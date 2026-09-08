@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "permissions": [
+    { "action": "shell", "resource": "npm", "effect": "deny" },
+    { "action": "shell", "resource": "npm *", "effect": "deny" },
+    { "action": "shell", "resource": "npx", "effect": "deny" },
+    { "action": "shell", "resource": "npx *", "effect": "deny" }
+  ]
+}
