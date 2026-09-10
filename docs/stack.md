@@ -4,7 +4,6 @@
 | Web UI       | **React + Vite**                           |
 | Mobile       | **Capacitor 8**                            |
 | Routing      | **React Router**                           |
-| Server state | **TanStack Query**                         |
 | Styling      | **Tailwind CSS + Radix primitives**        |
 | API          | **Node.js + Express 5**                    |
 | Validation   | **Zod**                                    |
