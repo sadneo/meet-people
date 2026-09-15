@@ -7,25 +7,55 @@
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names web,api \"pnpm dev:web\" \"pnpm dev:api\"",
     "dev:web": "vite",
-    "dev:api": "tsx watch api/index.ts",
-    "build": "tsc --noEmit && vite build",
+    "dev:api": "tsx watch api/server.ts",
+    "build": "pnpm typecheck && pnpm build:web && pnpm build:api",
+    "build:web": "vite build",
+    "build:api": "tsc -p tsconfig.api.json",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=\"$(command -v chromium || true)\" playwright test",
+    "test:auth": "node scripts/test-local-auth.mjs",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "start:api": "node dist/api/api/server.js",
+    "preview": "vite preview",
+    "supabase:start": "sh scripts/supabase.sh start",
+    "supabase:stop": "sh scripts/supabase.sh stop",
+    "supabase:reset": "sh scripts/supabase.sh db reset",
+    "supabase:types": "mkdir -p src/types && sh scripts/supabase.sh gen types typescript --local > src/types/database.ts",
+    "supabase:check": "pnpm supabase:reset && pnpm supabase:types && git diff --exit-code -- src/types/database.ts",
+    "env:local": "node scripts/write-local-env.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "express": "^5.2.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-router": "^8.3.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/react": "^16.3.3",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.0",
     "concurrently": "^9.2.0",
+    "eslint": "10.10.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.12.0",
+    "jsdom": "28.0.0",
+    "supabase": "2.117.0",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.0",
-    "vite": "^8.0.0"
+    "typescript-eslint": "^8.70.0",
+    "vite": "^8.0.0",
+    "vitest": "5.0.1"
   }
 }
