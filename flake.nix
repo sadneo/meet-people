@@ -25,6 +25,7 @@
               pnpm
               google-cloud-sdk
               supabase-cli
+              firebase-tools
             ];
           };
         });
