@@ -22,12 +22,12 @@ function Home() {
   }
 
   return (
-    <main className="space-y-4">
+    <div className="space-y-4">
       <h1>Meet People</h1>
       <p>React is ready.</p>
       <button type="button" onClick={() => void checkApi()}>Check API</button>
       <p role="status">{apiStatus}</p>
-    </main>
+    </div>
   )
 }
 
