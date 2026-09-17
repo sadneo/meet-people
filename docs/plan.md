@@ -1,14 +1,16 @@
-**Target Architecture**
-Keep the current single-package repository until independent package lifecycles justify a monorepo:
+# Deployment plan
+
+Keep the current single-package repository until independent package lifecycles justify workspaces:
 
 - React 19 + Vite static SPA
 - React Router in declarative/library mode
 - Express 5 API deployed to Cloud Run
 - Zod at runtime trust boundaries
-- Supabase projects for staging and production
-- Local Supabase through the CLI and Docker
+- Local Supabase through the CLI and Docker, plus one hosted project
 - Firebase Hosting for static files and same-origin `/api/**` rewrites
-- GitHub Actions for checks, staging deployment from `main`, and production deployment from version tags
+- GitHub Actions for checks and version-tag releases through Google Workload Identity Federation
+
+Current scope excludes Capacitor, hosted staging, TanStack React Query, browser-direct Supabase access, and end-user authentication. Add them only when the project needs them.
 
 ## Phase 1: React Router And Zod
 
@@ -30,7 +32,7 @@ Do not add React Router framework mode or `@react-router/dev`; the existing Vite
    - `/`: home/readiness page
    - `*`: not-found page
 4. Keep the current page as the index route.
-5. Replace the delayed `/api/hello` side effect with an explicit status component or remove it until the query setup is introduced.
+5. Replace the delayed `/api/hello` side effect with an explicit status component or remove it until a product feature needs it.
 6. Configure Firebase Hosting later to serve `index.html` for unknown non-API paths.
 7. Verify direct navigation and browser refresh on each route.
 
@@ -41,18 +43,16 @@ Do not create route loaders, generated route configuration, protected-route abst
 Use Zod only where untrusted data enters the application:
 
 1. Add an API environment schema for `PORT`, Supabase configuration, and deployment-specific values.
-2. Add a browser environment schema for public `VITE_*` values.
-3. Validate environment configuration once at process/application startup.
-4. Add a schema for the `/api/hello` response to prove the frontend/API validation path.
-5. Use `safeParse` for HTTP request input so malformed input can produce a `400` response.
-6. Use inferred types rather than maintaining separate TypeScript interfaces.
-7. Never expose Supabase server credentials through `VITE_*` variables.
+2. Validate API configuration once at startup.
+3. Add a schema for the `/api/hello` response to prove the frontend/API validation path.
+4. Use `safeParse` for HTTP request input so malformed input can produce a `400` response.
+5. Use inferred types rather than maintaining separate TypeScript interfaces.
+6. Keep server credentials out of browser code, committed files, logs, and test snapshots.
 
 Suggested placement:
 
 ```text
 src/
-  env.ts
   routes/
     Home.tsx
     NotFound.tsx
@@ -81,28 +81,18 @@ Add packages only when their integration is implemented in the same change.
 ### Runtime packages
 
 ```bash
-pnpm add @supabase/supabase-js @tanstack/react-query
+pnpm add @supabase/supabase-js
 pnpm add -D tailwindcss @tailwindcss/vite
 ```
 
 Responsibilities:
 
-- `@supabase/supabase-js`: browser authentication, database, storage, and realtime access.
-- `@tanstack/react-query`: remote server-state requests and cache behavior.
+- `@supabase/supabase-js`: server-side Supabase access and local infrastructure smoke tests.
 - Tailwind: application styling through the Vite plugin.
 
 For Radix, install individual primitives when the first real component needs them. Do not install every Radix package during scaffolding.
 
-### Mobile packages
-
-After the web application builds and deploys successfully:
-
-```bash
-pnpm add @capacitor/core
-pnpm add -D @capacitor/cli
-```
-
-Add `@capacitor/android` and `@capacitor/ios` only when those native targets will actually be initialized and tested. Capacitor should not block the initial web/API deployment.
+Do not add TanStack React Query. Use direct API calls until a concrete cache or server-state requirement justifies it. Do not add Capacitor or native targets in this plan.
 
 ### Development and test packages
 
@@ -116,7 +106,7 @@ Use:
 
 - Vitest for Zod, route, and API behavior.
 - Testing Library for the minimal React route checks.
-- Playwright for local and deployed browser smoke tests.
+- Playwright for local browser smoke tests.
 
 Prefer testing the Express application without adding Supertest: export the app, start it on an ephemeral local port, and use built-in `fetch`.
 
@@ -158,22 +148,20 @@ Create the smallest infrastructure migration:
 
 ### Local clients
 
-Create:
+Create a server Supabase client only when an API endpoint needs database access. The browser talks only to the same-origin Express API; remove public `VITE_SUPABASE_*` configuration and browser Supabase clients.
 
-- A browser Supabase client using public URL and publishable/anonymous credentials.
-- A server client only when the API requires privileged operations.
-- No service-role key in browser code, committed files, logs, or test snapshots.
+Use user-scoped credentials and row-level security when user-facing database access is introduced. Reserve the service-role key for explicitly privileged server operations. Never commit or log service-role credentials.
 
 ### Authentication and authorization
 
-1. Configure local email authentication.
-2. Decide redirect URLs for Vite, Firebase staging, and Firebase production.
+1. Configure local email authentication for an infrastructure smoke test.
+2. Defer browser authentication, redirect URLs, and protected routes until a product feature needs them.
 3. Require row-level security on every future user-owned table.
 4. Test policies through user-level clients rather than relying only on service-role access.
 
 ### Storage and realtime
 
-Scaffold configuration, but wait to create resources until requirements exist:
+Defer storage and realtime resources until requirements exist:
 
 - Create storage buckets with explicit access policies when image upload is implemented.
 - Add tables to realtime publication only when realtime database changes are needed.
@@ -195,7 +183,7 @@ Regenerate after every migration and check for an uncommitted diff during CI.
 - `supabase db reset` applies every migration and seed from scratch.
 - PostGIS is available.
 - Generated database types match the migration state.
-- The application can connect to local Supabase.
+- The local API or infrastructure smoke test can connect to Supabase.
 - Local auth initialization succeeds.
 
 ## Phase 4: Local Testing
@@ -213,12 +201,14 @@ pnpm start:api
 pnpm verify
 ```
 
-`pnpm verify` should run the same non-deployment checks as CI:
+`pnpm verify` should run the same reproducibility checks as CI:
 
 1. Type-check.
 2. Lint.
 3. Unit and integration tests.
-4. Build web and API artifacts.
+4. Reset local Supabase and confirm generated types have no diff.
+5. Build web and API artifacts.
+6. Run the local browser smoke suite against the production-style build.
 
 ### Minimum test coverage
 
@@ -229,7 +219,7 @@ pnpm verify
 - API health endpoint returns success.
 - Frontend can load and reach `/api/health`.
 - Local Supabase migration reset succeeds.
-- One authentication smoke flow before auth-dependent application work begins.
+- One local Supabase authentication smoke flow.
 
 Avoid broad component snapshot suites. Test boundaries and critical flows.
 
@@ -246,9 +236,8 @@ dist/
 ### Web build
 
 1. Configure Vite to output static assets to `dist/web`.
-2. Supply public Supabase staging or production configuration at build time.
-3. Keep API requests relative, such as `/api/health`, because Firebase will proxy them.
-4. Ensure no server secret appears in generated assets.
+2. Keep API requests relative, such as `/api/health`, because Firebase will proxy them.
+3. Ensure no server secret appears in generated assets.
 
 ### API build
 
@@ -287,162 +276,81 @@ Before creating any pipeline:
 
 This phase establishes and documents how builds work before automating them.
 
-## Phase 6: Hosted Supabase Environments
+## Phase 6: Hosted Environment
 
-Create two Supabase projects:
+Create one hosted Supabase project and one Google Cloud/Firebase project for the deployed application.
 
-- `meet-people-staging`
-- `meet-people-production`
-
-For each project:
+### Supabase
 
 1. Record the project reference without committing credentials.
-2. Configure allowed frontend and auth redirect URLs.
-3. Apply migrations from the repository.
-4. Verify PostGIS.
-5. Generate or compare remote database types.
-6. Confirm row-level security before adding application tables.
-7. Store credentials in the corresponding GitHub environment.
-
-Use separate staging and production data. Never restore staging test data into production.
-
-## Phase 7: Manual Staging Deployment
-
-Complete one successful manual deployment before automating it.
+2. Apply committed migrations with a direct database URL; do not create a persistent CLI link.
+3. Verify PostGIS.
+4. Confirm row-level security before adding application tables.
+5. Store the database URL as a GitHub Actions secret only. Store any server-only Supabase credentials in Secret Manager only when an API feature requires them.
 
 ### Google Cloud
 
-Use separate Google Cloud/Firebase projects for staging and production where practical.
-
-For staging:
-
 1. Create an Artifact Registry repository.
-2. Enable Cloud Run and required build/container APIs.
-3. Build and push the API image.
-4. Deploy the image to Cloud Run.
-5. Configure non-secret environment variables.
-6. Store server secrets using Secret Manager when they become necessary.
-7. Restrict privileged Supabase credentials to the API service.
+2. Enable Cloud Run, Artifact Registry, and required build APIs.
+3. Create one GitHub deploy service account with only the Artifact Registry, Cloud Run, Firebase Hosting, and Secret Manager permissions this release needs.
+4. Configure GitHub OpenID Connect and Workload Identity Federation for the repository. Do not store service-account JSON keys.
+5. Add a GCP budget alert.
 
 ### Firebase Hosting
 
-1. Initialize Firebase Hosting for the Vite output.
-2. Set the public directory to `dist/web`.
+1. Initialize one production Hosting site for `dist/web`.
+2. Commit `firebase.json` and select the Firebase project explicitly in CI.
 3. Add rewrites in this order:
-   - `/api/**` to the staging Cloud Run service.
+   - `/api/**` to the Cloud Run service with explicit `serviceId`, `region`, and `pinTag`.
    - All remaining paths to `/index.html`.
-4. Deploy the frontend manually.
-5. Verify direct navigation to every React Router route.
-6. Verify API calls use the Firebase origin and require no browser CORS exception.
+4. Allow unauthenticated Cloud Run invocation so the Hosting rewrite works. Protected application routes will authenticate in Express when they exist.
+5. Verify direct route refresh and same-origin `/api/health` access without browser CORS configuration.
 
-### Manual staging acceptance
+## Phase 7: Continuous Integration And Release
 
-- Firebase serves the frontend over HTTPS.
-- Direct route refresh works.
-- `/api/health` reaches Cloud Run through Firebase.
-- The frontend connects to staging Supabase.
-- Authentication redirects return to the staging domain.
-- No production Supabase value is present.
-- Playwright’s remote smoke suite passes against the staging URL.
+Create one GitHub Actions workflow for pull requests, `main`, and pushed `v*` tags:
 
-## Phase 8: Remote Testing
+1. Check out the repository and install the declared Node and pnpm versions.
+2. Run `pnpm install --frozen-lockfile`.
+3. Run `pnpm verify`, including the local Supabase reset/type check and production-style browser smoke test.
+4. Build the API container without pushing it.
+5. Upload test reports only on failure.
+6. Protect `main` by requiring this workflow before merge.
 
-Make Playwright accept a base URL through an environment variable:
+Use action and package-manager caching. Do not cache `node_modules`.
 
-```text
-PLAYWRIGHT_BASE_URL
-```
+On a pushed version tag such as `v0.1.0`, continue only after these checks pass:
 
-Keep the remote suite small:
+1. Authenticate to Google Cloud through the deploy service account and OIDC.
+2. Build and push an immutable API image tagged with the Git commit SHA.
+3. Apply migrations with `supabase db push --db-url "$SUPABASE_DB_URL" --yes`.
+4. Deploy that image to the single Cloud Run service.
+5. Deploy `dist/web` to the single Firebase Hosting site.
+6. Request `/api/health` through the Firebase origin.
+7. Record the URL, commit SHA, image digest, and migration version in the workflow summary.
 
-1. Load the home route.
-2. Navigate to another route and refresh it.
-3. Confirm the not-found route.
-4. Check API health through `/api/health`.
-5. Exercise one staging Supabase/auth flow once available.
-6. Avoid destructive tests against production.
+Avoid destructive migrations in the same release as code that depends on them. Cloud Run revisions can overlap briefly, so keep changes additive when possible. If an applied migration causes a problem, fix it with a new forward migration rather than attempting an automatic rollback.
 
-Tests should create uniquely named staging data and clean it up, or use deterministic seed records reset independently of production.
+### Release recovery
 
-## Phase 9: Continuous Integration
-
-Create a GitHub Actions check workflow for pull requests, `main`, and version tags:
-
-1. Check out the repository.
-2. Install the declared Node and pnpm versions.
-3. Run `pnpm install --frozen-lockfile`.
-4. Run linting.
-5. Run TypeScript checks.
-6. Run unit/integration tests.
-7. Build web and API artifacts.
-8. Build the API container without pushing it.
-9. Optionally start local Supabase and run migration tests when Docker is available.
-10. Upload useful test reports only on failure.
-
-Use caching supplied by the package-manager/action integrations. Do not cache `node_modules`.
-
-Protect `main` by requiring this workflow before merge.
-
-## Phase 10: Continuous Deployment
-
-### Authentication
-
-Use GitHub OpenID Connect with Google Workload Identity Federation. Do not store long-lived Google service-account JSON keys.
-
-Create GitHub environments:
-
-- `staging`
-- `production`
-
-Store environment-specific Firebase, Google Cloud, and Supabase identifiers or secrets there.
-
-### Staging deployment
-
-On a successful push to `main`:
-
-1. Run all CI checks.
-2. Authenticate to Google Cloud through OIDC.
-3. Build and push an immutable API image tagged with the Git commit SHA.
-4. Apply staging Supabase migrations.
-5. Deploy that exact image to staging Cloud Run.
-6. Build the frontend with staging public Supabase variables.
-7. Deploy static files to staging Firebase Hosting.
-8. Run remote Playwright smoke tests.
-9. Mark the workflow failed if deployment or smoke testing fails.
-
-### Production deployment
-
-On a version tag such as `v0.1.0`:
-
-1. Confirm the tagged commit already passed CI.
-2. Require approval through the GitHub `production` environment.
-3. Build or promote an image identified by the tagged commit.
-4. Apply production migrations.
-5. Deploy Cloud Run.
-6. Build the frontend with production public values.
-7. Deploy Firebase Hosting.
-8. Run non-destructive production smoke tests.
-9. Record deployed URLs, commit SHA, image digest, and migration version in the workflow summary.
-
-Database migrations should be backward-compatible with both the old and new API revision because Cloud Run rollouts can briefly serve both.
+Document how to redeploy the prior Cloud Run revision and Firebase Hosting release. Do not add formal recovery drills, database restore drills, secret-rotation procedures, dashboards, tracing, or alerting beyond default logs, the health check, the deployment smoke test, and the budget alert until the project has real users.
 
 ## Documentation Deliverables
 
-Once the build has been proven manually, document:
+Once the release has been proven, document:
 
 - Required tools and versions
 - `nix develop`
 - `pnpm install --frozen-lockfile`
 - `pnpm dev`
 - Local Supabase startup and reset
-- Environment variable names and whether each is public or secret
+- Environment variable names and whether each is server-only or a GitHub secret
 - Local verification command
 - Production-style local build commands
-- Manual staging deployment
-- Tag-based production releases
-- Troubleshooting for ports, Docker, Supabase, and auth redirects
+- Tag-based releases
+- Troubleshooting for ports, Docker, Supabase, Firebase, and Cloud Run
 
-Do not document guessed build commands now. Add them after Phase 5 has successfully run.
+Do not document guessed deployment commands. Add them after Phase 7 has successfully run.
 
 ## Completion Definition
 
@@ -454,9 +362,7 @@ Scaffolding is complete when:
 - `pnpm verify` passes from a fresh checkout.
 - Web and API production artifacts build locally.
 - The API container runs locally.
-- Staging can be manually deployed and remotely tested.
-- Pull requests receive automated checks.
-- `main` deploys to staging.
-- Version tags deploy to production after approval.
-- Both deployments pass remote smoke tests.
+- Pull requests receive automated reproducibility checks.
+- A pushed version tag runs checks, applies migrations, and deploys the hosted application.
+- The deployed application passes a same-origin health smoke test.
 - Setup and release instructions reflect commands that have actually been executed.
