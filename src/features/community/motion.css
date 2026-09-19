@@ -1,0 +1,112 @@
+/* The intro, reward receipt, and motion stay inside the Community prototype. */
+.pebble-app .pebble-pouch-intro {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100dvh;
+  min-height: 360px;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  background: #f6efdf;
+  color: #46573b;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity .45s ease;
+}
+.pebble-app button.pebble-pouch-intro:active { transform: none; }
+.pebble-app .pebble-pouch-intro:focus-visible { outline: 2px solid #849466; outline-offset: -10px; }
+.pebble-pouch-intro.fade { opacity: 0; }
+.pebble-intro-wordmark { position: absolute; top: 15%; left: 50%; transform: translateX(-50%); font-size: clamp(42px, 6vw, 62px); font-weight: 900; letter-spacing: -3px; line-height: 1; }
+.pebble-intro-wordmark svg { position: absolute; top: -15px; right: -11px; color: #809465; transform: rotate(-13deg); }
+.pebble-pouch-anchor { position: absolute; top: 50%; left: 50%; width: clamp(100px, 15vw, 140px); transform: translate(-50%, -50%); }
+.pebble-pouch { display: block; width: 100%; overflow: visible; transform-origin: 50% 85%; }
+.idle .pebble-pouch { animation: pebble-pouch-wiggle 3.6s ease-in-out infinite; }
+.pebble-pouch-mouth, .pebble-pouch-body { transform-box: fill-box; transform-origin: center; }
+.open .pebble-pouch-mouth, .fade .pebble-pouch-mouth { animation: pebble-pouch-open .6s ease-out both; }
+.open .pebble-pouch-body, .fade .pebble-pouch-body { animation: pebble-pouch-release .7s ease-out both; }
+.open .pebble-pouch-shadow, .fade .pebble-pouch-shadow { opacity: 0; }
+.pebble-pouch-hint { position: absolute; bottom: 12%; left: 0; width: 100%; font-size: 11px; letter-spacing: 1.7px; color: #899077; }
+.pebble-scattered-stone { position: absolute; top: calc(50% - 24px); left: calc(50% - 24px); width: clamp(38px, 6vw, 56px); transform: translate(var(--scatter-x), var(--scatter-y)) rotate(var(--scatter-rotation)); animation: pebble-scatter-out 750ms cubic-bezier(.16,.75,.25,1) both; animation-delay: var(--scatter-delay); }
+.pebble-scattered-stone svg { display: block; width: 100%; filter: drop-shadow(0 5px 3px #76674d12); }
+@keyframes pebble-pouch-wiggle {
+  0%, 65%, 100% { transform: rotate(0); }
+  71% { transform: rotate(-6deg); }
+  77% { transform: rotate(5deg); }
+  83% { transform: rotate(-3deg); }
+  89% { transform: rotate(2deg); }
+}
+@keyframes pebble-pouch-open { to { transform: translateY(-16px) rotate(-16deg) scaleX(1.35); opacity: 0; } }
+@keyframes pebble-pouch-release { 30% { transform: scale(1.12, .88); opacity: 1; } to { transform: translateY(12px) scale(.8); opacity: 0; } }
+@keyframes pebble-scatter-out {
+  from { transform: translate(0, 0) rotate(0) scale(.2); opacity: 0; }
+  12% { opacity: 1; }
+  to { transform: translate(var(--scatter-x), var(--scatter-y)) rotate(var(--scatter-rotation)); opacity: 1; }
+}
+.pebble-header, .pebble-main { animation: pebble-interface-enter .5s ease-out both; }
+@keyframes pebble-interface-enter { from { opacity: 0; } to { opacity: 1; } }
+
+.pebble-dialog .pebble-verification-label { font-size: 10px; margin: 10px 0 20px; color: #8a8167; }
+.pebble-proof-step { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px; border: 1px dashed #cbd1b8; border-radius: 12px; text-align: left; background: #f0f1e5; }
+.pebble-proof-icon { color: #859868; }
+.pebble-proof-step > div { flex: 1; min-width: 160px; }
+.pebble-proof-step strong, .pebble-confirmation-title strong { font-size: 11px; font-weight: 600; }
+.pebble-dialog .pebble-proof-step p { font-size: 9px; margin-top: 3px; line-height: 1.5; }
+.pebble-proof-step button { width: 100%; justify-content: center; background: #e0e7d0; min-height: 40px; }
+.pebble-proof-step button:disabled { background: transparent; padding: 0; min-height: 20px; color: #728756; }
+.pebble-confirmations { margin: 19px 0; text-align: left; }
+.pebble-confirmation-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pebble-confirmation-title > span { font-size: 10px; color: #7e896c; }
+.pebble-confirmation-people { display: flex; gap: 5px; flex-wrap: wrap; margin: 11px 0 7px; }
+.pebble-confirmation-people > span { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 50%; background: #eaece0; color: #919982; }
+.pebble-confirmation-people > .confirmed { background: #dae6c7; color: #536f3e; animation: pebble-confirm-pop .35s ease-out; }
+.pebble-dialog .pebble-confirmations p { font-size: 10px; line-height: 1.6; min-height: 32px; }
+.pebble-confirm-button { display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 9px; margin-top: 10px; background: #f0f1e5; border: 1px solid #dce1cf; border-radius: 9px; color: #627d4a; font-size: 11px !important; }
+.pebble-confirm-button > span { margin-left: auto; font-size: 10px; }
+.pebble-confirm-button:hover:not(:disabled) { background: #e7ecd9; }
+.pebble-confirmations .pebble-text-button { display: flex; width: 100%; margin-top: 2px; font-size: 9px !important; }
+.pebble-app .pebble-confirm-button:disabled, .pebble-app .pebble-text-button:disabled { opacity: .45; text-decoration: none; }
+.pebble-reward-receipt { padding: 14px 16px; background: #efedda; border-radius: 12px; display: grid; gap: 8px; color: #788263; font-size: 10px; }
+.pebble-reward-receipt > div { display: flex; align-items: center; justify-content: space-between; }
+.pebble-reward-receipt strong { font-weight: 600; }
+.pebble-receipt-total { border-top: 1px solid #d8d9c3; padding-top: 10px; color: #526641; font-size: 12px; }
+.pebble-receipt-number { display: flex; align-items: center; gap: 5px; font-size: 17px; animation: pebble-confirm-pop .3s ease-out; }
+.pebble-app .pebble-primary:disabled { background: #e4e5d8; color: #8d957f; box-shadow: none; }
+.pebble-dialog .pebble-reward-footnote { font-size: 9px; margin-top: 10px; }
+@keyframes pebble-confirm-pop { 0% { transform: scale(.85); } 65% { transform: scale(1.09); } 100% { transform: scale(1); } }
+
+.pebble-stone-bob, .pebble-stone-wander { transform-box: fill-box; transform-origin: center bottom; }
+.pebble-stone-bob { animation: pebble-idle-hop 13s ease-in-out 2s infinite; }
+.pebble-stone-wander { animation: pebble-idle-wander 19s ease-in-out 7s infinite; }
+@keyframes pebble-idle-hop {
+  0%, 81%, 94%, 100% { transform: translateY(0) rotate(0); }
+  84% { transform: translateY(1px) scale(1.04, .96); }
+  87% { transform: translateY(-4px) rotate(-4deg); }
+  90% { transform: translateY(0) rotate(3deg); }
+}
+@keyframes pebble-idle-wander {
+  0%, 71%, 100% { transform: translate(0, 0) rotate(0); }
+  77% { transform: translate(-3px, -2px) rotate(-6deg); }
+  84% { transform: translate(-5px, 0) rotate(0); }
+  91% { transform: translate(-2px, -2px) rotate(5deg); }
+}
+.pebble-balance { position: relative; }
+.pebble-balance > span:nth-of-type(2) { color: #77806b; font-size: 12px; }
+.pebble-balance-pop { animation: pebble-confirm-pop .4s ease-out; }
+.pebble-balance .pebble-balance-feedback { position: absolute; right: 0; top: calc(100% + 6px); display: flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 20px; color: #587344; background: #e7eedb; white-space: nowrap; font-size: 11px; z-index: 2; pointer-events: none; animation: pebble-reward-float 2.3s ease-out both; }
+.pebble-balance .pebble-balance-feedback.spend { color: #a26c51; background: #f1e3d2; }
+@keyframes pebble-reward-float { 0% { opacity: 0; transform: translateY(5px); } 15%, 75% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-8px); } }
+.pebble-grow-feedback { position: absolute; left: 50%; top: 66%; width: 170px; height: 100px; transform: translate(-50%, -50%); pointer-events: none; color: #fff6cd; }
+.pebble-grow-ring { position: absolute; inset: 0; border: 2px solid #fff4c5; border-radius: 50%; animation: pebble-grow-ring 1s ease-out both; }
+.pebble-grow-spark { position: absolute; animation: pebble-grow-spark 1.6s ease-out both; font-size: 23px; }
+.pebble-grow-spark.a { top: -14px; left: -4px; }.pebble-grow-spark.b { top: -30px; right: 24px; animation-delay: .1s; }.pebble-grow-spark.c { top: 27px; right: -10px; animation-delay: .2s; }
+.pebble-grow-label { position: absolute; top: -52px; left: 50%; transform: translateX(-50%); padding: 7px 12px; border-radius: 20px; background: #faf7e9ed; color: #718251; font-size: 10px; white-space: nowrap; animation: pebble-grow-message 2.3s ease-out both; }
+@keyframes pebble-grow-ring { from { transform: scale(.5); opacity: .75; } to { transform: scale(1.4); opacity: 0; } }
+@keyframes pebble-grow-spark { 0% { opacity: 0; scale: .3; } 25% { opacity: 1; scale: 1; } 100% { opacity: 0; translate: 0 -16px; } }
+@keyframes pebble-grow-message { 0%, 100% { opacity: 0; } 20%, 80% { opacity: 1; } }
+@media (max-width: 640px) { .pebble-balance > span:nth-of-type(2) { font-size: 10px; }.pebble-dialog:has(.pebble-proof-step) .pebble-dialog-content { padding-top: 46px; }.pebble-dialog:has(.pebble-proof-step) h2 { font-size: 25px; } }
+@media (prefers-reduced-motion: reduce) {
+  .pebble-app *, .pebble-app *::before, .pebble-app *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .open .pebble-pouch, .fade .pebble-pouch { opacity: 0; }
+  .pebble-grow-ring, .pebble-grow-spark { display: none; }
+}
