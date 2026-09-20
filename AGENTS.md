@@ -11,15 +11,9 @@ This project uses pnpm exclusively.
 - Do not create or modify `package-lock.json`.
 - `pnpm-lock.yaml` is the canonical lockfile.
 
-# Product Design
+# Frontend
 
 - Read `docs/DESIGN.md` before designing or changing product UI.
-- Reuse `src/design-system/` components and tokens. Its `README.md` contains
-  implementation rules; do not create a feature-local design system.
-- `docs/DESIGN.md` is the product-design authority. `src/design-system/` is
-  its implementation. Resolve conflicts in favor of `docs/DESIGN.md`.
-- Do not merge, cherry-pick, copy, or adapt UI from
-  `feature/pebble-community-ui`. Rebuild approved behavior from the design
-  system and current product requirements.
-- Pebble has no Community destination. World/progression features belong on
-  Home; activity discovery and participation belong under Events.
+- Refer to `docs/UI-PLAN.md` as well for the direction for the app UI
+- Reuse existing frontend components when available.
+- `docs/DESIGN.md` is the product-design authority.
