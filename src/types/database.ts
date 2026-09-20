@@ -34,13 +34,170 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ingestion_runs: {
+        Row: {
+          accepted_count: number
+          created_at: string
+          deleted_count: number
+          error_summary: Json
+          fetched_count: number
+          finished_at: string | null
+          id: string
+          inactivated_count: number
+          missed_count: number
+          mode: string
+          request_count: number
+          reset_count: number
+          skipped_count: number
+          source: string
+          started_at: string
+          status: string
+          updated_at: string
+          upserted_count: number
+          window_ends_at: string | null
+          window_starts_at: string | null
+        }
+        Insert: {
+          accepted_count?: number
+          created_at?: string
+          deleted_count?: number
+          error_summary?: Json
+          fetched_count?: number
+          finished_at?: string | null
+          id?: string
+          inactivated_count?: number
+          missed_count?: number
+          mode: string
+          request_count?: number
+          reset_count?: number
+          skipped_count?: number
+          source: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          upserted_count?: number
+          window_ends_at?: string | null
+          window_starts_at?: string | null
+        }
+        Update: {
+          accepted_count?: number
+          created_at?: string
+          deleted_count?: number
+          error_summary?: Json
+          fetched_count?: number
+          finished_at?: string | null
+          id?: string
+          inactivated_count?: number
+          missed_count?: number
+          mode?: string
+          request_count?: number
+          reset_count?: number
+          skipped_count?: number
+          source?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          upserted_count?: number
+          window_ends_at?: string | null
+          window_starts_at?: string | null
+        }
+        Relationships: []
+      }
+      listings: {
+        Row: {
+          address: string | null
+          category: string | null
+          city: string | null
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          external_id: string
+          id: string
+          image_url: string | null
+          last_synced_at: string | null
+          latitude: number | null
+          listing_type: string
+          location_name: string | null
+          longitude: number | null
+          missed_sync_count: number
+          postal_code: string | null
+          region: string | null
+          source: string
+          source_url: string | null
+          starts_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          category?: string | null
+          city?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          external_id: string
+          id?: string
+          image_url?: string | null
+          last_synced_at?: string | null
+          latitude?: number | null
+          listing_type?: string
+          location_name?: string | null
+          longitude?: number | null
+          missed_sync_count?: number
+          postal_code?: string | null
+          region?: string | null
+          source: string
+          source_url?: string | null
+          starts_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          category?: string | null
+          city?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          external_id?: string
+          id?: string
+          image_url?: string | null
+          last_synced_at?: string | null
+          latitude?: number | null
+          listing_type?: string
+          location_name?: string | null
+          longitude?: number | null
+          missed_sync_count?: number
+          postal_code?: string | null
+          region?: string | null
+          source?: string
+          source_url?: string | null
+          starts_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      reconcile_ticketmaster_full_sync: {
+        Args: {
+          p_seen_external_ids: string[]
+          p_window_ends_at: string
+          p_window_starts_at: string
+        }
+        Returns: {
+          inactivated_count: number
+          missed_count: number
+          reset_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
