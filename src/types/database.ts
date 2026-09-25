@@ -110,6 +110,7 @@ export type Database = {
           city: string | null
           created_at: string
           description: string | null
+          details_synced_at: string | null
           ends_at: string | null
           external_id: string
           id: string
@@ -135,6 +136,7 @@ export type Database = {
           city?: string | null
           created_at?: string
           description?: string | null
+          details_synced_at?: string | null
           ends_at?: string | null
           external_id: string
           id?: string
@@ -160,6 +162,7 @@ export type Database = {
           city?: string | null
           created_at?: string
           description?: string | null
+          details_synced_at?: string | null
           ends_at?: string | null
           external_id?: string
           id?: string
@@ -186,6 +189,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      reconcile_sbengaged_full_sync: {
+        Args: {
+          p_seen_external_ids: string[]
+          p_window_ends_at: string
+          p_window_starts_at: string
+        }
+        Returns: {
+          inactivated_count: number
+          missed_count: number
+          reset_count: number
+        }[]
+      }
       reconcile_ticketmaster_full_sync: {
         Args: {
           p_seen_external_ids: string[]

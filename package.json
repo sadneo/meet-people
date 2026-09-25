@@ -25,6 +25,7 @@
     "supabase:types": "mkdir -p src/types && sh scripts/supabase.sh gen types typescript --local > src/types/database.ts",
     "supabase:check": "pnpm supabase:reset && pnpm supabase:types && git diff --exit-code -- src/types/database.ts",
     "supabase:functions:serve": "sh scripts/supabase.sh functions serve ingest-ticketmaster --env-file supabase/.env",
+    "supabase:functions:serve:sbengaged": "sh scripts/supabase.sh functions serve ingest-sbengaged --env-file supabase/.env",
     "env:local": "node scripts/write-local-env.mjs"
   },
   "dependencies": {
