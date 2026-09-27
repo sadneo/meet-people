@@ -2,8 +2,8 @@ import { expect, test, type Page } from '@playwright/test'
 
 async function scene(page: Page, name: string) { await page.getByLabel('Review scene').selectOption(name) }
 async function startPlan(page: Page) {
-  await page.goto('/prototype')
-  await page.getByRole('navigation').getByRole('button', { name: 'Free Time', exact: true }).click()
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Free Time', exact: true }).click()
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.getByRole('button', { name: 'Find people', exact: true }).click()
@@ -37,7 +37,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await page.getByLabel('Message', { exact: true }).fill('See you there!')
     await page.getByRole('button', { name: 'Send', exact: true }).click()
     await expect(page.locator('.pt-chat-bubble').filter({ hasText: /^See you there!$/ })).toBeVisible()
-    await page.getByRole('navigation').getByRole('button', { name: 'Messages', exact: true }).click()
+    await page.getByRole('link', { name: 'Messages', exact: true }).click()
     await expect(page.locator('.pt-conversation')).toHaveCount(2)
     await expect(page.locator('.pt-conversation').first()).toContainText('See you there!')
     await page.locator('.pt-conversation').first().click()
@@ -47,9 +47,9 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await page.getByRole('button', { name: 'Choose a time', exact: true }).click()
     await page.getByRole('button', { name: 'Review plan' }).click()
     await page.getByRole('button', { name: 'Confirm plan', exact: true }).click()
-    await page.getByRole('navigation').getByRole('button', { name: 'Profile', exact: true }).click()
+    await page.getByRole('link', { name: 'Profile', exact: true }).click()
     await expect(page.locator('.pt-profile-plan')).toContainText('A walk around campus')
-    await page.getByRole('navigation').getByRole('button', { name: 'Messages', exact: true }).click()
+    await page.getByRole('link', { name: 'Messages', exact: true }).click()
     await expect(page.locator('.pt-conversation')).toHaveCount(2)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     expect(errors).toEqual([])
@@ -57,7 +57,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
 }
 test('onboarding skip, all chapters, unique rewards and ordinary profile editing', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/prototype?scene=onboarding')
+  await page.goto('/onboarding')
   await page.getByRole('button', { name: 'Skip animation' }).click()
   await expect(page.getByRole('button', { name: 'Complete chapter' })).toBeDisabled()
   await page.getByRole('button', { name: 'Use demo photo' }).click()
@@ -86,7 +86,7 @@ test('onboarding skip, all chapters, unique rewards and ordinary profile editing
   await expect(page.getByRole('heading', { name: 'Your Pebble community' })).toBeAttached()
   await expect(page.locator('[data-upgrade]')).toHaveCount(0)
   await expect(page.getByLabel('Pebble balance', { exact: true })).toContainText('40')
-  await page.getByRole('navigation').getByRole('button', { name: 'Profile', exact: true }).click()
+  await page.getByRole('link', { name: 'Profile', exact: true }).click()
   await page.getByRole('button', { name: 'Edit profile' }).click()
   await page.getByLabel('Display name', { exact: true }).fill('Sam Lee')
   await page.getByRole('button', { name: 'Save profile' }).click()
@@ -94,7 +94,7 @@ test('onboarding skip, all chapters, unique rewards and ordinary profile editing
   await expect(page.locator('.pt-origin')).toHaveCount(0)
 })
 test('cinematic finishes; reduced motion bypasses it and disables movement', async ({ page }) => {
-  await page.goto('/prototype?scene=onboarding')
+  await page.goto('/onboarding')
   await expect(page.locator('.pt-enormous-shadow')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Basic profile', exact: true })).toBeVisible({ timeout: 8000 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -114,7 +114,7 @@ test('cinematic finishes; reduced motion bypasses it and disables movement', asy
 test('all scenes fit a narrow phone; filters, empty states, reporting and blocking work', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/prototype')
+  await page.goto('/')
   const values = await page.getByLabel('Review scene').locator('option').allTextContents()
   for (const value of values) {
     await scene(page, value)
@@ -152,7 +152,7 @@ test('registration stays local, custom time is preserved, and unread state clear
   await page.emulateMedia({ reducedMotion: 'reduce' })
   const requests: string[] = []
   page.on('request', request => { if (['fetch', 'xhr'].includes(request.resourceType())) requests.push(request.url()) })
-  await page.goto('/prototype?scene=register')
+  await page.goto('/register')
   await page.getByLabel('Email', { exact: true }).fill('demo@example.com')
   await page.getByLabel('Password', { exact: true }).fill('fake-password')
   await page.getByRole('button', { name: 'Create demo account' }).click()

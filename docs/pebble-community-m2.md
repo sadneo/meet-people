@@ -16,7 +16,7 @@ Pebble connects shared real-world activities with a small, growing virtual commu
 ## Boundaries and integration
 
 ```text
-/community -> Community.tsx
+/prototype/yzcommunity -> Community.tsx
               |-- PouchIntro (local intro phase and cleaned-up timers)
               |-- local activity view and ActivityRewards dialog
               |-- demo reducer (balance, stage, per-activity proof/confirmations/collected amount, customization)
@@ -27,15 +27,15 @@ Pebble connects shared real-world activities with a small, growing virtual commu
 No feature requests to API, Supabase, auth, event registry, or matchmaking.
 ```
 
-The only shared application change is one import and one `/community` route in `src/App.tsx`. Home and fallback routes remain intact. The Activities tab is internal demo state, not a real `/events` route. Existing app startup environment validation and optional Supabase initialization are unchanged; the feature itself requires neither a Supabase connection nor a running API.
+The milestone now lives at `/prototype/yzcommunity` in `src/App.tsx`. Its Activities tab remains internal demo state; `/events` belongs to the main application. The feature requires neither a Supabase connection nor a running API.
 
 All state lives in React. Refreshing or leaving the route resets the demo; switching its two internal views or closing a dialog preserves it. Invalid activity IDs, duplicate proof, confirmations before proof or beyond the group limit, duplicate reward collection, unaffordable upgrades, and upgrades beyond the last stage are ignored. Reset requires an in-page confirmation so a live demo is not accidentally lost.
 
-The final team navigation can link to `/community`. Later integration should replace the mock reducer and activity view with agreed data contracts, while keeping the presentation components. No production reward or attendance validation is implied.
+The milestone is retained for design reference at `/prototype/yzcommunity`. Later integration should replace the mock reducer and activity view with agreed data contracts, while keeping the presentation components. No production reward or attendance validation is implied.
 
 ## Local walkthrough
 
-1. Run `pnpm dev` and open `http://127.0.0.1:3000/community`. Tap the pouch to enter.
+1. Run `pnpm dev` and open `http://127.0.0.1:3000/prototype/yzcommunity`. Tap the pouch to enter.
 2. Open Activities, join the walk, and select **Add demo proof**. The receipt shows 10 Pebbles ready to collect.
 3. Select **Simulate 1 confirmation** to see another 10 added, then **Simulate remaining confirmations** to reach 40. Select **Bring 40 Pebbles home**.
 4. Select **Grow your world** for the pile. Repeat the proof/confirmation flow for coffee, then spend 60 for the cottage. Try the roof colors and wildflowers.
@@ -55,7 +55,7 @@ $env:PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH='C:\Program Files (x86)\Microsoft\Edge\
 pnpm exec node node_modules/@playwright/test/cli.js test
 ```
 
-Validation: all 10 unit tests and six browser tests passed, along with lint, typecheck, and web/API builds. The browser checks cover 320px, 390px, 768px, and 1280px widths and confirm the original Home layout is preserved. Desktop intro and reward dialog and the mobile reward dialog were also visually reviewed. Vite reported a non-failing bundle-size warning. No browser or package installation was needed.
+The browser checks cover 320px, 390px, 768px, and 1280px widths and confirm the milestone remains isolated from the main Home route. Desktop intro and reward dialog and the mobile reward dialog are covered alongside the main application suite.
 
 M2 only: fictional activities/attendees, simulated proof and confirmations, local currency and progression. No file input, photo capture, upload, actual verification, persistence, real accounts, event scraping, matchmaking, backend, or schema changes. No packages were added.
 

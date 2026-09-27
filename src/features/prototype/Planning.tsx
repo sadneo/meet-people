@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { usePrototype } from './context'
 import { activities, availableTimes, people, planDate, planTime, validPlan, type Draft } from './model'
-import { Avatar, Avatars, Button, Chips, Empty, Header, Icon, Pebble, Ripple } from './ui'
+import { FreeTimePebble as Ripple } from './FreeTimePebble'
+import { Avatar, Avatars, Button, Chips, Empty, Header, Icon, Pebble } from './ui'
 
 export function PlanSummary({ draft }: { draft: Draft }) {
   const { state } = usePrototype()

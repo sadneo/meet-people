@@ -8,5 +8,20 @@
       "npx": "deny",
       "npx *": "deny"
     }
+  },
+
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": [
+        "pnpm",
+        "dlx",
+        "@playwright/mcp@latest",
+        "--executable-path",
+        "/home/aidan/.nix-profile/bin/chromium",
+        "--headless"
+      ],
+      "enabled": true
+    }
   }
 }

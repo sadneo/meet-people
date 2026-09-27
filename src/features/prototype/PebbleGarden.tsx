@@ -4,7 +4,7 @@ import { upgrades } from './economy'
 import { CommunityWorld, UpgradePicture } from './CommunityWorld'
 import { Icon, Pouch } from './ui'
 
-export function CommunityHome() {
+export function PebbleGarden() {
   const { state, dispatch } = usePrototype()
   const [open, setOpen] = useState(false)
   const [announcement, setAnnouncement] = useState('')

@@ -3,6 +3,27 @@ import { emptyCommunity, purchase, type Community, type UpgradeId } from './econ
 export const scenes = ['Home', 'Intro', 'Login', 'Register', 'Onboarding', 'Events', 'Event Detail', 'Free Time', 'Free Time Match', 'Activities', 'Planning', 'Review', 'Confirmed', 'Messages', 'Chat', 'Connection', 'Profile', 'Other User Profile', 'Settings'] as const
 export type Scene = typeof scenes[number]
 export const sceneSlug = (scene: Scene) => scene.toLowerCase().replaceAll(' ', '-')
+export const scenePaths: Record<Scene, string> = {
+  Home: '/',
+  Intro: '/intro',
+  Login: '/login',
+  Register: '/register',
+  Onboarding: '/onboarding',
+  Events: '/events',
+  'Event Detail': '/events/detail',
+  'Free Time': '/free-time',
+  'Free Time Match': '/free-time/matches',
+  Activities: '/free-time/activities',
+  Planning: '/free-time/plan',
+  Review: '/free-time/review',
+  Confirmed: '/free-time/confirmed',
+  Messages: '/messages',
+  Chat: '/messages/chat',
+  Connection: '/free-time/connection',
+  Profile: '/profile',
+  'Other User Profile': '/profile/person',
+  Settings: '/settings',
+}
 export const interests = ['Music', 'Gaming', 'Sports', 'Food', 'Outdoors', 'Art', 'Movies', 'Fitness', 'Study', 'Coffee', 'Photography']
 export const intents = ['Meet new people', 'Find people for events', 'Casual hangouts', 'Activity buddies', 'Study buddies']
 export const DEMO_CHAPTER_REWARD = 10

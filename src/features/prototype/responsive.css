@@ -1,6 +1,5 @@
 /* Revision: a viewport-wide product canvas, with readable utility layouts inside it. */
 .pt-app { display: flex; flex-direction: column; }
-.pt-topbar { width: 100%; max-width: none; padding-inline: clamp(28px, 4vw, 112px); }
 .pt-main { width: 100%; max-width: none; flex: 1; padding-inline: clamp(28px, 4vw, 112px); }
 .pt-review-tools { flex-wrap: wrap; flex-shrink: 0; position: relative; z-index: 40; }
 .pt-dev-economy { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
@@ -101,6 +100,9 @@
   .pt-settings > section { max-width: 1000px; }
   .pt-settings > .pt-button, .pt-settings > .pt-hint { grid-column: 1 / -1; justify-self: start; }
 }
+@media (min-width: 801px) {
+  .pt-main { padding-bottom: 42px; }
+}
 @media (max-width: 899px) {
   .pt-messages-workspace { display: block; }
   .pt-inbox-pane, .pt-conversation-pane { padding: 0; border: 0; }
@@ -127,7 +129,6 @@
   .pt-scene-free-time-match .pt-match-overview { min-height: 650px; }
 }
 @media (max-width: 620px) {
-  .pt-topbar { padding-inline: 20px; }
   .pt-main { padding-inline: 18px; }
   .pt-review-tools { gap: 6px 8px; padding-block: 6px; }
   .pt-dev-economy { margin-left: 0; gap: 6px; width: 100%; }

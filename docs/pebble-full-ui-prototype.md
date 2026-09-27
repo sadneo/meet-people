@@ -1,8 +1,8 @@
 # Pebble multi-screen design review
 
-Branch: `feature/pebble-full-ui-prototype`. Entry: `http://localhost:3000/prototype` after `pnpm dev`.
+Entry: `http://localhost:3000/` after `pnpm dev`.
 
-This is an isolated, frontend-only design prototype. Its only shared application change is a lazy-loaded `/prototype` route. The existing `/`, `/community`, fallback route, Community components, backend, schemas, environment files, dependencies, and lockfile are unchanged.
+This frontend-only design is now the main application. Primary screens use canonical routes: `/`, `/events`, `/free-time`, `/messages`, `/profile`, and `/settings`. The earlier Community milestone remains available only at `/prototype/yzcommunity`.
 
 
 ## Focused community revision
@@ -22,7 +22,7 @@ Review: Intro/replay; Home before and after purchases at 390px, 1440px, and 3840
 
 ## Strongest demo (about 90 seconds)
 
-1. Open **Free Time** from the bottom navigation. Home is now exclusively the virtual community.
+1. Open **Free Time** from the navigation. Home is exclusively the virtual community.
 2. Keep **Later today** → **Continue**.
 3. Keep **Low-key** → **Continue**.
 4. Keep **Nearby** → **Find people**.
@@ -45,9 +45,9 @@ The gray **DEV · Design review** toolbar is shown only by Vite development mode
 - Messages, Chat, Connection
 - Profile, Other User Profile, Settings
 
-The URL records the scene (`/prototype?scene=free-time`), so browser Back/Forward works. Draft choices survive scene navigation. Refresh resets planning/profile/chat state. The community balance, purchases, and already-earned chapter receipts persist locally. Direct jumps to later planning scenes show a useful start action if prerequisites have not been chosen. Complete the main flow to review populated confirmation and group chat screens.
+Each screen has a path, including `/events`, `/free-time/matches`, and `/messages/chat`, so browser Back/Forward works without query-string scenes. Draft choices survive in-app navigation. Refresh resets planning/profile/chat state. The community balance, purchases, and already-earned chapter receipts persist locally. Direct jumps to later planning screens show a useful start action if prerequisites have not been chosen.
 
-**Empty states** toggles sample empty screens in Events, Messages, and Free Time Match. This control is separate from the product UI. The five real navigation tabs are Events / Free Time / Home / Messages / Profile; Settings is inside Profile.
+**Empty states** toggles sample empty screens in Events, Messages, and Free Time Match. This control is separate from the product UI. Desktop places the logo and primary tabs at the top with Profile and Settings on the right. Mobile uses five bottom tabs; Settings remains inside Profile.
 
 ## Other interactive references
 
@@ -62,19 +62,19 @@ The URL records the scene (`/prototype?scene=free-time`), so browser Back/Forwar
 
 ## Identity and implementation choices
 
-- Home recomposes the existing Community pixel primitives (stones, trees, flowers, cottages) into a viewport-wide SVG landscape, without editing the original `/community` world. Cream, moss/grass greens, terracotta, rounded controls, friendly stones, the cloth pouch, and occasional motion come from Community.
+- Home recomposes the existing Community pixel primitives (stones, trees, flowers, cottages) into a viewport-wide SVG landscape, without editing the earlier `/prototype/yzcommunity` world. Cream, moss/grass greens, terracotta, rounded controls, friendly stones, the cloth pouch, and occasional motion come from Community.
 - `feature/meet-planning-ui` was inspected with read-only Git commands. People context, shared availability/conflict labels, progressive planning, exact meeting-point summaries, and editable review/confirmation informed this implementation. No files were merged, cherry-picked, or copied wholesale from that branch.
 - New screens use scoped `.pt-*` styles and shared buttons, chips, avatars, icons, typography, and navigation. No new dependencies.
 - `prefers-reduced-motion` disables CSS movement and skips the opening cinematic. Essential form/reward transitions still finish; Skip animation is available during the opening and chapter reward moments.
 
 ## Explicit limits
 
-All people, interests, overlap, availability, events, places, prices, messages, and rewards are fixtures or React state. No API calls, auth, backend persistence, uploads, geolocation, event ingestion, matchmaking, real invitations, reporting backend, or economy is implemented. The app supports one active demo plan; confirming a new plan replaces it. Settings switches and stock photos are design references. The world has local, manual purchases and a clickable Pebble, not a simulation. The cinematic is a lightweight 2D CSS/SVG interpretation, not 3D. Desktop keeps the five tabs, with wider utility layouts, a conversation list beside chat, and an event preview above 1800px. No production-ready moderation or account workflows are claimed.
+All people, interests, overlap, availability, events, places, prices, messages, and rewards are fixtures or React state. No API calls, auth, backend persistence, uploads, geolocation, event ingestion, matchmaking, real invitations, reporting backend, or economy is implemented. The app supports one active demo plan; confirming a new plan replaces it. Settings switches and stock photos are design references. The world has local, manual purchases and a clickable Pebble, not a simulation. The cinematic is a lightweight 2D CSS/SVG interpretation, not 3D. Desktop uses top navigation, wider utility layouts, a conversation list beside chat, and an event preview above 1800px. No production-ready moderation or account workflows are claimed.
 
 ## Validation
 
-- `pnpm verify`: passed TypeScript, ESLint, 17 Vitest tests, production web and API builds. The existing main application chunk still has Vite's non-blocking size warning.
-- All 19 Playwright browser tests passed, including purchases at 390px/1440px/3840px, persistence/reset, Intro replay, viewport-edge mascot behavior, and responsive event/conversation panes. Production preview also confirmed that DEV controls are absent and Home fills the viewport with all five tabs.
+- `pnpm verify`: passes TypeScript, ESLint, 21 Vitest tests, and production web/API builds.
+- All 20 Playwright browser tests pass, including canonical routes, desktop/mobile app shells, purchases at 390px/1440px/3840px, persistence/reset, Intro replay, viewport-edge mascot behavior, and responsive event/conversation panes.
 - Browser coverage: connected path at 1440px and 390px, all scenes at 360px, plan edits and state consistency, disabled conflicts/incomplete confirmation, onboarding completion/unique rewards, animation skip/reduced motion, report/block controls, event filters, empty states, and existing Community behavior.
 - Windows browser command (existing Playwright dependency, installed Edge):
 

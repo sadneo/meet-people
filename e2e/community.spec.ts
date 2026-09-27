@@ -14,7 +14,7 @@ async function openActivity(page: Page, title: string) {
 
 test('the verified mock reward loop grows, customizes, and resets on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/community')
+  await page.goto('/prototype/yzcommunity')
   await enterCommunity(page)
   await expect(page.getByRole('img', { name: 'A single smiling pebble in a sunlit meadow' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Sage roof' })).toBeDisabled()
@@ -58,7 +58,7 @@ test('the verified mock reward loop grows, customizes, and resets on mobile', as
 })
 
 test('proof, partial collection, and confirmations survive closing the activity', async ({ page }) => {
-  await page.goto('/community')
+  await page.goto('/prototype/yzcommunity')
   await enterCommunity(page)
   await openActivity(page, 'A little walk, a new friend')
   await page.getByRole('button', { name: 'Add demo proof' }).click()
@@ -75,7 +75,7 @@ test('proof, partial collection, and confirmations survive closing the activity'
 })
 
 test('intro supports keyboard, scatters all expressions, and leaves no hidden focus layer', async ({ page }) => {
-  await page.goto('/community')
+  await page.goto('/prototype/yzcommunity')
   const intro = page.getByRole('button', { name: 'Open Pebble pouch' })
   await intro.focus()
   await page.keyboard.press('Enter')
@@ -89,7 +89,7 @@ test('intro supports keyboard, scatters all expressions, and leaves no hidden fo
 
 test('reduced motion retains the intro, reward flow, and static world', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/community')
+  await page.goto('/prototype/yzcommunity')
   expect(await page.locator('.pebble-pouch').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
   await enterCommunity(page)
   expect(await page.locator('.pebble-stone-bob').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
@@ -101,7 +101,7 @@ test('reduced motion retains the intro, reward flow, and static world', async ({
 })
 
 test('intro, world, and reward dialog fit narrow and wide screens without changing Home', async ({ page }) => {
-  await page.goto('/community')
+  await page.goto('/prototype/yzcommunity')
   for (const width of [320, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
@@ -120,6 +120,5 @@ test('intro, world, and reward dialog fit narrow and wide screens without changi
     await page.getByRole('button', { name: 'Community', exact: true }).click()
   }
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Meet People' })).toBeVisible()
-  expect(await page.locator('body').evaluate(body => getComputedStyle(body).display)).toBe('grid')
+  await expect(page.getByRole('heading', { name: 'Your Pebble community' })).toBeAttached()
 })

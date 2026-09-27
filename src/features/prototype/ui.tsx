@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { people, type Person } from './model'
 
 export function Pebble({ expression = 'happy', className = '' }: { expression?: 'happy' | 'neutral' | 'surprised'; className?: string }) {
@@ -34,4 +34,3 @@ export function Header({ title, sub, back, action }: { title: string; sub?: stri
 export function Button({ children, onClick, secondary = false, disabled = false, type = 'button', className = '' }: { children: ReactNode; onClick?: () => void; secondary?: boolean; disabled?: boolean; type?: 'button' | 'submit'; className?: string }) { return <button type={type} onClick={onClick} disabled={disabled} className={`pt-button ${secondary ? 'pt-secondary' : ''} ${className}`}>{children}</button> }
 export function Chips({ options, values, onChange, multi = false, label }: { options: string[]; values: string[]; onChange: (values: string[]) => void; multi?: boolean; label: string }) { return <div className="pt-chips" role="group" aria-label={label}>{options.map(value => <button type="button" key={value} aria-pressed={values.includes(value)} onClick={() => onChange(multi ? (values.includes(value) ? values.filter(v => v !== value) : [...values, value]) : [value])}>{values.includes(value) && <Icon name="check" size={16} />}{value}</button>)}</div> }
 export function Empty({ title, text, action, onClick }: { title: string; text: string; action: string; onClick: () => void }) { return <div className="pt-empty"><Pebble expression="neutral" /><h2>{title}</h2><p>{text}</p><Button onClick={onClick}>{action}</Button></div> }
-export function Ripple({ count = 1, compact = false }: { count?: number; compact?: boolean }) { return <div className={`pt-ripple ${compact ? 'pt-ripple-compact' : ''}`} aria-hidden="true"><span /><span /><span />{Array.from({ length: count }, (_, i) => <div key={i} className="pt-ripple-stone" style={{ '--i': i, '--count': count } as CSSProperties}><Pebble expression={i === 2 ? 'surprised' : 'happy'} /></div>)}</div> }

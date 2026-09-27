@@ -5,7 +5,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 1000
   test(`community fills viewport and persists manual purchases at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport)
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('/prototype')
+    await page.goto('/')
     await expect(page.locator('.pt-community-world')).toBeVisible()
     const box = (await page.locator('.pt-community-home').boundingBox())!
     expect(box.x).toBe(0)
@@ -24,8 +24,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 1000
     await expect(page.getByLabel('Pebble balance', { exact: true })).toContainText('25')
     await page.keyboard.press('Escape')
     await expect(page.locator('.pt-upgrade-drawer')).toHaveCount(0)
-    await page.getByRole('navigation').getByRole('button', { name: 'Events', exact: true }).click()
-    await page.getByRole('navigation').getByRole('button', { name: 'Home', exact: true }).click()
+    await page.getByRole('link', { name: 'Events', exact: true }).click()
+    await page.getByRole('link', { name: 'Home', exact: true }).click()
     await page.reload()
     await expect(page.locator('[data-upgrade]')).toHaveCount(10)
     await expect(page.getByLabel('Pebble balance', { exact: true })).toContainText('25')
@@ -40,7 +40,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 1000
 }
 
 test('Intro can be replayed, reset during opening, and returns to Home', async ({ page }) => {
-  await page.goto('/prototype?scene=intro')
+  await page.goto('/intro')
   await expect(page.getByRole('button', { name: 'Open Pebble pouch' })).toHaveClass(/idle/)
   await page.getByRole('button', { name: 'Open Pebble pouch' }).click()
   await expect(page.locator('.pebble-scattered-stone')).toHaveCount(9)
@@ -62,7 +62,7 @@ test('curious Pebble visits actual viewport edges and retreats fully at 4K', asy
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.addInitScript(() => { Math.random = () => 0 })
   await page.clock.install()
-  await page.goto('/prototype?scene=login')
+  await page.goto('/login')
   const mascot = page.getByRole('button', { name: 'Say hello to the curious Pebble' })
   for (let edge = 0; edge < 4; edge++) {
     await expect(mascot).toHaveClass(new RegExp(`pt-edge-${edge}`))
@@ -81,7 +81,7 @@ test('curious Pebble visits actual viewport edges and retreats fully at 4K', asy
 
 test('invalid local economy data does not break the prototype', async ({ page }) => {
   await page.addInitScript(key => localStorage.setItem(key, '{broken'), COMMUNITY_STORAGE_KEY)
-  await page.goto('/prototype')
+  await page.goto('/')
   await expect(page.getByLabel('Pebble balance', { exact: true })).toContainText('0')
   await page.getByRole('button', { name: 'Add 100 demo Pebbles', exact: true }).click()
   await expect(page.getByLabel('Pebble balance', { exact: true })).toContainText('100')
@@ -90,7 +90,7 @@ test('invalid local economy data does not break the prototype', async ({ page })
 test('wide event preview follows selection and utility scenes remain responsive', async ({ page }) => {
   await page.setViewportSize({ width: 3840, height: 2160 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/prototype?scene=events')
+  await page.goto('/events')
   await expect(page.locator('.pt-event-preview')).toBeVisible()
   await page.getByRole('button', { name: 'View Coffee & conversation', exact: true }).click()
   await expect(page.getByLabel('Review scene')).toHaveValue('Events')
