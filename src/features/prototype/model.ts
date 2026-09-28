@@ -1,10 +1,12 @@
 import { emptyCommunity, purchase, type Community, type UpgradeId } from './economy'
 // Everything in this module is local design-review data, not a service contract.
-export const scenes = ['Home', 'Intro', 'Login', 'Register', 'Onboarding', 'Events', 'Event Detail', 'Free Time', 'Free Time Match', 'Activities', 'Planning', 'Review', 'Confirmed', 'Messages', 'Chat', 'Connection', 'Profile', 'Other User Profile', 'Settings'] as const
+export const scenes = ['Home', 'Matchmaking', 'Downtime Matchmaking', 'Intro', 'Login', 'Register', 'Onboarding', 'Events', 'Event Detail', 'Free Time', 'Free Time Match', 'Activities', 'Planning', 'Review', 'Confirmed', 'Messages', 'Chat', 'Connection', 'Profile', 'Other User Profile', 'Settings'] as const
 export type Scene = typeof scenes[number]
 export const sceneSlug = (scene: Scene) => scene.toLowerCase().replaceAll(' ', '-')
 export const scenePaths: Record<Scene, string> = {
   Home: '/',
+  Matchmaking: '/matchmaking',
+  'Downtime Matchmaking': '/downtime-matchmaking',
   Intro: '/intro',
   Login: '/login',
   Register: '/register',
