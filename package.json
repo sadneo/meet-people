@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names web,api \"pnpm dev:web\" \"pnpm dev:api\"",
     "dev:web": "vite",
-    "dev:api": "tsx watch api/server.ts",
+    "dev:api": "tsx watch --env-file-if-exists=.env.local api/server.ts",
     "build": "pnpm typecheck && pnpm build:web && pnpm build:api",
     "build:web": "vite build",
     "build:api": "tsc -p tsconfig.api.json",

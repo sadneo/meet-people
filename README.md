@@ -30,7 +30,11 @@ The Supabase wrapper automatically uses a rootless Podman socket when one is ava
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only | Supabase service-role key for privileged API operations. |
 | `PORT` | Server-only | API listening port; defaults to `3001`. |
 
-`pnpm env:local` writes the public local Supabase values to ignored `.env.local`. Never expose the service-role key through a `VITE_*` variable.
+`pnpm env:local` writes public browser values and private API values to ignored `.env.local`. The API development command loads this file. Never expose the service-role key through a `VITE_*` variable.
+
+The live events UI is available at `/events`. Apply pending local migrations with
+`pnpm exec supabase migration up --local`. See [the events backend guide](docs/events-backend.md)
+for sign-in, persistent event groups, verification, and later prototype merging.
 
 ## SB Engaged ingestion
 

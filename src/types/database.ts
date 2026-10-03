@@ -34,6 +34,116 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_group_members: {
+        Row: {
+          event_id: string
+          group_id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          event_id: string
+          group_id: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          event_id?: string
+          group_id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_group_members_event_id_user_id_fkey"
+            columns: ["event_id", "user_id"]
+            isOneToOne: true
+            referencedRelation: "event_interests"
+            referencedColumns: ["event_id", "user_id"]
+          },
+          {
+            foreignKeyName: "event_group_members_group_id_event_id_fkey"
+            columns: ["group_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "event_groups"
+            referencedColumns: ["id", "event_id"]
+          },
+        ]
+      }
+      event_groups: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_groups_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_interests: {
+        Row: {
+          created_at: string
+          event_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_interests_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_interests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "event_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      event_profiles: {
+        Row: {
+          display_name: string
+          user_id: string
+        }
+        Insert: {
+          display_name: string
+          user_id: string
+        }
+        Update: {
+          display_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ingestion_runs: {
         Row: {
           accepted_count: number
@@ -189,6 +299,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      event_categories: { Args: never; Returns: Json }
+      event_company_action: {
+        Args: {
+          p_action: string
+          p_event_id: string
+          p_name: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      event_company_snapshot: {
+        Args: { p_event_id: string; p_user_id: string }
+        Returns: Json
+      }
+      event_interest_counts: { Args: { p_event_ids: string[] }; Returns: Json }
       reconcile_sbengaged_full_sync: {
         Args: {
           p_seen_external_ids: string[]

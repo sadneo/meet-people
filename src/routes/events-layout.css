@@ -1,0 +1,14 @@
+.events-standalone-shell {
+  background: #faf8f0;
+  min-height: 100dvh;
+}
+.events-standalone-main {
+  padding: 36px clamp(20px, 4vw, 112px) calc(var(--navigation-height) + 48px);
+  max-width: 2600px;
+  margin: 0 auto;
+}
+@media (max-width: 700px) {
+  .events-standalone-main {
+    padding: 24px 20px calc(var(--navigation-height) + 32px);
+  }
+}
