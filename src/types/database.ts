@@ -34,13 +34,310 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      event_group_members: {
+        Row: {
+          event_id: string
+          group_id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          event_id: string
+          group_id: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          event_id?: string
+          group_id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_group_members_event_id_user_id_fkey"
+            columns: ["event_id", "user_id"]
+            isOneToOne: true
+            referencedRelation: "event_interests"
+            referencedColumns: ["event_id", "user_id"]
+          },
+          {
+            foreignKeyName: "event_group_members_group_id_event_id_fkey"
+            columns: ["group_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "event_groups"
+            referencedColumns: ["id", "event_id"]
+          },
+        ]
+      }
+      event_groups: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_groups_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_interests: {
+        Row: {
+          created_at: string
+          event_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_interests_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_interests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "event_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      event_profiles: {
+        Row: {
+          display_name: string
+          user_id: string
+        }
+        Insert: {
+          display_name: string
+          user_id: string
+        }
+        Update: {
+          display_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ingestion_runs: {
+        Row: {
+          accepted_count: number
+          created_at: string
+          deleted_count: number
+          error_summary: Json
+          fetched_count: number
+          finished_at: string | null
+          id: string
+          inactivated_count: number
+          missed_count: number
+          mode: string
+          request_count: number
+          reset_count: number
+          skipped_count: number
+          source: string
+          started_at: string
+          status: string
+          updated_at: string
+          upserted_count: number
+          window_ends_at: string | null
+          window_starts_at: string | null
+        }
+        Insert: {
+          accepted_count?: number
+          created_at?: string
+          deleted_count?: number
+          error_summary?: Json
+          fetched_count?: number
+          finished_at?: string | null
+          id?: string
+          inactivated_count?: number
+          missed_count?: number
+          mode: string
+          request_count?: number
+          reset_count?: number
+          skipped_count?: number
+          source: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          upserted_count?: number
+          window_ends_at?: string | null
+          window_starts_at?: string | null
+        }
+        Update: {
+          accepted_count?: number
+          created_at?: string
+          deleted_count?: number
+          error_summary?: Json
+          fetched_count?: number
+          finished_at?: string | null
+          id?: string
+          inactivated_count?: number
+          missed_count?: number
+          mode?: string
+          request_count?: number
+          reset_count?: number
+          skipped_count?: number
+          source?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          upserted_count?: number
+          window_ends_at?: string | null
+          window_starts_at?: string | null
+        }
+        Relationships: []
+      }
+      listings: {
+        Row: {
+          address: string | null
+          category: string | null
+          city: string | null
+          created_at: string
+          description: string | null
+          details_synced_at: string | null
+          ends_at: string | null
+          external_id: string
+          id: string
+          image_url: string | null
+          last_synced_at: string | null
+          latitude: number | null
+          listing_type: string
+          location_name: string | null
+          longitude: number | null
+          missed_sync_count: number
+          postal_code: string | null
+          region: string | null
+          source: string
+          source_url: string | null
+          starts_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          category?: string | null
+          city?: string | null
+          created_at?: string
+          description?: string | null
+          details_synced_at?: string | null
+          ends_at?: string | null
+          external_id: string
+          id?: string
+          image_url?: string | null
+          last_synced_at?: string | null
+          latitude?: number | null
+          listing_type?: string
+          location_name?: string | null
+          longitude?: number | null
+          missed_sync_count?: number
+          postal_code?: string | null
+          region?: string | null
+          source: string
+          source_url?: string | null
+          starts_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          category?: string | null
+          city?: string | null
+          created_at?: string
+          description?: string | null
+          details_synced_at?: string | null
+          ends_at?: string | null
+          external_id?: string
+          id?: string
+          image_url?: string | null
+          last_synced_at?: string | null
+          latitude?: number | null
+          listing_type?: string
+          location_name?: string | null
+          longitude?: number | null
+          missed_sync_count?: number
+          postal_code?: string | null
+          region?: string | null
+          source?: string
+          source_url?: string | null
+          starts_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      event_categories: { Args: never; Returns: Json }
+      event_company_action: {
+        Args: {
+          p_action: string
+          p_event_id: string
+          p_name: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      event_company_snapshot: {
+        Args: { p_event_id: string; p_user_id: string }
+        Returns: Json
+      }
+      event_interest_counts: { Args: { p_event_ids: string[] }; Returns: Json }
+      reconcile_sbengaged_full_sync: {
+        Args: {
+          p_seen_external_ids: string[]
+          p_window_ends_at: string
+          p_window_starts_at: string
+        }
+        Returns: {
+          inactivated_count: number
+          missed_count: number
+          reset_count: number
+        }[]
+      }
+      reconcile_ticketmaster_full_sync: {
+        Args: {
+          p_seen_external_ids: string[]
+          p_window_ends_at: string
+          p_window_starts_at: string
+        }
+        Returns: {
+          inactivated_count: number
+          missed_count: number
+          reset_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -4,7 +4,8 @@ import Community from './routes/Community'
 import PebbleApp, { ImmersiveLayout, IntroScreen } from './routes/PebbleApp'
 import { AppShell } from './features/prototype/AppShell'
 import { Auth, Onboarding } from './features/prototype/Onboarding'
-import { EventDetail, EventsScreen } from './features/prototype/Browse'
+import { EventDetail, EventsScreen } from './features/events/Browse'
+import { eventDetailRoute, eventsPath } from './features/events/routes'
 import { ActivityPaths, ConfirmedPlan, FreeTime, Matches, Planning, ReviewPlan } from './features/prototype/Planning'
 import { Chat, Connection, Messages, ProfileScreen, Settings } from './features/prototype/Social'
 import { PebbleGarden } from './features/prototype/PebbleGarden'
@@ -23,8 +24,8 @@ function App() {
           <Route index element={<PebbleGarden />} />
           <Route path="matchmaking" element={<MatchmakingHome />} />
           <Route path="downtime-matchmaking" element={<DowntimeMatchmaking />} />
-          <Route path="events" element={<EventsScreen />} />
-          <Route path="events/detail" element={<EventDetail />} />
+          <Route path={eventsPath} element={<EventsScreen />} />
+          <Route path={eventDetailRoute} element={<EventDetail />} />
           <Route path="free-time" element={<FreeTime />} />
           <Route path="free-time/matches" element={<Matches />} />
           <Route path="free-time/activities" element={<ActivityPaths />} />
