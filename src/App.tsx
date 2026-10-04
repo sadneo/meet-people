@@ -7,13 +7,13 @@ import { Auth, Onboarding } from './features/prototype/Onboarding'
 import { EventDetail, EventsScreen } from './features/events/Browse'
 import { eventDetailRoute, eventsPath } from './features/events/routes'
 import { ActivityPaths, ConfirmedPlan, FreeTime, Matches, Planning, ReviewPlan } from './features/prototype/Planning'
-import { Chat, Connection, Messages, ProfileScreen, Settings } from './features/prototype/Social'
+import { Chat, ChatDetails, Connection, Messages, ProfileScreen, Settings } from './features/prototype/Social'
 import { PebbleGarden } from './features/prototype/PebbleGarden'
 import MatchmakingHome from './features/prototype/MatchmakingHome'
 import DowntimeMatchmaking from './features/prototype/DowntimeMatchmaking'
 
 function MessagesWorkspace() {
-  return <div className="pt-messages-workspace"><section className="pt-inbox-pane"><Messages /></section><section className="pt-conversation-pane"><Chat /></section></div>
+  return <div className="pt-messages-workspace"><section className="pt-inbox-pane" aria-label="Conversation inbox"><Messages /></section><section className="pt-conversation-pane" aria-label="Selected conversation"><Chat /></section><aside className="pt-chat-details" aria-label="Conversation details"><ChatDetails /></aside></div>
 }
 
 function App() {

@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { usePrototype } from './context'
 import { activities, interests, people, planDate, planTime } from './model'
 import { Avatar, Avatars, Button, Chips, Empty, Header, Icon, Pebble } from './ui'
+import { jamieMessages, sampleConversations } from './messaging'
+import './messages.css'
 
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -10,25 +12,98 @@ function Modal({ title, children, onClose }: { title: string; children: ReactNod
   return <dialog ref={ref} className="pt-dialog" aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose() }}><div className="pt-section-heading"><h2 id={titleId}>{title}</h2><button className="pt-icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></button></div>{children}</dialog>
 }
 export function Messages() {
-  const { state, dispatch, go, empty, setEmpty, setChatPerson } = usePrototype()
-  const read = state.readChannels.includes('jamie')
+  const { state, dispatch, go, empty, setEmpty, chatPerson, setChatPerson } = usePrototype()
+  const [search, setSearch] = useState('')
   const activity = activities.find(a => a.id === state.plan?.activity)
-  return <><Header title="Messages" sub="Good plans start with a conversation." />{empty ? <Empty title="Your conversations start here" text="Find someone with a little time in common." action="Find people" onClick={() => { setEmpty(false); go('Free Time') }} /> : <div className="pt-conversations">{state.plan && <button className="pt-conversation" onClick={() => { setChatPerson(null); go('Chat') }}><span className="pt-group-avatar"><Avatars ids={state.plan.people} /></span><span><strong>You, {state.plan.people.map(id => people.find(p => p.id === id)?.first).join(' & ')}</strong><span>{state.messages.plan?.at(-1) ?? `${activity?.short} · ${planTime(state.plan)}`}</span><small className="pt-badge">Plan confirmed</small></span><small>Now<Icon name="arrow" size={17} /></small></button>}{!state.blocked.includes('jamie') && <button className="pt-conversation" onClick={() => { dispatch({ type: 'read', channel: 'jamie' }); setChatPerson('jamie'); go('Chat') }}><Avatar person={people[0]} /><span><strong>Jamie Chen</strong><span>{state.messages.jamie?.at(-1) ?? 'Coffee sounds good! When are you free?'}</span><small>Planning a coffee</small></span><small>2:42 PM{!read && <span className="pt-unread" aria-label="Unread conversation" />}</small></button>}{state.blocked.includes('jamie') && !state.plan && <Empty title="No conversations to show" text="Find people with something in common." action="Find people" onClick={() => go('Free Time')} />}</div>}</>
+  const selected = chatPerson ?? (state.plan ? 'plan' : 'jamie')
+  const visible = sampleConversations.filter(item => !state.blocked.includes(item.id) && `${people.find(person => person.id === item.id)?.name} ${state.messages[item.id]?.at(-1) ?? item.preview}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
+  return <>
+    <Header title="Messages" sub="Good plans start with a conversation." />
+    {!empty && <label className="pt-conversation-search"><Icon name="search" /><span className="pt-sr-only">Search conversations</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search conversations..." /></label>}
+    {empty ? <Empty title="Your conversations start here" text="Find someone with a little time in common." action="Find people" onClick={() => { setEmpty(false); go('Free Time') }} /> : <div className="pt-conversations">
+      {state.plan && !search && <button className={`pt-conversation ${selected === 'plan' ? 'is-selected' : ''}`} onClick={() => { setChatPerson(null); go('Chat') }}><span className="pt-group-avatar"><Avatars ids={state.plan.people} /></span><span><strong>You, {state.plan.people.map(id => people.find(p => p.id === id)?.first).join(' & ')}</strong><span>{state.messages.plan?.at(-1) ?? `${activity?.short} · ${planTime(state.plan)}`}</span><small className="pt-badge">Plan confirmed</small></span><small>Now</small></button>}
+      {visible.map(item => {
+        const person = people.find(person => person.id === item.id)!
+        return <button key={item.id} className={`pt-conversation ${selected === item.id ? 'is-selected' : ''}`} aria-current={selected === item.id ? 'true' : undefined} onClick={() => { dispatch({ type: 'read', channel: item.id }); setChatPerson(item.id); go('Chat') }}><Avatar person={person} /><span><strong>{person.name}</strong><span>{state.messages[item.id]?.at(-1) ?? item.preview}</span></span><small>{item.time}{item.unread && !state.readChannels.includes(item.id) && <span className="pt-unread" aria-label="Unread conversation" />}</small></button>
+      })}
+      {!visible.length && <p className="pt-search-empty">{search ? 'No conversations found. Try another name.' : 'No conversations to show. Find people through matching.'}</p>}
+    </div>}
+  </>
 }
 export function Chat() {
-  const { state, dispatch, go, chatPerson, setPersonId } = usePrototype()
-  const [message, setMessage] = useState('')
+  const { state, dispatch, go, empty, chatPerson, setPersonId } = usePrototype()
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [notice, setNotice] = useState<string | null>(null)
+  const [emojiOpen, setEmojiOpen] = useState(false)
+  const attachment = useRef<HTMLInputElement>(null)
   const bottom = useRef<HTMLDivElement>(null)
   const channel = chatPerson ?? (state.plan ? 'plan' : 'jamie')
+  const message = drafts[channel] ?? ''
+  const setMessage = (text: string) => setDrafts(drafts => ({ ...drafts, [channel]: text.slice(0, 1000) }))
   const conversation = state.messages[channel] ?? []
   const person = people.find(p => p.id === chatPerson) ?? people[0]
   const group = !chatPerson && state.plan
-  const blocked = chatPerson ? state.blocked.includes(chatPerson) : !!state.plan?.people.some(id => state.blocked.includes(id))
+  const blocked = group ? !!state.plan?.people.some(id => state.blocked.includes(id)) : state.blocked.includes(person.id)
   const plan = group ? state.plan! : null
   const activity = activities.find(a => a.id === plan?.activity)
-  useEffect(() => { if (conversation.length) bottom.current?.scrollIntoView({ block: 'nearest' }) }, [conversation.length])
-  const startPlan = () => { dispatch({ type: 'draft', patch: { people: [person.id], activity: 'coffee', time: '' } }); go('Planning') }
-  return <><Header title={group ? `You, ${plan!.people.map(id => people.find(p => p.id === id)?.first).join(' & ')}` : person.name} sub={group ? 'Group conversation · demo' : 'Campus · demo conversation'} back={() => go('Messages')} action={!group && <button className="pt-avatar-link" aria-label="View profile" onClick={() => { setPersonId(person.id); go('Other User Profile') }}><Avatar person={person} size="small" /></button>} /><section className="pt-chat"><div className="pt-chat-date">SAT, SEP 26 · DEMO MESSAGES</div>{blocked ? <div className="pt-inline-notice">A blocked person is in this conversation. Sending is disabled in this demo. <button className="pt-text-button" onClick={() => go('Settings')}>Manage blocked users</button></div> : <><div className="pt-chat-bubble">{group ? 'Great, let’s make it happen!' : 'Hey! I noticed we’re both into coffee and music.'}</div><div className="pt-chat-bubble is-mine">{group ? 'Here’s our plan. See you there!' : 'Coffee sounds like a good start.'}</div></>}<div className="pt-shared-plan"><div className="pt-section-heading"><span className="pt-badge">{plan ? 'Confirmed' : 'Planning'}</span><span className="pt-mini-pebbles"><Pebble /><Pebble /></span></div><h2>{activity?.name ?? 'Make time for a coffee'}</h2>{plan ? <><p><strong>{planDate(plan)} · {planTime(plan)}</strong></p><p><Icon name="pin" size={17} />{activity?.place}</p><p>You + {plan.people.map(id => people.find(p => p.id === id)?.first).join(' + ')}</p><div className="pt-button-row"><Button onClick={() => go('Confirmed')}>View plan</Button><Button secondary onClick={() => { dispatch({ type: 'edit-plan' }); go('Planning') }}>Change plan</Button></div></> : <><p>You + {person.first} · time and place to decide</p><Button disabled={blocked} onClick={startPlan}>Make a plan<Icon name="arrow" size={18} /></Button></>}</div>{conversation.map((text, i) => <div className="pt-chat-bubble is-mine" key={i}>{text}</div>)}<div ref={bottom} /><form className="pt-composer" onSubmit={e => { e.preventDefault(); if (!blocked && message.trim()) { dispatch({ type: 'message', text: message, channel }); setMessage('') } }}><label className="pt-sr-only" htmlFor="pt-message">Message</label><input id="pt-message" value={message} maxLength={1000} disabled={blocked} onChange={e => setMessage(e.target.value)} placeholder="Write a demo message…" autoComplete="off" /><Button type="submit" disabled={!message.trim() || blocked}>Send<Icon name="arrow" size={18} /></Button></form><p className="pt-hint">Only visible here. No real messages are sent.</p></section></>
+  useEffect(() => {
+    const chat = bottom.current?.parentElement
+    if (chat) chat.scrollTop = conversation.length ? chat.scrollHeight : 0
+  }, [channel, conversation.length])
+  const startPlan = () => { dispatch({ type: 'draft', patch: { people: plan?.people ?? [person.id], activity: 'coffee', time: '' } }); go('Planning') }
+  const samples = group ? [{ text: 'Great, let’s make it happen!', time: '2:34 PM', mine: false }, { text: 'Here’s our plan. See you there!', time: '2:36 PM', mine: true }] : person.id === 'jamie' ? jamieMessages : [{ text: sampleConversations.find(item => item.id === person.id)?.preview.replace('...', '') ?? 'Hey! Good to meet you.', time: '11:18 AM', mine: false }]
+  if (empty) return <div className="pt-chat-placeholder"><Icon name="messages" size={48} /><h2>A good conversation starts here.</h2><p>Choose matching to meet someone new.</p></div>
+  return <>
+    <header className="pt-chat-header">
+      <button className="pt-icon-button pt-chat-back" aria-label="Back" onClick={() => go('Messages')}><Icon name="back" /></button>
+      <div className="pt-chat-identity">
+        {group ? <Avatars ids={plan!.people} /> : <button className="pt-avatar-link" aria-label="View profile" onClick={() => { setPersonId(person.id); go('Other User Profile') }}><Avatar person={person} /></button>}
+        <div><h1 tabIndex={-1}>{group ? `You, ${plan!.people.map(id => people.find(p => p.id === id)?.first).join(' & ')}` : person.name}</h1><p><Icon name="matchmaking" size={19} />{group ? 'From your shared plan' : 'Met through event matchmaking'}</p></div>
+      </div>
+      <div className="pt-chat-tools"><button aria-label="Voice call" className="pt-chat-tool" onClick={() => setNotice('Voice call')}><Icon name="phone" /></button><button aria-label="Video call" className="pt-chat-tool" onClick={() => setNotice('Video call')}><Icon name="video" /></button><button aria-label="Conversation options" className="pt-chat-tool" onClick={() => setNotice('Conversation options')}><Icon name="more" /></button></div>
+      <Button className="pt-chat-plan" disabled={blocked} onClick={startPlan}>Make a plan</Button>
+    </header>
+    <section className="pt-chat">
+      <div className="pt-chat-date"><span>SAT, SEP 26 · DEMO MESSAGES</span></div>
+      {blocked ? <div className="pt-inline-notice">A blocked person is in this conversation. Sending is disabled in this demo. <button className="pt-text-button" onClick={() => go('Settings')}>Manage blocked users</button></div> : samples.map((item, index) => <div className={`pt-message-row ${item.mine ? 'is-mine' : ''}`} key={`${channel}-${index}`}>{!item.mine && <Avatar person={person} size="small" />}<div className="pt-message-content"><div className={`pt-chat-bubble ${item.mine ? 'is-mine' : ''}`}>{item.text}</div><time>{item.time}</time></div></div>)}
+      {plan && <div className="pt-shared-plan">
+        <span className="pt-badge">Confirmed</span>
+        <h2>{activity?.name ?? 'Make time for a coffee'}</h2>
+        <p><strong>{planDate(plan)} · {planTime(plan)}</strong></p><p><Icon name="pin" size={17} />{activity?.place}</p><p>You + {plan.people.map(id => people.find(p => p.id === id)?.first).join(' + ')}</p><div className="pt-button-row"><Button onClick={() => go('Confirmed')}>View plan</Button><Button secondary onClick={() => { dispatch({ type: 'edit-plan' }); go('Planning') }}>Change plan</Button></div>
+      </div>}
+      {conversation.map((text, i) => <div className="pt-message-row is-mine" key={i}><div className="pt-message-content"><div className="pt-chat-bubble is-mine">{text}</div><span className="pt-message-sent">Just now · demo</span></div></div>)}
+      <div ref={bottom} />
+    </section>
+    <form className="pt-composer" onSubmit={e => { e.preventDefault(); if (!blocked && message.trim()) { dispatch({ type: 'message', text: message, channel }); setMessage('') } }}>
+      <button className="pt-chat-tool" type="button" aria-label="Attach a file" disabled={blocked} onClick={() => attachment.current?.click()}><Icon name="attachment" /></button><input ref={attachment} type="file" hidden aria-label="Choose demo attachment" onChange={event => { const file = event.target.files?.[0]; if (file) setMessage(`${message}${message ? ' ' : ''}[Demo attachment: ${file.name}]`); event.target.value = '' }} />
+      <div className="pt-composer-field"><label className="pt-sr-only" htmlFor="pt-message">Message</label><input id="pt-message" value={message} maxLength={1000} disabled={blocked} onChange={e => setMessage(e.target.value)} placeholder="Write a message..." autoComplete="off" /><button type="button" className="pt-chat-tool" aria-label="Add an emoji" aria-expanded={emojiOpen} disabled={blocked} onClick={() => setEmojiOpen(!emojiOpen)}><Icon name="smile" /></button>{emojiOpen && <div className="pt-emoji-picker" aria-label="Choose an emoji">{['😊', '☕', '👋', '🌿', '🎉'].map(emoji => <button type="button" key={emoji} aria-label={`Insert ${emoji}`} onClick={() => { setMessage(message + emoji); setEmojiOpen(false) }}>{emoji}</button>)}</div>}</div><Button type="submit" disabled={!message.trim() || blocked}>Send<Icon name="arrow" size={18} /></Button>
+    </form>
+    {notice && <Modal title={notice} onClose={() => setNotice(null)}>{notice === 'Conversation options' ? <><Button secondary onClick={() => { setPersonId(person.id); go('Other User Profile') }}>View profile</Button><Button secondary onClick={() => { setNotice(null); go('Settings') }}>Privacy and blocked users</Button></> : <p>Calls are not connected in this demo. Keep the conversation going with a message, or make a plan to meet.</p>}</Modal>}
+  </>
+}
+export function ChatDetails() {
+  const { state, dispatch, go, empty, chatPerson, setPersonId } = usePrototype()
+  const [detail, setDetail] = useState<'cafe' | 'event' | null>(null)
+  const person = people.find(person => person.id === chatPerson) ?? people[0]
+  const group = !chatPerson && state.plan
+  const blocked = group ? state.plan!.people.some(id => state.blocked.includes(id)) : state.blocked.includes(person.id)
+  const startPlan = () => { dispatch({ type: 'draft', patch: { people: group ? state.plan!.people : [person.id], activity: 'coffee', time: '' } }); go('Planning') }
+  if (empty) return null
+  return <>
+    <section className="pt-contact-card">
+      <img className="pt-contact-cover" src="/prototype/cafe-interior.jpg" alt="A warm café with plants and wooden tables" />
+      <div className="pt-contact-body"><button className="pt-contact-avatar pt-avatar-link" aria-label={`View ${person.first}'s profile`} onClick={() => { setPersonId(person.id); go('Other User Profile') }}><Avatar person={person} size="large" /><span className="pt-demo-presence" aria-label="Sample presence indicator" /></button>
+        <h2>{person.name}</h2><p className="pt-contact-source"><Icon name="matchmaking" size={19} />Met through event matchmaking</p>
+        <div className="pt-contact-facts"><span><Icon name="graduation" size={19} />College student</span><span><Icon name="pin" size={19} />On campus</span><span><Icon name="cake" size={19} />{person.id === 'jamie' ? 'She/her' : 'Student'}</span></div>
+        <p className="pt-contact-bio">{person.id === 'jamie' ? 'I love good coffee, live music, and exploring new spots around campus. Always up for a meaningful conversation!' : person.bio}</p>
+        <div className="pt-contact-interests"><h3>Mutual interests</h3><div>{person.interests.filter(interest => state.profile.interests.includes(interest)).map(interest => <span key={interest}><Icon name={interest === 'Coffee' ? 'coffee' : interest === 'Music' ? 'music' : 'leaf'} size={19} />{interest === 'Music' ? 'Live music' : interest === 'Outdoors' ? 'Walks' : interest}</span>)}</div></div>
+      </div>
+    </section>
+    <section className="pt-conversation-next"><Icon name="events" size={24} /><div><h2>Turn this into something real</h2><p>You both seem interested in meeting up.<br />Make a plan and keep the momentum going!</p><Button disabled={blocked} onClick={startPlan}>Make a plan<Icon name="arrow" size={18} /></Button></div></section>
+    <button className="pt-shared-context" onClick={() => setDetail('cafe')}><div><span><Icon name="pin" size={17} />You both saved</span><strong>Brew House Café</strong><small>Café · 0.4 mi from campus</small></div><img src="/prototype/cafe-interior.jpg" alt="Brew House Café sample interior" /><Icon name="back" size={18} /></button>
+    <button className="pt-shared-context" onClick={() => setDetail('event')}><div><span><Icon name="events" size={17} />Met at</span><strong>Fall Social Mixer</strong><small>Campus event · Sep 12, 2024</small></div><img src="/prototype/social-mixer.jpg" alt="An evening social gathering" /><Icon name="back" size={18} /></button>
+    {detail && <Modal title={detail === 'cafe' ? 'Brew House Café' : 'Fall Social Mixer'} onClose={() => setDetail(null)}><p>{detail === 'cafe' ? 'A cozy café, 0.4 miles from campus. This is a sample saved place for the prototype.' : 'A sample campus event from Sep 12, 2024. Event matchmaking and attendance are simulated.'}</p><Button disabled={blocked} onClick={startPlan}>Make a plan</Button></Modal>}
+  </>
 }
 export function Connection() {
   const { personId, state, dispatch, go, setChatPerson } = usePrototype()

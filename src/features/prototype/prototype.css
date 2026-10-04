@@ -31,18 +31,18 @@ body:has(.pt-app) #root { width: 100%; }
 .pt-review-tools label { margin: 0; }
 .pt-review-tools select { padding: 4px 10px; min-height: 35px; width: 185px; font-size: 14px; }
 .pt-review-tools .pt-empty-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; }
-.pt-app-header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: clamp(24px, 4vw, 70px); padding: 18px clamp(28px, 4vw, 112px); border-bottom: 1px solid var(--pt-line); background: #fffdf6; }
+.pt-app-header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: clamp(8px, 1.5vw, 40px); padding: 18px var(--pt-gutter); border-bottom: 1px solid var(--pt-line); background: #fffdf6; }
 .pt-logo-link { line-height: 0; }
 .pt-desktop-nav, .pt-account-nav { display: flex; align-items: center; gap: 6px; }
 .pt-desktop-nav { justify-content: center; }
-.pt-app-header nav a { min-height: 44px; padding: 9px 13px; border-radius: 10px; display: inline-flex; align-items: center; gap: 7px; color: #5d6857; font-size: 14px; font-weight: 700; text-decoration: none; }
+.pt-app-header nav a { min-height: 44px; padding: 9px clamp(5px, 1vw, 13px); border-radius: 10px; display: inline-flex; align-items: center; gap: 7px; color: #5d6857; font-size: 14px; font-weight: 700; text-decoration: none; }
 .pt-app-header nav a:hover { background: #f0f2e6; }
 .pt-app-header nav a.is-active { color: #3e5c31; background: #e8eddc; }
 .pt-desktop-nav .pt-pebble { width: 29px; height: 29px; }
 .pt-brand { font-size: 35px; font-weight: 900; letter-spacing: -2px; line-height: 1; position: relative; display: inline-block; color: #3f4d36; }
 .pt-brand-dot { color: var(--pt-coral); }
 .pt-brand-leaf { position: absolute; width: 12px; height: 7px; background: #819962; transform: rotate(-35deg); right: 9px; top: -4px; border-radius: 9px 0; }
-.pt-main { max-width: 1088px; padding: 18px 28px 124px; margin: 0 auto; text-align: left; animation: pt-screen-in .25s ease both; }
+.pt-main { padding: 18px var(--pt-gutter) calc(var(--pt-navigation-clearance) + 24px); margin: 0 auto; text-align: left; animation: pt-screen-in .25s ease both; }
 .pt-page-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 25px; }
 .pt-page-heading > div { flex: 1; min-width: 0; }
 .pt-page-heading p { margin-top: 6px; }
@@ -375,26 +375,22 @@ body:has(.pt-app) #root { width: 100%; }
   .pt-review-tools > span { display: none; }
   .pt-app-header { display: none; }
   .pt-bottom-nav { display: grid; }
-  .pt-event-grid { grid-template-columns: repeat(2,1fr); }
   .pt-origin-layout { gap: 15px; }
   .pt-stone-camera { padding: 8px; gap: 8px; }
   .pt-chapter-stone { padding: 20px 10px; min-height: 146px; }
   .pt-chapter-form { padding: 20px; }
   .pt-chapter-stone strong { font-size: 13px; }
-}
-@media (max-width: 620px) {
   .pt-review-tools { padding: 6px 12px; gap: 9px; flex-wrap: wrap; }
   .pt-review-tools > strong { font-size: 11px; }
   .pt-review-tools select { width: 152px; font-size: 12px; }
   .pt-review-tools .pt-empty-toggle { font-size: 11px; gap: 3px; }
   .pt-review-tools input[type=checkbox] { width: 16px; height: 16px; }
   .pt-brand { font-size: 32px; }
-  .pt-main { padding: 17px 18px 116px; }
+  .pt-main { padding-top: 20px; }
   .pt-page-heading { margin-bottom: 21px; }
   .pt-page-heading p { font-size: 14px; }
   .pt-page-heading h1 { font-size: 25px; }
-  .pt-icon-button { width: 40px; height: 40px; }
-  .pt-bottom-nav { bottom: 0; width: 100%; border-radius: 18px 18px 0 0; border-bottom: 0; padding: 5px 6px max(7px, env(safe-area-inset-bottom)); }
+  .pt-bottom-nav { bottom: 0; width: 100%; height: var(--pt-navigation-clearance); border-radius: 18px 18px 0 0; border-bottom: 0; padding: 5px 6px calc(7px + var(--pt-safe-area-bottom)); }
   .pt-bottom-nav a { min-height: 58px; font-size: 11px; }
   .pt-surface { padding: 20px; }
   .pt-free-layout { display: block; }

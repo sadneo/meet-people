@@ -26,6 +26,15 @@ const paths: Record<string, ReactNode> = {
   settings: <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="8" cy="6" r="2" fill="currentColor" /><circle cx="16" cy="12" r="2" fill="currentColor" /><circle cx="9" cy="18" r="2" fill="currentColor" /></>,
   matchmaking: <><circle cx="9" cy="8" r="3" /><circle cx="17" cy="10" r="2.5" /><path d="M3 21v-2a6 6 0 0 1 12 0v2M14 15.5a5 5 0 0 1 7 4.5v1" /></>,
   shield: <><path d="m12 2 8 3v6c0 6-8 11-8 11S4 17 4 11V5Z" /><path d="m8 11 3 3 5-6" /></>,
+  search: <><circle cx="10.5" cy="10.5" r="7" /><path d="m16 16 5 5" /></>,
+  phone: <path d="m7 3 3 5-3 3c2 3 3 4 6 6l3-3 5 3c0 3-2 5-5 4C9 19 5 15 3 8 2 5 4 3 7 3Z" />,
+  video: <><rect x="3" y="5" width="13" height="14" rx="2" /><path d="m16 9 5-3v12l-5-3" /></>,
+  more: <><circle cx="12" cy="5" r="1" fill="currentColor" /><circle cx="12" cy="12" r="1" fill="currentColor" /><circle cx="12" cy="19" r="1" fill="currentColor" /></>,
+  attachment: <path d="m8 13 6-7a3 3 0 0 1 4 4l-7 8a5 5 0 0 1-7-7l8-9" />,
+  smile: <><circle cx="12" cy="12" r="9" /><path d="M8 9h.1M16 9h.1M7 14q5 6 10 0" /></>,
+  graduation: <><path d="m2 8 10-5 10 5-10 5Zm4 3v6q6 5 12 0v-6M22 8v8" /></>,
+  cake: <><path d="M4 12h16v9H4ZM4 15q2 4 4 0 2 4 4 0 2 4 4 0 2 4 4 0M8 7v5m4-5v5m4-5v5M8 3v1m4-1v1m4-1v1" /></>,
+  leaf: <><path d="M20 3C9 2 3 7 5 15c7 3 15-1 15-12ZM4 21 15 8" /></>,
 }
 export function Icon({ name, size = 22 }: { name: string; size?: number }) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] ?? paths.profile}</svg> }
 export function Brand() { return <span className="pt-brand">pebble<span className="pt-brand-leaf" /><span className="pt-brand-dot">.</span></span> }

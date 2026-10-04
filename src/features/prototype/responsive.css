@@ -1,6 +1,9 @@
 /* Revision: a viewport-wide product canvas, with readable utility layouts inside it. */
+/* Body ownership also supplies clearance to preferences portalled outside the app. */
+body:has(.pt-app) { --pt-safe-area-bottom: env(safe-area-inset-bottom, 0px); --pt-navigation-height: 72px; --pt-navigation-clearance: 0px; --pt-gutter: clamp(28px, 4vw, 112px); }
 .pt-app { display: flex; flex-direction: column; }
-.pt-main { width: 100%; max-width: none; flex: 1; padding-inline: clamp(28px, 4vw, 112px); }
+.pt-main { width: 100%; max-width: none; min-width: 0; flex: 1; padding-inline: var(--pt-gutter); }
+.pt-main > *, .pt-main section { min-width: 0; }
 .pt-review-tools { flex-wrap: wrap; flex-shrink: 0; position: relative; z-index: 40; }
 .pt-dev-economy { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 .pt-dev-economy button { min-height: 33px; padding: 5px 10px; font-size: 12px; background: #f6f3e9; border: 1px solid #a6ac98; border-radius: 6px; }
@@ -24,7 +27,7 @@
 .pt-matchmaking-entry-copy p { margin-top: 5px; color: #53604b; font-size: 13px; font-weight: 600; }
 .pt-matchmaking-entry-copy small { display: block; margin-top: 4px; color: #717869; font-size: 11px; }
 .pt-matchmaking-actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.pt-matchmaking-actions .pt-button { min-height: 42px; padding: 8px 15px; font-size: 13px; }
+.pt-matchmaking-actions .pt-button { min-height: 44px; padding: 8px 15px; font-size: 14px; }
 .pt-upgrade-panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 4; width: min(420px, calc(100% - 48px)); pointer-events: none; transform: translateX(100%); transition: transform .25s ease-out; will-change: transform; }
 .pt-upgrade-panel.is-open { transform: translateX(0); }
 .pt-upgrade-tab { position: absolute; left: -44px; top: 45%; z-index: 1; padding: 14px 7px; border: 1px solid #a8b28e; border-right: 0; border-radius: 12px 0 0 12px; background: #faf6e4; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: -4px 3px 12px #43543b14; min-width: 44px; pointer-events: auto; }
@@ -36,7 +39,7 @@
 .pt-upgrade-drawer h2 { font-size: 21px; outline: none; }
 .pt-upgrade-drawer > header p { margin-top: 9px; font-size: 15px; }
 .pt-upgrade-drawer > header p strong { color: #405837; font-size: 23px; }
-.pt-upgrade-list { overflow-y: auto; overscroll-behavior: contain; padding: 4px 20px 105px; }
+.pt-upgrade-list { overflow-y: auto; overscroll-behavior: contain; padding: 4px 20px calc(var(--pt-navigation-clearance) + 24px); }
 .pt-upgrade-item { display: grid; grid-template-columns: 74px 1fr; gap: 12px; padding: 20px 0; border-bottom: 1px solid #dce0ce; }
 .pt-upgrade-picture { width: 76px; height: 76px; align-self: center; background: #e4ebd6; border-radius: 13px; padding: 3px; }
 .pt-upgrade-item h3 { font-size: 17px; line-height: 1.3; }
@@ -76,73 +79,37 @@
 .pt-event-image { height: clamp(210px, 19vw, 360px); }
 .pt-event-card { max-width: 670px; }
 .pt-event-grid { max-width: 2100px; }
-.pt-event-preview { display: none; }
 .pt-event-detail { width: 100%; }
 .pt-detail-hero { height: clamp(280px, 30vh, 580px); }
 .pt-detail-body { grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr); gap: clamp(30px, 5vw, 130px); }
 .pt-description { max-width: 68ch; }
 .pt-detail-body > section { max-width: 680px; }
-.pt-messages-workspace { display: grid; grid-template-columns: minmax(300px, .34fr) minmax(0, 1fr); gap: 0; min-height: calc(100dvh - 205px); }
-.pt-inbox-pane { border-right: 1px solid var(--pt-line); padding-right: 24px; }
-.pt-inbox-pane .pt-conversation { padding: 20px 13px; gap: 11px; }
-.pt-conversation-pane { padding-left: clamp(26px, 4vw, 100px); min-width: 0; }
-.pt-conversation-pane .pt-chat { max-width: 1050px; }
-.pt-conversation-pane .pt-page-heading { max-width: 1050px; margin-inline: auto; }
-.pt-conversation-pane .pt-chat { display: flex; flex-direction: column; min-height: calc(100dvh - 310px); }
-.pt-conversation-pane .pt-composer { margin-top: auto; }
-.pt-conversation-pane .pt-shared-plan { width: min(540px, 100%); }
-@media (min-width: 900px) {
+@media (width > 800px) {
   .pt-curious { --mascot-size: clamp(140px, 6vw, 220px); }
   .pt-free-layout { grid-template-columns: 1fr 1fr; gap: clamp(40px, 5vw, 130px); min-height: calc(100dvh - 340px); }
   .pt-pond-panel .pt-ripple { width: clamp(320px, 28vw, 650px); height: clamp(270px, 29vh, 550px); }
   .pt-pond-panel .pt-ripple-stone .pt-pebble { width: clamp(64px, 5vw, 115px); height: auto; }
   .pt-preferences { width: 100%; max-width: 760px; justify-self: center; padding: clamp(25px, 3vw, 60px); }
-  .pt-scene-free-time-match .pt-main { display: grid; grid-template-columns: minmax(300px, .75fr) minmax(420px, 1.35fr); column-gap: clamp(35px, 4vw, 100px); align-content: start; }
+  .pt-scene-free-time-match .pt-main { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1.35fr); column-gap: clamp(24px, 4vw, 100px); align-content: start; }
   .pt-scene-free-time-match .pt-page-heading { grid-column: 1 / -1; }
   .pt-scene-free-time-match .pt-match-overview { grid-column: 1; grid-row: 2 / 4; flex-direction: column; justify-content: center; text-align: center; gap: 26px; padding: clamp(24px, 4vw, 75px); margin: 0; background: #eaf0dd; border-radius: 22px; min-height: min(65vh, 800px); }
   .pt-match-overview .pt-ripple { width: min(100%, 410px); height: clamp(190px, 25vh, 300px); }
   .pt-scene-free-time-match .pt-people-list { grid-column: 2; grid-row: 2; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); align-content: start; }
   .pt-scene-free-time-match .pt-action-bar { grid-column: 2; align-self: start; }
-  .pt-profile-layout { grid-template-columns: minmax(290px, .55fr) minmax(400px, 1.1fr); gap: clamp(45px, 6vw, 180px); }
+  .pt-profile-layout { grid-template-columns: minmax(0, .55fr) minmax(0, 1.1fr); gap: clamp(24px, 6vw, 180px); }
   .pt-profile-person { max-width: 560px; width: 100%; justify-self: center; }
   .pt-profile-details { max-width: 1200px; }
-  .pt-planning-grid { grid-template-columns: minmax(420px, 1.2fr) minmax(320px, 1fr); gap: clamp(25px, 5vw, 100px); }
+  .pt-planning-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(24px, 5vw, 100px); }
   .pt-plan-aside { max-width: 850px; width: 100%; justify-self: end; }
-  .pt-time-options { grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); }
+  .pt-time-options { grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr)); }
   .pt-settings { max-width: none; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px 60px; }
   .pt-settings > section { max-width: 1000px; }
   .pt-settings > .pt-button, .pt-settings > .pt-hint { grid-column: 1 / -1; justify-self: start; }
-}
-@media (min-width: 801px) {
   .pt-main { padding-bottom: 42px; }
 }
-@media (max-width: 899px) {
-  .pt-messages-workspace { display: block; }
-  .pt-inbox-pane, .pt-conversation-pane { padding: 0; border: 0; }
-  .pt-scene-messages .pt-conversation-pane, .pt-scene-chat .pt-inbox-pane { display: none; }
-  .pt-conversation-pane .pt-chat { display: block; min-height: 0; }
-  .pt-conversation-pane .pt-composer { margin-top: 24px; }
-}
-@media (min-width: 1800px) {
-  .pt-events-workspace { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(480px, 1fr); gap: clamp(40px, 4vw, 110px); }
-  .pt-event-grid { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); max-width: none; }
-  .pt-event-card { max-width: none; }
-  .pt-event-card.is-current { border-color: #728d5c; box-shadow: 0 0 0 1px #728d5c; }
-  .pt-event-preview { display: block; border-left: 1px solid var(--pt-line); padding-left: 35px; }
-  .pt-event-preview .pt-detail-body { grid-template-columns: 1fr; gap: 28px; }
-  .pt-event-preview .pt-detail-hero { height: clamp(300px, 28vh, 500px); }
-  .pt-event-preview .pt-detail-body > section { max-width: none; }
-  .pt-event-preview .pt-detail-body > div { max-width: 70ch; }
-  .pt-scene-free-time-match .pt-person-row { flex-direction: column; align-items: start; position: relative; padding: 30px; }
-  .pt-scene-free-time-match .pt-person-row .pt-avatar { width: 110px; height: 110px; }
-  .pt-scene-free-time-match .pt-select-person { position: absolute; top: 30px; right: 25px; }
-  .pt-scene-free-time-match .pt-name-link { font-size: 23px !important; }
-  .pt-scene-free-time-match .pt-person-row > div { flex: initial; }
-  .pt-scene-free-time-match .pt-people-list { align-self: start; }
-  .pt-scene-free-time-match .pt-match-overview { min-height: 650px; }
-}
-@media (max-width: 620px) {
-  .pt-main { padding-inline: 18px; }
+@media (max-width: 800px) {
+  body:has(.pt-app) { --pt-gutter: 20px; --pt-navigation-clearance: calc(var(--pt-navigation-height) + var(--pt-safe-area-bottom)); }
+  .pt-scene-intro, .pt-scene-login, .pt-scene-register, .pt-scene-onboarding { --pt-navigation-clearance: 0px; }
   .pt-review-tools { gap: 6px 8px; padding-block: 6px; }
   .pt-dev-economy { margin-left: 0; gap: 6px; width: 100%; }
   .pt-dev-economy button { font-size: 10px; min-height: 29px; padding: 4px 8px; }
@@ -150,7 +117,7 @@
   .pt-world-wallet > svg { width: 45px; height: 48px; }
   .pt-world-wallet strong { font-size: 23px; }
   .pt-world-wallet > span > span { font-size: 11px; }
-  .pt-matchmaking-entry { left: 14px; bottom: calc(78px + env(safe-area-inset-bottom)); grid-template-columns: 88px minmax(0, 1fr); gap: 5px 12px; width: calc(100% - 28px); padding: 13px 14px; border-radius: 16px; }
+  .pt-matchmaking-entry { left: 14px; bottom: calc(var(--pt-navigation-clearance) + 12px); grid-template-columns: 88px minmax(0, 1fr); gap: 5px 12px; width: calc(100% - 28px); padding: 13px 14px; border-radius: 16px; }
   .pt-matchmaking-entry-pebbles { min-width: 88px; }
   .pt-matchmaking-entry-pebbles .pt-pebble { width: 42px; margin-right: -14px; }
   .pt-matchmaking-entry-pebbles .pt-pebble:nth-child(2) { width: 35px; }
@@ -159,7 +126,7 @@
   .pt-matchmaking-entry-copy p { font-size: 12px; }
   .pt-matchmaking-entry-copy small { display: none; }
   .pt-matchmaking-actions { grid-column: 1 / -1; }
-  .pt-matchmaking-actions .pt-button { min-height: 39px; padding: 7px 12px; }
+  .pt-matchmaking-actions .pt-button { min-height: 44px; padding: 7px 12px; flex: 1; }
   .pt-upgrade-drawer > header { padding: 18px 13px; }
   .pt-upgrade-drawer h2 { font-size: 18px; }
   .pt-upgrade-list { padding-inline: 13px; }

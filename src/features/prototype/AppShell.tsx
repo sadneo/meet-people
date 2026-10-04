@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { usePrototype } from './context'
 import { scenePaths, type Scene } from './model'
-import { Brand, Icon, Pebble } from './ui'
+import { Avatar, Brand, Icon, Pebble } from './ui'
 
 const primaryTabs: { label: Scene; icon: string }[] = [
   { label: 'Home', icon: 'home' },
@@ -16,7 +16,7 @@ function Tab({ label, icon, active }: { label: Scene; icon: string; active: bool
 }
 
 export function AppShell() {
-  const { scene } = usePrototype()
+  const { scene, state } = usePrototype()
   const { pathname } = useLocation()
   const main = useRef<HTMLElement>(null)
   const activeTab: Scene = scene === 'Event Detail' ? 'Events' : scene === 'Downtime Matchmaking' ? 'Matchmaking' : ['Free Time Match', 'Activities', 'Planning', 'Review', 'Confirmed', 'Connection'].includes(scene) ? 'Free Time' : scene === 'Chat' ? 'Messages' : ['Other User Profile', 'Settings'].includes(scene) ? 'Profile' : scene
@@ -31,7 +31,7 @@ export function AppShell() {
       <Link className="pt-logo-link" to="/" aria-label="Pebble home"><Brand /></Link>
       <nav className="pt-desktop-nav" aria-label="Primary navigation">{primaryTabs.map(tab => <Tab key={tab.label} {...tab} active={activeTab === tab.label} />)}</nav>
       <nav className="pt-account-nav" aria-label="Account navigation">
-        <Tab label="Profile" icon="profile" active={activeTab === 'Profile' && scene !== 'Settings'} />
+        <Link to={scenePaths.Profile} aria-label="Profile" className={activeTab === 'Profile' && scene !== 'Settings' ? 'is-active' : ''} aria-current={activeTab === 'Profile' && scene !== 'Settings' ? 'page' : undefined}><Avatar person={state.profile} size="small" /><span>Profile</span></Link>
         <Tab label="Settings" icon="settings" active={scene === 'Settings'} />
       </nav>
     </header>

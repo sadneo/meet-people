@@ -4,13 +4,13 @@ import { events, people } from './model'
 import { Avatar, Avatars, Button, Chips, Empty, Header, Icon } from './ui'
 
 export function EventsScreen() {
-  const { empty, setEmpty, go, setEventId, eventId, state } = usePrototype()
+  const { empty, setEmpty, go, setEventId, state } = usePrototype()
   const [category, setCategory] = useState('All')
-  const openEvent = (id: string) => { setEventId(id); if (!window.matchMedia('(min-width: 1800px)').matches) go('Event Detail') }
+  const openEvent = (id: string) => { setEventId(id); go('Event Detail') }
   const visible = events.filter(event => category === 'All' || event.category === category)
-  return <div className="pt-events-workspace"><section className="pt-events-feed"><Header title="Events around campus" sub="Find something worth showing up for." /><Chips label="Event category" options={['All', 'Music', 'Food', 'Outdoors']} values={[category]} onChange={([value]) => { setCategory(value); if (value !== 'All') setEventId(events.find(event => event.category === value)!.id) }} /><p className="pt-results-note"><Icon name="pin" size={16} />Around campus · sample events, not live listings</p>{empty ? <Empty title="A quiet calendar" text="No events to show here yet. Try another category." action="Show sample events" onClick={() => setEmpty(false)} /> : <div className="pt-event-grid">{visible.map(event => <article className={`pt-event-card ${event.id === eventId ? 'is-current' : ''}`} key={event.id}><button className="pt-event-image" aria-label={`View ${event.title}`} onClick={() => { openEvent(event.id) }}><img src={`/prototype/${event.image}`} alt={event.category === 'Music' ? 'Live stage with warm concert lighting' : event.category === 'Food' ? 'Coffee being prepared in a café' : 'Sunlight through green woodland'} /><span className="pt-price">{event.price}</span></button><div className="pt-event-copy"><span className="pt-eyebrow">{event.category} · {event.distance}</span><button className="pt-name-link" onClick={() => { openEvent(event.id) }}><h2>{event.title}</h2></button><p className="pt-event-date">{event.when}</p><p><Icon name="pin" size={16} />{event.place}</p><div className="pt-social-context"><Avatars ids={event.people.filter(id => !state.blocked.includes(id))} /><span>{event.people.filter(id => !state.blocked.includes(id)).length} people looking for company</span></div><Button secondary className="pt-wide" onClick={() => { openEvent(event.id) }}>See event & people<Icon name="arrow" size={18} /></Button></div></article>)}</div>}</section><aside className="pt-event-preview"><EventDetail preview /></aside></div>
+  return <div className="pt-events-workspace"><section className="pt-events-feed"><Header title="Events around campus" sub="Find something worth showing up for." /><Chips label="Event category" options={['All', 'Music', 'Food', 'Outdoors']} values={[category]} onChange={([value]) => { setCategory(value); if (value !== 'All') setEventId(events.find(event => event.category === value)!.id) }} /><p className="pt-results-note"><Icon name="pin" size={16} />Around campus · sample events, not live listings</p>{empty ? <Empty title="A quiet calendar" text="No events to show here yet. Try another category." action="Show sample events" onClick={() => setEmpty(false)} /> : <div className="pt-event-grid">{visible.map(event => <article className="pt-event-card" key={event.id}><button className="pt-event-image" aria-label={`View ${event.title}`} onClick={() => { openEvent(event.id) }}><img src={`/prototype/${event.image}`} alt={event.category === 'Music' ? 'Live stage with warm concert lighting' : event.category === 'Food' ? 'Coffee being prepared in a café' : 'Sunlight through green woodland'} /><span className="pt-price">{event.price}</span></button><div className="pt-event-copy"><span className="pt-eyebrow">{event.category} · {event.distance}</span><button className="pt-name-link" onClick={() => { openEvent(event.id) }}><h2>{event.title}</h2></button><p className="pt-event-date">{event.when}</p><p><Icon name="pin" size={16} />{event.place}</p><div className="pt-social-context"><Avatars ids={event.people.filter(id => !state.blocked.includes(id))} /><span>{event.people.filter(id => !state.blocked.includes(id)).length} people looking for company</span></div><Button secondary className="pt-wide" onClick={() => { openEvent(event.id) }}>See event & people<Icon name="arrow" size={18} /></Button></div></article>)}</div>}</section></div>
 }
-export function EventDetail({ preview = false }: { preview?: boolean }) {
+export function EventDetail() {
   const { eventId, go, state, setPersonId } = usePrototype()
   const [matchedEventId, setMatchedEventId] = useState<string | null>(null)
   const event = events.find(e => e.id === eventId) ?? events[0]
@@ -18,7 +18,7 @@ export function EventDetail({ preview = false }: { preview?: boolean }) {
   const matched = matchedEventId === event.id
 
   return <>
-    <Header title={preview ? 'Selected event' : 'Event details'} back={preview ? undefined : () => go('Events')} />
+    <Header title="Event details" back={() => go('Events')} />
     <article className="pt-event-detail">
       <img className="pt-detail-hero" src={`/prototype/${event.image}`} alt={`${event.category} event atmosphere; illustrative photo`} />
       <div className="pt-detail-body">

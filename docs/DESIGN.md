@@ -22,14 +22,17 @@ quiet, practical, and easy to scan.
 
 ## Product Structure
 
-Pebble has four product destinations: Home, Events, Chats, and Profile. There
-is no Community destination or separate Activities area.
+Pebble has five navigation destinations: Home, Matchmaking, Events, Messages,
+and Profile. Settings is a supporting account route. Free-time matching,
+activity selection, and planning are supporting flows rather than navigation
+destinations. There is no separate Community destination.
 
-- Home owns matching, the Pebble world, progression, balance, unlocks, and
-  world customization.
+- Home owns the Pebble world, progression, balance, unlocks, world
+  customization, and entry points into matching.
+- Matchmaking owns event and downtime matching preferences and actions.
 - Events owns activity discovery, event details, joining, attendance, and
   event rewards.
-- Chats owns conversations created through matches and events.
+- Messages owns conversations created through matches and events.
 - Profile owns identity, preferences, and settings.
 
 Use real routes and links for destinations. Do not reproduce product
@@ -86,7 +89,7 @@ must not make functional records slower to scan.
 
 | Role | Size | Weight | Notes |
 | --- | --- | --- | --- |
-| Wordmark | 3rem | 800 | Compact, rounded, used only on Home |
+| Wordmark | 3rem | 800 | Compact, rounded, used in desktop navigation and onboarding |
 | Page title | 1.75rem | 700 | One per standard screen; serif is optional |
 | Section title | 1.125rem | 700 | Introduces a meaningful group |
 | Body | 1rem | 450 | Default reading text |
@@ -102,8 +105,9 @@ AA contrast.
 ## Spacing And Shape
 
 Use a four-pixel spacing base: `4`, `8`, `12`, `16`, `20`, `24`, `32`, `40`,
-and `48` pixels. Standard screen content has `20px` horizontal padding on
-mobile and a `32px` maximum outer gutter on larger screens.
+and `48` pixels. Standard screen content has `20px` horizontal padding in
+compact layout. Expanded outer gutters scale from `28px` to `112px` with the
+viewport; readable text and individual records retain content-width limits.
 
 | Token | Value | Use |
 | --- | --- | --- |
@@ -117,34 +121,61 @@ an event, person, invitation, or profile summary.
 
 ## Layout
 
-The prototype is mobile-first. On desktop, retain a centered app frame rather
-than turning the product into a wide dashboard.
+The prototype uses a viewport-wide app shell with one app-wide width
+breakpoint: **800px and below is compact; above 800px is expanded**. Navigation,
+workspace panes, forms, actions, and sheets switch together at this boundary.
+Do not introduce feature-specific width breakpoints or viewport-dependent
+navigation behavior. Use flexible grids and `clamp()` for continuous sizing.
 
 ```text
-Desktop                         Mobile
-+---------------------+         +-----------------+
-|     app frame       |         |     content     |
-|                     |         |                 |
-|      page body      |         |   page body     |
-|                     |         |                 |
-|  Home Events Chats  |         | Home Events ... |
-+---------------------+         +-----------------+
+Expanded (>800px)                    Compact (<=800px)
++------------------------------+    +----------------------+
+| Brand  Primary nav  Account  |    | Single-pane content  |
+|                              |    |                      |
+| Workspace / supporting pane |    | Stacked actions      |
+|                              |    |                      |
++------------------------------+    | Persistent bottom nav|
+                                    +----------------------+
 ```
 
 Standard content is left-aligned. The Home wordmark, scene, matching status,
 and primary action are centered as a deliberate exception.
 
+| Area | Compact | Expanded |
+| --- | --- | --- |
+| Navigation | Five-item bottom bar; no desktop header | Header with primary and account navigation |
+| Messages | Inbox or conversation according to route; back action | Searchable inbox, conversation, and profile/plan context in three panes |
+| Events | Single-column list; detail route | Fluid card grid; same detail route |
+| Profile and planning | Stacked sections and actions | Side-by-side supporting sections |
+| Matchmaking | Stacked panels, full-width actions, preferences sheet | Grouped panels and centered preferences dialog |
+| Onboarding | Stacked scene and form | Scene and form side by side |
+
+The active shell owns `--pt-gutter`, `--pt-navigation-height`,
+`--pt-safe-area-bottom`, and `--pt-navigation-clearance`. Compact navigation is
+72px plus the bottom safe area. Page padding, Home overlays, upgrade lists,
+and preferences sheets derive clearance from these values. Expanded and
+immersive layouts reserve no bottom-navigation space. Intro, login,
+registration, and onboarding have no product navigation.
+
+Messaging uses viewport-height panes with independently scrolling content and
+a reachable composer. Short screens must preserve scrolling and access to
+actions. Height and reduced-motion queries may adapt usability without adding
+another width mode. Test 799px, 800px, and 801px as well as phone and wide
+desktop sizes.
+
 ## Components
 
 ### App shell
 
-Provides the page background, safe content area, centered desktop frame, and
-room for the persistent bottom navigation. It does not add a header by
-default.
+Provides the page background, viewport-wide frame, shared gutters, and
+navigation clearance. The active implementation is
+`src/features/prototype/AppShell.tsx`, inside `src/routes/PebbleApp.tsx`.
+It renders desktop and compact navigation; CSS selects the visible version.
+The older `src/design-system/AppShell.tsx` is not the routed product shell.
 
 ### Bottom navigation
 
-Has exactly four destinations: Home, Events, Chats, and Profile. Every item
+Has exactly five destinations: Home, Matchmaking, Events, Messages, and Profile. Every item
 uses an icon and visible text label. The current location is identified by
 color and a small indicator, not color alone.
 
@@ -295,5 +326,7 @@ This system intentionally excludes a remote font provider, icon package,
 asset pipeline, dark theme, elaborate elevation scale, and a broad component
 catalog. Add them only after a real product need appears.
 
-It also excludes a Community route, feature-local shell, competing token
-layer, and screenshot-specific component variants.
+It also excludes a Community product destination, competing shells, competing
+token layers, and screenshot-specific component variants. The separate
+`/prototype/yzcommunity` experiment is outside the routed product shell and
+its responsive-layout contract.

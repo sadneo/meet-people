@@ -43,6 +43,6 @@ test('app shell switches between desktop and mobile navigation', async ({ page }
   await expect(page.locator('.pt-app-header')).toBeHidden()
   await expect(page.locator('.pt-bottom-nav')).toBeVisible()
   await expect(page.locator('.pt-bottom-nav').getByRole('link')).toHaveCount(5)
-  await page.locator('.pt-bottom-nav').getByRole('link', { name: 'Free Time' }).click()
-  await expect(page).toHaveURL('/free-time')
+  await page.locator('.pt-bottom-nav').getByRole('link', { name: 'Matchmaking' }).click()
+  await expect(page).toHaveURL('/matchmaking')
 })

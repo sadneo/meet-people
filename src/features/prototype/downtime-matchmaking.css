@@ -83,7 +83,7 @@
 .downtime-tags span { border: 1px solid var(--dt-line); border-radius: 999px; background: #fff9ec; padding: 7px 10px; color: var(--dt-ink); font-size: .76rem; font-weight: 650; }
 .downtime-tags.compact span { border-color: transparent; background: #edf1df; color: var(--dt-pine); }
 
-@media (max-width: 620px) {
+@media (max-width: 800px) {
   .downtime-page { gap: 16px; }
   .downtime-hero { margin-top: 2px; }
   .downtime-hero h1 { font-size: clamp(2.45rem, 13vw, 3.4rem); }

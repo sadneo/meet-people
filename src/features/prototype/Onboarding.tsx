@@ -31,7 +31,7 @@ export function Onboarding() {
   const complete = () => {
     if (!valid || phase !== 'chapters') return
     // Bring the stone and pouch back into view before the mobile reward moment.
-    if (window.innerWidth <= 620) origin.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
+    if (window.matchMedia('(max-width: 800px)').matches) origin.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
     const ground = origin.current?.getBoundingClientRect()
     const stone = origin.current?.querySelector('.pt-chapter-stone.is-current')?.getBoundingClientRect()
     const pouch = origin.current?.querySelector('.pt-pouch-count > svg')?.getBoundingClientRect()

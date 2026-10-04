@@ -33,6 +33,10 @@ export const people = [
   { id: 'jamie', name: 'Jamie Chen', first: 'Jamie', photo: 'jamie.jpg', bio: 'Usually looking for a good coffee, a new playlist, or an excuse to be outside.', interests: ['Coffee', 'Music', 'Outdoors'], overlap: 'Coffee & low-key hangouts', time: '3–6 PM', color: 'sage' },
   { id: 'aaron', name: 'Aaron Patel', first: 'Aaron', photo: 'aaron.jpg', bio: 'Board games, pickup games, and finding the best food near campus.', interests: ['Gaming', 'Food', 'Sports'], overlap: 'Games & trying new food', time: '3–5 PM', color: 'clay' },
   { id: 'maya', name: 'Maya Brooks', first: 'Maya', photo: 'maya.jpg', bio: 'Camera in my bag. Always up for a walk or a quiet study session.', interests: ['Photography', 'Outdoors', 'Study'], overlap: 'Walks & study breaks', time: '4–6 PM', color: 'sand' },
+  { id: 'alex-park', name: 'Alex Park', first: 'Alex', photo: 'aaron.jpg', bio: 'Always up for live music, a good meal, and meeting someone new.', interests: ['Music', 'Food', 'Coffee'], overlap: 'Live music & coffee', time: '3–6 PM', color: 'sage' },
+  { id: 'taylor', name: 'Taylor Kim', first: 'Taylor', photo: 'maya.jpg', bio: 'Weekend farmers markets, long walks, and a good book.', interests: ['Outdoors', 'Food', 'Photography'], overlap: 'Walks & weekend markets', time: '4–6 PM', color: 'sand' },
+  { id: 'jordan', name: 'Jordan Lee', first: 'Jordan', photo: 'jordan.jpg', bio: 'Finding new places around campus, one coffee at a time.', interests: ['Coffee', 'Music', 'Food'], overlap: 'Coffee & new places', time: '3–6 PM', color: 'clay' },
+  { id: 'morgan', name: 'Morgan Park', first: 'Morgan', photo: 'morgan.jpg', bio: 'A little fresh air and something fun to look forward to.', interests: ['Outdoors', 'Music', 'Art'], overlap: 'Walks & live music', time: '3–6 PM', color: 'sage' },
 ]
 export type Person = typeof people[number]
 export const activities = [
@@ -60,7 +64,7 @@ export type Plan = Draft & { status: 'Confirmed' }
 export type State = { profile: Profile; draft: Draft; plan: Plan | null; completed: number[]; messages: Record<string, string[]>; blocked: string[]; settings: Record<string, boolean>; readChannels: string[]; community: Community }
 export const initialState: State = {
   community: emptyCommunity,
-  profile: { name: 'Alex', bio: 'Coffee breaks, new friends, and a little time outside.', photo: 'you.jpg', interests: ['Coffee', 'Music', 'Gaming'], intents: ['Meet new people'], usual: ['Afternoons'], distance: '5 miles', group: 'Either' },
+  profile: { name: 'Alex', bio: 'Coffee breaks, new friends, and a little time outside.', photo: 'you.jpg', interests: ['Coffee', 'Music', 'Gaming', 'Outdoors'], intents: ['Meet new people'], usual: ['Afternoons'], distance: '5 miles', group: 'Either' },
   draft: { when: 'Later today', date: '2026-09-26', customTime: '16:00', vibe: 'Low-key', distance: 'Nearby', people: [], activity: '', time: '', note: '' },
   plan: null, completed: [], messages: {}, blocked: [], settings: { notifications: true, availability: true, discoverable: true, location: false }, readChannels: [],
 }
