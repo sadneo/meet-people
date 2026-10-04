@@ -1,10 +1,7 @@
-@import "tailwindcss";
-@import "./design-system/tokens.css";
-
 :root {
-  font-family: var(--font-sans);
-  color: var(--color-ink);
-  background: var(--color-page);
+  font-family: Inter, system-ui, sans-serif;
+  color: #213547;
+  background: #f5f7fa;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -16,12 +13,20 @@
 html {
   min-width: 320px;
   min-height: 100%;
-  background: var(--color-page);
 }
 
 body {
   min-width: 320px;
   min-height: 100dvh;
+  margin: 0;
+}
+
+h1 {
+  margin-bottom: 0.5rem;
+  font-size: 3rem;
+}
+
+p {
   margin: 0;
 }
 

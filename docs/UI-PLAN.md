@@ -17,9 +17,9 @@ events, chat, profile, or Supabase data.
 | `/profile` | Review a concise student profile and preferences summary |
 | `*` | Show the existing not-found experience |
 
-There is no separate Match or Community route. Matching is Home's primary
-action. A future community or progression feature can be entered from the
-scene only when it grows into a meaningful destination.
+There is no separate Match, Community, or Activities route. Matching and world
+progression belong on Home. Activity discovery and participation belong under
+Events.
 
 ## Home
 
@@ -122,6 +122,6 @@ or image dependency.
 
 - Authentication and data fetching
 - Real matching, event registration, chats, or profile editing
-- Community/progression screen
+- Separate Community or Activities destinations
 - Pixel-art generation or an asset pipeline
 - A general-purpose component library or dark mode
