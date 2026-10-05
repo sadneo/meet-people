@@ -36,6 +36,7 @@ test('app shell switches between desktop and mobile navigation', async ({ page }
   await page.goto('/events')
   await expect(page.locator('.pt-app-header')).toBeVisible()
   await expect(page.locator('.pt-bottom-nav')).toBeHidden()
+  await page.getByRole('button', { name: 'Account menu' }).click()
   await expect(page.locator('.pt-account-nav').getByRole('link', { name: 'Profile' })).toBeVisible()
   await expect(page.locator('.pt-account-nav').getByRole('link', { name: 'Settings' })).toBeVisible()
 
@@ -46,3 +47,53 @@ test('app shell switches between desktop and mobile navigation', async ({ page }
   await page.locator('.pt-bottom-nav').getByRole('link', { name: 'Matchmaking' }).click()
   await expect(page).toHaveURL('/matchmaking')
 })
+
+for (const width of [801, 1280]) {
+  test(`avatar dropdown navigates and dismisses at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto('/events')
+    const trigger = page.getByRole('button', { name: 'Account menu' })
+    const options = page.locator('.pt-account-options')
+    await expect(options).toBeHidden()
+    const avatar = await trigger.getByRole('img').boundingBox()
+    expect(avatar!.width).toBe(44)
+    expect(avatar!.height).toBe(44)
+
+    await trigger.focus()
+    await page.keyboard.press('Enter')
+    await expect(options).toBeVisible()
+    const bounds = await options.boundingBox()
+    expect(bounds!.x).toBeGreaterThanOrEqual(0)
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
+    await page.keyboard.press('Tab')
+    await expect(options.getByRole('link', { name: 'Profile', exact: true })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(options).toBeHidden()
+    await expect(trigger).toBeFocused()
+
+    await trigger.click()
+    await trigger.click()
+    await expect(options).toBeHidden()
+    await trigger.click()
+    await page.getByRole('heading', { name: 'Events around campus' }).click()
+    await expect(options).toBeHidden()
+
+    await page.goto('/messages/chat')
+    await trigger.click()
+    expect(await options.evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)')
+    for (const link of await options.getByRole('link').all()) {
+      expect(await link.evaluate(element => {
+        const bounds = element.getBoundingClientRect()
+        return element.contains(document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2))
+      })).toBe(true)
+    }
+    await trigger.click()
+
+    for (const [name, route] of [['Profile', '/profile'], ['Settings', '/settings'], ['Log out', '/login']]) {
+      await trigger.click()
+      await options.getByRole('link', { name, exact: true }).click()
+      await expect(page).toHaveURL(route)
+      await expect(options).toBeHidden()
+    }
+  })
+}

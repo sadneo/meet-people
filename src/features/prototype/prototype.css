@@ -42,7 +42,16 @@ body:has(.pt-app) #root { width: 100%; }
 .pt-app-header .pt-brand { font-size: 28px; }
 .pt-app-header nav a:hover { background: #f0f2e6; }
 .pt-app-header nav a.is-active { color: #3e5c31; background: #e8eddc; }
-.pt-desktop-nav .pt-pebble { width: 20px; height: 20px; }
+.pt-app-header { position: relative; z-index: 30; }
+.pt-account-dropdown { position: relative; }
+.pt-account-dropdown > summary { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; list-style: none; }
+.pt-account-dropdown > summary::-webkit-details-marker { display: none; }
+.pt-account-nav .pt-account-dropdown .pt-avatar { display: block; width: 44px; height: 44px; border: 1px solid var(--pt-line); }
+.pt-account-dropdown > summary:focus-visible, .pt-account-options a:focus-visible { outline-color: var(--color-focus, #315f9b); }
+.pt-account-options { position: absolute; top: calc(100% + 8px); right: 0; z-index: 50; display: grid; min-width: 180px; padding: 8px; border: 1px solid var(--pt-line); border-radius: var(--radius-control, 14px); background: var(--color-surface, #ffffff); }
+.pt-app-header .pt-account-options a { color: var(--pt-ink); }
+.pt-account-options a:last-child { margin-top: 4px; border-top: 1px solid var(--pt-line); border-radius: 0; }
+.pt-desktop-nav .pt-pebble { width: 29px; height: 29px; }
 .pt-brand { font-size: 35px; font-weight: 900; letter-spacing: -2px; line-height: 1; position: relative; display: inline-block; color: #3f4d36; }
 .pt-brand-dot { color: var(--pt-coral); }
 .pt-brand-leaf { position: absolute; width: 12px; height: 7px; background: #819962; transform: rotate(-35deg); right: 9px; top: -4px; border-radius: 9px 0; }

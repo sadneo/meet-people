@@ -5,6 +5,15 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
     await page.setViewportSize({ width, height: 844 })
     await page.emulateMedia({ reducedMotion: 'reduce' })
     const compact = width <= 800
+    await page.goto('/events')
+    const gutters = await page.locator('.pt-main').evaluate(element => {
+      const style = getComputedStyle(element)
+      return [style.paddingLeft, style.paddingRight]
+    })
+    const headerHeight = (await page.locator('.pt-app-header').boundingBox())?.height
+    const brandDotColor = await page.locator('.pt-brand-dot').evaluate(element => getComputedStyle(element).color)
+    const shellFonts = await page.locator('.pt-app-header, .pt-bottom-nav').evaluateAll(elements => elements.map(element => getComputedStyle(element).font))
+    const brandFont = await page.locator('.pt-brand').evaluate(element => getComputedStyle(element).font)
     for (const route of ['/', '/events', '/events/detail', '/matchmaking', '/downtime-matchmaking', '/messages', '/messages/chat', '/profile', '/settings', '/free-time', '/free-time/matches', '/free-time/plan', '/register', '/onboarding']) {
       if (route === '/free-time/plan') {
         await page.goto('/messages/chat')
@@ -22,6 +31,33 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
       }
       await expect(page.locator('.pt-app-header')).toBeVisible({ visible: !compact })
       await expect(page.locator('.pt-bottom-nav')).toBeVisible({ visible: compact })
+      expect(await page.locator('.pt-app-header, .pt-bottom-nav').evaluateAll(elements => elements.map(element => getComputedStyle(element).font)), `${route} shell typography`).toEqual(shellFonts)
+      for (const font of await page.locator('.pt-brand').evaluateAll(elements => elements.map(element => getComputedStyle(element).font))) {
+        expect(font, `${route} brand typography`).toBe(brandFont)
+      }
+      for (const color of await page.locator('.pt-brand-dot').evaluateAll(elements => elements.map(element => getComputedStyle(element).color))) {
+        expect(color, `${route} brand dot`).toBe(brandDotColor)
+      }
+      if (route !== '/') {
+        expect(await page.locator('.pt-main').evaluate(element => {
+          const style = getComputedStyle(element)
+          return [style.paddingLeft, style.paddingRight]
+        }), `${route} shell gutters`).toEqual(gutters)
+      }
+      if (!compact) {
+        expect((await page.locator('.pt-app-header').boundingBox())!.height, `${route} header height`).toBe(headerHeight)
+        expect(await page.locator('.pt-desktop-nav').evaluate(element => getComputedStyle(element).transform), `${route} navigation offset`).toBe('none')
+      }
+
+      if (route === '/profile') {
+        await expect(page.locator('.pt-profile-mobile-header')).toBeVisible({ visible: compact })
+        if (compact) {
+          const portrait = await page.locator('.pt-profile-portrait').boundingBox()
+          const edit = await page.getByRole('button', { name: 'Edit profile', exact: true }).boundingBox()
+          expect(edit!.x).toBeGreaterThanOrEqual(portrait!.x + portrait!.width)
+          expect(edit!.height).toBeGreaterThanOrEqual(44)
+        }
+      }
 
       if (route.startsWith('/messages')) {
         await expect(page.locator('.pt-inbox-pane')).toBeVisible({ visible: !compact || route === '/messages' })
@@ -32,7 +68,7 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
           expect(composer!.y + composer!.height).toBeLessThanOrEqual(navigation?.y ?? 844)
         }
       }
-      const grid = route === '/profile' ? '.pt-profile-layout' : route === '/free-time/plan' ? '.pt-planning-grid' : route === '/matchmaking' ? '.match-detail-grid' : null
+      const grid = route === '/profile' ? '.pt-profile-support' : route === '/free-time/plan' ? '.pt-planning-grid' : route === '/matchmaking' ? '.match-detail-grid' : null
       if (grid) {
         const columns = await page.locator(grid).evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length)
         expect(columns, route).toBe(compact ? 1 : 2)

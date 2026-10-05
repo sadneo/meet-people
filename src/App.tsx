@@ -1,4 +1,6 @@
+import { useSyncExternalStore } from 'react'
 import { Route, Routes } from 'react-router'
+import { usePrototype } from './features/prototype/context'
 import NotFound from './routes/NotFound'
 import Community from './routes/Community'
 import PebbleApp, { ImmersiveLayout, IntroScreen } from './routes/PebbleApp'
@@ -12,8 +14,17 @@ import { PebbleGarden } from './features/prototype/PebbleGarden'
 import MatchmakingHome from './features/prototype/MatchmakingHome'
 import DowntimeMatchmaking from './features/prototype/DowntimeMatchmaking'
 
+function subscribeToCompactLayout(callback: () => void) {
+  const query = window.matchMedia('(max-width: 800px)')
+  query.addEventListener('change', callback)
+  return () => query.removeEventListener('change', callback)
+}
+
 function MessagesWorkspace() {
-  return <div className="pt-messages-workspace"><section className="pt-inbox-pane" aria-label="Conversation inbox"><Messages /></section><section className="pt-conversation-pane" aria-label="Selected conversation"><Chat /></section><aside className="pt-chat-details" aria-label="Conversation details"><ChatDetails /></aside></div>
+  const { scene } = usePrototype()
+  const compact = useSyncExternalStore(subscribeToCompactLayout, () => window.matchMedia('(max-width: 800px)').matches)
+  const chatVisible = !compact || scene === 'Chat'
+  return <div className="pt-messages-workspace"><section className="pt-inbox-pane" aria-label="Conversation inbox"><Messages chatVisible={chatVisible} /></section><section className="pt-conversation-pane" aria-label="Selected conversation"><Chat visible={chatVisible} /></section><aside className="pt-chat-details" aria-label="Conversation details"><ChatDetails /></aside></div>
 }
 
 function App() {

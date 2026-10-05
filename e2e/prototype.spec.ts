@@ -46,6 +46,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await page.getByRole('button', { name: 'Choose a time', exact: true }).click()
     await page.getByRole('button', { name: 'Review plan' }).click()
     await page.getByRole('button', { name: 'Confirm plan', exact: true }).click()
+    if (viewport.width > 800) await page.getByRole('button', { name: 'Account menu' }).click()
     await page.getByRole('link', { name: 'Profile', exact: true }).click()
     await expect(page.locator('.pt-profile-plan')).toContainText('A walk around campus')
     await page.getByRole('link', { name: 'Messages', exact: true }).click()

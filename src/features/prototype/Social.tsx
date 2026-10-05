@@ -1,9 +1,11 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { Link } from 'react-router'
 import { usePrototype } from './context'
 import { activities, interests, people, planDate, planTime } from './model'
-import { Avatar, Avatars, Button, Chips, Empty, Header, Icon, Pebble } from './ui'
+import { Avatar, Avatars, Brand, Button, Chips, Empty, Header, Icon, Pebble } from './ui'
 import { jamieMessages, sampleConversations } from './messaging'
 import './messages.css'
+import './profile.css'
 
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -16,26 +18,26 @@ function Modal({ title, children, onClose }: { title: string; children: ReactNod
   }, [])
   return <dialog ref={ref} className="pt-dialog" aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose() }}><div className="pt-section-heading"><h2 id={titleId}>{title}</h2><button className="pt-icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></button></div>{children}</dialog>
 }
-export function Messages() {
-  const { state, dispatch, go, empty, setEmpty, chatPerson, setChatPerson } = usePrototype()
+export function Messages({ chatVisible }: { chatVisible: boolean }) {
+  const { state, go, empty, setEmpty, chatPerson, setChatPerson } = usePrototype()
   const [search, setSearch] = useState('')
   const activity = activities.find(a => a.id === state.plan?.activity)
-  const selected = chatPerson ?? (state.plan ? 'plan' : 'jamie')
+  const selected = chatVisible ? chatPerson ?? (state.plan ? 'plan' : 'jamie') : null
   const visible = sampleConversations.filter(item => !state.blocked.includes(item.id) && `${people.find(person => person.id === item.id)?.name} ${state.messages[item.id]?.at(-1) ?? item.preview}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
   return <>
     <Header title="Messages" sub="Good plans start with a conversation." />
     {!empty && <label className="pt-conversation-search"><Icon name="search" /><span className="pt-sr-only">Search conversations</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search conversations..." /></label>}
     {empty ? <Empty title="Your conversations start here" text="Find someone with a little time in common." action="Find people" onClick={() => { setEmpty(false); go('Free Time') }} /> : <div className="pt-conversations">
       {state.plan && !search && <button className={`pt-conversation ${selected === 'plan' ? 'is-selected' : ''}`} onClick={() => { setChatPerson(null); go('Chat') }}><span className="pt-group-avatar"><Avatars ids={state.plan.people} /></span><span><strong>You, {state.plan.people.map(id => people.find(p => p.id === id)?.first).join(' & ')}</strong><span>{state.messages.plan?.at(-1) ?? `${activity?.short} · ${planTime(state.plan)}`}</span><small className="pt-badge">Plan confirmed</small></span><small>Now</small></button>}
-      {visible.map(item => {
+      {visible.map((item, index) => {
         const person = people.find(person => person.id === item.id)!
-        return <button key={item.id} className={`pt-conversation ${selected === item.id ? 'is-selected' : ''}`} aria-current={selected === item.id ? 'true' : undefined} onClick={() => { dispatch({ type: 'read', channel: item.id }); setChatPerson(item.id); go('Chat') }}><Avatar person={person} /><span><strong>{person.name}</strong><span>{state.messages[item.id]?.at(-1) ?? item.preview}</span></span><small>{item.time}{item.unread && !state.readChannels.includes(item.id) && <span className="pt-unread" aria-label="Unread conversation" />}</small></button>
+        return <Fragment key={item.id}>{(index > 0 || (state.plan && !search)) && <div className="pt-conversation-separator" aria-hidden="true" />}<button className={`pt-conversation ${selected === item.id ? 'is-selected' : ''}`} aria-current={selected === item.id ? 'true' : undefined} onClick={() => { setChatPerson(item.id); go('Chat') }}><Avatar person={person} /><span><strong>{person.name}</strong><span>{state.messages[item.id]?.at(-1) ?? item.preview}</span></span><small>{item.time}{item.unread && selected !== item.id && !state.readChannels.includes(item.id) && <span className="pt-unread" aria-label="Unread conversation" />}</small></button></Fragment>
       })}
       {!visible.length && <p className="pt-search-empty">{search ? 'No conversations found. Try another name.' : 'No conversations to show. Find people through matching.'}</p>}
     </div>}
   </>
 }
-export function Chat() {
+export function Chat({ visible }: { visible: boolean }) {
   const { state, dispatch, go, empty, chatPerson, setPersonId } = usePrototype()
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [notice, setNotice] = useState<string | null>(null)
@@ -51,6 +53,9 @@ export function Chat() {
   const blocked = group ? !!state.plan?.people.some(id => state.blocked.includes(id)) : state.blocked.includes(person.id)
   const plan = group ? state.plan! : null
   const activity = activities.find(a => a.id === plan?.activity)
+  useEffect(() => {
+    if (visible && !empty && !state.readChannels.includes(channel)) dispatch({ type: 'read', channel })
+  }, [visible, empty, channel, state.readChannels, dispatch])
   useEffect(() => {
     const chat = bottom.current?.parentElement
     if (chat) chat.scrollTop = conversation.length ? chat.scrollHeight : 0
@@ -126,7 +131,40 @@ export function ProfileScreen({ other = false }: { other?: boolean }) {
   const [reported, setReported] = useState(false)
   const [reason, setReason] = useState('')
   const blocked = state.blocked.includes(person.id)
-  return <><Header title={other ? 'Profile' : 'Your profile'} back={other ? () => go('Free Time Match') : undefined} action={!other && <button className="pt-icon-button" aria-label="Settings" onClick={() => go('Settings')}><Icon name="settings" /></button>} /><div className="pt-profile-layout"><section className="pt-profile-person"><Avatar person={shown} size="large" /><h1>{shown.name}</h1><p className="pt-profile-location"><Icon name="pin" size={17} />Around campus</p><p className="pt-profile-bio">{shown.bio}</p><div className="pt-static-chips">{shown.interests.map(interest => <span key={interest}>{interest}</span>)}</div>{other ? <Button disabled={blocked} onClick={() => go('Connection')}>{blocked ? 'Blocked in this demo' : `Connect with ${person.first}`}<Icon name="arrow" size={18} /></Button> : <Button secondary onClick={() => { setProfile(state.profile); setEditing(true) }}>Edit profile</Button>}</section><section className="pt-profile-details">{other ? <><h2>Shared ground</h2><div className="pt-shared-ground"><div><Icon name="coffee" /><span><strong>{person.interests.filter(i => state.profile.interests.includes(i)).join(' · ') || 'Open to meeting new people'}</strong><small>Interests in common</small></span></div><div><Icon name="events" /><span><strong>{person.id === 'maya' ? 'A little fresh air' : 'Acoustic afternoon'}</strong><small>Shared event interest · sample</small></span></div><div><Icon name="time" /><span><strong>{person.time} today</strong><small>Mock availability overlap</small></span></div></div><div className="pt-safety-links"><button onClick={() => { setReported(false); setReason(''); setSafety('report') }}>Report user</button><button onClick={() => setSafety('block')}>{blocked ? 'Unblock user' : 'Block user'}</button></div></> : <><h2>Upcoming plans</h2>{state.plan ? <button className="pt-profile-plan" onClick={() => go('Confirmed')}><Icon name="events" /><span><strong>{activities.find(a => a.id === state.plan?.activity)?.name}</strong><span>{planDate(state.plan)} · {planTime(state.plan)}</span></span><Icon name="arrow" /></button> : <p>No plans yet. Find some free time in common.</p>}<div className="pt-profile-community"><Pebble /><div><h2>Your little community</h2><p>{state.community.balance} demo Pebbles · {state.completed.length}/4 chapters</p><span className="pt-hint">A small beginning, with room to grow.</span></div></div><button className="pt-settings-row" onClick={() => go('Settings')}><Icon name="settings" /><span>Settings & privacy</span><Icon name="arrow" /></button></>}</section></div>{editing && <Modal title="Edit your profile" onClose={() => setEditing(false)}><form onSubmit={e => { e.preventDefault(); if (profile.name.trim() && profile.bio.trim()) { dispatch({ type: 'profile', profile: { ...profile, name: profile.name.trim(), bio: profile.bio.trim() } }); setEditing(false) } }}><p className="pt-hint">Local demo edits. Your onboarding won’t replay.</p><label>Display name<input value={profile.name} required maxLength={30} onChange={e => setProfile({ ...profile, name: e.target.value })} /></label><label>Bio<textarea value={profile.bio} required maxLength={160} onChange={e => setProfile({ ...profile, bio: e.target.value })} /></label><fieldset><legend>Interests</legend><Chips label="Edit interests" options={interests} values={profile.interests} multi onChange={values => setProfile({ ...profile, interests: values })} /></fieldset><Button type="submit" className="pt-wide" disabled={!profile.name.trim() || !profile.bio.trim()}>Save profile</Button></form></Modal>}{safety && <Modal title={safety === 'report' ? `Report ${person.first}` : `${blocked ? 'Unblock' : 'Block'} ${person.first}?`} onClose={() => setSafety(null)}>{safety === 'block' ? <><p>{blocked ? 'They will appear in sample results again.' : 'They will be hidden from sample results. Messaging them will be disabled in this demo.'}</p><p className="pt-hint">Prototype control only. No real account is affected.</p><Button className="pt-wide" onClick={() => { dispatch({ type: blocked ? 'unblock' : 'block', id: person.id }); setSafety(null) }}>{blocked ? 'Unblock in demo' : 'Block in demo'}</Button></> : reported ? <div role="status"><p>Demo report recorded locally.</p><p className="pt-hint">This has not been sent to a moderation team. No real report was filed.</p><Button className="pt-wide" onClick={() => setSafety(null)}>Done</Button></div> : <form onSubmit={e => { e.preventDefault(); if (reason) setReported(true) }}><label>Reason<select required value={reason} onChange={e => setReason(e.target.value)}><option value="">Choose a reason</option><option>Harassment</option><option>Inappropriate content</option><option>Impersonation</option><option>Other concern</option></select></label><label>Additional context (optional)<textarea maxLength={400} placeholder="Use fictional details for this demo." /></label><p className="pt-hint">Prototype only. Nothing is submitted to a moderation team.</p><Button type="submit" className="pt-wide" disabled={!reason}>Submit demo report</Button></form>}</Modal>}</>
+  return <>
+    {other ? <><Header title="Profile" back={() => go('Free Time Match')} /><div className="pt-profile-layout"><section className="pt-profile-person"><Avatar person={shown} size="large" /><h1>{shown.name}</h1><p className="pt-profile-location"><Icon name="pin" size={17} />Around campus</p><p className="pt-profile-bio">{shown.bio}</p><div className="pt-static-chips">{shown.interests.map(interest => <span key={interest}>{interest}</span>)}</div><Button disabled={blocked} onClick={() => go('Connection')}>{blocked ? 'Blocked in this demo' : `Connect with ${person.first}`}<Icon name="arrow" size={18} /></Button></section><section className="pt-profile-details"><h2>Shared ground</h2><div className="pt-shared-ground"><div><Icon name="coffee" /><span><strong>{person.interests.filter(i => state.profile.interests.includes(i)).join(' · ') || 'Open to meeting new people'}</strong><small>Interests in common</small></span></div><div><Icon name="events" /><span><strong>{person.id === 'maya' ? 'A little fresh air' : 'Acoustic afternoon'}</strong><small>Shared event interest · sample</small></span></div><div><Icon name="time" /><span><strong>{person.time} today</strong><small>Mock availability overlap</small></span></div></div><div className="pt-safety-links"><button onClick={() => { setReported(false); setReason(''); setSafety('report') }}>Report user</button><button onClick={() => setSafety('block')}>{blocked ? 'Unblock user' : 'Block user'}</button></div></section></div></> : <>
+      <header className="pt-profile-mobile-header"><Link to="/" aria-label="Pebble home"><Brand /></Link><nav aria-label="Profile actions"><Link to="/settings" aria-label="Notification settings"><Icon name="bell" size={24} /></Link><Link to="/settings" aria-label="Settings"><Icon name="settings" size={26} /></Link></nav></header>
+      <section className="pt-profile-summary" aria-label="Your profile">
+        <img className="pt-profile-cover" src="/prototype/cafe-interior.jpg" alt="A welcoming campus café with leafy plants" />
+        <div className="pt-profile-identity">
+          <div className="pt-profile-portrait"><Avatar person={shown} size="large" /><span aria-label="Sample presence indicator" /></div>
+          <div className="pt-profile-copy"><h1 tabIndex={-1}>{shown.name}</h1><p className="pt-profile-location"><Icon name="pin" size={17} />Around campus</p><p className="pt-profile-bio">{shown.bio}</p><div className="pt-static-chips">{shown.interests.map(interest => <span key={interest}>{interest}</span>)}</div></div>
+          <Button secondary className="pt-profile-edit" onClick={() => { setProfile(state.profile); setEditing(true) }}><Icon name="edit" size={20} />Edit profile</Button>
+        </div>
+      </section>
+      <div className="pt-profile-support">
+        <section className="pt-profile-plans" aria-labelledby="profile-plans-title">
+          <header><h2 id="profile-plans-title"><Icon name="events" size={34} />Upcoming plans</h2><Button secondary onClick={() => go('Events')}><Icon name="events" size={18} />View events</Button></header>
+          {state.plan ? <button className="pt-profile-plan" onClick={() => go('Confirmed')}><Icon name="events" /><span><strong>{activities.find(a => a.id === state.plan?.activity)?.name}</strong><span>{planDate(state.plan)} · {planTime(state.plan)}</span></span><Icon name="arrow" /></button> : <div className="pt-profile-no-plans"><ProfileGarden trail /><h3>No plans yet</h3><p>Find some free time in common with other students<br className="pt-profile-desktop-break" /> and make a plan to hang out.</p><Button onClick={() => go('Events')}>Explore events<Icon name="arrow" size={20} /></Button></div>}
+        </section>
+        <aside className="pt-profile-sidebar">
+          <section className="pt-profile-growth" aria-labelledby="profile-community-title">
+            <header><Pebble /><div><h2 id="profile-community-title">Your little community</h2><p>A small beginning, with room to grow.</p></div><span className="pt-profile-chapters">{state.completed.length}/4 chapters</span></header>
+            <div className="pt-profile-progress" aria-hidden="true">{[0, 1, 2, 3].map(chapter => <span key={chapter} className={chapter <= state.completed.length ? 'is-current' : ''} />)}</div>
+            <div className="pt-profile-milestones">{['Find friends', 'Attend an event', 'Have a conversation', 'Make a plan'].map((label, chapter) => <div key={label} className={state.completed.includes(chapter) ? 'is-complete' : ''}><span className="pt-profile-milestone-pebbles"><Pebble />{chapter === 1 && <Pebble />}</span><span className="pt-profile-milestone-icon"><Icon name={['matchmaking', 'events', 'messages', 'plan'][chapter]} size={24} /></span><p>{label}</p><small>{state.completed.includes(chapter) ? 1 : 0}/1</small></div>)}</div>
+            <footer><div><h3>Good things take time</h3><p>Every conversation, event, and plan helps you build your Pebbles community. You’re on your way!</p></div><ProfileGarden /></footer>
+          </section>
+          <button className="pt-profile-settings" onClick={() => go('Settings')}><Icon name="settings" size={30} /><span><strong>Settings & privacy</strong><small>Manage your account, notifications, and privacy preferences.</small></span><Icon name="back" size={20} /></button>
+        </aside>
+      </div>
+    </>}
+    {editing && <Modal title="Edit your profile" onClose={() => setEditing(false)}><form onSubmit={e => { e.preventDefault(); if (profile.name.trim() && profile.bio.trim()) { dispatch({ type: 'profile', profile: { ...profile, name: profile.name.trim(), bio: profile.bio.trim() } }); setEditing(false) } }}><p className="pt-hint">Local demo edits. Your onboarding won’t replay.</p><label>Display name<input value={profile.name} required maxLength={30} onChange={e => setProfile({ ...profile, name: e.target.value })} /></label><label>Bio<textarea value={profile.bio} required maxLength={160} onChange={e => setProfile({ ...profile, bio: e.target.value })} /></label><fieldset><legend>Interests</legend><Chips label="Edit interests" options={interests} values={profile.interests} multi onChange={values => setProfile({ ...profile, interests: values })} /></fieldset><Button type="submit" className="pt-wide" disabled={!profile.name.trim() || !profile.bio.trim()}>Save profile</Button></form></Modal>}
+    {safety && <Modal title={safety === 'report' ? `Report ${person.first}` : `${blocked ? 'Unblock' : 'Block'} ${person.first}?`} onClose={() => setSafety(null)}>{safety === 'block' ? <><p>{blocked ? 'They will appear in sample results again.' : 'They will be hidden from sample results. Messaging them will be disabled in this demo.'}</p><p className="pt-hint">Prototype control only. No real account is affected.</p><Button className="pt-wide" onClick={() => { dispatch({ type: blocked ? 'unblock' : 'block', id: person.id }); setSafety(null) }}>{blocked ? 'Unblock in demo' : 'Block in demo'}</Button></> : reported ? <div role="status"><p>Demo report recorded locally.</p><p className="pt-hint">This has not been sent to a moderation team. No real report was filed.</p><Button className="pt-wide" onClick={() => setSafety(null)}>Done</Button></div> : <form onSubmit={e => { e.preventDefault(); if (reason) setReported(true) }}><label>Reason<select required value={reason} onChange={e => setReason(e.target.value)}><option value="">Choose a reason</option><option>Harassment</option><option>Inappropriate content</option><option>Impersonation</option><option>Other concern</option></select></label><label>Additional context (optional)<textarea maxLength={400} placeholder="Use fictional details for this demo." /></label><p className="pt-hint">Prototype only. Nothing is submitted to a moderation team.</p><Button type="submit" className="pt-wide" disabled={!reason}>Submit demo report</Button></form>}</Modal>}
+  </>
+}
+
+function ProfileGarden({ trail = false }: { trail?: boolean }) {
+  return <div className={`pt-profile-garden ${trail ? 'has-trail' : ''}`} aria-hidden="true"><svg viewBox="0 0 320 100"><path d="M8 88Q-7 58 18 71L31 86Q22 10 43 48L58 83Q66 17 79 61L82 85Q109 47 107 86Z" fill="var(--pt-pale)" /><path d="M245 91Q246 76 260 82Q272 57 276 84Q299 63 288 89L306 93Z" fill="var(--pt-pale)" />{trail ? <><path d="M164 54q35-13 23 12t-1-18c25-20 38 35 75 13l35-25" stroke="var(--pt-muted)" strokeWidth="2" strokeDasharray="6 7" fill="none" /><path d="M294 47q-9-30 0-20t4 16q21-21 24-10t-28 14" fill="var(--pt-green)" /></> : <path d="m102 27-5-5m13-5-3-6m107 15 5-5m-13-6 3-6" stroke="var(--pt-coral)" strokeWidth="2" strokeLinecap="round" />}</svg><Pebble /></div>
 }
 export function Settings() {
   const { state, dispatch, go } = usePrototype()

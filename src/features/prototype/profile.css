@@ -1,0 +1,131 @@
+.pt-scene-profile {
+  --pt-ink: #303c35;
+  --pt-muted: #73796d;
+  --pt-green: #60794f;
+  --pt-pale: #edf0e4;
+  --pt-cream: #faf9f2;
+  --pt-line: #eeece1;
+}
+.pt-scene-profile .pt-main { padding-top: 22px; padding-bottom: 14px; animation: none; }
+.pt-profile-mobile-header { display: none; }
+.pt-profile-summary, .pt-profile-plans, .pt-profile-growth, .pt-profile-settings { border: 1px solid var(--pt-line); border-radius: 16px; background: #fffdf7; }
+.pt-profile-summary { overflow: hidden; }
+.pt-profile-cover { display: block; width: 100%; height: 134px; object-fit: cover; object-position: center 42%; }
+.pt-profile-identity { display: grid; grid-template-columns: 204px minmax(0, 1fr) auto; align-items: start; gap: 40px; max-width: 1210px; margin: 0 auto; padding: 26px 0 22px; }
+.pt-profile-portrait { position: relative; margin-top: -83px; }
+.pt-profile-portrait .pt-avatar { display: block; width: 204px; height: 204px; border: 6px solid #fffdf7; }
+.pt-profile-portrait > span { position: absolute; right: 16px; bottom: 18px; width: 28px; height: 28px; border: 5px solid #fffdf7; border-radius: 50%; background: #65ad62; }
+.pt-profile-copy h1 { font-size: 38px; line-height: 1.1; letter-spacing: -1px; }
+.pt-profile-copy .pt-profile-location { justify-content: start; margin: 6px 0 8px !important; font-size: 15px; }
+.pt-profile-copy .pt-profile-bio { margin: 0 0 13px !important; font-size: 17px; }
+.pt-profile-copy .pt-static-chips { justify-content: start; gap: 10px; margin: 0; }
+.pt-profile-copy .pt-static-chips span { padding: 5px 15px; font-size: 16px; background: var(--pt-pale); }
+.pt-profile-edit { min-height: 53px; padding-inline: 24px; background: transparent; }
+.pt-profile-support { display: grid; grid-template-columns: minmax(0, 1.39fr) minmax(0, 1fr); gap: 20px; margin-top: 22px; }
+.pt-profile-plans { padding: 22px 24px; }
+.pt-profile-plans > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--pt-line); }
+.pt-profile-plans h2 { display: flex; align-items: center; gap: 18px; padding-left: 5px; font-size: 28px; letter-spacing: -.7px; }
+.pt-profile-plans > header .pt-button { min-height: 44px; padding: 8px 13px; font-size: 15px; font-weight: 400 !important; border-color: var(--pt-line); background: transparent; }
+.pt-profile-no-plans { min-height: 354px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px 0 20px; }
+.pt-profile-no-plans h3 { font-size: 24px; letter-spacing: -.5px; margin: 10px 0 7px; }
+.pt-profile-no-plans > p { font-size: 18px; line-height: 1.5; }
+.pt-profile-no-plans > .pt-button { margin-top: 18px; min-height: 51px; padding-inline: 25px; }
+.pt-profile-garden { position: relative; width: 180px; height: 76px; flex-shrink: 0; }
+.pt-profile-garden > svg { position: absolute; width: 100%; height: 100%; bottom: 0; left: 0; }
+.pt-profile-garden > .pt-pebble { width: 76px; height: 76px; left: 50%; transform: translateX(-50%); }
+.pt-profile-garden.has-trail { width: 320px; height: 100px; }
+.pt-profile-garden.has-trail > .pt-pebble { width: 86px; height: 86px; bottom: 0; left: 46%; }
+.pt-profile-sidebar { display: grid; grid-template-rows: 1fr auto; gap: 20px; }
+.pt-profile-growth { padding: 22px 23px 14px; }
+.pt-profile-growth > header { display: flex; flex-wrap: wrap; align-items: start; gap: 14px; }
+.pt-profile-growth > header > div { flex: 1 1 180px; }
+.pt-profile-growth h2 { font-size: 23px; letter-spacing: -.6px; }
+.pt-profile-growth > header p { margin-top: 4px; font-size: 16px; }
+.pt-profile-chapters { white-space: nowrap; background: var(--pt-pale); border-radius: 24px; padding: 7px 17px; font-size: 16px; margin-left: auto; }
+.pt-profile-progress { display: flex; justify-content: space-between; position: relative; margin: 20px 13% 19px; }
+.pt-profile-progress::before { content: ''; position: absolute; top: 8px; left: 0; right: 0; height: 3px; background: #e4e4df; }
+.pt-profile-progress > span { position: relative; width: 18px; height: 18px; border-radius: 50%; background: #e4e4df; }
+.pt-profile-progress > span.is-current { background: #829b6d; }
+.pt-profile-milestones { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.pt-profile-milestones > div { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; padding: 12px 4px 9px; border-radius: 14px; background: #f8f8f0; }
+.pt-profile-milestones > div > span { display: flex; height: 38px; align-items: center; }
+.pt-profile-milestones > div > .pt-profile-milestone-icon { display: none; }
+.pt-profile-milestones .pt-pebble { width: 38px; height: 38px; filter: grayscale(1); opacity: .22; }
+.pt-profile-milestones .pt-pebble + .pt-pebble { margin-left: -27px; }
+.pt-profile-milestones .is-complete .pt-pebble { filter: none; opacity: 1; }
+.pt-profile-milestones p, .pt-profile-milestones small { font-size: 14px; }
+.pt-profile-milestones small { color: var(--pt-muted); }
+.pt-profile-growth > footer { display: flex; align-items: end; gap: 10px; border-top: 1px solid var(--pt-line); padding-top: 10px; margin-top: 16px; }
+.pt-profile-growth > footer > div:first-child { flex: 1; }
+.pt-profile-growth > footer .pt-profile-garden { width: clamp(76px, 28%, 180px); }
+.pt-profile-growth h3 { font-size: 17px; }
+.pt-profile-growth > footer p { font-size: 15px; line-height: 1.5; margin-top: 2px; }
+.pt-profile-settings { width: 100%; padding: 15px 24px; display: flex; align-items: center; gap: 18px; text-align: left; }
+.pt-profile-settings > span { flex: 1; }
+.pt-profile-settings strong, .pt-profile-settings small { display: block; }
+.pt-profile-settings strong { font-size: 18px; line-height: 1.3; }
+.pt-profile-settings small { color: var(--pt-muted); line-height: 1.5; }
+.pt-profile-settings > svg:last-child { transform: rotate(180deg); }
+@media (width > 800px) {
+  .pt-scene-profile .pt-app-header { background: #fffdf7; border-color: #e6e4d8; }
+  .pt-profile-identity { width: calc(100% - 64px); padding-bottom: 26px; }
+}
+@media (max-width: 800px) {
+  .pt-scene-profile .pt-main { padding-top: 8px; padding-bottom: calc(var(--pt-navigation-clearance) + 16px); }
+  .pt-profile-mobile-header { display: flex; align-items: center; justify-content: space-between; min-height: 52px; margin-bottom: 12px; }
+  .pt-profile-mobile-header > a { text-decoration: none; }
+  .pt-profile-mobile-header nav { display: flex; gap: 12px; }
+  .pt-profile-mobile-header nav a { display: grid; place-items: center; width: 44px; height: 44px; color: var(--pt-ink); border-radius: 10px; }
+  .pt-profile-summary { margin-inline: -8px; }
+  .pt-profile-cover { height: 134px; }
+  .pt-profile-identity { grid-template-columns: 132px minmax(0, 1fr); gap: 4px 8px; padding: 0 12px 14px; }
+  .pt-profile-portrait { grid-column: 1; grid-row: 1; margin-top: -62px; }
+  .pt-profile-portrait .pt-avatar { width: 132px; height: 132px; border-width: 5px; }
+  .pt-profile-portrait > span { right: 9px; bottom: 8px; width: 24px; height: 24px; border-width: 4px; }
+  .pt-profile-copy { grid-column: 1 / -1; }
+  .pt-profile-copy h1 { font-size: 28px; }
+  .pt-profile-copy .pt-profile-location { margin: 4px 0 6px !important; }
+  .pt-profile-copy .pt-profile-bio { font-size: 16px; margin-bottom: 12px !important; }
+  .pt-profile-copy .pt-static-chips { gap: 8px; }
+  .pt-profile-copy .pt-static-chips span { padding: 6px 14px; font-size: 15px; }
+  .pt-profile-edit { grid-column: 2; grid-row: 1; justify-self: end; margin-top: 14px; min-height: 44px; padding: 8px 10px; font-size: 15px; gap: 6px; white-space: nowrap; }
+  .pt-profile-support { grid-template-columns: 1fr; gap: 14px; margin-top: 16px; }
+  .pt-profile-sidebar { gap: 14px; }
+  .pt-profile-plans { padding: 10px 14px; }
+  .pt-profile-plans h2 { font-size: 20px; gap: 10px; padding-left: 0; }
+  .pt-profile-plans h2 > svg { width: 25px; }
+  .pt-profile-plans > header { flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
+  .pt-profile-plans > header .pt-button { padding: 8px 10px; font-size: 14px; gap: 7px; }
+  .pt-profile-no-plans { min-height: 218px; padding: 14px 0 4px; }
+  .pt-profile-garden.has-trail { width: min(250px, 100%); height: 64px; }
+  .pt-profile-garden.has-trail > .pt-pebble { width: 64px; height: 64px; }
+  .pt-profile-no-plans h3 { font-size: 20px; margin: 8px 0 4px; }
+  .pt-profile-no-plans > p { font-size: 16px; line-height: 1.4; }
+  .pt-profile-no-plans > .pt-button { margin-top: 12px; min-height: 44px; padding: 8px 24px; }
+  .pt-profile-desktop-break { display: none; }
+  .pt-profile-growth { padding: 12px 14px; }
+  .pt-profile-growth > header { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; }
+  .pt-profile-growth > header > .pt-pebble { width: 44px; height: 48px; }
+  .pt-profile-growth h2 { font-size: 18px; }
+  .pt-profile-growth > header p { font-size: 14px; }
+  .pt-profile-chapters { align-self: start; padding: 6px 12px; font-size: 14px; }
+  .pt-profile-progress { margin: 16px 10% 14px; }
+  .pt-profile-progress > span { width: 15px; height: 15px; }
+  .pt-profile-progress::before { top: 6px; height: 2px; }
+  .pt-profile-milestones { gap: 6px; }
+  .pt-profile-milestones > div { padding: 6px 4px; gap: 2px; }
+  .pt-profile-milestones > div > .pt-profile-milestone-pebbles { display: none; }
+  .pt-profile-milestones > div > .pt-profile-milestone-icon { display: flex; height: 22px; color: var(--pt-muted); opacity: .45; }
+  .pt-profile-milestone-icon svg { width: 22px; height: 22px; }
+  .pt-profile-milestones .is-complete > .pt-profile-milestone-icon { opacity: 1; color: var(--pt-green); }
+  .pt-profile-milestones p { flex: 1; line-height: 1.2; }
+  .pt-profile-milestones small { line-height: 1.2; }
+  .pt-profile-growth > footer { padding-top: 0; margin-top: 14px; border-top: 0; gap: 8px; }
+  .pt-profile-growth h3 { font-size: 16px; line-height: 1.3; }
+  .pt-profile-growth > footer p { font-size: 14px; line-height: 1.3; }
+  .pt-profile-growth > footer .pt-profile-garden { width: 100px; height: 64px; }
+  .pt-profile-growth > footer .pt-pebble { width: 60px; height: 60px; }
+  .pt-profile-settings { padding: 10px 14px; gap: 12px; }
+  .pt-profile-settings strong { font-size: 19px; }
+  .pt-profile-settings small { line-height: 1.3; }
+}

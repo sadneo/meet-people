@@ -9,12 +9,10 @@
   --pt-message-surface: #fffdf7;
   height: 100dvh;
   min-height: 0;
-  font-family: Arial, system-ui, sans-serif;
 }
-.pt-scene-messages .pt-app-header, .pt-scene-chat .pt-app-header { min-height: 72px; padding-block: 10px; flex-shrink: 0; }
-.pt-scene-messages .pt-brand, .pt-scene-chat .pt-brand { font-family: 'Trebuchet MS', 'Segoe UI', sans-serif; }
+.pt-scene-messages .pt-app-header, .pt-scene-chat .pt-app-header { flex-shrink: 0; }
 .pt-account-nav .pt-avatar { width: 34px; height: 34px; border: 0; }
-.pt-scene-messages .pt-main, .pt-scene-chat .pt-main { display: flex; min-height: 0; padding: 12px 28px 16px; animation: none; }
+.pt-scene-messages .pt-main, .pt-scene-chat .pt-main { display: flex; min-height: 0; padding-block: 12px 16px; animation: none; }
 .pt-messages-workspace { display: grid; grid-template-columns: minmax(0, 26fr) minmax(0, 48fr) minmax(0, 26fr); gap: 10px; width: 100%; min-height: 0; }
 .pt-inbox-pane, .pt-conversation-pane { min-width: 0; min-height: 0; background: var(--pt-message-surface); border-radius: 16px; }
 .pt-inbox-pane { padding: 20px 12px; overflow-y: auto; overscroll-behavior: contain; }
@@ -25,9 +23,13 @@
 .pt-app .pt-conversation-search input { min-width: 0; min-height: 44px; padding: 8px 0; border: 0; background: transparent; font-size: 16px; font-weight: 400; }
 .pt-conversation-search:focus-within { outline: 3px solid var(--color-focus, #315f9b); outline-offset: 2px; }
 .pt-app .pt-conversation-search input:focus-visible { outline: 0; }
-.pt-inbox-pane .pt-conversations { border: 0; border-radius: 0; background: transparent; }
-.pt-inbox-pane .pt-conversation { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 16px; min-height: 105px; padding: 17px 12px; border-bottom: 1px solid var(--pt-line); }
-.pt-inbox-pane .pt-conversation.is-selected { min-height: 98px; padding-block: 14px; background: var(--pt-pale); border: 1px solid var(--pt-line); border-radius: 16px; margin-bottom: 4px; }
+.pt-inbox-pane .pt-conversations { display: flex; flex-direction: column; gap: 4px; border: 0; border-radius: 0; background: transparent; }
+.pt-inbox-pane .pt-conversation, .pt-inbox-pane .pt-conversation:last-child { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 16px; min-height: 105px; padding: 17px 12px; border: 1px solid transparent; border-radius: 16px; }
+.pt-conversation-separator { flex-shrink: 0; height: 1px; margin: 0 12px; background: var(--pt-line); }
+.pt-inbox-pane .pt-conversation:hover { background: var(--pt-pale); border-color: var(--pt-line); }
+.pt-inbox-pane .pt-conversation.is-selected { background: var(--pt-pale); border-color: var(--color-pine, var(--pt-green)); }
+.pt-app .pt-inbox-pane .pt-conversation:active { transform: none; }
+.pt-inbox-pane .pt-conversation:focus-visible { outline-color: var(--color-focus, #315f9b); outline-offset: -3px; }
 .pt-inbox-pane .pt-conversation > .pt-avatar { width: clamp(40px, 4vw, 68px); height: clamp(40px, 4vw, 68px); border: 2px solid white; }
 .pt-inbox-pane .pt-conversation > span:nth-child(2) { gap: 5px; padding-top: 10px; }
 .pt-inbox-pane .pt-conversation strong { font-size: 18px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 44px; }
@@ -101,7 +103,7 @@
 .pt-shared-context > svg { transform: rotate(180deg); color: var(--pt-muted); }
 
 @media (max-width: 800px) {
-  .pt-scene-messages .pt-main, .pt-scene-chat .pt-main { padding: 0 20px var(--pt-navigation-clearance); }
+  .pt-scene-messages .pt-main, .pt-scene-chat .pt-main { padding-block: 0 var(--pt-navigation-clearance); }
   .pt-messages-workspace { display: flex; flex-direction: column; gap: 0; }
   .pt-inbox-pane, .pt-conversation-pane { flex: 1; padding: 20px 0 12px; border-radius: 0; background: transparent; }
   .pt-scene-messages .pt-conversation-pane, .pt-scene-chat .pt-inbox-pane, .pt-chat-details { display: none; }
