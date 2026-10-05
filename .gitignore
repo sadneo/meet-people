@@ -9,4 +9,5 @@ dist/
 playwright-report/
 test-results/
 .agents/
-.playwright-mcp
+.playwright-mcp/
+worktree/
