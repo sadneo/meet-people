@@ -147,6 +147,30 @@ test('all scenes fit a narrow phone; filters, empty states, reporting and blocki
   await expect(page.getByLabel('Share my availability')).not.toBeChecked()
 })
 
+test('settings switches retain session changes and dialogs return focus', async ({ page }) => {
+  await page.goto('/settings')
+  const notifications = page.getByRole('switch', { name: 'Plan & message notifications', exact: true })
+  await expect(notifications).toBeChecked()
+  await notifications.focus()
+  await page.keyboard.press('Space')
+  await expect(notifications).not.toBeChecked()
+  await page.getByLabel('Review scene').selectOption('Profile')
+  await page.getByLabel('Review scene').selectOption('Settings')
+  await expect(notifications).not.toBeChecked()
+  const account = page.getByRole('button', { name: /^Account details/ })
+  await account.click()
+  await expect(page.getByRole('dialog', { name: 'Demo account' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(account).toBeFocused()
+  const blocked = page.getByRole('button', { name: /^Blocked users/ })
+  await blocked.click()
+  await expect(page.getByRole('dialog', { name: 'Blocked users' })).toContainText('No blocked users in this session.')
+  await page.getByRole('button', { name: 'Close dialog' }).click()
+  await expect(blocked).toBeFocused()
+  await page.getByRole('button', { name: 'Log out of demo', exact: true }).click()
+  await expect(page).toHaveURL('/login')
+})
+
 test('registration stays local, custom time is preserved, and unread state clears', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   const requests: string[] = []

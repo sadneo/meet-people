@@ -8,7 +8,12 @@ import './messages.css'
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
-  useEffect(() => { const dialog = ref.current!; dialog.showModal(); return () => dialog.close() }, [])
+  useEffect(() => {
+    const dialog = ref.current!
+    const opener = document.activeElement
+    dialog.showModal()
+    return () => { dialog.close(); if (opener instanceof HTMLElement && opener.isConnected) opener.focus() }
+  }, [])
   return <dialog ref={ref} className="pt-dialog" aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose() }}><div className="pt-section-heading"><h2 id={titleId}>{title}</h2><button className="pt-icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></button></div>{children}</dialog>
 }
 export function Messages() {
@@ -126,6 +131,22 @@ export function ProfileScreen({ other = false }: { other?: boolean }) {
 export function Settings() {
   const { state, dispatch, go } = usePrototype()
   const [account, setAccount] = useState(false)
-  const toggle = (key: string, title: string, description: string) => <label className="pt-toggle-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" checked={state.settings[key]} onChange={e => dispatch({ type: 'setting', key, value: e.target.checked })} /></label>
-  return <><Header title="Settings" sub="Local prototype preferences" back={() => go('Profile')} /><div className="pt-settings"><section><h2>Account</h2><button className="pt-settings-row" onClick={() => setAccount(true)}><span>Account details</span><Icon name="arrow" /></button></section><section><h2>Notifications</h2>{toggle('notifications', 'Plan & message notifications', 'Show notifications about your conversations.')}</section><section><h2>Privacy</h2>{toggle('discoverable', 'Show me in discovery', 'Let other people find your profile.')}{toggle('availability', 'Share my availability', 'Show your free-time windows to connections.')}</section><section><h2>Location</h2>{toggle('location', 'Nearby suggestions', 'Demo setting only. No location access is requested.')}<p className="pt-hint">Campus is the fixed demo location.</p></section><section><h2>Safety & blocked users</h2><p>Block or report someone from their profile. These controls are mock UI for review.</p>{state.blocked.length ? state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>) : <p className="pt-hint">No blocked users in this session.</p>}</section><Button secondary onClick={() => go('Login')}>Log out of demo</Button><p className="pt-hint">No active account. Community purchases stay on this device.</p></div>{account && <Modal title="Demo account" onClose={() => setAccount(false)}><p><strong>{state.profile.name}</strong></p><p>alex@example.com</p><p className="pt-hint">Placeholder account details. Authentication and account management are not connected.</p><Button onClick={() => { setAccount(false); go('Profile') }}>Go to profile</Button></Modal>}</>
+  const [safety, setSafety] = useState(false)
+  const heading = (icon: string, title: string, description?: string) => <header className="pt-settings-heading"><Icon name={icon} size={24} /><div><h2>{title}</h2>{description && <p>{description}</p>}</div></header>
+  const toggle = (key: string, title: string, description: string) => <label className="pt-toggle-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" role="switch" aria-label={title} checked={state.settings[key]} onChange={e => dispatch({ type: 'setting', key, value: e.target.checked })} /></label>
+  return <>
+    <div className="pt-settings-landscape" aria-hidden="true" />
+    <div className="pt-settings">
+      <header className="pt-settings-title"><span><Icon name="gear" size={28} /></span><div><h1 tabIndex={-1}>Settings</h1><p>Manage your account and preferences.</p></div></header>
+      <section>{heading('profile', 'Account', 'Manage your account and profile information.')}<button className="pt-settings-row" onClick={() => setAccount(true)}><span><strong>Account details</strong><small>View and update your profile information.</small></span><Icon name="chevron" size={16} /></button></section>
+      <section>{heading('bell', 'Notifications', 'Choose what notifications you receive.')}{toggle('notifications', 'Plan & message notifications', 'Get notified about new messages and activity in your conversations.')}</section>
+      <section>{heading('shield', 'Privacy', 'Control who can find and see you on Pebble.')}{toggle('discoverable', 'Show me in discovery', 'Let other people find your profile.')}{toggle('availability', 'Share my availability', 'Show your free-time windows to connections.')}</section>
+      <section>{heading('pin', 'Discovery & Availability', 'Settings that help people find you in the right place.')}{toggle('location', 'Nearby suggestions', 'Show people and events near your current location.')}</section>
+      <section>{heading('map', 'Location', 'Manage your location settings.')}<div className="pt-settings-row"><span><strong>Campus location (demo)</strong><small>Campus is the fixed demo location for this prototype. Location access is not required.</small></span></div></section>
+      <section>{heading('matchmaking', 'Safety', 'Manage your interactions and blocked users.')}<button className="pt-settings-row" onClick={() => setSafety(true)}><span><strong>Blocked users</strong><small>Block or report someone from their profile. These controls are mock UI for review.</small></span><Icon name="chevron" size={16} /></button>{state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>)}</section>
+      <section className="pt-settings-actions">{heading('logout', 'Account Actions')}<div className="pt-settings-row"><span><strong>Log out of demo</strong><small>No active account. Community purchases stay on this device.</small></span><Button secondary onClick={() => go('Login')}>Log out of demo</Button></div></section>
+    </div>
+    {account && <Modal title="Demo account" onClose={() => setAccount(false)}><p><strong>{state.profile.name}</strong></p><p>alex@example.com</p><p className="pt-hint">Placeholder account details. Authentication and account management are not connected.</p><Button onClick={() => { setAccount(false); go('Profile') }}>Go to profile</Button></Modal>}
+    {safety && <Modal title="Blocked users" onClose={() => setSafety(false)}>{state.blocked.length ? state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>) : <p>No blocked users in this session.</p>}<p className="pt-hint">Block or report someone from their profile. These controls are mock UI for review.</p></Modal>}
+  </>
 }

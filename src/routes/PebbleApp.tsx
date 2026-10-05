@@ -7,6 +7,7 @@ import { PouchIntro } from '../features/community/PouchIntro'
 import '../features/community/motion.css'
 import '../features/prototype/prototype.css'
 import '../features/prototype/responsive.css'
+import '../features/prototype/settings.css'
 
 export default function PebbleApp() {
   const { pathname } = useLocation()

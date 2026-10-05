@@ -102,9 +102,6 @@ body:has(.pt-app) { --pt-safe-area-bottom: env(safe-area-inset-bottom, 0px); --p
   .pt-planning-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(24px, 5vw, 100px); }
   .pt-plan-aside { max-width: 850px; width: 100%; justify-self: end; }
   .pt-time-options { grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr)); }
-  .pt-settings { max-width: none; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px 60px; }
-  .pt-settings > section { max-width: 1000px; }
-  .pt-settings > .pt-button, .pt-settings > .pt-hint { grid-column: 1 / -1; justify-self: start; }
   .pt-main { padding-bottom: 42px; }
 }
 @media (max-width: 800px) {
