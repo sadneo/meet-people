@@ -1,17 +1,19 @@
 -- ============================================
 -- ENABLE RLS
 -- ============================================
-alter table profiles enable row level security;
-alter table interests enable row level security;
-alter table profile_interests enable row level security;
-alter table profile_photos enable row level security;
-alter table meetups enable row level security;
-alter table meetup_attendees enable row level security;
-alter table connections enable row level security;
-alter table conversations enable row level security;
-alter table messages enable row level security;
-alter table blocks enable row level security;
-alter table reports enable row level security;
+alter table profiles             enable row level security;
+alter table user_interests       enable row level security;
+alter table availability         enable row level security;
+alter table meetups              enable row level security;
+alter table meetup_attendees     enable row level security;
+alter table event_interest       enable row level security;
+alter table queue_entries        enable row level security;
+alter table connections          enable row level security;
+alter table conversations        enable row level security;
+alter table messages             enable row level security;
+alter table blocks               enable row level security;
+alter table interaction_outcomes enable row level security;
+alter table dating_matches       enable row level security;
 
 -- ============================================
 -- PROFILES
@@ -24,27 +26,27 @@ create policy "Users update own profile" on profiles
   for update using (auth.uid() = id);
 
 -- ============================================
--- INTERESTS
+-- USER INTERESTS
 -- ============================================
-create policy "Interests are publicly readable" on interests
+create policy "User interests are publicly readable" on user_interests
   for select using (true);
-create policy "Profile interests are publicly readable" on profile_interests
-  for select using (true);
-create policy "Users manage own interests" on profile_interests
+create policy "Users insert own interests" on user_interests
   for insert with check (profile_id = auth.uid());
-create policy "Users delete own interests" on profile_interests
+create policy "Users update own interests" on user_interests
+  for update using (profile_id = auth.uid());
+create policy "Users delete own interests" on user_interests
   for delete using (profile_id = auth.uid());
 
 -- ============================================
--- PHOTOS
+-- AVAILABILITY
 -- ============================================
-create policy "Photos are publicly readable" on profile_photos
+create policy "Availability is publicly readable" on availability
   for select using (true);
-create policy "Users manage own photos" on profile_photos
+create policy "Users manage own availability" on availability
   for insert with check (profile_id = auth.uid());
-create policy "Users update own photos" on profile_photos
+create policy "Users update own availability" on availability
   for update using (profile_id = auth.uid());
-create policy "Users delete own photos" on profile_photos
+create policy "Users delete own availability" on availability
   for delete using (profile_id = auth.uid());
 
 -- ============================================
@@ -59,9 +61,6 @@ create policy "Hosts update own meetups" on meetups
 create policy "Hosts delete own meetups" on meetups
   for delete using (host_id = auth.uid());
 
--- ============================================
--- MEETUP ATTENDEES
--- ============================================
 create policy "Attendees viewable" on meetup_attendees
   for select using (true);
 create policy "Users RSVP as themselves" on meetup_attendees
@@ -72,18 +71,36 @@ create policy "Users delete own RSVP" on meetup_attendees
   for delete using (profile_id = auth.uid());
 
 -- ============================================
+-- EVENT INTEREST
+-- ============================================
+create policy "Event interest is publicly readable" on event_interest
+  for select using (true);
+create policy "Users express own interest" on event_interest
+  for insert with check (profile_id = auth.uid());
+create policy "Users remove own interest" on event_interest
+  for delete using (profile_id = auth.uid());
+
+-- ============================================
+-- QUEUE ENTRIES
+-- ============================================
+create policy "Queue entries are publicly readable" on queue_entries
+  for select using (true);
+create policy "Users join queue as themselves" on queue_entries
+  for insert with check (profile_id = auth.uid());
+create policy "Users leave queue as themselves" on queue_entries
+  for delete using (profile_id = auth.uid());
+
+-- ============================================
 -- CONNECTIONS
 -- ============================================
 create policy "Participants see own connections" on connections
   for select using (user_a = auth.uid() or user_b = auth.uid());
-
 create policy "Users create their own requests" on connections
   for insert with check (
     initiated_by = auth.uid()
     and (user_a = auth.uid() or user_b = auth.uid())
     and status = 'pending'
   );
-
 create policy "Recipient accepts pending request" on connections
   for update using (
     status = 'pending'
@@ -91,7 +108,6 @@ create policy "Recipient accepts pending request" on connections
     and initiated_by <> auth.uid()
   )
   with check (status = 'accepted');
-
 create policy "Participants delete own connections" on connections
   for delete using (user_a = auth.uid() or user_b = auth.uid());
 
@@ -112,7 +128,6 @@ create policy "Participants read messages" on messages
         and (c.user_a = auth.uid() or c.user_b = auth.uid())
     )
   );
-
 create policy "Participants send messages" on messages
   for insert with check (
     sender_id = auth.uid()
@@ -127,7 +142,6 @@ create policy "Participants send messages" on messages
         )
     )
   );
-
 create policy "Recipients mark read" on messages
   for update using (
     exists (
@@ -148,9 +162,36 @@ create policy "Users delete own blocks" on blocks
   for delete using (blocker_id = auth.uid());
 
 -- ============================================
--- REPORTS
+-- INTERACTION OUTCOMES
 -- ============================================
-create policy "Users see own reports" on reports
-  for select using (reporter_id = auth.uid());
-create policy "Users create reports" on reports
-  for insert with check (reporter_id = auth.uid());
+create policy "Participants see own outcomes" on interaction_outcomes
+  for select using (user_a = auth.uid() or user_b = auth.uid());
+create policy "Participants insert outcomes" on interaction_outcomes
+  for insert with check (user_a = auth.uid() or user_b = auth.uid());
+create policy "Participants update outcomes" on interaction_outcomes
+  for update using (user_a = auth.uid() or user_b = auth.uid());
+
+-- ============================================
+-- DATING MATCHES
+-- ============================================
+create policy "Participants see dating matches" on dating_matches
+  for select using (user_a = auth.uid() or user_b = auth.uid());
+create policy "Users create their own dating requests" on dating_matches
+  for insert with check (
+    initiated_by = auth.uid()
+    and (user_a = auth.uid() or user_b = auth.uid())
+    and status = 'pending'
+  );
+create policy "Recipient accepts dating request" on dating_matches
+  for update using (
+    status = 'pending'
+    and (user_a = auth.uid() or user_b = auth.uid())
+    and initiated_by <> auth.uid()
+  )
+  with check (status = 'matched');
+create policy "Participants end dating match" on dating_matches
+  for update using (
+    status = 'matched'
+    and (user_a = auth.uid() or user_b = auth.uid())
+  )
+  with check (status = 'ended');
