@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router'
 import { PrototypeContext, usePrototype } from '../features/prototype/context'
 import { COMMUNITY_STORAGE_KEY, loadCommunity } from '../features/prototype/economy'
 import { initialState, reducer, scenes, scenePaths, sceneSlug, type Scene } from '../features/prototype/model'
+import { isEventDetailPath } from '../features/events/routes'
 import { PouchIntro } from '../features/community/PouchIntro'
 import '../features/community/motion.css'
 import '../features/prototype/prototype.css'
@@ -12,7 +13,7 @@ import '../features/prototype/settings.css'
 export default function PebbleApp() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const scene = scenes.find(value => scenePaths[value] === pathname) ?? 'Home'
+  const scene = isEventDetailPath(pathname) ? 'Event Detail' : scenes.find(value => scenePaths[value] === pathname) ?? 'Home'
   const [state, dispatch] = useReducer(reducer, initialState, initial => ({ ...initial, community: loadCommunity() }))
   const [introRun, setIntroRun] = useState(0)
   const [empty, setEmpty] = useState(false)

@@ -1,3 +1,4 @@
+import { mockCurrentEvents, testEventId } from './current-events-fixture'
 import { expect, test } from '@playwright/test'
 import { COMMUNITY_STORAGE_KEY, upgrades } from '../src/features/prototype/economy'
 
@@ -90,15 +91,13 @@ test('invalid local economy data does not break the prototype', async ({ page })
 test('wide event selection opens details and utility scenes remain responsive', async ({ page }) => {
   await page.setViewportSize({ width: 3840, height: 2160 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
+  await mockCurrentEvents(page)
   await page.goto('/events')
-  await page.getByRole('button', { name: 'View Coffee & conversation', exact: true }).click()
-  await expect(page).toHaveURL('/events/detail')
-  await expect(page.getByRole('heading', { name: 'Coffee & conversation', exact: true })).toBeVisible()
-  await page.goto('/events')
+  await page.getByRole('link', { name: 'See event & people' }).click()
+  await expect(page).toHaveURL(new RegExp(`selected=${testEventId}`))
+  await expect(page.locator('.ev-event-preview').getByRole('heading', { name: 'Campus concert', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Outdoors', exact: true }).click()
-  await page.getByRole('button', { name: 'View A little fresh air', exact: true }).click()
-  await expect(page).toHaveURL('/events/detail')
-  await expect(page.getByRole('heading', { name: 'A little fresh air', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'A quiet calendar' })).toBeVisible()
   for (const scene of ['Free Time', 'Free Time Match', 'Messages', 'Profile', 'Register']) {
     await page.getByLabel('Review scene').selectOption(scene)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), scene).toBe(true)
@@ -108,5 +107,5 @@ test('wide event selection opens details and utility scenes remain responsive', 
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.locator('.pt-conversation-pane')).toBeHidden()
   await page.getByLabel('Review scene').selectOption('Events')
-  await expect(page.locator('.pt-event-preview')).toBeHidden()
+  await expect(page.locator('.ev-event-preview')).toBeHidden()
 })

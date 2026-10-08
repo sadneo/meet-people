@@ -56,7 +56,7 @@ test('failed requests can be retried and unavailable details are explained', asy
 test('feature styles preserve host prototype controls and layout', async ({ page }) => {
   await page.goto('/events')
   await expect(page.getByRole('heading', { name: 'Acoustic afternoon' }).first()).toBeVisible()
-  const hostStyle = await page.evaluate(() => {
+  const hostStyles = await page.evaluate(() => {
     const host = document.createElement('div')
     host.className = 'pt-app'
     const button = document.createElement('button')
@@ -65,12 +65,17 @@ test('feature styles preserve host prototype controls and layout', async ({ page
     button.style.padding = '2px'
     host.appendChild(button)
     document.body.appendChild(host)
-    const style = getComputedStyle(button)
-    const result = { color: style.color, padding: style.padding, hostMinHeight: getComputedStyle(host).minHeight }
+    const read = () => ({ color: getComputedStyle(button).color, padding: getComputedStyle(button).padding, hostMinHeight: getComputedStyle(host).minHeight })
+    const before = read()
+    const feature = document.createElement('div')
+    feature.className = 'ev-feature'
+    feature.innerHTML = '<button class="ev-button">Feature control</button>'
+    host.appendChild(feature)
+    const after = read()
     host.remove()
-    return result
+    return { before, after }
   })
-  expect(hostStyle).toEqual({ color: 'rgb(17, 34, 51)', padding: '2px', hostMinHeight: '0px' })
+  expect(hostStyles.after).toEqual(hostStyles.before)
   await expect(page.locator('main')).toHaveCount(1)
   await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toHaveCount(1)
   await expect(page.locator('.ev-feature main, .ev-feature nav')).toHaveCount(0)

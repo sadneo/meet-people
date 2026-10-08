@@ -1,3 +1,4 @@
+import { mockCurrentEvents } from './current-events-fixture'
 import { expect, test, type Page } from '@playwright/test'
 
 async function scene(page: Page, name: string) { await page.getByLabel('Review scene').selectOption(name) }
@@ -112,6 +113,7 @@ test('cinematic finishes; reduced motion bypasses it and disables movement', asy
   expect(await curious.getAttribute('class')).not.toBe(oldClass)
 })
 test('all scenes fit a narrow phone; filters, empty states, reporting and blocking work', async ({ page }) => {
+  await mockCurrentEvents(page)
   await page.setViewportSize({ width: 360, height: 800 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
@@ -122,9 +124,10 @@ test('all scenes fit a narrow phone; filters, empty states, reporting and blocki
   }
   await scene(page, 'Events')
   await page.getByRole('button', { name: 'Music', exact: true }).click()
-  await expect(page.locator('.pt-event-card')).toHaveCount(1)
-  await page.getByLabel('Empty states').check()
+  await expect(page.locator('.ev-event-card')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Outdoors', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'A quiet calendar' })).toBeVisible()
+  await page.getByLabel('Empty states').check()
   await scene(page, 'Messages')
   await expect(page.getByRole('heading', { name: 'Your conversations start here' })).toBeVisible()
   await scene(page, 'Free Time Match')

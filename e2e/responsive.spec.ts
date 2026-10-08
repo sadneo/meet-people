@@ -1,9 +1,11 @@
+import { mockCurrentEvents, testEventId } from './current-events-fixture'
 import { expect, test } from '@playwright/test'
 
 for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
   test(`product layouts share the 800px boundary at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 })
     await page.emulateMedia({ reducedMotion: 'reduce' })
+    await mockCurrentEvents(page)
     const compact = width <= 800
     await page.goto('/events')
     const gutters = await page.locator('.pt-main').evaluate(element => {
@@ -11,9 +13,9 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
       return [style.paddingLeft, style.paddingRight]
     })
     const headerHeight = (await page.locator('.pt-app-header').boundingBox())?.height
-    const brandDotColor = await page.locator('.pt-brand-dot').evaluate(element => getComputedStyle(element).color)
+    const brandDotColor = await page.locator('.pt-app-header .pt-brand-dot').evaluate(element => getComputedStyle(element).color)
     const shellFonts = await page.locator('.pt-app-header, .pt-bottom-nav').evaluateAll(elements => elements.map(element => getComputedStyle(element).font))
-    const brandFont = await page.locator('.pt-brand').evaluate(element => getComputedStyle(element).font)
+    const brandFont = await page.locator('.pt-app-header .pt-brand').evaluate(element => getComputedStyle(element).font)
     for (const route of ['/', '/events', '/events/detail', '/matchmaking', '/downtime-matchmaking', '/messages', '/messages/chat', '/profile', '/settings', '/free-time', '/free-time/matches', '/free-time/plan', '/register', '/onboarding']) {
       if (route === '/free-time/plan') {
         await page.goto('/messages/chat')
@@ -32,10 +34,10 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
       await expect(page.locator('.pt-app-header')).toBeVisible({ visible: !compact })
       await expect(page.locator('.pt-bottom-nav')).toBeVisible({ visible: compact })
       expect(await page.locator('.pt-app-header, .pt-bottom-nav').evaluateAll(elements => elements.map(element => getComputedStyle(element).font)), `${route} shell typography`).toEqual(shellFonts)
-      for (const font of await page.locator('.pt-brand').evaluateAll(elements => elements.map(element => getComputedStyle(element).font))) {
+      for (const font of await page.locator('.pt-app-header .pt-brand').evaluateAll(elements => elements.map(element => getComputedStyle(element).font))) {
         expect(font, `${route} brand typography`).toBe(brandFont)
       }
-      for (const color of await page.locator('.pt-brand-dot').evaluateAll(elements => elements.map(element => getComputedStyle(element).color))) {
+      for (const color of await page.locator('.pt-app-header .pt-brand-dot').evaluateAll(elements => elements.map(element => getComputedStyle(element).color))) {
         expect(color, `${route} brand dot`).toBe(brandDotColor)
       }
       if (route !== '/') {
@@ -86,8 +88,8 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
     }
 
     await page.goto('/events')
-    await page.getByRole('button', { name: 'View Coffee & conversation', exact: true }).click()
-    await expect(page).toHaveURL('/events/detail')
+    await page.getByRole('link', { name: 'See event & people' }).click()
+    await expect(page).toHaveURL(width >= 1800 ? new RegExp(`selected=${testEventId}`) : new RegExp(`/events/${testEventId}$`))
   })
 }
 

@@ -1,8 +1,5 @@
 import { GoogleGenAI } from "npm:@google/genai";
-import { createClient } from "npm:@supabase/supabase-js@2";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
 
 // Optional shared secret. Set EMBED_SHARED_SECRET in .env to require it.
@@ -10,9 +7,6 @@ const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
 const EMBED_SHARED_SECRET = Deno.env.get("EMBED_SHARED_SECRET");
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-});
 
 Deno.serve(async (req) => {
   // Only accept POST
