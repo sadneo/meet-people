@@ -1,0 +1,13 @@
+.pt-messaging-access { width: min(100%, 560px); margin-inline: auto; overflow-y: auto; }
+.pt-messaging-initials { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--pt-pale); color: var(--pt-ink); font-size: 1rem; font-weight: 700; }
+.pt-messaging-details { padding: 20px; }
+.pt-messaging-details > div { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+.pt-conversation-pane .pt-chat-bubble { overflow-wrap: anywhere; }
+.pt-inbox-pane .pt-conversation > small { position: static; grid-column: 2; align-items: start; }
+.pt-inbox-pane .pt-conversation strong { padding-right: 0; }
+.pt-inbox-pane .pt-conversation > span:nth-child(2) { padding-top: 0; }
+.pt-inbox-pane .pt-page-heading { flex-wrap: wrap; }
+.pt-messaging-mobile-plan { display: none; }
+@media (max-width: 800px) {
+  .pt-messaging-mobile-plan { display: block; }
+}
