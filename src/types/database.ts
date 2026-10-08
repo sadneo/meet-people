@@ -34,6 +34,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      conversation_participants: {
+        Row: {
+          conversation_id: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          participant_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          participant_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          participant_key?: string
+        }
+        Relationships: []
+      }
       event_group_members: {
         Row: {
           event_id: string
@@ -294,6 +335,48 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          body: string
+          client_request_id: string
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          client_request_id: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          client_request_id?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_conversation_id_sender_id_fkey"
+            columns: ["conversation_id", "sender_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_participants"
+            referencedColumns: ["conversation_id", "user_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -314,6 +397,39 @@ export type Database = {
         Returns: Json
       }
       event_interest_counts: { Args: { p_event_ids: string[] }; Returns: Json }
+      messaging_check_participant: {
+        Args: { p_conversation_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      messaging_ensure_conversation: {
+        Args: { p_participant_ids: string[] }
+        Returns: string
+      }
+      messaging_ensure_event_conversation: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: string
+      }
+      messaging_history: {
+        Args: {
+          p_before?: string
+          p_conversation_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      messaging_list_conversations: {
+        Args: { p_page?: number; p_user_id: string }
+        Returns: Json
+      }
+      messaging_send: {
+        Args: {
+          p_body: string
+          p_conversation_id: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       reconcile_sbengaged_full_sync: {
         Args: {
           p_seen_external_ids: string[]

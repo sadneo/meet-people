@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { useNavigate } from 'react-router'
+import { conversationPath, ensureEventConversation } from '../messaging/client'
 import { EventCompanySchema, type EventCompany } from '../../../shared/events'
 import { eventRequest } from './client'
 import { Button, Icon } from './ui'
@@ -10,6 +12,9 @@ function Initials({ name }: { name: string }) {
 }
 
 export function Company({ id, title, session, authReady }: { id: string; title: string; session: Session | null; authReady: boolean }) {
+  const navigate = useNavigate()
+  const openingChat = useRef(false)
+  const [chatBusy, setChatBusy] = useState(false)
   const [company, setCompany] = useState<EventCompany | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -43,6 +48,13 @@ export function Company({ id, title, session, authReady }: { id: string; title: 
   if (!authReady) return <section><h2>Find your company</h2><p role="status">Checking sign-in…</p></section>
   if (!session) return <section><h2>Find your company</h2><EventSignIn /></section>
   const group = company?.group
+  async function openChat() {
+    if (!group || openingChat.current) return
+    openingChat.current = true; setChatBusy(true); setError('')
+    try { const result = await ensureEventConversation(group.id); navigate(conversationPath(result.conversationId)) }
+    catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not open conversation.') }
+    finally { openingChat.current = false; setChatBusy(false) }
+  }
   return <section className={group ? 'ev-event-match-result' : undefined} aria-busy={busy}>
     {group ? <>
       <span className="ev-event-match-badge"><Icon name={group.members.length > 1 ? 'check' : 'time'} size={16} />{group.members.length > 1 ? 'Group formed' : 'Waiting for company'}</span>
@@ -50,6 +62,7 @@ export function Company({ id, title, session, authReady }: { id: string; title: 
       <p>{group.members.length > 1 ? `You’re going to ${title} with people who chose the same event.` : 'Someone who joins this event can join your group. You can leave at any time.'}</p>
       <div className="ev-event-group">{group.members.map(person => <div className="ev-event-group-person" key={person.id}><Initials name={person.name} /><span><strong>{person.id === session.user.id ? `${person.name} (you)` : person.name}</strong><small>Going to this event</small></span></div>)}</div>
       <div className="ev-event-match-reasons"><span>Same event</span><span>Small group · up to 4</span></div>
+      {group.members.length > 1 && <Button secondary className="ev-wide" disabled={busy || chatBusy} onClick={() => void openChat()}>{chatBusy ? 'Opening conversation…' : 'Message group'}</Button>}
       <Button secondary className="ev-wide" disabled={busy} onClick={() => void act('leave')}>Leave group</Button>
     </> : <>
       <h2>Find your company</h2>

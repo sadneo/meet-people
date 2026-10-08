@@ -16,7 +16,6 @@ const paths: Record<string, ReactNode> = {
   arrow: <path d="M4 12h15m-6-6 6 6-6 6" />,
   back: <path d="m14 5-7 7 7 7" />,
   edit: <><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-4-4L5 15Z" /></>,
-  bell: <><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5ZM10 21h4M12 2v2" /></>,
   plan: <><path d="M6 3h9l4 4v14H6ZM14 3v5h5M9 12h7m-7 4h5" /></>,
   check: <path d="m5 12 4 4L19 6" />,
   close: <path d="m6 6 12 12M6 18 18 6" />,
