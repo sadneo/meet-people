@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
+import { usePrototype } from './context'
 import { useNavigate } from 'react-router'
 import { Button, Icon, Pebble } from './ui'
 import { PreferencesPanel } from './MatchmakingHome'
 import { initialMatchProfile, loadMatchProfile, matchmakingProfileStorageKey } from './matchmaking-profile'
 import './downtime-matchmaking.css'
-const downtimeStorageKey = 'pebble.downtime-matching'
 
 const dayLabels: Record<string, string> = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' }
 const timeLabels: Record<string, string> = { morning: 'morning', afternoon: 'afternoon', evening: 'evening', late: 'late' }
@@ -31,7 +31,8 @@ function DowntimeMatchmaking() {
   const [profile, setProfile] = useState(loadMatchProfile)
   const [draft, setDraft] = useState(initialMatchProfile)
   const [preferencesOpen, setPreferencesOpen] = useState(false)
-  const [active, setActive] = useState(() => localStorage.getItem(downtimeStorageKey) === 'true')
+  const { state, dispatch } = usePrototype()
+  const active = state.settings.downtime
 
   useEffect(() => {
     if (!preferencesOpen) return
@@ -51,11 +52,7 @@ function DowntimeMatchmaking() {
     setPreferencesOpen(false)
   }
 
-  const toggle = () => {
-    const next = !active
-    setActive(next)
-    localStorage.setItem(downtimeStorageKey, String(next))
-  }
+  const toggle = () => dispatch({ type: 'setting', key: 'downtime', value: !active })
 
   return <div className="downtime-page">
     <div className="downtime-controls" aria-label="Downtime matchmaking controls">

@@ -2,7 +2,7 @@ import { useEffect, useReducer, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router'
 import { PrototypeContext, usePrototype } from '../features/prototype/context'
 import { COMMUNITY_STORAGE_KEY, loadCommunity } from '../features/prototype/economy'
-import { initialState, reducer, scenes, scenePaths, sceneSlug, type Scene } from '../features/prototype/model'
+import { DOWNTIME_STORAGE_KEY, initialState, reducer, scenes, scenePaths, sceneSlug, type Scene, type State } from '../features/prototype/model'
 import { isEventDetailPath } from '../features/events/routes'
 import { PouchIntro } from '../features/community/PouchIntro'
 import '../features/community/motion.css'
@@ -14,7 +14,7 @@ export default function PebbleApp() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const scene = isEventDetailPath(pathname) ? 'Event Detail' : scenes.find(value => scenePaths[value] === pathname) ?? 'Home'
-  const [state, dispatch] = useReducer(reducer, initialState, initial => ({ ...initial, community: loadCommunity() }))
+  const [state, dispatch] = useReducer(reducer, initialState, loadState)
   const [introRun, setIntroRun] = useState(0)
   const [empty, setEmpty] = useState(false)
   const [personId, setPersonId] = useState('jamie')
@@ -25,6 +25,11 @@ export default function PebbleApp() {
     try { localStorage.setItem(COMMUNITY_STORAGE_KEY, JSON.stringify(state.community)) }
     catch { console.warn('Pebble community storage unavailable; changes last for this session only.') }
   }, [state.community])
+
+  useEffect(() => {
+    try { localStorage.setItem(DOWNTIME_STORAGE_KEY, String(state.settings.downtime)) }
+    catch { console.warn('Pebble settings storage unavailable; changes last for this session only.') }
+  }, [state.settings.downtime])
 
   const go = (next: Scene) => {
     if (next === 'Intro') setIntroRun(run => run + 1)
@@ -47,6 +52,12 @@ export default function PebbleApp() {
       <Outlet key={scene === 'Intro' ? introRun : undefined} />
     </div>
   </PrototypeContext.Provider>
+}
+
+function loadState(initial: State): State {
+  let downtime = false
+  try { downtime = localStorage.getItem(DOWNTIME_STORAGE_KEY) === 'true' } catch { /* storage unavailable */ }
+  return { ...initial, community: loadCommunity(), settings: { ...initial.settings, downtime } }
 }
 
 export function ImmersiveLayout() {

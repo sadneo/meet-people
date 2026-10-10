@@ -1,23 +1,12 @@
-import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { usePrototype } from './context'
 import { activities, interests, people, planDate, planTime } from './model'
-import { Avatar, Avatars, Brand, Button, Chips, Empty, Header, Icon, Pebble } from './ui'
+import { Avatar, Avatars, Brand, Button, Chips, Empty, Header, Icon, Modal, Pebble } from './ui'
 import { jamieMessages, sampleConversations } from './messaging'
 import './messages.css'
 import './profile.css'
 
-function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null)
-  const titleId = useId()
-  useEffect(() => {
-    const dialog = ref.current!
-    const opener = document.activeElement
-    dialog.showModal()
-    return () => { dialog.close(); if (opener instanceof HTMLElement && opener.isConnected) opener.focus() }
-  }, [])
-  return <dialog ref={ref} className="pt-dialog" aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose() }}><div className="pt-section-heading"><h2 id={titleId}>{title}</h2><button className="pt-icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></button></div>{children}</dialog>
-}
 export function Messages({ chatVisible }: { chatVisible: boolean }) {
   const { state, go, empty, setEmpty, chatPerson, setChatPerson } = usePrototype()
   const [search, setSearch] = useState('')
@@ -165,26 +154,4 @@ export function ProfileScreen({ other = false }: { other?: boolean }) {
 
 function ProfileGarden({ trail = false }: { trail?: boolean }) {
   return <div className={`pt-profile-garden ${trail ? 'has-trail' : ''}`} aria-hidden="true"><svg viewBox="0 0 320 100"><path d="M8 88Q-7 58 18 71L31 86Q22 10 43 48L58 83Q66 17 79 61L82 85Q109 47 107 86Z" fill="var(--pt-pale)" /><path d="M245 91Q246 76 260 82Q272 57 276 84Q299 63 288 89L306 93Z" fill="var(--pt-pale)" />{trail ? <><path d="M164 54q35-13 23 12t-1-18c25-20 38 35 75 13l35-25" stroke="var(--pt-muted)" strokeWidth="2" strokeDasharray="6 7" fill="none" /><path d="M294 47q-9-30 0-20t4 16q21-21 24-10t-28 14" fill="var(--pt-green)" /></> : <path d="m102 27-5-5m13-5-3-6m107 15 5-5m-13-6 3-6" stroke="var(--pt-coral)" strokeWidth="2" strokeLinecap="round" />}</svg><Pebble /></div>
-}
-export function Settings() {
-  const { state, dispatch, go } = usePrototype()
-  const [account, setAccount] = useState(false)
-  const [safety, setSafety] = useState(false)
-  const heading = (icon: string, title: string, description?: string) => <header className="pt-settings-heading"><Icon name={icon} size={24} /><div><h2>{title}</h2>{description && <p>{description}</p>}</div></header>
-  const toggle = (key: string, title: string, description: string) => <label className="pt-toggle-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" role="switch" aria-label={title} checked={state.settings[key]} onChange={e => dispatch({ type: 'setting', key, value: e.target.checked })} /></label>
-  return <>
-    <div className="pt-settings-landscape" aria-hidden="true" />
-    <div className="pt-settings">
-      <header className="pt-settings-title"><span><Icon name="gear" size={28} /></span><div><h1 tabIndex={-1}>Settings</h1><p>Manage your account and preferences.</p></div></header>
-      <section>{heading('profile', 'Account', 'Manage your account and profile information.')}<button className="pt-settings-row" onClick={() => setAccount(true)}><span><strong>Account details</strong><small>View and update your profile information.</small></span><Icon name="chevron" size={16} /></button></section>
-      <section>{heading('bell', 'Notifications', 'Choose what notifications you receive.')}{toggle('notifications', 'Plan & message notifications', 'Get notified about new messages and activity in your conversations.')}</section>
-      <section>{heading('shield', 'Privacy', 'Control who can find and see you on Pebble.')}{toggle('discoverable', 'Show me in discovery', 'Let other people find your profile.')}{toggle('availability', 'Share my availability', 'Show your free-time windows to connections.')}</section>
-      <section>{heading('pin', 'Discovery & Availability', 'Settings that help people find you in the right place.')}{toggle('location', 'Nearby suggestions', 'Show people and events near your current location.')}</section>
-      <section>{heading('map', 'Location', 'Manage your location settings.')}<div className="pt-settings-row"><span><strong>Campus location (demo)</strong><small>Campus is the fixed demo location for this prototype. Location access is not required.</small></span></div></section>
-      <section>{heading('matchmaking', 'Safety', 'Manage your interactions and blocked users.')}<button className="pt-settings-row" onClick={() => setSafety(true)}><span><strong>Blocked users</strong><small>Block or report someone from their profile. These controls are mock UI for review.</small></span><Icon name="chevron" size={16} /></button>{state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>)}</section>
-      <section className="pt-settings-actions">{heading('logout', 'Account Actions')}<div className="pt-settings-row"><span><strong>Log out of demo</strong><small>No active account. Community purchases stay on this device.</small></span><Button secondary onClick={() => go('Login')}>Log out of demo</Button></div></section>
-    </div>
-    {account && <Modal title="Demo account" onClose={() => setAccount(false)}><p><strong>{state.profile.name}</strong></p><p>alex@example.com</p><p className="pt-hint">Placeholder account details. Authentication and account management are not connected.</p><Button onClick={() => { setAccount(false); go('Profile') }}>Go to profile</Button></Modal>}
-    {safety && <Modal title="Blocked users" onClose={() => setSafety(false)}>{state.blocked.length ? state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>) : <p>No blocked users in this session.</p>}<p className="pt-hint">Block or report someone from their profile. These controls are mock UI for review.</p></Modal>}
-  </>
 }
