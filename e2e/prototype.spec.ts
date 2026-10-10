@@ -171,18 +171,19 @@ test('settings switches retain session changes and dialogs return focus', async 
   await expect(page.getByRole('dialog', { name: 'Blocked users' })).toContainText('No blocked users in this session.')
   await page.getByRole('button', { name: 'Close dialog' }).click()
   await expect(blocked).toBeFocused()
-  await page.getByRole('button', { name: 'Log out of demo', exact: true }).click()
+  await page.getByRole('region', { name: 'Account actions' }).getByRole('link', { name: 'Sign in', exact: true }).click()
   await expect(page).toHaveURL('/login')
 })
 
-test('registration stays local, custom time is preserved, and unread state clears', async ({ page }) => {
+test('registration has no demo bypass; prototype custom time and unread state are preserved', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   const requests: string[] = []
   page.on('request', request => { if (['fetch', 'xhr'].includes(request.resourceType())) requests.push(request.url()) })
   await page.goto('/register')
-  await page.getByLabel('Email', { exact: true }).fill('demo@example.com')
-  await page.getByLabel('Password', { exact: true }).fill('fake-password')
-  await page.getByRole('button', { name: 'Create demo account' }).click()
+  await expect(page.getByRole('heading', { name: 'Sign in to match' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Create demo account' })).toHaveCount(0)
+  await expect(page.getByLabel('Password', { exact: true })).toHaveCount(0)
+  await page.goto('/onboarding')
   await expect(page.getByRole('heading', { name: 'Basic profile', exact: true })).toBeVisible()
   await scene(page, 'Free Time')
   await page.getByRole('button', { name: 'Pick a time', exact: true }).click()

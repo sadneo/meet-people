@@ -1,99 +1,29 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, useLocation } from 'react-router'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
+import { afterEach, expect, it, vi } from 'vitest'
 import App from '../src/App'
-
-vi.stubGlobal('scrollTo', () => {})
-
-function CurrentPath() {
-  return <output aria-label="Current path">{useLocation().pathname}</output>
-}
-
-afterEach(() => {
-  cleanup()
-  localStorage.clear()
-})
-
-describe('downtime matchmaking demo', () => {
-  it('explains the passive matching criteria and local-only boundary', () => {
-    render(<MemoryRouter initialEntries={['/downtime-matchmaking']}><App /></MemoryRouter>)
-
-    expect(screen.getByRole('heading', { name: 'Meet people, even while you’re away' })).toBeTruthy()
-    expect(screen.getByText('Shared interests')).toBeTruthy()
-    expect(screen.getByText('Overlapping free time')).toBeTruthy()
-    expect(screen.getByText('Nearby places')).toBeTruthy()
-    expect(screen.getByText(/simulated on this device/i)).toBeTruthy()
-  })
-
-  it('edits shared matching preferences directly from downtime matchmaking', () => {
-    render(<MemoryRouter initialEntries={['/downtime-matchmaking']}><App /></MemoryRouter>)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Preferences' }))
-    expect(screen.getByRole('dialog', { name: 'Your preferences' })).toBeTruthy()
-
-    fireEvent.change(screen.getByLabelText('Approximate area'), { target: { value: 'West campus' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
-
-    expect(screen.getByText('West campus')).toBeTruthy()
-    expect(localStorage.getItem('pebble.matchmaking-profile')).toContain('West campus')
-  })
-
-  it('switches from downtime to active matchmaking', () => {
-    render(<MemoryRouter initialEntries={['/downtime-matchmaking']}><App /><CurrentPath /></MemoryRouter>)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Active matchmaking' }))
-
-    expect(screen.getByLabelText('Current path').textContent).toBe('/matchmaking')
-    expect(screen.getByRole('heading', { name: 'Find your people' })).toBeTruthy()
-  })
-
-  it('enables and disables a persisted downtime search', () => {
-    render(<MemoryRouter initialEntries={['/downtime-matchmaking']}><App /></MemoryRouter>)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Turn on downtime matching' }))
-
-    expect(screen.getByRole('status').textContent).toContain('Downtime matching is on')
-    expect(localStorage.getItem('pebble.downtime-matching')).toBe('true')
-
-    fireEvent.click(screen.getByRole('button', { name: 'Pause downtime matching' }))
-
-    expect(screen.getByRole('status').textContent).toContain('Downtime matching is paused')
-    expect(localStorage.getItem('pebble.downtime-matching')).toBe('false')
-  })
-
-  it('restores an enabled downtime search after remounting', () => {
-    localStorage.setItem('pebble.downtime-matching', 'true')
-
-    const view = render(<MemoryRouter initialEntries={['/downtime-matchmaking']}><App /></MemoryRouter>)
-    expect(screen.getByRole('button', { name: 'Pause downtime matching' })).toBeTruthy()
-
-    view.unmount()
-    render(<MemoryRouter initialEntries={['/downtime-matchmaking']}><App /></MemoryRouter>)
-    expect(screen.getByRole('status').textContent).toContain('Downtime matching is on')
-  })
-
-  it('reuses saved matchmaking preferences', () => {
-    localStorage.setItem('pebble.matchmaking-profile', JSON.stringify({
-      age: '24', area: 'North campus', distance: 'Under 10 min',
-      interests: ['Pottery', 'Coffee'], schedule: ['wed-evening'], places: ['Coffee shops'],
-    }))
-
-    render(<MemoryRouter initialEntries={['/downtime-matchmaking']}><App /></MemoryRouter>)
-
-    expect(screen.getByText('North campus')).toBeTruthy()
-    expect(screen.getByText('Pottery')).toBeTruthy()
-    expect(screen.getByText('Wed evening')).toBeTruthy()
-  })
-
-  it('falls back safely when stored matching preferences are malformed', () => {
-    localStorage.setItem('pebble.matchmaking-profile', JSON.stringify({
-      area: 'North campus', interests: 'not-an-array', schedule: { bad: true }, places: null,
-    }))
-
-    render(<MemoryRouter initialEntries={['/downtime-matchmaking']}><App /></MemoryRouter>)
-
-    expect(screen.getByText('Stony Brook campus')).toBeTruthy()
-    expect(screen.getByText('Hiking')).toBeTruthy()
-    expect(screen.getByText('Mon evening')).toBeTruthy()
-  })
+vi.mock('../src/auth/useSession', () => ({ useSession: () => ({ session: { access_token: 'user-jwt', user: { id: 'a0000000-0000-4000-8000-000000000001' } }, ready: true }) }))
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
+it('uses the downtime server queue, not persisted demo state, and checks only on demand', async () => {
+  localStorage.setItem('pebble.downtime-matching', 'true')
+  let mode: string | null = null
+  const calls: string[] = []
+  vi.stubGlobal('scrollTo', () => {})
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push(String(input))
+    if (String(input).endsWith('/profile')) return Response.json({ profile: { username: 'sam', display_name: 'Sam', bio: null, birthdate: null, location_city: null, avatar_url: null, interests: [], availability: [] } })
+    if (init?.method === 'POST') { expect(JSON.parse(String(init.body))).toEqual({ mode: 'downtime' }); mode = 'downtime' }
+    if (init?.method === 'DELETE') mode = null
+    return Response.json({ mode })
+  }))
+  render(<MemoryRouter initialEntries={['/downtime-matchmaking']}><App /></MemoryRouter>)
+  const start = await screen.findByRole('button', { name: 'Turn on downtime matching', exact: true })
+  await waitFor(() => expect(start.disabled).toBe(false))
+  fireEvent.click(start)
+  await screen.findByRole('button', { name: 'Pause downtime matching', exact: true })
+  expect(screen.getByRole('status').textContent).toContain('downtime queue')
+  expect(calls.some(path => path.endsWith('/result'))).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Pause downtime matching', exact: true }))
+  await screen.findByRole('button', { name: 'Turn on downtime matching', exact: true })
+  expect(localStorage.getItem('pebble.downtime-matching')).toBe('true')
 })

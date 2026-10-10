@@ -3,6 +3,8 @@ import { Link, Outlet, useLocation } from 'react-router'
 import { usePrototype } from './context'
 import { scenePaths, type Scene } from './model'
 import { Avatar, Brand, Icon, Pebble } from './ui'
+import { useLogout } from '../../auth/useLogout'
+import { MatchingInbox } from '../matchmaking/MatchingInbox'
 
 const primaryTabs: { label: Scene; icon: string }[] = [
   { label: 'Home', icon: 'home' },
@@ -18,6 +20,7 @@ function Tab({ label, icon, active }: { label: Scene; icon: string; active: bool
 export function AppShell() {
   const { scene, state } = usePrototype()
   const { pathname } = useLocation()
+  const auth = useLogout()
   const main = useRef<HTMLElement>(null)
   const account = useRef<HTMLDetailsElement>(null)
   const activeTab: Scene = scene === 'Event Detail' ? 'Events' : scene === 'Downtime Matchmaking' ? 'Matchmaking' : ['Free Time Match', 'Activities', 'Planning', 'Review', 'Confirmed', 'Connection'].includes(scene) ? 'Free Time' : scene === 'Chat' ? 'Messages' : ['Other User Profile', 'Settings'].includes(scene) ? 'Profile' : scene
@@ -55,11 +58,13 @@ export function AppShell() {
           <div className="pt-account-options" onClick={() => { if (account.current) account.current.open = false }}>
             <Tab label="Profile" icon="profile" active={activeTab === 'Profile' && scene !== 'Settings'} />
             <Tab label="Settings" icon="settings" active={scene === 'Settings'} />
-            <Link to={scenePaths.Login}>Log out</Link>
+            {!auth.ready ? <button type="button" disabled>Loading account…</button> : auth.session ? <button type="button" disabled={auth.busy} onClick={() => void auth.logout()}>{auth.busy ? 'Logging out…' : 'Log out'}</button> : <Link to={scenePaths.Login}>Sign in</Link>}
           </div>
         </details>
       </nav>
     </header>
+    {auth.error && <p className="pt-logout-error" role="alert">{auth.error}</p>}
+    <MatchingInbox />
     <main ref={main} className="pt-main"><Outlet /></main>
     <nav className="pt-bottom-nav" aria-label="Primary navigation">{[...primaryTabs, { label: 'Profile' as Scene, icon: 'profile' }].map(tab => <Tab key={tab.label} {...tab} active={activeTab === tab.label} />)}</nav>
   </>

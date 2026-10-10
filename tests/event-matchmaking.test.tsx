@@ -1,7 +1,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import App from '../src/App'
+import { Company } from '../src/features/events/Company'
+import type { Session } from '@supabase/supabase-js'
 
 const fixture = vi.hoisted(() => {
   const userId = 'a0000000-0000-4000-8000-000000000001'
@@ -34,23 +35,23 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 function CurrentPath() { return <output aria-label="Current path">{useLocation().pathname}</output> }
 
-describe('event matchmaking integration', () => {
-  it('renders the server-returned group and stays on the event route', async () => {
-    render(<MemoryRouter initialEntries={[`/events/${fixture.eventId}`]}><App /><CurrentPath /></MemoryRouter>)
+const legacyCompany = <Company id={fixture.eventId} title={event.title} session={fixture.session as Session} authReady />
+describe('legacy Company standalone compatibility (not mounted on event detail)', () => {
+  it('renders the legacy server-returned group without navigating', async () => {
+    render(<MemoryRouter initialEntries={[`/events/${fixture.eventId}`]}>{legacyCompany}<CurrentPath /></MemoryRouter>)
     const join = await screen.findByRole('button', { name: 'Find someone to go with' })
     expect(screen.queryByText('Taylor')).toBeNull()
     fireEvent.click(join)
     await screen.findByRole('heading', { name: 'Your event group is ready' })
     expect(screen.getByText('Sam (you)')).toBeTruthy()
     expect(screen.getByText('Taylor')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Campus concert' })).toBeTruthy()
+    expect(screen.getByText(/You’re going to Campus concert/)).toBeTruthy()
     expect(screen.getByLabelText('Current path').textContent).toBe(`/events/${fixture.eventId}`)
     expect(screen.queryByRole('heading', { name: 'Find your people' })).toBeNull()
-    expect(screen.getAllByRole('link', { name: 'Events' }).every(link => link.getAttribute('aria-current') === 'page')).toBe(true)
     expect(requests.find(request => request.body?.action === 'join')).toMatchObject({ url: `/api/events/${fixture.eventId}/company`, method: 'POST', body: { action: 'join', name: 'Sam' }, authorization: 'Bearer test-session' })
   })
   it('leaves the group through the API and returns to the event company prompt', async () => {
-    render(<MemoryRouter initialEntries={[`/events/${fixture.eventId}`]}><App /><CurrentPath /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={[`/events/${fixture.eventId}`]}>{legacyCompany}<CurrentPath /></MemoryRouter>)
     fireEvent.click(await screen.findByRole('button', { name: 'Find someone to go with' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Leave group' }))
     await screen.findByRole('heading', { name: 'Find your company' })

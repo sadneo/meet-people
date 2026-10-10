@@ -2,6 +2,10 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { usePrototype } from './context'
 import { DEMO_CHAPTER_REWARD, interests, intents, type Profile } from './model'
 import { Avatar, Brand, Button, Chips, Icon, Pebble, Pouch } from './ui'
+import { Link, useLocation, useNavigate } from 'react-router'
+import { EmailLinkSignIn } from '../../auth/EmailLinkSignIn'
+import { useSession } from '../../auth/useSession'
+import { safeReturnTo } from '../../auth/returnTo'
 
 const chapters = ['Basic profile', 'Interests', 'Social intent', 'Availability & preferences']
 function firstIncomplete(completed: number[]) { return [0, 1, 2, 3].find(i => !completed.includes(i)) ?? 0 }
@@ -47,7 +51,11 @@ export function Onboarding() {
 }
 
 export function Auth({ register = false }: { register?: boolean }) {
-  const { go } = usePrototype()
+  const { session, ready } = useSession()
+  const { search } = useLocation()
+  const navigate = useNavigate()
+  const returnTo = safeReturnTo(new URLSearchParams(search).get('returnTo'))
+  useEffect(() => { if (ready && session && returnTo) navigate(returnTo, { replace: true }) }, [ready, session, returnTo, navigate])
   const [edge, setEdge] = useState(0)
   const [hidden, setHidden] = useState(false)
   useEffect(() => {
@@ -55,5 +63,5 @@ export function Auth({ register = false }: { register?: boolean }) {
     const timer = window.setTimeout(() => { setEdge(previous => (previous + 1 + Math.floor(Math.random() * 3)) % 4); setHidden(false) }, 1400 + Math.random() * 1600)
     return () => window.clearTimeout(timer)
   }, [hidden])
-  return <section className="pt-auth"><Brand /><div className="pt-auth-form"><h1>{register ? 'Make room for new people.' : 'Good to see you.'}</h1><p>{register ? 'Create your Pebble profile.' : 'Sign in to Pebble.'}</p><form onSubmit={e => { e.preventDefault(); go(register ? 'Onboarding' : 'Home') }}><label>Email<input type="email" required placeholder="you@university.edu" autoComplete="email" /></label><label>Password<input type="password" required minLength={8} placeholder="At least 8 characters" autoComplete={register ? 'new-password' : 'current-password'} /></label><Button type="submit" className="pt-wide">{register ? 'Create demo account' : 'Log in to demo'}<Icon name="arrow" /></Button><p className="pt-hint">Use made-up details. Nothing is sent or saved.</p></form><button className="pt-text-button" onClick={() => go(register ? 'Login' : 'Register')}>{register ? 'Already have an account? Log in' : 'New here? Create an account'}</button><button className="pt-text-button" onClick={() => go('Home')}>Explore the demo</button></div><button className={`pt-curious pt-edge-${edge} ${hidden ? 'is-hidden' : ''}`} aria-label="Say hello to the curious Pebble" onClick={() => setHidden(true)}><Pebble /></button></section>
+  return <section className="pt-auth"><Brand /><div className="pt-auth-form"><h1>{register ? 'Create an account' : 'Sign in'}</h1>{!ready ? <p role="status">Loading session…</p> : session ? <><p>You are signed in.</p><Link to="/matchmaking">Go to matchmaking</Link></> : <EmailLinkSignIn />}<Link to="/">Back to home preview</Link></div><button className={`pt-curious pt-edge-${edge} ${hidden ? 'is-hidden' : ''}`} aria-label="Say hello to the curious Pebble" onClick={() => setHidden(true)}><Pebble /></button></section>
 }

@@ -13,8 +13,15 @@ export async function eventRequest<T>(path: string, schema: ZodType<T>, options:
   return schema.parse(data)
 }
 
+export const eventImagePlaceholder = '/images/event-placeholder.svg'
 export function safeImage(url: string | null) {
-  return url?.startsWith('https://') || url?.startsWith('http://') ? url : '/prototype/music.jpg'
+  if (url && /^https?:\/\//i.test(url)) {
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return url
+    } catch { /* Missing/invalid source artwork uses the local neutral placeholder. */ }
+  }
+  return eventImagePlaceholder
 }
 export function sourceLink(url: string | null) {
   return url?.startsWith('https://') || url?.startsWith('http://') ? url : null

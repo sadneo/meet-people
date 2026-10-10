@@ -6,6 +6,7 @@ import { Avatar, Avatars, Brand, Button, Chips, Empty, Header, Icon, Pebble } fr
 import { jamieMessages, sampleConversations } from './messaging'
 import './messages.css'
 import './profile.css'
+import { useLogout } from '../../auth/useLogout'
 
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -168,6 +169,7 @@ function ProfileGarden({ trail = false }: { trail?: boolean }) {
 }
 export function Settings() {
   const { state, dispatch, go } = usePrototype()
+  const auth = useLogout()
   const [account, setAccount] = useState(false)
   const [safety, setSafety] = useState(false)
   const heading = (icon: string, title: string, description?: string) => <header className="pt-settings-heading"><Icon name={icon} size={24} /><div><h2>{title}</h2>{description && <p>{description}</p>}</div></header>
@@ -182,7 +184,7 @@ export function Settings() {
       <section>{heading('pin', 'Discovery & Availability', 'Settings that help people find you in the right place.')}{toggle('location', 'Nearby suggestions', 'Show people and events near your current location.')}</section>
       <section>{heading('map', 'Location', 'Manage your location settings.')}<div className="pt-settings-row"><span><strong>Campus location (demo)</strong><small>Campus is the fixed demo location for this prototype. Location access is not required.</small></span></div></section>
       <section>{heading('matchmaking', 'Safety', 'Manage your interactions and blocked users.')}<button className="pt-settings-row" onClick={() => setSafety(true)}><span><strong>Blocked users</strong><small>Block or report someone from their profile. These controls are mock UI for review.</small></span><Icon name="chevron" size={16} /></button>{state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>)}</section>
-      <section className="pt-settings-actions">{heading('logout', 'Account Actions')}<div className="pt-settings-row"><span><strong>Log out of demo</strong><small>No active account. Community purchases stay on this device.</small></span><Button secondary onClick={() => go('Login')}>Log out of demo</Button></div></section>
+      <section className="pt-settings-actions" aria-label="Account actions">{heading('logout', 'Account actions')}<div className="pt-settings-row"><span><strong>{auth.session ? 'Supabase session' : 'Sign in to Pebble'}</strong><small>{auth.session ? 'Log out of your account. Local preview purchases stay on this device.' : 'No active Supabase session. Local preview purchases stay on this device.'}</small></span>{!auth.ready ? <Button secondary disabled>Loading account…</Button> : auth.session ? <Button secondary disabled={auth.busy} onClick={() => void auth.logout()}>{auth.busy ? 'Logging out…' : 'Log out'}</Button> : <Link className="pt-button pt-secondary" to="/login">Sign in</Link>}</div>{auth.error && <p role="alert">{auth.error}</p>}</section>
     </div>
     {account && <Modal title="Demo account" onClose={() => setAccount(false)}><p><strong>{state.profile.name}</strong></p><p>alex@example.com</p><p className="pt-hint">Placeholder account details. Authentication and account management are not connected.</p><Button onClick={() => { setAccount(false); go('Profile') }}>Go to profile</Button></Modal>}
     {safety && <Modal title="Blocked users" onClose={() => setSafety(false)}>{state.blocked.length ? state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>) : <p>No blocked users in this session.</p>}<p className="pt-hint">Block or report someone from their profile. These controls are mock UI for review.</p></Modal>}

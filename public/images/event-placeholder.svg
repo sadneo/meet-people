@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480">
+  <title>Neutral Pebble placeholder illustration</title>
+  <desc>Three friendly pebble stones in a softly colored meadow, not a photograph of an event or venue.</desc>
+  <!-- Original local artwork; no external images, fonts or resources. -->
+  <rect width="800" height="480" fill="#fff9ec"/>
+  <circle cx="590" cy="120" r="64" fill="#edf0e2"/>
+  <path d="M0 300Q180 246 390 302T800 282V480H0Z" fill="#e2e8d4"/>
+  <path d="M0 367Q220 326 433 370T800 344V480H0Z" fill="#cdd8bb"/>
+  <g fill="#9cac88" opacity=".35">
+    <ellipse cx="279" cy="363" rx="80" ry="16"/>
+    <ellipse cx="430" cy="379" rx="99" ry="20"/>
+    <ellipse cx="576" cy="360" rx="66" ry="14"/>
+  </g>
+  <path d="M212 332Q214 277 253 254Q292 235 321 275Q346 309 338 341Q330 366 281 367Q223 367 212 332Z" fill="#b9b7a4"/>
+  <path d="M347 344Q349 269 399 232Q432 208 473 238Q511 269 514 338Q516 379 433 383Q358 384 347 344Z" fill="#a6ad93"/>
+  <path d="M520 337Q518 293 549 271Q576 251 603 280Q632 307 628 340Q624 363 575 366Q527 364 520 337Z" fill="#c3c2ae"/>
+  <g fill="none" stroke="#f4f2e6" stroke-width="8" stroke-linecap="round" opacity=".65">
+    <path d="M237 293Q248 271 266 267"/>
+    <path d="M372 289Q383 257 402 248"/>
+    <path d="M540 306Q548 285 561 283"/>
+  </g>
+  <g fill="#63705b">
+    <circle cx="264" cy="314" r="4"/><circle cx="291" cy="314" r="4"/>
+    <circle cx="414" cy="313" r="5"/><circle cx="445" cy="313" r="5"/>
+    <circle cx="565" cy="320" r="4"/><circle cx="589" cy="320" r="4"/>
+  </g>
+  <g fill="none" stroke="#63705b" stroke-width="3" stroke-linecap="round">
+    <path d="M269 330Q278 338 287 330"/>
+    <path d="M418 332Q430 343 442 332"/>
+    <path d="M568 334Q577 342 586 334"/>
+  </g>
+  <g fill="none" stroke="#9cac88" stroke-width="4" stroke-linecap="round">
+    <path d="M145 363l-7-13m7 13 8-17M657 383l-5-15m5 15 8-10M304 422l-6-12m6 12 7-15"/>
+  </g>
+</svg>

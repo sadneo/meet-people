@@ -5,25 +5,31 @@
 Maintain a mobile-first visual prototype for a student-focused, platonic
 social app. It demonstrates world progression, matching, events, planning,
 conversations, and profile preferences with explicitly labelled demo data.
-These flows do not connect to live matching, registration, chat, or account
-services. `docs/DESIGN.md` is the product-design authority.
+Most flows remain local previews. Active/downtime matching and email-link
+sign-in now use the backend slice described in `docs/matchmaking-backend.md`;
+SQL activation is separate. Chat/planning remain prototypes.
+Imported event detail/preview use a server-backed group queue and persistent
+in-app proposal inbox; see `docs/event-group-queue.md` for the proposed parent SQL
+contracts and disabled worker. No Company/compatibility consent is reused.
+`docs/DESIGN.md` is the product-design authority.
 
 ## Information Architecture
 
 | Route | Purpose |
 | --- | --- |
 | `/` | Pebble community world, balance, upgrades, and matching entry points |
-| `/matchmaking` | Event matchmaking and preferences |
-| `/downtime-matchmaking` | Downtime matching and preferences |
+| `/matchmaking` | Authenticated active queue, single-person result and profile preferences |
+| `/downtime-matchmaking` | Authenticated downtime queue and shared profile preferences |
 | `/events` | Browse sample events |
 | `/events/detail` | Event details and demo event-group formation |
+| `/events/:listingId` | Imported-event detail and authenticated group queue (SQL activation separate) |
 | `/messages` | Conversation inbox |
 | `/messages/chat` | Selected conversation |
 | `/profile` | Current student profile |
 | `/profile/person` | Another sample student's profile |
 | `/settings` | Local prototype and account preferences |
 | `/free-time` and nested routes | Availability, people, activities, planning, review, confirmation, and connection |
-| `/intro`, `/login`, `/register`, `/onboarding` | Immersive introduction and demo account setup |
+| `/intro`, `/login`, `/register`, `/onboarding` | Preview introduction/onboarding; real email-link sign-in on login/register |
 | `*` | Not-found experience |
 
 Home, Matchmaking, Events, Messages, and Profile are the five navigation

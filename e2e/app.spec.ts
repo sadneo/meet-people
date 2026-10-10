@@ -89,7 +89,7 @@ for (const width of [801, 1280]) {
     }
     await trigger.click()
 
-    for (const [name, route] of [['Profile', '/profile'], ['Settings', '/settings'], ['Log out', '/login']]) {
+    for (const [name, route] of [['Profile', '/profile'], ['Settings', '/settings'], ['Sign in', '/login']]) {
       await trigger.click()
       await options.getByRole('link', { name, exact: true }).click()
       await expect(page).toHaveURL(route)
