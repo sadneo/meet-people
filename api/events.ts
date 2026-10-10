@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
-import type { SupabaseClient, User } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import { authenticate as verifySession } from './auth.js'
 import { EventQuerySchema, EventSchema, EventCompanySchema } from '../shared/events.js'
 
 const columns = 'id,title,description,category,starts_at,ends_at,location_name,address,city,image_url,source,source_url,status,latitude,longitude'
@@ -23,13 +24,8 @@ export function createEventsRouter(client: SupabaseClient | null) {
     .eq('listing_type', 'event').in('status', ['active', 'rescheduled'])
     .or(`starts_at.gte.${new Date().toISOString()},ends_at.gte.${new Date().toISOString()}`)
 
-  async function authenticate(request: Request, response: Response): Promise<User | null> {
-    const token = request.headers.authorization?.match(/^Bearer (\S+)$/i)?.[1]
-    if (!token) { response.status(401).json({ error: 'Sign in to find company for this event.' }); return null }
-    const { data, error } = await client!.auth.getUser(token)
-    if (error || !data.user) { response.status(401).json({ error: 'Your session has expired. Sign in again.' }); return null }
-    return data.user
-  }
+  const authenticate = (request: Request, response: Response) =>
+    verifySession(client!, request, response, 'Sign in to find company for this event.')
   async function findEvent(request: Request, response: Response) {
     const parsed = uuid.safeParse(request.params.id)
     if (!parsed.success) { response.status(400).json({ error: 'Invalid event ID.' }); return null }

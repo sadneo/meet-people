@@ -61,12 +61,30 @@ export const times = [
 export type Profile = { name: string; bio: string; photo: string; interests: string[]; intents: string[]; usual: string[]; distance: string; group: string }
 export type Draft = { when: string; date: string; customTime: string; vibe: string; distance: string; people: string[]; activity: string; time: string; note: string }
 export type Plan = Draft & { status: 'Confirmed' }
-export type State = { profile: Profile; draft: Draft; plan: Plan | null; completed: number[]; messages: Record<string, string[]>; blocked: string[]; settings: Record<string, boolean>; readChannels: string[]; community: Community }
+export type Account = { username: string; usernameChangedAt: string | null; email: string; pendingEmail: string | null; hasPassword: boolean; twoFactor: boolean }
+// Empty strings follow the device, mirroring null in user_settings.
+export type Region = { locale: string; timezone: string }
+export type DemoSession = { id: string; device: string; detail: string; lastActive: string; current: boolean }
+export type State = { profile: Profile; draft: Draft; plan: Plan | null; completed: number[]; messages: Record<string, string[]>; blocked: string[]; settings: Record<string, boolean>; readChannels: string[]; community: Community; account: Account; region: Region; sessions: DemoSession[] }
+export const USERNAME_CHANGE_DAYS = 30
+export const DOWNTIME_STORAGE_KEY = 'pebble.downtime-matching'
+export function nextUsernameChange(account: Account, now = Date.now()) {
+  if (!account.usernameChangedAt) return null
+  const next = new Date(account.usernameChangedAt).getTime() + USERNAME_CHANGE_DAYS * 24 * 60 * 60 * 1000
+  return next > now ? new Date(next) : null
+}
 export const initialState: State = {
   community: emptyCommunity,
   profile: { name: 'Alex', bio: 'Coffee breaks, new friends, and a little time outside.', photo: 'you.jpg', interests: ['Coffee', 'Music', 'Gaming', 'Outdoors'], intents: ['Meet new people'], usual: ['Afternoons'], distance: '5 miles', group: 'Either' },
   draft: { when: 'Later today', date: '2026-09-26', customTime: '16:00', vibe: 'Low-key', distance: 'Nearby', people: [], activity: '', time: '', note: '' },
-  plan: null, completed: [], messages: {}, blocked: [], settings: { notifications: true, availability: true, discoverable: true, location: false }, readChannels: [],
+  plan: null, completed: [], messages: {}, blocked: [], settings: { notifications: true, availability: true, discoverable: true, location: false, dating: false, downtime: false }, readChannels: [],
+  account: { username: 'alex', usernameChangedAt: null, email: 'alex@example.com', pendingEmail: null, hasPassword: false, twoFactor: false },
+  region: { locale: '', timezone: '' },
+  sessions: [
+    { id: 'this-device', device: 'This browser', detail: 'Stony Brook, NY', lastActive: 'Active now', current: true },
+    { id: 'phone', device: 'iPhone · Safari', detail: 'Stony Brook, NY', lastActive: '2 hours ago', current: false },
+    { id: 'library', device: 'Chrome on Windows', detail: 'Library computer · Stony Brook, NY', lastActive: '3 days ago', current: false },
+  ],
 }
 export type Action =
   | { type: 'build'; id: UpgradeId }
@@ -82,6 +100,12 @@ export type Action =
   | { type: 'read'; channel: string }
   | { type: 'block'; id: string }
   | { type: 'unblock'; id: string }
+  | { type: 'account'; patch: Partial<Account> }
+  | { type: 'username'; username: string; now?: number }
+  | { type: 'region'; patch: Partial<Region> }
+  | { type: 'end-session'; id: string }
+  | { type: 'end-other-sessions' }
+  | { type: 'delete-account' }
 export function availableTimes(draft: Draft) {
   if (draft.when === 'Tonight') return [{ id: '19:00', label: '7:00–7:45 PM', unavailable: [] }, { id: '20:00', label: '8:00–8:45 PM', unavailable: ['maya'] }]
   if (draft.when === 'Pick a time') return [{ id: draft.customTime, label: `${formatClock(draft.customTime)} · 45 minutes`, unavailable: [] }]
@@ -110,6 +134,17 @@ export function reducer(state: State, action: Action): State {
     case 'read': return { ...state, readChannels: [...new Set([...state.readChannels, action.channel])] }
     case 'block': return { ...state, blocked: [...new Set([...state.blocked, action.id])], draft: { ...state.draft, people: state.draft.people.filter(id => id !== action.id), time: '' } }
     case 'unblock': return { ...state, blocked: state.blocked.filter(id => id !== action.id) }
+    case 'account': return { ...state, account: { ...state.account, ...action.patch } }
+    // Choosing the same name is a no-op; otherwise changes are limited like the API's.
+    case 'username': {
+      const now = action.now ?? Date.now()
+      if (action.username === state.account.username || nextUsernameChange(state.account, now)) return state
+      return { ...state, account: { ...state.account, username: action.username, usernameChangedAt: new Date(now).toISOString() } }
+    }
+    case 'region': return { ...state, region: { ...state.region, ...action.patch } }
+    case 'end-session': return { ...state, sessions: state.sessions.filter(session => session.current || session.id !== action.id) }
+    case 'end-other-sessions': return { ...state, sessions: state.sessions.filter(session => session.current) }
+    case 'delete-account': return { ...initialState, community: emptyCommunity }
   }
 }
 export function formatClock(value: string) {

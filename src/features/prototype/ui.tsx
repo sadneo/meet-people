@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { people, type Person } from './model'
 
 export function Pebble({ expression = 'happy', className = '' }: { expression?: 'happy' | 'neutral' | 'surprised'; className?: string }) {
@@ -42,6 +42,11 @@ const paths: Record<string, ReactNode> = {
   graduation: <><path d="m2 8 10-5 10 5-10 5Zm4 3v6q6 5 12 0v-6M22 8v8" /></>,
   cake: <><path d="M4 12h16v9H4ZM4 15q2 4 4 0 2 4 4 0 2 4 4 0 2 4 4 0M8 7v5m4-5v5m4-5v5M8 3v1m4-1v1m4-1v1" /></>,
   leaf: <><path d="M20 3C9 2 3 7 5 15c7 3 15-1 15-12ZM4 21 15 8" /></>,
+  globe: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3q4 4 4 9t-4 9q-4-4-4-9t4-9Z" /></>,
+  key: <><circle cx="8" cy="15" r="4" /><path d="m11 12 9-9m-4 4 3 3m-6 0 2 2" /></>,
+  download: <path d="M12 3v12m-5-5 5 5 5-5M4 20h16" />,
+  mobile: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></>,
+  laptop: <><rect x="4" y="5" width="16" height="11" rx="1.5" /><path d="M2 19h20" /></>,
 }
 export function Icon({ name, size = 22 }: { name: string; size?: number }) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] ?? paths.profile}</svg> }
 export function Brand() { return <span className="pt-brand">pebble<span className="pt-brand-leaf" /><span className="pt-brand-dot">.</span></span> }
@@ -51,3 +56,14 @@ export function Header({ title, sub, back, action }: { title: string; sub?: stri
 export function Button({ children, onClick, secondary = false, disabled = false, type = 'button', className = '' }: { children: ReactNode; onClick?: () => void; secondary?: boolean; disabled?: boolean; type?: 'button' | 'submit'; className?: string }) { return <button type={type} onClick={onClick} disabled={disabled} className={`pt-button ${secondary ? 'pt-secondary' : ''} ${className}`}>{children}</button> }
 export function Chips({ options, values, onChange, multi = false, label }: { options: string[]; values: string[]; onChange: (values: string[]) => void; multi?: boolean; label: string }) { return <div className="pt-chips" role="group" aria-label={label}>{options.map(value => <button type="button" key={value} aria-pressed={values.includes(value)} onClick={() => onChange(multi ? (values.includes(value) ? values.filter(v => v !== value) : [...values, value]) : [value])}>{values.includes(value) && <Icon name="check" size={16} />}{value}</button>)}</div> }
 export function Empty({ title, text, action, onClick }: { title: string; text: string; action: string; onClick: () => void }) { return <div className="pt-empty"><Pebble expression="neutral" /><h2>{title}</h2><p>{text}</p><Button onClick={onClick}>{action}</Button></div> }
+export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+  useEffect(() => {
+    const dialog = ref.current!
+    const opener = document.activeElement
+    dialog.showModal()
+    return () => { dialog.close(); if (opener instanceof HTMLElement && opener.isConnected) opener.focus() }
+  }, [])
+  return <dialog ref={ref} className="pt-dialog" aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose() }}><div className="pt-section-heading"><h2 id={titleId}>{title}</h2><button className="pt-icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></button></div>{children}</dialog>
+}
