@@ -70,18 +70,13 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
           expect(composer!.y + composer!.height).toBeLessThanOrEqual(navigation?.y ?? 844)
         }
       }
-      const grid = route === '/profile' ? '.pt-profile-support' : route === '/free-time/plan' ? '.pt-planning-grid' : route === '/matchmaking' ? '.match-detail-grid' : null
+      const grid = route === '/profile' ? '.pt-profile-support' : route === '/free-time/plan' ? '.pt-planning-grid' : null
       if (grid) {
         const columns = await page.locator(grid).evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length)
         expect(columns, route).toBe(compact ? 1 : 2)
       }
       if (['/matchmaking', '/downtime-matchmaking'].includes(route)) {
-        await page.getByRole('button', { name: 'Preferences', exact: true }).click()
-        const alignment = await page.locator('.match-preferences-backdrop').evaluate(element => getComputedStyle(element).alignItems)
-        expect(alignment).toBe(compact ? 'end' : 'center')
-        const panel = await page.locator('.match-preferences').boundingBox()
-        const navigation = compact ? await page.locator('.pt-bottom-nav').boundingBox() : null
-        expect(panel!.y + panel!.height).toBeLessThanOrEqual(navigation?.y ?? 844)
+        await expect(page.getByRole('heading', { name: 'Sign in to match' })).toBeVisible()
         expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
         await page.keyboard.press('Escape')
       }
@@ -106,6 +101,8 @@ test('an existing messaging workspace switches with navigation when resized', as
 })
 
 test('navigation and preferences share safe-area clearance on a short screen', async ({ page }) => {
+  await mockMatchingSession(page)
+  await mockMatchingApi(page)
   await page.setViewportSize({ width: 320, height: 480 })
   await page.goto('/matchmaking')
   await page.evaluate(() => document.body.style.setProperty('--pt-safe-area-bottom', '24px'))
@@ -127,3 +124,4 @@ test('navigation and preferences share safe-area clearance on a short screen', a
   const entry = await page.locator('.pt-matchmaking-entry').boundingBox()
   expect(entry!.y + entry!.height).toBeLessThanOrEqual(navigation!.y)
 })
+import { mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'

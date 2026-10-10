@@ -199,3 +199,31 @@
 @media (prefers-reduced-motion: reduce) {
   .match-home *, .match-home *::before, .match-home *::after { scroll-behavior: auto !important; transition: none !important; }
 }
+.match-live { display: grid; gap: 20px; }
+.match-live .match-record-card { padding: 20px; overflow-wrap: anywhere; }
+.match-live .match-topbar { justify-content: space-between; }
+.match-live .match-topbar h1 { font-size: 1.75rem; }
+.match-live .match-mode-switch { min-height: 44px; background: var(--color-surface); }
+.match-live-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.match-live .match-topbar { flex-wrap: wrap; gap: 12px; }
+.match-live label, .match-live-dialog label { display: grid; gap: 8px; }
+.match-live select { min-height: 44px; width: 100%; padding: 12px; border: 1px solid var(--color-line); border-radius: var(--radius-control); color: var(--color-ink); background: var(--color-surface); font: inherit; }
+.match-live fieldset label { display: flex; align-items: center; min-height: 44px; }
+.match-live form { display: grid; gap: 16px; }
+.match-live input, .match-live-dialog input, .match-live-dialog textarea, .match-live-dialog select { min-height: 44px; max-width: 100%; border: 1px solid var(--color-line); border-radius: var(--radius-control); padding: 12px; color: var(--color-ink); background: var(--color-surface); font: inherit; }
+.match-live-dialog { position: fixed; inset: 0; margin: auto; transform: none; border: 1px solid var(--color-line); padding: 0; max-height: 85vh; width: min(640px, calc(100% - 40px)); color: var(--color-ink); }
+.match-live-dialog::backdrop { background: rgb(0 0 0 / .35); }
+.match-live-dialog .match-preferences-body { display: grid; gap: 16px; }
+.match-live-dialog { display: block; }
+.match-live-dialog > form { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: min(75dvh, 48rem); }
+.match-live-dialog header, .match-live-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; }
+.match-live-dialog label, .match-live-dialog legend { font-size: .875rem; }
+.match-live-dialog .match-form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 16px; }
+.match-live-dialog input:focus-visible, .match-live-dialog textarea:focus-visible, .match-live-dialog select:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.match-live button:disabled, .match-live-dialog button:disabled { opacity: .6; cursor: not-allowed; }
+@media (max-width: 800px) {
+  .match-live-actions { flex-direction: column; }
+  .match-live-dialog { inset: auto 0 var(--pt-navigation-clearance); margin: 0 auto; width: 100%; max-height: calc(92dvh - var(--pt-navigation-clearance)); }
+  .match-live-dialog > form { height: min(calc(92dvh - var(--pt-navigation-clearance)), 48rem); }
+  .match-live-dialog .match-form-row { grid-template-columns: 1fr; }
+}

@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
-import { supabase } from '../../supabase'
-import { useSession } from '../../auth/useSession'
 import { EventSchema, EventsResponseSchema, type LiveEvent } from '../../../shared/events'
-import { eventDate, eventRequest, safeImage, sourceLink } from './client'
+import { eventDate, eventImagePlaceholder, eventRequest, safeImage, sourceLink } from './client'
 import { Button, Chips, Header, Icon } from './ui'
-import { Company } from './Company'
+import { EventGroupQueue } from './EventGroupQueue'
 import { EventsFeature } from './Feature'
 import { eventDetailPath, eventsPath } from './routes'
 
-function EventPhoto({ event, detail = false }: { event: LiveEvent; detail?: boolean }) {
-  const [failed, setFailed] = useState(false)
-  return <img className={detail ? 'ev-detail-hero' : undefined} src={failed ? '/prototype/music.jpg' : safeImage(event.image_url)} alt={failed || safeImage(event.image_url).startsWith('/prototype/') ? 'Illustrative concert photography' : `${event.title} event image`} onError={() => { if (!failed) setFailed(true) }} />
+function EventPhoto({ event, detail = false, onImageFailure }: { event: LiveEvent; detail?: boolean; onImageFailure?: (source: string) => void }) {
+  const [failedSource, setFailedSource] = useState<string | null>(null)
+  const source = safeImage(event.image_url)
+  const placeholder = source === eventImagePlaceholder || failedSource === source
+  return <img className={detail ? 'ev-detail-hero' : undefined} src={placeholder ? eventImagePlaceholder : source} alt={placeholder ? 'Pebble placeholder illustration (not an event photo)' : `${event.title} event image`} onError={() => {
+    if (!placeholder) { setFailedSource(source); onImageFailure?.(source) }
+  }} />
 }
 export function EventsScreen() {
   return <EventsFeature><EventsFeed /></EventsFeature>
@@ -77,16 +79,16 @@ function EventsFeed() {
 export function EventDetail({ id, preview = false }: { id?: string; preview?: boolean }) {
   const params = useParams()
   const eventId = id ?? params.id ?? ''
-  // Remount data and company when navigating directly between event URLs.
+  // Remount event data and queue when navigating directly between event URLs.
   const content = <EventDetailContent key={eventId} id={eventId} preview={preview} />
   return preview ? content : <EventsFeature>{content}</EventsFeature>
 }
 
 function EventDetailContent({ id, preview }: { id: string; preview: boolean }) {
   const [event, setEvent] = useState<LiveEvent | null>(null)
+  const [failedImage, setFailedImage] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
-  const { session, ready } = useSession()
   useEffect(() => {
     const controller = new AbortController()
     void eventRequest(`/${id}`, EventSchema, { signal: controller.signal }).then(data => { if (!controller.signal.aborted) { setEvent(data); setError('') } }).catch((failure: unknown) => {
@@ -99,14 +101,13 @@ function EventDetailContent({ id, preview }: { id: string; preview: boolean }) {
     {!preview && <Link className="ev-text-button" to={eventsPath}><Icon name="back" />Back to events</Link>}
     <Header title={preview ? 'Selected event' : 'Event details'} />
     {error ? <div role="alert"><p>{error}</p><Button onClick={() => setRetry(value => value + 1)}>Retry</Button></div> : !event ? <p role="status">Loading event…</p> : <article className="ev-event-detail">
-      <EventPhoto event={event} detail />
+      <EventPhoto event={event} detail onImageFailure={setFailedImage} />
       <div className="ev-detail-body"><div><span className="ev-eyebrow">{event.category ?? 'Other'}</span><h1>{event.title}</h1>
         <p className="ev-detail-fact"><Icon name="events" />{eventDate(event.starts_at, event.ends_at)}</p><p className="ev-detail-fact"><Icon name="pin" />{event.location_name ?? event.city ?? 'Location to be announced'}</p>
         {event.address && <p>{event.address}</p>}<p className="ev-description">{event.description ?? 'No description provided.'}</p>
-        <span className="ev-hint">Source: {event.source}{!event.image_url ? ' · Illustrative photography' : ''}</span>
+        <span className="ev-hint">Source: {event.source}{safeImage(event.image_url) === eventImagePlaceholder || failedImage === safeImage(event.image_url) ? ' · Pebble placeholder illustration (not an event photo)' : ''}</span>
         {url && <p><a className="ev-text-button" href={url} target="_blank" rel="noopener noreferrer">View original listing</a></p>}
-        {session && <Button secondary onClick={() => void supabase?.auth.signOut()}>Sign out</Button>}
-      </div><Company key={`${id}-${session?.user.id ?? 'guest'}`} id={id} title={event.title} session={session} authReady={ready} /></div>
+      </div><EventGroupQueue listingId={id} /></div>
     </article>}
   </>
 }

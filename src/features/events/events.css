@@ -49,16 +49,16 @@
 .ev-feature.ev-feature .ev-social-context { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.4; }
 .ev-feature.ev-feature .ev-event-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 21px; }
 .ev-feature.ev-feature .ev-results-note { display: flex; align-items: center; gap: 6px; margin: 17px 0 !important; font-size: 13px; }
-.ev-feature.ev-feature .ev-event-card { background: #fffdf6; border: 1px solid var(--ev-line); border-radius: 16px; overflow: hidden; }
-.ev-feature.ev-feature .ev-event-image { padding: 0; border: 0; position: relative; width: 100%; height: 200px; display: block; }
+.ev-feature.ev-feature .ev-event-card { display: flex; flex-direction: column; background: #fffdf6; border: 1px solid var(--ev-line); border-radius: 16px; overflow: hidden; }
+.ev-feature.ev-feature .ev-event-image { flex-shrink: 0; padding: 0; border: 0; position: relative; width: 100%; height: 200px; display: block; }
 .ev-feature.ev-feature .ev-event-image img { width: 100%; height: 100%; object-fit: cover; }
-.ev-feature.ev-feature .ev-event-copy { padding: 18px; }
+.ev-feature.ev-feature .ev-event-copy { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 18px; overflow-wrap: anywhere; }
 .ev-feature.ev-feature .ev-event-copy > .ev-eyebrow { display: block; }
 .ev-feature.ev-feature .ev-event-copy h2 { font-size: 21px; }
 .ev-feature.ev-feature .ev-event-copy .ev-name-link { margin: 7px 0; }
 .ev-feature.ev-feature .ev-event-copy > p { display: flex; align-items: center; gap: 6px; font-size: 14px; margin-bottom: 8px; }
 .ev-feature.ev-feature .ev-event-copy .ev-event-date { color: #384d30; font-weight: 700; }
-.ev-feature.ev-feature .ev-event-copy .ev-social-context { border-top: 1px solid var(--ev-line); margin: 14px 0; padding-top: 13px; min-height: 52px; }
+.ev-feature.ev-feature .ev-event-copy .ev-social-context { border-top: 1px solid var(--ev-line); margin: auto 0 14px; padding-top: 13px; min-height: 52px; }
 .ev-feature.ev-feature .ev-event-copy .ev-button { font-size: 14px; padding: 10px; }
 .ev-feature.ev-feature .ev-event-detail { border-radius: 18px; background: #fffdf6; border: 1px solid var(--ev-line); overflow: hidden; }
 .ev-feature.ev-feature .ev-detail-hero { width: 100%; height: 280px; object-fit: cover; display: block; }
@@ -97,6 +97,10 @@
 .ev-feature.ev-feature .ev-detail-body > div { min-width: 0; overflow-wrap: anywhere; }
 .ev-feature.ev-feature .ev-description { white-space: pre-line; }
 .ev-feature.ev-feature .ev-event-signin { margin-top: 16px; }
+.ev-feature.ev-feature .ev-event-compatibility { padding: 24px; border-top: 1px solid var(--ev-line); overflow-wrap: anywhere; }
+.ev-feature.ev-feature .ev-event-compatibility p { margin-block: 12px; }
+.ev-feature.ev-feature .ev-event-compatibility > .ev-button { margin: 4px 8px 4px 0; max-width: 100%; }
+.ev-feature.ev-feature .ev-event-compatibility li { margin-block: 16px; }
 @media (min-width: 1800px) {
   .ev-feature.ev-feature .ev-events-workspace { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(480px, 1fr); gap: clamp(40px, 4vw, 110px); }
   .ev-feature.ev-feature .ev-event-grid { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); max-width: none; }

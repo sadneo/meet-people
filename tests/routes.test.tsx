@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from '../src/App'
+vi.mock('../src/supabase', () => ({ supabase: null }))
 
 vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
 vi.stubGlobal('scrollTo', () => {})
@@ -25,9 +26,9 @@ describe('routes', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Start matching' }))
 
-    expect(screen.getByRole('heading', { name: 'Find your people' })).toBeTruthy()
-    expect(screen.getByText('Shared interests. Free time. Nearby plans.')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Preferences' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Active matchmaking' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Sign in to match' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Preferences' })).toBeNull()
     expect(screen.getByLabelText('Current path').textContent).toBe('/matchmaking')
   })
 
@@ -40,7 +41,7 @@ describe('routes', () => {
 
     fireEvent.click(screen.getAllByRole('link', { name: 'Matchmaking' })[0])
     expect(screen.getByLabelText('Current path').textContent).toBe('/matchmaking')
-    expect(screen.getByRole('heading', { name: 'Find your people' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Active matchmaking' })).toBeTruthy()
     expect(screen.getAllByRole('link', { name: 'Matchmaking' }).every(link => link.getAttribute('aria-current') === 'page')).toBe(true)
   })
 
@@ -54,7 +55,7 @@ describe('routes', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Match while away' }))
 
-    expect(screen.getByRole('heading', { name: 'Meet people, even while you’re away' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Downtime matchmaking' })).toBeTruthy()
     expect(screen.getByText('Downtime matchmaking')).toBeTruthy()
     expect(screen.getByLabelText('Current path').textContent).toBe('/downtime-matchmaking')
   })
