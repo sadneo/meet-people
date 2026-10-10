@@ -6,7 +6,7 @@ token and then uses the service role; identity always comes from the token and
 user IDs in request bodies are rejected. Schemas shared with the browser live in
 `shared/profile.ts`.
 
-## Schema (`20261008120000_profile_settings.sql`)
+## Schema (`20261009120000_profile_settings.sql`)
 
 - `profiles` gains `pronouns`, `intents`, `usual_times`, `max_distance_miles`
   (1–100, default 5), `group_preference` (`one_on_one` | `group` | `either`), and
