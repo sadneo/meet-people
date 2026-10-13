@@ -22,6 +22,16 @@ export async function mockMatchingSession(page: Page, signedIn = true, signOutFa
 export const browserProfile = { username: 'sam', display_name: 'Sam', bio: null, birthdate: null, location_city: 'Campus', avatar_url: null, interests: ['Coffee'], availability: [] }
 export async function mockMatchingApi(page: Page) {
   let mode: string | null = null
+  // Signed-in shell and candidate card: the Messages dot and per-person connection state.
+  const connections = new Map<string, string>()
+  await page.route('**/api/conversations/activity', route => route.fulfill({ json: { unreadConversations: 0, incomingRequests: 0 } }))
+  await page.route('**/api/connections/**', route => {
+    const request = route.request()
+    const id = new URL(request.url()).pathname.split('/')[3]
+    if (request.method() === 'POST') connections.set(id, 'sent')
+    if (request.method() === 'DELETE') connections.delete(id)
+    return route.fulfill({ json: { status: connections.get(id) ?? 'none', conversationId: null } })
+  })
   await page.route('**/api/matchmaking/**', route => {
     const request = route.request()
     const path = new URL(request.url()).pathname

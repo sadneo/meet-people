@@ -111,10 +111,11 @@ test('wide event selection opens details and utility scenes remain responsive', 
     await page.getByLabel('Review scene').selectOption(scene)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), scene).toBe(true)
   }
+  // Signed out here; signed-in panes across widths: messaging-persistence.spec.ts.
   await page.getByLabel('Review scene').selectOption('Messages')
-  await expect(page.locator('.pt-conversation-pane')).toBeVisible()
+  await expect(page.getByText('Sign in to open your saved conversations.')).toBeVisible()
   await page.setViewportSize({ width: 390, height: 844 })
-  await expect(page.locator('.pt-conversation-pane')).toBeHidden()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.getByLabel('Review scene').selectOption('Events')
   await expect(page.locator('.ev-event-preview')).toBeHidden()
 })
