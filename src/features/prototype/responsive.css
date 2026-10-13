@@ -9,36 +9,6 @@ body:has(.pt-app) { --pt-safe-area-bottom: env(safe-area-inset-bottom, 0px); --p
 .pt-dev-economy button { min-height: 33px; padding: 5px 10px; font-size: 12px; background: #f6f3e9; border: 1px solid #a6ac98; border-radius: 6px; }
 .pt-scene-home, .pt-scene-intro { height: 100dvh; min-height: 0; overflow: clip; }
 .pt-scene-home .pt-main, .pt-scene-intro .pt-main { padding: 0; min-height: 0; animation: none; }
-.pt-community-home { position: relative; height: 100%; min-height: 0; isolation: isolate; overflow: hidden; background: #b3c98d; }
-.pt-community-canvas { position: absolute; inset: 0; }
-.pt-community-world { display: block; height: 100%; width: 100%; }
-.pt-world-wallet { position: absolute; top: clamp(16px, 3vw, 42px); right: clamp(20px, 3vw, 50px); display: flex; align-items: center; gap: 9px; padding: 8px 19px 9px 8px; border: 1px solid #c5c5a2; background: #fbf7e8ed; border-radius: 19px; box-shadow: 0 5px 16px #53634015; pointer-events: none; }
-.pt-world-wallet > svg { width: 64px; height: 68px; }
-.pt-world-wallet > span { display: grid; gap: 0; }
-.pt-world-wallet strong { font-size: 27px; line-height: 1.15; animation: pt-settle .35s ease; }
-.pt-world-wallet > span > span { font-size: 13px; }
-.pt-matchmaking-entry { position: absolute; left: clamp(20px, 3vw, 50px); bottom: clamp(20px, 4vw, 54px); z-index: 2; display: grid; grid-template-columns: auto minmax(190px, 1fr); align-items: center; gap: 6px 18px; width: min(500px, calc(100% - 40px)); padding: 17px 18px; border: 1px solid #c5c5a2; border-radius: 20px; background: #fbf7e8f2; box-shadow: 0 12px 30px #43543b24; backdrop-filter: blur(8px); }
-.pt-matchmaking-entry-pebbles { display: flex; align-items: end; min-width: 118px; }
-.pt-matchmaking-entry-pebbles .pt-pebble { width: 54px; margin-right: -16px; filter: drop-shadow(0 4px 4px #4051361a); }
-.pt-matchmaking-entry-pebbles .pt-pebble:nth-child(2) { width: 45px; transform: translateY(5px); }
-.pt-matchmaking-entry-pebbles .pt-pebble:nth-child(3) { width: 49px; }
-.pt-matchmaking-entry-copy > span { color: #637657; font-size: 10px; font-weight: 800; letter-spacing: .15em; }
-.pt-matchmaking-entry-copy h2 { margin: 2px 0 0; font-family: Georgia, serif; font-size: clamp(23px, 2.2vw, 30px); font-weight: 500; line-height: 1.05; }
-.pt-matchmaking-entry-copy p { margin-top: 5px; color: #53604b; font-size: 13px; font-weight: 600; }
-.pt-matchmaking-entry-copy small { display: block; margin-top: 4px; color: #717869; font-size: 11px; }
-.pt-matchmaking-actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.pt-matchmaking-actions .pt-button { min-height: 44px; padding: 8px 15px; font-size: 14px; }
-.pt-upgrade-panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 4; width: min(420px, calc(100% - 48px)); pointer-events: none; transform: translateX(100%); transition: transform .25s ease-out; will-change: transform; }
-.pt-upgrade-panel.is-open { transform: translateX(0); }
-.pt-upgrade-tab { position: absolute; left: -44px; top: 45%; z-index: 1; padding: 14px 7px; border: 1px solid #a8b28e; border-right: 0; border-radius: 12px 0 0 12px; background: #faf6e4; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: -4px 3px 12px #43543b14; min-width: 44px; pointer-events: auto; }
-.pt-upgrade-tab span { writing-mode: vertical-rl; font-size: 13px; font-weight: 700; }
-.pt-upgrade-drawer { position: absolute; inset: 0; display: flex; flex-direction: column; visibility: hidden; pointer-events: none; background: #faf8ef; box-shadow: -8px 0 35px #41543b24; border-left: 1px solid #abb894; transition: visibility 0s linear .25s; }
-.pt-upgrade-panel.is-open .pt-upgrade-drawer { visibility: visible; pointer-events: auto; transition: none; }
-.pt-upgrade-drawer > header { padding: 24px 20px 17px; display: flex; gap: 8px; align-items: start; border-bottom: 1px solid #d7dcc8; background: #eef0df; }
-.pt-upgrade-drawer > header > div { flex: 1; }
-.pt-upgrade-drawer h2 { font-size: 21px; outline: none; }
-.pt-upgrade-drawer > header p { margin-top: 9px; font-size: 15px; }
-.pt-upgrade-drawer > header p strong { color: #405837; font-size: 23px; }
 .pt-upgrade-list { overflow-y: auto; overscroll-behavior: contain; padding: 4px 20px calc(var(--pt-navigation-clearance) + 24px); }
 .pt-upgrade-item { display: grid; grid-template-columns: 74px 1fr; gap: 12px; padding: 20px 0; border-bottom: 1px solid #dce0ce; }
 .pt-upgrade-picture { width: 76px; height: 76px; align-self: center; background: #e4ebd6; border-radius: 13px; padding: 3px; }
@@ -110,28 +80,11 @@ body:has(.pt-app) { --pt-safe-area-bottom: env(safe-area-inset-bottom, 0px); --p
   .pt-review-tools { gap: 6px 8px; padding-block: 6px; }
   .pt-dev-economy { margin-left: 0; gap: 6px; width: 100%; }
   .pt-dev-economy button { font-size: 10px; min-height: 29px; padding: 4px 8px; }
-  .pt-world-wallet { top: 16px; right: 18px; gap: 3px; padding: 6px 14px 6px 5px; }
-  .pt-world-wallet > svg { width: 45px; height: 48px; }
-  .pt-world-wallet strong { font-size: 23px; }
-  .pt-world-wallet > span > span { font-size: 11px; }
-  .pt-matchmaking-entry { left: 14px; bottom: calc(var(--pt-navigation-clearance) + 12px); grid-template-columns: 88px minmax(0, 1fr); gap: 5px 12px; width: calc(100% - 28px); padding: 13px 14px; border-radius: 16px; }
-  .pt-matchmaking-entry-pebbles { min-width: 88px; }
-  .pt-matchmaking-entry-pebbles .pt-pebble { width: 42px; margin-right: -14px; }
-  .pt-matchmaking-entry-pebbles .pt-pebble:nth-child(2) { width: 35px; }
-  .pt-matchmaking-entry-pebbles .pt-pebble:nth-child(3) { width: 38px; }
-  .pt-matchmaking-entry-copy h2 { font-size: 21px; }
-  .pt-matchmaking-entry-copy p { font-size: 12px; }
-  .pt-matchmaking-entry-copy small { display: none; }
-  .pt-matchmaking-actions { grid-column: 1 / -1; }
-  .pt-matchmaking-actions .pt-button { min-height: 44px; padding: 7px 12px; flex: 1; }
-  .pt-upgrade-drawer > header { padding: 18px 13px; }
-  .pt-upgrade-drawer h2 { font-size: 18px; }
   .pt-upgrade-list { padding-inline: 13px; }
   .pt-upgrade-item { grid-template-columns: 55px 1fr; gap: 9px; }
   .pt-upgrade-picture { width: 55px; height: 64px; }
   .pt-upgrade-item h3 { font-size: 16px; }
   .pt-upgrade-item p { font-size: 12px; }
-  .pt-upgrade-tab { top: 36%; }
   .pt-origin { padding: 17px; }
   .pt-origin-layout { gap: 13px; }
   .pt-chapter-form { padding: 20px; }

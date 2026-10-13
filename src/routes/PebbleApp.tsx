@@ -3,18 +3,22 @@ import { Outlet, useLocation, useNavigate } from 'react-router'
 import { PrototypeContext, usePrototype } from '../features/prototype/context'
 import { COMMUNITY_STORAGE_KEY, loadCommunity } from '../features/prototype/economy'
 import { initialState, reducer, scenes, scenePaths, sceneSlug, type Scene } from '../features/prototype/model'
+import { isEventDetailPath } from '../features/events/routes'
 import { PouchIntro } from '../features/community/PouchIntro'
 import '../features/community/motion.css'
 import '../features/prototype/prototype.css'
 import '../features/prototype/responsive.css'
 import '../features/prototype/settings.css'
+import '../features/prototype/calm.css'
+import { Icon } from '../features/prototype/ui'
 
 export default function PebbleApp() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const scene = scenes.find(value => scenePaths[value] === pathname) ?? 'Home'
+  const scene = isEventDetailPath(pathname) ? 'Event Detail' : scenes.find(value => scenePaths[value] === pathname) ?? 'Home'
   const [state, dispatch] = useReducer(reducer, initialState, initial => ({ ...initial, community: loadCommunity() }))
   const [introRun, setIntroRun] = useState(0)
+  const [devOpen, setDevOpen] = useState(false)
   const [empty, setEmpty] = useState(false)
   const [personId, setPersonId] = useState('jamie')
   const [eventId, setEventId] = useState('acoustic')
@@ -33,7 +37,7 @@ export default function PebbleApp() {
 
   return <PrototypeContext.Provider value={{ state, dispatch, scene, go, empty, setEmpty, personId, setPersonId, eventId, setEventId, chatPerson, setChatPerson }}>
     <div className={`pt-app pt-scene-${sceneSlug(scene)}`}>
-      {import.meta.env.DEV && <aside className="pt-review-tools" aria-label="Development scene switcher">
+      {import.meta.env.DEV && <div className="pt-dev-panel"><button className="pt-dev-tab" aria-label="Developer controls" title="Developer controls" aria-expanded={devOpen} aria-controls="pt-dev-controls" onClick={() => setDevOpen(value => !value)}><Icon name="code" size={16} /></button><aside id="pt-dev-controls" hidden={!devOpen} className="pt-review-tools" aria-label="Development scene switcher">
         <strong>DEV · Design review</strong>
         <label><span className="pt-sr-only">Review scene</span><select aria-label="Review scene" value={scene} onChange={event => go(event.target.value as Scene)}>{scenes.map(value => <option key={value}>{value}</option>)}</select></label>
         <label className="pt-empty-toggle"><input type="checkbox" checked={empty} onChange={event => setEmpty(event.target.checked)} />Empty states</label>
@@ -42,7 +46,9 @@ export default function PebbleApp() {
           <button onClick={() => dispatch({ type: 'demo-funds' })}>Add 100 demo Pebbles</button>
           <button title="Resets balance and upgrades; keeps earned chapter history" onClick={() => dispatch({ type: 'reset-community' })}>Reset community/upgrades</button>
         </div>
-      </aside>}
+        <small>Community history uses isolated demo activity. Purchases use your saved local balance.</small>
+        <small>Home people are fictional profile previews, not live presence. Refresh only cycles local samples.</small>
+      </aside></div>}
       <Outlet key={scene === 'Intro' ? introRun : undefined} />
     </div>
   </PrototypeContext.Provider>

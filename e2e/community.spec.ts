@@ -120,5 +120,5 @@ test('intro, world, and reward dialog fit narrow and wide screens without changi
     await page.getByRole('button', { name: 'Community', exact: true }).click()
   }
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Your Pebble community' })).toBeAttached()
+  await expect(page.getByRole('heading', { name: 'Who’s around?' })).toBeAttached()
 })

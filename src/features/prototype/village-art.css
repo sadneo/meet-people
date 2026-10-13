@@ -1,0 +1,3 @@
+/* Preserve the original artwork colors; SVG only positions/crops raster assets. */
+.pt-village-art { image-rendering: pixelated; }
+.pt-village-art .pt-world-character:focus-visible > rect { stroke-width: 6; }
