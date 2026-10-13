@@ -132,39 +132,33 @@ Home does not infer presence from it. Replace this adapter when real available
 users are supplied. No presence polling, backend contract or persistence is
 introduced. Keep fixture disclosure in code and developer controls.
 
-Community uses a shallow diamond slab with visible top and two side faces.
-Objects remain upright, anchored by ground-contact coordinates, and render
-back-to-front by depth. Each placement and artwork primitive can be replaced
-independently. This is 2D composition, not a 3D engine.
+Community uses the supplied raster village art family on the square isometric
+platform. `village-landscape.png` removes the movable cottage, bench and Pebbles
+from the reference; `village-props.png` supplies their independent sprites.
+Permanent trees, river, terrain, rocks and wild landscape remain fixed. All
+history stages clip their terrain to one island silhouette and share the
+original `community-village.png` shadow. Generated PNG shadows must never stack
+under the shared shadow. Sunday remains one centered Pebble on plain grass.
 
-The supplied village PNG is an art-direction reference, not a replacement for
-the interactive scene. `CommunityAreas` keeps that village and its history in
-the left panel and adds a horizontally scrollable museum on the right. An
-icon-only control at the center-right screen edge uses a museum above a right
-arrow to enter. In the museum, the return control moves to the center-left
-edge, with the Home tree above a left arrow. Arrow keys also
-move between panels. Build is available only in the village; currency stays
-visible in both areas. Off-screen
-content is inert and hidden from assistive technology.
+There is no user-facing Museum or area navigation. Its unused components/assets
+are retained for possible future reuse; Community does not import them.
 
-The museum concept is reference-only. `GeologyMuseum` builds a mostly-white SVG
-room with exactly 16 identical display cases in a wall-aligned 4×4 isometric
-grid. Case steps are 86×43 SVG units along the isometric axes, using the room's
-available width/depth without shrinking cases. The current prototype exhibit
-fills all sixteen cases with four rows of four stages: Red Garnet (determined),
-Blue Sapphire (wistful), Green Emerald (content), and Yellow Citrine (excited).
-Each isometric row progresses left-to-right from colored cracks to emerging
-crystal, revealed crystal, and an expressive final gem. `GemProgression.tsx`
-provides simple editable pixel SVG sprites because the supplied sheets do not
-include these four expressive families. The developer empty-state toggle still
-clears all sixteen cases. This is fixed art-direction data, not chat activity,
-relationship scores, or earned rewards.
+Saturday is the editable current village; other days are read-only growth
+snapshots. Drag placed decorations, structures and Pebbles with mouse, pen or
+touch; arrow keys move a focused item. Ground-contact positions snap to a loose
+12px grid and stay on the inset island, clear of water and tree trunks (the
+footbridge may cross water). Objects and permanent tree overlays sort by ground
+depth. Escape/cancel discards an in-progress drag. Position updates use the
+existing local Community reducer/save, not a server or database. Reset clears
+positions as well as purchases. Old saves without positions remain valid.
 
-The village and all Build previews share the artwork-only `village-art.css`
-palette: muted sage grass, layered olive foliage, warm plaster and terracotta,
-honey wood, and soft blue water. Tree silhouettes, wall shading, ground pixels,
-and stream highlights follow `community/community-village.png`; the original
-PNG is unchanged and the scene remains made of individually gated objects.
+Garnet (determined), Sapphire (wistful), Emerald (content), and Citrine (excited)
+are rare expressive geological Pebbles. `expressive-pebbles.png` uses the same
+soft pixel outline, face, cheeks and squat shape as the mascot. Each costs 300
+Pebbles, above the normal catalog's 10–120. The existing Build dialog handles
+affordability, single ownership and currency deduction. Buying selects Saturday
+and places the item at a default position ready to drag. There is no additional
+currency, museum progression or backend dependency.
 
 `community-history.ts` is an isolated UI-only fixture because the local economy
 has balance, upgrades, and earned chapter IDs but no dated activity ledger.
@@ -173,13 +167,23 @@ landscape/visitor stage: Sunday has only one centered Pebble on plain grass;
 Monday adds the back tree, Tuesday the left tree, Wednesday the river, Thursday
 the path/cottage, Friday the right tree/friend, and Saturday the front tree and
 second friend. Owned upgrades join cumulatively in a fixed demo reveal order;
-all appear by Saturday. This presentation order does not represent purchase
+all appear by Saturday; rare Pebbles appear only then. This presentation order does not represent purchase
 dates, earn currency, or change saved ownership. The fixture distinction is documented in developer
 controls and `VISUAL-REVIEW.md`, without a visible “Demo history” label.
 
 Build opens a native modal dialog with focus containment, Escape, focus return,
-and scrolling. Purchases retain their existing prices, balance checks, reducer,
-and local persistence. No new backend or storage schema.
+and scrolling. The same catalog appears in two labelled sections: Rare Finds
+first, then Village Decorations. All four 300-Pebble rocks remain listed regardless
+of affordability/ownership; only their purchase buttons change state. Header and
+secondary Reset purchases footer stay visible while the catalog scrolls.
+
+Reset purchases requires a native confirmation dialog with Cancel focused first.
+It refunds each owned Build item once, clears ownership, purchase receipts and
+purchased-item positions, and preserves base-object positions, earned chapters
+and unrelated state. New purchases record the deducted price in optional local
+`purchaseCosts`. Older ownership-only saves use the unchanged catalog prices.
+Refunds are not capped by the demo funding limit. The existing local storage key
+and reducer persist everything; no backend/database schema change.
 
 ## Matchmaking and service states
 
