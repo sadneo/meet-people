@@ -20,7 +20,7 @@ shared across routed screens; this color update preserves their layouts.
 | Route | Purpose |
 | --- | --- |
 | `/` | Minimal Pebble focal composition and discovery entry |
-| `/community` | Village and weekly activity, balance/upgrades, horizontally adjacent geology museum |
+| `/community` | Village and weekly activity, balance/upgrades, local drag placement |
 | `/matchmaking` | Authenticated active queue, single-person result and profile preferences |
 | `/downtime-matchmaking` | Authenticated downtime queue and shared profile preferences |
 | `/events` | Browse sample events |
@@ -84,15 +84,12 @@ are independent of the single width breakpoint.
   profile adapter, accessible 1750ms minimum refresh and Home-only positioning. These do
   not query matchmaking or implement presence.
 - `src/features/prototype/PebbleGarden.tsx`: Community route and Build dialog.
-- `src/features/prototype/CommunityWorld.tsx`: depth-sorted interactive diorama; `village-art.css` shares the reference-inspired
-  artwork palette with every Build preview.
-- `src/features/pebble-art/`: supplied pixel art, shared display crops, and crisp
-  rendering for characters, currency, Build, geodes and gems.
-- `src/features/prototype/CommunityAreas.tsx`, `GeologyMuseum.tsx`, `museum.css`,
-  and `museum-model.ts`: horizontal village/museum panels, sixteen aligned
-  display cases and an isolated four-family, four-stage mineral exhibit.
-  `GemProgression.tsx` supplies expressive pixel sprites. The empty-state toggle
-  remains available; chat backend integration is deferred.
+- `src/features/prototype/CommunityWorld.tsx`: raster village, shared platform shadow,
+  fixed landscape, depth-sorted mouse/touch/keyboard placement and sprite previews.
+- `src/features/prototype/community-placement.ts`: ground bounds, snapping and
+  validated local position data; `economy.ts` includes four 300-Pebble collectibles.
+- `src/features/pebble-art/`: supplied pixel art and shared character/currency crops.
+- Museum components and assets are unused; no Museum is mounted in the app.
 - `src/features/prototype/CommunityHistory.tsx` and `community-history.ts`: interactive
   weekly chart and isolated UI fixture (no dated activity ledger exists).
 - `src/features/prototype/calm.css`: shared visual refinement and focal scaling.

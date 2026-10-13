@@ -1,3 +1,4 @@
+import { parsePositions, type Positions } from './community-placement'
 // Review-only prices. Kept in one catalog so the team can tune them together.
 export const upgrades = [
   { id: 'flowers', name: 'Wildflower Patch', cost: 10, icon: 'tree', detail: 'Little clusters of color in the grass.' },
@@ -10,9 +11,13 @@ export const upgrades = [
   { id: 'stage', name: 'Music Stage', cost: 70, icon: 'music', detail: 'A place to play, listen, and gather.' },
   { id: 'cottage', name: 'Cottage Expansion', cost: 90, icon: 'profile', detail: 'Another wing for your first cottage.' },
   { id: 'hall', name: 'Community Hall', cost: 120, icon: 'people', detail: 'A bigger home for the whole community.' },
+  { id: 'garnet', name: 'Garnet', cost: 300, icon: 'profile', detail: 'A little fiery determination.' },
+  { id: 'sapphire', name: 'Sapphire', cost: 300, icon: 'profile', detail: 'A wistful blue companion.' },
+  { id: 'emerald', name: 'Emerald', cost: 300, icon: 'profile', detail: 'A quietly content companion.' },
+  { id: 'citrine', name: 'Citrine', cost: 300, icon: 'profile', detail: 'A sunny burst of excitement.' },
 ] as const
 export type UpgradeId = typeof upgrades[number]['id']
-export type Community = { balance: number; owned: UpgradeId[]; earnedChapters: number[] }
+export type Community = { balance: number; owned: UpgradeId[]; earnedChapters: number[]; positions?: Positions; purchaseCosts?: Partial<Record<UpgradeId, number>> }
 export const COMMUNITY_STORAGE_KEY = 'pebble:full-ui:community:v1'
 export const emptyCommunity: Community = { balance: 0, owned: [], earnedChapters: [] }
 
@@ -21,10 +26,22 @@ export function parseCommunity(raw: string | null): Community {
     const value: unknown = JSON.parse(raw ?? 'null')
     if (!value || typeof value !== 'object') return { ...emptyCommunity }
     const saved = value as Partial<Community>
-    if (!Number.isSafeInteger(saved.balance) || saved.balance! < 0 || saved.balance! > 1_000_000 || !Array.isArray(saved.owned) || !Array.isArray(saved.earnedChapters)) return { ...emptyCommunity }
+    if (!Number.isSafeInteger(saved.balance) || saved.balance! < 0 || !Array.isArray(saved.owned) || !Array.isArray(saved.earnedChapters)) return { ...emptyCommunity }
+    const owned = [...new Set(saved.owned.filter(id => upgrades.some(upgrade => upgrade.id === id)))]
+    const purchaseCosts: Partial<Record<UpgradeId, number>> = {}
+    if (saved.purchaseCosts && typeof saved.purchaseCosts === 'object') {
+      for (const id of owned) {
+        const paid = saved.purchaseCosts[id]
+        if (typeof paid === 'number' && Number.isSafeInteger(paid) && paid >= 0 && paid <= 1_000_000) purchaseCosts[id] = paid
+      }
+    }
+    // A balance plus its refundable purchases must remain an exact safe integer.
+    if (!Number.isSafeInteger(saved.balance! + purchaseRefund({ ...emptyCommunity, owned, purchaseCosts }))) return { ...emptyCommunity }
     return {
       balance: saved.balance!,
-      owned: [...new Set(saved.owned.filter(id => upgrades.some(upgrade => upgrade.id === id)))],
+      owned,
+      ...(saved.purchaseCosts ? { purchaseCosts } : {}),
+      ...(saved.positions ? { positions: parsePositions(saved.positions, owned) } : {}),
       earnedChapters: [...new Set(saved.earnedChapters.filter(id => Number.isInteger(id) && id >= 0 && id < 4))],
     }
   } catch { return { ...emptyCommunity } }
@@ -35,5 +52,24 @@ export function loadCommunity(): Community {
 export function purchase(community: Community, id: UpgradeId): Community {
   const upgrade = upgrades.find(item => item.id === id)
   if (!upgrade || community.owned.includes(id) || community.balance < upgrade.cost) return community
-  return { ...community, balance: community.balance - upgrade.cost, owned: [...community.owned, id] }
+  return { ...community, balance: community.balance - upgrade.cost, owned: [...community.owned, id], purchaseCosts: { ...community.purchaseCosts, [id]: upgrade.cost } }
 }
+
+// Legacy saves have ownership only. Catalog prices have not changed, so use them
+// for those purchases; new purchases retain their actual deducted amount.
+export function purchaseRefund(community: Community): number {
+  return [...new Set(community.owned)].reduce((sum, id) => {
+    const item = upgrades.find(upgrade => upgrade.id === id)
+    return item ? sum + (community.purchaseCosts?.[id] ?? item.cost) : sum
+  }, 0)
+}
+export function resetPurchases(community: Community): Community {
+  if (!community.owned.length) return community
+  const positions = Object.fromEntries(Object.entries(community.positions ?? {}).filter(([id]) => !upgrades.some(item => item.id === id)))
+  return { ...community, balance: community.balance + purchaseRefund(community), owned: [], purchaseCosts: {}, positions }
+}
+
+export const buildSections = [
+  { name: 'Rare Finds', items: upgrades.filter(item => ['garnet', 'sapphire', 'emerald', 'citrine'].includes(item.id)) },
+  { name: 'Village Decorations', items: upgrades.filter(item => !['garnet', 'sapphire', 'emerald', 'citrine'].includes(item.id)) },
+]

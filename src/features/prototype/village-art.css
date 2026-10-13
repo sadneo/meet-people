@@ -1,3 +1,29 @@
 /* Preserve the original artwork colors; SVG only positions/crops raster assets. */
 .pt-village-art { image-rendering: pixelated; }
 .pt-village-art .pt-world-character:focus-visible > rect { stroke-width: 6; }
+.pt-build-slot { display: flex; align-items: center; width: 56px; height: 48px; }
+.pt-community-village { width: 100%; flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; }
+.pt-community-village .pt-diorama { flex-shrink: 0; max-width: 100%; }
+.pt-village-movable { cursor: grab; touch-action: none; outline: none; }
+.pt-village-movable:active { cursor: grabbing; }
+.pt-village-movable > rect:focus-visible { stroke: var(--pt-green); stroke-width: 4; stroke-dasharray: 8 6; }
+.pt-placement-hint { color: var(--pt-muted); text-align: center; font-size: 12px; margin: 4px 0 0; }
+@media (max-width: 800px) { .pt-community-village { width: calc(100% + 28px); max-width: calc(100vw - 12px); } .pt-community-village .pt-community-history { max-width: 100%; } }
+
+.pt-village-movable > rect { outline: none; touch-action: none; }
+.pt-world-character > rect:focus-visible { outline: none; stroke: var(--pt-green); stroke-width: 4; }
+/* Chromium decides gesture ownership at the HTML scene boundary. SVG children
+   alone do not reliably prevent touch panning/cancellation during a drag. */
+.pt-diorama[data-editable="true"] { touch-action: none; }
+/* Keep the entire catalog reachable, with persistent header and reset control. */
+.pt-build-dialog > header, .pt-build-footer { flex-shrink: 0; }
+.pt-build-dialog .pt-upgrade-list { flex: 1; min-height: 0; }
+.pt-build-dialog .pt-build-section-title { padding-top: 16px; font-size: 15px; color: var(--pt-muted); }
+.pt-build-footer { padding: 8px 20px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid var(--pt-line); }
+.pt-reset-purchases { min-height: 44px; border: 0; padding: 8px 0; background: transparent; color: var(--pt-berry) !important; font-size: 14px !important; text-decoration: underline; text-underline-offset: 3px; }
+.pt-build-reset-dialog { margin: auto; max-width: min(380px, calc(100vw - 32px)); border: 1px solid var(--pt-line); border-radius: 16px; padding: 24px; color: var(--pt-ink); background: var(--pt-cream); }
+.pt-build-reset-dialog::backdrop { background: #36463266; }
+.pt-build-reset-dialog p + p { margin-top: 12px; color: var(--pt-muted); font-size: 14px; }
+.pt-build-reset-dialog > div { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+.pt-build-reset-dialog .pt-reset-cancel { background: transparent; color: var(--pt-ink) !important; border-color: var(--pt-line); }
+.pt-build-reset-dialog .pt-reset-confirm { background: var(--pt-berry); border-color: var(--pt-berry); }
