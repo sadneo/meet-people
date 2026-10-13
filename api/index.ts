@@ -1,6 +1,7 @@
 import express from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { env } from './env.js'
+import { createConnectionsRouter } from './connections.js'
 import { createEventsRouter } from './events.js'
 import { createMatchmakingRouter, createUserContextTransport } from './matchmaking.js'
 import { createMessagingRouter } from './messaging.js'
@@ -14,6 +15,7 @@ const eventsClient = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
   : null
 app.use('/api/events', createEventsRouter(eventsClient))
 app.use('/api/conversations', createMessagingRouter(eventsClient))
+app.use('/api/connections', createConnectionsRouter(eventsClient))
 app.use('/api/matchmaking', createMatchmakingRouter(env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY
   ? createUserContextTransport({ url: env.SUPABASE_URL, publicKey: env.SUPABASE_PUBLISHABLE_KEY, verificationKey: env.SUPABASE_SERVICE_ROLE_KEY })
   : null))

@@ -8,7 +8,8 @@ conversations, and profile preferences. Home and Community fixtures are document
 in source and developer controls without demo labels in their minimal product UI.
 Most flows remain local previews. Active/downtime matching and email-link
 sign-in now use the backend slice described in `docs/matchmaking-backend.md`;
-SQL activation is separate. Chat/planning remain prototypes.
+SQL activation is separate. Messages uses the saved messaging backend in
+`docs/MESSAGING-M3.md`; planning remains a prototype.
 Imported event detail/preview use a server-backed group queue and persistent
 in-app proposal inbox; see `docs/event-group-queue.md` for the proposed parent SQL
 contracts and disabled worker. No Company/compatibility consent is reused.
@@ -74,7 +75,7 @@ are independent of the single width breakpoint.
 
 ## Implementation Shape
 
-- `src/App.tsx`: routes and shared messaging workspace.
+- `src/App.tsx`: routes. `src/features/messaging/`: the saved Messages workspace.
 - `src/routes/PebbleApp.tsx`: prototype state, scene wrapper, CSS imports,
   development controls, and immersive layout.
 - `src/features/prototype/AppShell.tsx`: desktop and compact icon navigation.

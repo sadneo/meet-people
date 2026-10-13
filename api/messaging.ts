@@ -1,26 +1,32 @@
-import { Router, type Request, type Response } from 'express'
+import { Router } from 'express'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { ConversationIdSchema, ConversationsSchema, HistorySchema, MessageSchema, SendMessageSchema } from '../shared/messaging.js'
+import { ConversationIdSchema, ConversationsSchema, HistorySchema, MarkReadSchema, MessageSchema, MessagingActivitySchema, ReadStateSchema, SendMessageSchema } from '../shared/messaging.js'
+import { expectedErrors, requireVerifiedUser } from './service-router.js'
 
-// Trusted server integration only. Call AFTER the matching owner verifies mutual
-// acceptance. IDs are auth.users IDs, never prototype names or client claims.
-export async function ensureConversationForParticipants(client: SupabaseClient, participantIds: string[]) {
-  const ids = z.array(z.string().uuid()).min(2).max(5).parse(participantIds)
-  const { data, error } = await client.rpc('messaging_ensure_conversation', { p_participant_ids: ids })
-  if (error) throw error
-  return ConversationIdSchema.parse({ conversationId: data })
+const cursor = z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
+
+const expected: Record<string, readonly [number, string]> = {
+  MSG01: [404, 'Conversation not found.'],
+  MSG02: [404, 'Group not found.'],
+  MSG03: [403, 'You are not in this conversation.'],
+  MSG04: [403, 'You are not in this group.'],
+  // Same text whichever side blocked, so nobody learns they were blocked.
+  MSG05: [403, 'You can’t send messages in this conversation.'],
+  MSG06: [409, 'A group needs at least two people before it has a conversation.'],
+  MSG07: [409, 'No one else is in this conversation.'],
+  MSG08: [400, 'Invalid conversation page or cursor.'],
+  MSG09: [400, 'Enter a message of 1–2000 characters.'],
+  MSG10: [409, 'This request was already used for a different message.'],
+  MSG11: [429, 'You’re sending messages too quickly. Wait a moment and try again.'],
+  MSG12: [409, 'Direct conversations end when the connection ends.'],
 }
 
 export function createMessagingRouter(client: SupabaseClient | null) {
   const router = Router()
-  router.use(async (request, response, next) => {
-    if (!client) { response.status(503).json({ error: 'Messaging is not configured.' }); return }
-    const token = request.headers.authorization?.match(/^Bearer (\S+)$/i)?.[1]
-    if (!token) { response.status(401).json({ error: 'Sign in to open your messages.' }); return }
-    const { data, error } = await client.auth.getUser(token)
-    if (error || !data.user) { response.status(401).json({ error: 'Your session has expired. Sign in again.' }); return }
-    response.locals.userId = data.user.id
+  router.use(requireVerifiedUser(client, { unconfigured: 'Messaging is not configured.', signIn: 'Sign in to open your messages.' }))
+  router.param('id', (request, response, next, id) => {
+    if (!z.string().uuid().safeParse(id).success) { response.status(400).json({ error: 'Invalid conversation ID.' }); return }
     next()
   })
   router.get('/', async (request, response) => {
@@ -30,24 +36,29 @@ export function createMessagingRouter(client: SupabaseClient | null) {
     if (error) throw error
     response.json(ConversationsSchema.parse(data))
   })
+  // Unread conversations and incoming connection requests, for the navigation dot.
+  router.get('/activity', async (_request, response) => {
+    const { data, error } = await client!.rpc('messaging_activity', { p_user_id: response.locals.userId })
+    if (error) throw error
+    response.json(MessagingActivitySchema.parse(data))
+  })
   router.post('/', async (request, response) => {
-    // An event group is the only verified matching source currently in this repo.
-    // Resolve its participants in SQL; never let a browser add arbitrary users.
+    // Direct chats open when a connection is accepted. Event groups are resolved
+    // in SQL; a browser never chooses who is in a conversation.
     const parsed = z.object({ eventGroupId: z.string().uuid() }).strict().safeParse(request.body)
     if (!parsed.success) { response.status(400).json({ error: 'Provide a valid event group.' }); return }
     const { data, error } = await client!.rpc('messaging_ensure_event_conversation', { p_user_id: response.locals.userId, p_group_id: parsed.data.eventGroupId })
     if (error) throw error
     response.json(ConversationIdSchema.parse({ conversationId: data }))
   })
-  router.use('/:id/messages', (request, response, next) => {
-    if (!z.string().uuid().safeParse(request.params.id).success) { response.status(400).json({ error: 'Invalid conversation ID.' }); return }
-    next()
-  })
   router.get('/:id/messages', async (request, response) => {
-    const query = z.object({ before: z.string().uuid().optional() }).strict().safeParse(request.query)
+    // `before` pages back through history; `after` polls for newer messages.
+    const query = z.object({ before: cursor.min(1).optional(), after: cursor.optional() }).strict()
+      .refine(value => value.before === undefined || value.after === undefined).safeParse(request.query)
     if (!query.success) { response.status(400).json({ error: 'Invalid message cursor.' }); return }
     const { data, error } = await client!.rpc('messaging_history', {
-      p_user_id: response.locals.userId, p_conversation_id: request.params.id, p_before: query.data.before ?? null,
+      p_user_id: response.locals.userId, p_conversation_id: request.params.id,
+      p_before: query.data.before ?? null, p_after: query.data.after ?? null,
     })
     if (error) throw error
     response.json(HistorySchema.parse(data))
@@ -62,15 +73,19 @@ export function createMessagingRouter(client: SupabaseClient | null) {
     if (error) throw error
     response.json(MessageSchema.parse(data))
   })
-  router.use((error: unknown, _request: Request, response: Response, _next: (error?: unknown) => void) => {
-    void _next
-    const code = error && typeof error === 'object' && 'code' in error ? error.code : null
-    const known = code === 'P0002' ? [404, 'Conversation or group not found.'] as const
-      : code === '42501' ? [403, 'You are not a participant in this conversation or group.'] as const
-        : code === '22023' ? [400, 'This conversation request is not valid. A group needs at least two people.'] as const : null
-    if (known) { response.status(known[0]).json({ error: known[1] }); return }
-    // Do not forward database details or credentials to clients or logs.
-    response.status(503).json({ error: 'Messaging is temporarily unavailable. Please try again.' })
+  router.post('/:id/read', async (request, response) => {
+    const parsed = MarkReadSchema.safeParse(request.body)
+    if (!parsed.success) { response.status(400).json({ error: 'Invalid message cursor.' }); return }
+    const { data, error } = await client!.rpc('messaging_mark_read', { p_user_id: response.locals.userId, p_conversation_id: request.params.id, p_seq: parsed.data.seq })
+    if (error) throw error
+    response.json(ReadStateSchema.parse({ lastReadSeq: data }))
   })
+  router.post('/:id/leave', async (request, response) => {
+    if (!z.object({}).strict().safeParse(request.body ?? {}).success) { response.status(400).json({ error: 'Invalid request.' }); return }
+    const { error } = await client!.rpc('messaging_leave', { p_user_id: response.locals.userId, p_conversation_id: request.params.id })
+    if (error) throw error
+    response.status(204).end()
+  })
+  router.use(expectedErrors(expected, 'Messaging', 'Messaging is temporarily unavailable. Please try again.'))
   return router
 }
