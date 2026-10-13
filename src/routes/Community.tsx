@@ -4,6 +4,7 @@ import { ActivityRewards } from '../features/community/ActivityRewards'
 import { PouchIntro } from '../features/community/PouchIntro'
 import { RewardFeedback } from '../features/community/RewardFeedback'
 import { Icon } from '../features/community/Icon'
+import { CurrencyIcon } from '../features/pebble-art/PixelArt'
 import { World } from '../features/community/World'
 import '../features/community/community.css'
 import '../features/community/motion.css'
@@ -55,7 +56,7 @@ function CommunityExperience() {
         <button className={view === 'community' ? 'active' : ''} aria-current={view === 'community' ? 'page' : undefined} onClick={() => navigate('community')}><Icon name="leaf" />Community</button>
         <button className={view === 'activities' ? 'active' : ''} aria-current={view === 'activities' ? 'page' : undefined} onClick={() => navigate('activities')}><Icon name="people" />Activities</button>
       </nav>
-      <div className="pebble-balance" aria-label={`${state.balance} Pebbles available`}><span className="pebble-coin"><Icon name="pebble" size={23} /></span><strong key={state.balance} className={state.feedback ? 'pebble-balance-pop' : ''}>{state.balance}</strong><span>Pebbles</span>{state.feedback && <RewardFeedback key={state.feedback.serial} feedback={state.feedback} />}</div>
+      <div className="pebble-balance" aria-label={`${state.balance} Pebbles available`}><CurrencyIcon /><strong key={state.balance} className={state.feedback ? 'pebble-balance-pop' : ''}>{state.balance}</strong><span>Pebbles</span>{state.feedback && <RewardFeedback key={state.feedback.serial} feedback={state.feedback} />}</div>
     </header>
 
     <main className="pebble-main">
@@ -78,7 +79,7 @@ function CommunityExperience() {
           <div className="pebble-next">
             <div className="pebble-next-title"><span>{next ? 'NEXT LITTLE CHAPTER' : 'LOOK WHAT YOU GREW'}</span><Icon name={next ? 'spark' : 'leaf'} size={18} /></div>
             <h3>{next ? next.short : 'A place for everyone'}</h3>
-            {next ? <><div className="pebble-progress-label"><span>{canGrow ? 'Ready when you are' : `${next.cost - state.balance} more Pebbles to grow`}</span><strong>{state.balance} / {next.cost}<Icon name="pebble" size={15} /></strong></div><div className="pebble-progress" role="progressbar" aria-label={`Pebbles toward ${next.short}`} aria-valuenow={Math.min(state.balance, next.cost)} aria-valuemin={0} aria-valuemax={next.cost}><span style={{ width: `${Math.min(100, state.balance / next.cost * 100)}%` }} /></div><button className={`pebble-primary ${canGrow ? 'coral' : ''}`} onClick={() => canGrow ? growWorld() : navigate('activities')}>{canGrow ? `Grow your world · ${next.cost}` : 'Find an activity'}<Icon name={canGrow ? 'pebble' : 'arrow'} /></button></> : <><p className="pebble-finish-copy">From one little pebble to a place to belong.<br />This is just the beginning.</p><button className="pebble-primary" onClick={() => setResetOpen(true)}>Start a fresh story<Icon name="reset" size={17} /></button></>}
+            {next ? <><div className="pebble-progress-label"><span>{canGrow ? 'Ready when you are' : `${next.cost - state.balance} more Pebbles to grow`}</span><strong>{state.balance} / {next.cost}<CurrencyIcon /></strong></div><div className="pebble-progress" role="progressbar" aria-label={`Pebbles toward ${next.short}`} aria-valuenow={Math.min(state.balance, next.cost)} aria-valuemin={0} aria-valuemax={next.cost}><span style={{ width: `${Math.min(100, state.balance / next.cost * 100)}%` }} /></div><button className={`pebble-primary ${canGrow ? 'coral' : ''}`} onClick={() => canGrow ? growWorld() : navigate('activities')}>{canGrow ? `Grow your world · ${next.cost}` : 'Find an activity'}<Icon name={canGrow ? 'pebble' : 'arrow'} /></button></> : <><p className="pebble-finish-copy">From one little pebble to a place to belong.<br />This is just the beginning.</p><button className="pebble-primary" onClick={() => setResetOpen(true)}>Start a fresh story<Icon name="reset" size={17} /></button></>}
           </div>
         </section>
 

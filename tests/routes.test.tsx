@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from '../src/App'
+vi.mock('../src/supabase', () => ({ supabase: null }))
 
 vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
 vi.stubGlobal('scrollTo', () => {})
@@ -17,17 +18,17 @@ describe('routes', () => {
       <MemoryRouter initialEntries={['/']}><App /></MemoryRouter>,
     )
 
-    expect(screen.getByRole('heading', { name: 'Your Pebble community' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Who’s around?' })).toBeTruthy()
   })
 
   it('opens the dedicated interactive matchmaking page from the prototype homepage', () => {
     render(<MemoryRouter initialEntries={['/']}><App /><CurrentPath /></MemoryRouter>)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Start matching' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Find people' }))
 
-    expect(screen.getByRole('heading', { name: 'Find your people' })).toBeTruthy()
-    expect(screen.getByText('Shared interests. Free time. Nearby plans.')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Preferences' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Active matchmaking' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Sign in to match' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Preferences' })).toBeNull()
     expect(screen.getByLabelText('Current path').textContent).toBe('/matchmaking')
   })
 
@@ -40,7 +41,7 @@ describe('routes', () => {
 
     fireEvent.click(screen.getAllByRole('link', { name: 'Matchmaking' })[0])
     expect(screen.getByLabelText('Current path').textContent).toBe('/matchmaking')
-    expect(screen.getByRole('heading', { name: 'Find your people' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Active matchmaking' })).toBeTruthy()
     expect(screen.getAllByRole('link', { name: 'Matchmaking' }).every(link => link.getAttribute('aria-current') === 'page')).toBe(true)
   })
 
@@ -52,9 +53,9 @@ describe('routes', () => {
   it('opens standalone downtime matchmaking from the prototype homepage', () => {
     render(<MemoryRouter initialEntries={['/']}><App /><CurrentPath /></MemoryRouter>)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Match while away' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Downtime matchmaking' }))
 
-    expect(screen.getByRole('heading', { name: 'Meet people, even while you’re away' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Downtime matchmaking' })).toBeTruthy()
     expect(screen.getByText('Downtime matchmaking')).toBeTruthy()
     expect(screen.getByLabelText('Current path').textContent).toBe('/downtime-matchmaking')
   })
@@ -72,13 +73,22 @@ describe('routes', () => {
   it('renders canonical product routes', () => {
     render(<MemoryRouter initialEntries={['/events']}><App /></MemoryRouter>)
 
-    expect(screen.getByRole('heading', { name: 'Events around campus' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Events' })).toBeTruthy()
   })
 
-  it.each(['/prototype', '/prototype?scene=events', '/community'])('removes %s', path => {
+  it.each(['/prototype', '/prototype?scene=events'])('removes %s', path => {
     render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
 
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeTruthy()
+  })
+
+  it('opens Community from Home without changing the primary destinations', () => {
+    render(<MemoryRouter initialEntries={['/']}><App /><CurrentPath /></MemoryRouter>)
+    fireEvent.click(screen.getByRole('link', { name: 'Community', exact: true }))
+    expect(screen.getByRole('link', { name: 'Back to Home' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Community' })).toBeNull()
+    expect(screen.getByLabelText('Current path').textContent).toBe('/community')
+    expect(screen.getAllByRole('link', { name: 'Home', exact: true }).every(link => link.getAttribute('aria-current') === 'page')).toBe(true)
   })
 
   it('renders the not-found route', () => {

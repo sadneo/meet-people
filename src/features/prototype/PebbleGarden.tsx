@@ -1,55 +1,39 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { usePrototype } from './context'
 import { upgrades } from './economy'
 import { CommunityWorld, UpgradePicture } from './CommunityWorld'
-import { Button, Icon, Pebble, Pouch } from './ui'
+import { CommunityAreas } from './CommunityAreas'
+import { CommunityHistory } from './CommunityHistory'
+import { communityWeek } from './community-history'
+import { PebbleBalance } from './Home'
+import { Icon } from './ui'
+import { BuildIcon, CurrencyIcon } from '../pebble-art/PixelArt'
 
 export function PebbleGarden() {
   const { state, dispatch } = usePrototype()
-  const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
+  const [week, setWeek] = useState(0)
+  const [selected, setSelected] = useState(6)
+  const [area, setArea] = useState(0)
   const [announcement, setAnnouncement] = useState('')
+  const dialog = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
-  const title = useRef<HTMLHeadingElement>(null)
-  useEffect(() => {
-    if (!open) return
-    title.current?.focus({ preventScroll: true })
-    // Buying disables the focused Build button; Escape must also work if focus moves to body.
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { setOpen(false); trigger.current?.focus() }
-    }
-    window.addEventListener('keydown', escape)
-    return () => window.removeEventListener('keydown', escape)
-  }, [open])
-  const close = () => { setOpen(false); trigger.current?.focus() }
-  return <section className="pt-community-home" aria-label="Pebble community" onKeyDown={event => { if (event.key === 'Escape' && open) close() }}>
-    <h1 className="pt-sr-only" tabIndex={-1}>Your Pebble community</h1>
-    <CommunityWorld owned={state.community.owned} />
-    <div className="pt-world-wallet" aria-label="Pebble balance"><Pouch /><span><strong key={state.community.balance}>{state.community.balance}</strong><span>Pebbles</span></span></div>
-    <aside className="pt-matchmaking-entry" aria-labelledby="pt-matchmaking-entry-title">
-      <div className="pt-matchmaking-entry-pebbles" aria-hidden="true"><Pebble /><Pebble expression="surprised" /><Pebble /></div>
-      <div className="pt-matchmaking-entry-copy">
-        <span>FRIENDS FIRST</span>
-        <h2 id="pt-matchmaking-entry-title">Find your people</h2>
-        <p>Shared interests. Free time. Nearby plans.</p>
-        <small>Groups of 3–5 · simulated demo</small>
-      </div>
-      <div className="pt-matchmaking-actions"><Button onClick={() => navigate('/matchmaking')}>Start matching<Icon name="arrow" /></Button><Button secondary onClick={() => navigate('/downtime-matchmaking')}>Match while away<Icon name="time" /></Button></div>
-    </aside>
-    <div className={`pt-upgrade-panel ${open ? 'is-open' : ''}`}>
-      <button ref={trigger} className="pt-upgrade-tab" aria-label={open ? 'Close community upgrades' : 'Build your community'} aria-expanded={open} aria-controls="pt-upgrades" onClick={() => open ? close() : setOpen(true)}><Icon name={open ? 'arrow' : 'back'} /><span>Build</span></button>
-      <aside id="pt-upgrades" className="pt-upgrade-drawer" aria-hidden={!open} aria-labelledby="pt-upgrade-title" inert={!open ? true : undefined}>
-        <header><div><h2 id="pt-upgrade-title" ref={title} tabIndex={-1}>Build your community</h2><p><strong>{state.community.balance}</strong> Pebbles available</p></div><button className="pt-icon-button" aria-label="Close upgrades" onClick={close}><Icon name="close" /></button></header>
-        <div className="pt-upgrade-list">{upgrades.map(upgrade => {
-          const owned = state.community.owned.includes(upgrade.id)
-          const affordable = state.community.balance >= upgrade.cost
-          return <article key={upgrade.id} className="pt-upgrade-item" aria-label={upgrade.name}>
-            <UpgradePicture id={upgrade.id} /><div><h3>{upgrade.name}</h3><p>{upgrade.detail}</p><div className="pt-upgrade-purchase"><span>{upgrade.cost} Pebbles</span><button className="pt-button" disabled={owned || !affordable} aria-label={`${owned ? 'Owned' : 'Build'} ${upgrade.name}`} onClick={() => { dispatch({ type: 'build', id: upgrade.id }); setAnnouncement(`${upgrade.name} built. ${upgrade.cost} Pebbles spent.`) }}>{owned ? 'Owned' : 'Build'}</button></div>{!owned && !affordable && <small>{upgrade.cost - state.community.balance} more Pebbles needed</small>}</div>
-          </article>
-        })}</div>
-      </aside>
-    </div>
-    <p className="pt-build-announcement pt-sr-only" role="status">{announcement}</p>
+  const days = communityWeek(week)
+  const close = () => { dialog.current?.close(); trigger.current?.focus() }
+  return <section className="pt-community-page" aria-label="Pebble community">
+    <header className="pt-community-heading"><Link to="/" className="pt-icon-button pt-quiet-icon" aria-label="Back to Home" title="Back to Home"><Icon name="back" size={24} /></Link><div className="pt-community-controls"><PebbleBalance /><span className="pt-build-slot">{area === 0 && <button ref={trigger} className="pt-icon-button pt-build-control" aria-label="Build your community" title="Build your community" aria-haspopup="dialog" onClick={() => dialog.current?.showModal()}><BuildIcon /></button>}</span></div></header>
+    <CommunityAreas area={area} onAreaChange={setArea}><CommunityWorld owned={state.community.owned} stage={days[selected].stage} />
+    <CommunityHistory days={days} selected={selected} week={week} select={setSelected} changeWeek={value => { setWeek(value); setSelected(6) }} /></CommunityAreas>
+    <dialog ref={dialog} className="pt-build-dialog" aria-labelledby="pt-upgrade-title" onCancel={event => { event.preventDefault(); close() }}>
+      <header><div><h2 id="pt-upgrade-title">Build your community</h2><p className="pt-build-balance"><CurrencyIcon /><span><strong>{state.community.balance}</strong> Pebbles available</span></p></div><button className="pt-icon-button" aria-label="Close upgrades" title="Close upgrades" onClick={close}><Icon name="close" size={24} /></button></header>
+      <div className="pt-upgrade-list">{upgrades.map(upgrade => {
+        const owned = state.community.owned.includes(upgrade.id)
+        const affordable = state.community.balance >= upgrade.cost
+        return <article key={upgrade.id} className="pt-upgrade-item" aria-label={upgrade.name}>
+          <UpgradePicture id={upgrade.id} /><div><h3>{upgrade.name}</h3><p>{upgrade.detail}</p><div className="pt-upgrade-purchase"><span>{upgrade.cost} Pebbles</span><button className="pt-button" disabled={owned || !affordable} aria-label={`${owned ? 'Owned' : 'Build'} ${upgrade.name}`} onClick={() => { dispatch({ type: 'build', id: upgrade.id }); setAnnouncement(`${upgrade.name} built. ${upgrade.cost} Pebbles spent.`) }}>{owned ? 'Owned' : 'Build'}</button></div>{!owned && !affordable && <small>{upgrade.cost - state.community.balance} more Pebbles needed</small>}</div>
+        </article>
+      })}</div>
+      <p className="pt-sr-only" role="status">{announcement}</p>
+    </dialog>
   </section>
 }

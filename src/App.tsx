@@ -9,6 +9,7 @@ import { eventDetailRoute, eventsPath } from './features/events/routes'
 import { ActivityPaths, ConfirmedPlan, FreeTime, Matches, Planning, ReviewPlan } from './features/prototype/Planning'
 import { Connection, ProfileScreen, Settings } from './features/prototype/Social'
 import MessagesWorkspace from './features/messaging/Feature'
+import { Home } from './features/prototype/Home'
 import { PebbleGarden } from './features/prototype/PebbleGarden'
 import MatchmakingHome from './features/prototype/MatchmakingHome'
 import DowntimeMatchmaking from './features/prototype/DowntimeMatchmaking'
@@ -18,7 +19,8 @@ function App() {
     <Routes>
       <Route element={<PebbleApp />}>
         <Route element={<AppShell />}>
-          <Route index element={<PebbleGarden />} />
+          <Route index element={<Home />} />
+          <Route path="community" element={<PebbleGarden />} />
           <Route path="matchmaking" element={<MatchmakingHome />} />
           <Route path="downtime-matchmaking" element={<DowntimeMatchmaking />} />
           <Route path={eventsPath} element={<EventsScreen />} />

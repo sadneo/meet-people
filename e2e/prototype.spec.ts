@@ -1,6 +1,12 @@
+import { mockCurrentEvents } from './current-events-fixture'
 import { expect, test, type Page } from '@playwright/test'
 
-async function scene(page: Page, name: string) { await page.getByLabel('Review scene').selectOption(name) }
+async function scene(page: Page, name: string) {
+  const tab = page.getByRole('button', { name: 'Developer controls', exact: true })
+  if (await tab.getAttribute('aria-expanded') === 'false') await tab.click()
+  await page.getByLabel('Review scene').selectOption(name)
+  await tab.click()
+}
 async function startPlan(page: Page) {
   await page.goto('/free-time')
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
@@ -83,7 +89,7 @@ test('onboarding skip, all chapters, unique rewards and ordinary profile editing
   await expect(page.getByRole('heading', { name: 'Your Pebble is ready.' })).toBeVisible()
   await expect(page.locator('.pt-pouch-count')).toContainText('40')
   await page.getByRole('button', { name: 'Enter Pebble' }).click()
-  await expect(page.getByRole('heading', { name: 'Your Pebble community' })).toBeAttached()
+  await expect(page.getByRole('heading', { name: 'Who’s around?' })).toBeAttached()
   await expect(page.locator('[data-upgrade]')).toHaveCount(0)
   await expect(page.getByLabel('Pebble balance', { exact: true })).toContainText('40')
   await page.getByRole('link', { name: 'Profile', exact: true }).click()
@@ -112,6 +118,7 @@ test('cinematic finishes; reduced motion bypasses it and disables movement', asy
   expect(await curious.getAttribute('class')).not.toBe(oldClass)
 })
 test('all scenes fit a narrow phone; filters, empty states, reporting and blocking work', async ({ page }) => {
+  await mockCurrentEvents(page)
   await page.setViewportSize({ width: 360, height: 800 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
@@ -122,13 +129,16 @@ test('all scenes fit a narrow phone; filters, empty states, reporting and blocki
   }
   await scene(page, 'Events')
   await page.getByRole('button', { name: 'Music', exact: true }).click()
-  await expect(page.locator('.pt-event-card')).toHaveCount(1)
-  await page.getByLabel('Empty states').check()
+  await expect(page.locator('.ev-event-card')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Outdoors', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'A quiet calendar' })).toBeVisible()
+  await page.getByRole('button', { name: 'Developer controls', exact: true }).click()
+  await page.getByLabel('Empty states').check()
   await scene(page, 'Messages')
   await expect(page.getByRole('heading', { name: 'Your conversations start here' })).toBeVisible()
   await scene(page, 'Free Time Match')
   await expect(page.getByRole('heading', { name: 'No overlap just yet' })).toBeVisible()
+  await page.getByRole('button', { name: 'Developer controls', exact: true }).click()
   await page.getByLabel('Empty states').uncheck()
   await scene(page, 'Other User Profile')
   await page.getByRole('button', { name: 'Report user', exact: true }).click()
@@ -155,8 +165,8 @@ test('settings switches retain session changes and dialogs return focus', async 
   await notifications.focus()
   await page.keyboard.press('Space')
   await expect(notifications).not.toBeChecked()
-  await page.getByLabel('Review scene').selectOption('Profile')
-  await page.getByLabel('Review scene').selectOption('Settings')
+  await scene(page, 'Profile')
+  await scene(page, 'Settings')
   await expect(notifications).not.toBeChecked()
   const account = page.getByRole('button', { name: /^Account details/ })
   await account.click()
@@ -168,18 +178,19 @@ test('settings switches retain session changes and dialogs return focus', async 
   await expect(page.getByRole('dialog', { name: 'Blocked users' })).toContainText('No blocked users in this session.')
   await page.getByRole('button', { name: 'Close dialog' }).click()
   await expect(blocked).toBeFocused()
-  await page.getByRole('button', { name: 'Log out of demo', exact: true }).click()
+  await page.getByRole('region', { name: 'Account actions' }).getByRole('link', { name: 'Sign in', exact: true }).click()
   await expect(page).toHaveURL('/login')
 })
 
-test('registration stays local, custom time is preserved, and unread state clears', async ({ page }) => {
+test('registration has no demo bypass; prototype custom time and unread state are preserved', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   const requests: string[] = []
   page.on('request', request => { if (['fetch', 'xhr'].includes(request.resourceType())) requests.push(request.url()) })
   await page.goto('/register')
-  await page.getByLabel('Email', { exact: true }).fill('demo@example.com')
-  await page.getByLabel('Password', { exact: true }).fill('fake-password')
-  await page.getByRole('button', { name: 'Create demo account' }).click()
+  await expect(page.getByRole('heading', { name: 'Sign in to match' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Create demo account' })).toHaveCount(0)
+  await expect(page.getByLabel('Password', { exact: true })).toHaveCount(0)
+  await page.goto('/onboarding')
   await expect(page.getByRole('heading', { name: 'Basic profile', exact: true })).toBeVisible()
   await scene(page, 'Free Time')
   await page.getByRole('button', { name: 'Pick a time', exact: true }).click()
