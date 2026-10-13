@@ -129,7 +129,7 @@ test('failed event photo and failed local placeholder never enter an image retry
 test('mobile cards, real empty categories, and shareable details', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/events')
-  await expect(page.getByRole('heading', { name: 'Events around campus' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Events', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Acoustic afternoon' }).first()).toBeVisible()
   await page.getByRole('button', { name: 'Outdoors', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'A quiet calendar' })).toBeVisible()
@@ -158,7 +158,7 @@ test('failed requests can be retried and unavailable details are explained', asy
   let fail = true
   await page.route('**/api/events?**', route => route.fulfill(fail ? { status: 503, json: { error: 'Events are temporarily unavailable. Please try again.' } } : { json: { events: [event], categories: ['Music'], page: 1, hasMore: false } }))
   await page.goto('/events')
-  await expect(page.getByRole('heading', { name: 'Could not load events' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Events unavailable' })).toBeVisible()
   fail = false
   await page.getByRole('button', { name: 'Retry' }).click()
   await expect(page.getByRole('heading', { name: 'Acoustic afternoon' }).first()).toBeVisible()

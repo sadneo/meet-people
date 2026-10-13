@@ -16,7 +16,7 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
     const brandDotColor = await page.locator('.pt-app-header .pt-brand-dot').evaluate(element => getComputedStyle(element).color)
     const shellFonts = await page.locator('.pt-app-header, .pt-bottom-nav').evaluateAll(elements => elements.map(element => getComputedStyle(element).font))
     const brandFont = await page.locator('.pt-app-header .pt-brand').evaluate(element => getComputedStyle(element).font)
-    for (const route of ['/', '/events', '/events/detail', '/matchmaking', '/downtime-matchmaking', '/messages', '/messages/chat', '/profile', '/settings', '/free-time', '/free-time/matches', '/free-time/plan', '/register', '/onboarding']) {
+    for (const route of ['/', '/community', '/events', '/events/detail', '/matchmaking', '/downtime-matchmaking', '/messages', '/messages/chat', '/profile', '/settings', '/free-time', '/free-time/matches', '/free-time/plan', '/register', '/onboarding']) {
       if (route === '/free-time/plan') {
         await page.goto('/messages/chat')
         await page.getByRole('button', { name: 'Make a plan', exact: true }).click()
@@ -121,7 +121,7 @@ test('navigation and preferences share safe-area clearance on a short screen', a
 
   await page.goto('/')
   await page.evaluate(() => document.body.style.setProperty('--pt-safe-area-bottom', '24px'))
-  const entry = await page.locator('.pt-matchmaking-entry').boundingBox()
+  const entry = await page.getByRole('link', { name: 'Find people' }).boundingBox()
   expect(entry!.y + entry!.height).toBeLessThanOrEqual(navigation!.y)
 })
 import { mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'

@@ -2,12 +2,17 @@ import type { ReactNode } from 'react'
 import { people, type Person } from './model'
 
 export function Pebble({ expression = 'happy', className = '' }: { expression?: 'happy' | 'neutral' | 'surprised'; className?: string }) {
-  return <svg className={`pt-pebble ${className}`} viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="33" cy="58" rx="25" ry="4" fill="#506b44" opacity=".14" /><path d="M26 6C15 7 5 30 6 44c1 13 14 15 29 14 18 0 25-4 24-16C58 28 46 5 34 5Z" fill="#bab5a0" stroke="#7a7b65" strokeWidth="2" /><path d="M27 10c-8 3-14 17-15 26" fill="none" stroke="#e3dbc3" strokeWidth="4" strokeLinecap="round" /><path d="M23 32v3m18-3v3" stroke="#434939" strokeWidth="3.5" strokeLinecap="round" />{expression === 'surprised' ? <ellipse cx="33" cy="42" rx="3" ry="4" fill="#434939" /> : <path d={expression === 'happy' ? 'M28 40q5 6 10 0' : 'M29 42h8'} fill="none" stroke="#434939" strokeWidth="2" strokeLinecap="round" />}<path d="M16 40h5m23 0h5" stroke="#d89379" strokeWidth="3" strokeLinecap="round" /></svg>
+  return <svg className={`pt-pebble ${className}`} viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="33" cy="58" rx="25" ry="4" fill="var(--pt-ink)" opacity=".14" /><path d="M26 6C15 7 5 30 6 44c1 13 14 15 29 14 18 0 25-4 24-16C58 28 46 5 34 5Z" fill="#bab5a0" stroke="#7a7b65" strokeWidth="2" /><path d="M27 10c-8 3-14 17-15 26" fill="none" stroke="var(--pt-stone-highlight)" strokeWidth="4" strokeLinecap="round" /><path d="M23 32v3m18-3v3" stroke="#434939" strokeWidth="3.5" strokeLinecap="round" />{expression === 'surprised' ? <ellipse cx="33" cy="42" rx="3" ry="4" fill="#434939" /> : <path d={expression === 'happy' ? 'M28 40q5 6 10 0' : 'M29 42h8'} fill="none" stroke="#434939" strokeWidth="2" strokeLinecap="round" />}<path d="M16 40h5m23 0h5" stroke="var(--pt-cheek)" strokeWidth="3" strokeLinecap="round" /></svg>
 }
 export function Pouch() {
   return <svg viewBox="0 0 140 150" aria-hidden="true"><path d="M49 46c-5 15-29 35-29 59 0 25 21 28 49 28s51-4 51-28c0-24-26-45-31-59Z" fill="#cba575" stroke="#9b7954" strokeWidth="3" /><path className="pt-pouch-mouth" d="m50 47-9-28 14 5 13-7 13 7 17-5-11 28Z" fill="#dcc095" stroke="#9b7954" strokeWidth="3" /><path d="M46 48q24 8 46 0m-22 5-12 15m12-15 19 11" stroke="#77845a" strokeWidth="5" fill="none" strokeLinecap="round" /><path d="M58 95c-2-13 7-20 24-17 0 15-10 23-23 18m-3 6 17-18" fill="#77845a" stroke="#607049" strokeWidth="2" /></svg>
 }
 const paths: Record<string, ReactNode> = {
+  home: <><path d="m3 10 9-7 9 7v10H3Z" /><path d="M9 20v-7h6v7" /></>,
+  build: <><path d="m14 3 7 7-4 4-3-3-9 10-3-3 10-9-3-3Z" /><path d="m12 5 4-3" /></>,
+  refresh: <><path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5" /></>,
+  history: <><path d="M3 11a9 9 0 1 1 2 7M3 5v6h6M12 7v5l4 2" /></>,
+  code: <><path d="m7 6-5 6 5 6m10-12 5 6-5 6m-4-15-2 18" /></>,
   events: <><rect x="4" y="5" width="16" height="16" rx="3" /><path d="M8 3v4m8-4v4M4 11h16m-12 4h2m4 0h2m-8 3h2" /></>,
   time: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   messages: <path d="M20 11a8 8 0 0 1-8 8H8l-5 3 1-6a8 8 0 1 1 16-5ZM8 10h8m-8 4h5" />,
@@ -22,6 +27,7 @@ const paths: Record<string, ReactNode> = {
   coffee: <><path d="M4 7h12v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5Zm12 1h2a3 3 0 0 1 0 6h-2M3 22h16M7 2v2m5-2v2" /></>,
   games: <><path d="M8 7h8q4 0 5 9c0 4-3 5-6 1H9c-3 4-6 3-6-1Q4 7 8 7Z" /><path d="M8 10v5m-2-2h4m6-2h.1m2 3h.1" /></>,
   tree: <><path d="m12 2 7 9h-3l5 6H3l5-6H5Zm0 15v5" /></>,
+  museum: <path d="m3 8 9-5 9 5ZM5 11v7m7-7v7m7-7v7M3 21h18" />,
   music: <><path d="M9 18V5l11-2v13M9 9l11-2" /><ellipse cx="6" cy="18" rx="3" ry="2" /><ellipse cx="17" cy="16" rx="3" ry="2" /></>,
   food: <><path d="M5 2v7q0 3 3 3t3-3V2M8 2v20M19 2q-5 5-4 11h4m0-11v20" /></>,
   book: <><path d="M12 5Q7 2 2 4v15q5-2 10 1 5-3 10-1V4q-5-2-10 1Zm0 0v15" /></>,

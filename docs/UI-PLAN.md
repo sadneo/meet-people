@@ -4,20 +4,23 @@
 
 Maintain a mobile-first visual prototype for a student-focused, platonic
 social app. It demonstrates world progression, matching, events, planning,
-conversations, and profile preferences with explicitly labelled demo data.
+conversations, and profile preferences. Home and Community fixtures are documented
+in source and developer controls without demo labels in their minimal product UI.
 Most flows remain local previews. Active/downtime matching and email-link
 sign-in now use the backend slice described in `docs/matchmaking-backend.md`;
 SQL activation is separate. Chat/planning remain prototypes.
 Imported event detail/preview use a server-backed group queue and persistent
 in-app proposal inbox; see `docs/event-group-queue.md` for the proposed parent SQL
 contracts and disabled worker. No Company/compatibility consent is reused.
-`docs/DESIGN.md` is the product-design authority.
+`docs/DESIGN.md` is the product-design authority. The fresh meadow palette is
+shared across routed screens; this color update preserves their layouts.
 
 ## Information Architecture
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Pebble community world, balance, upgrades, and matching entry points |
+| `/` | Minimal Pebble focal composition and discovery entry |
+| `/community` | Village and weekly activity, balance/upgrades, horizontally adjacent geology museum |
 | `/matchmaking` | Authenticated active queue, single-person result and profile preferences |
 | `/downtime-matchmaking` | Authenticated downtime queue and shared profile preferences |
 | `/events` | Browse sample events |
@@ -32,8 +35,8 @@ contracts and disabled worker. No Company/compatibility consent is reused.
 | `/intro`, `/login`, `/register`, `/onboarding` | Preview introduction/onboarding; real email-link sign-in on login/register |
 | `*` | Not-found experience |
 
-Home, Matchmaking, Events, Messages, and Profile are the five navigation
-destinations. Settings appears in desktop account navigation and is reachable
+Home, Matchmaking, Events, Messages, and Profile are the five icon-first navigation
+destinations. Community is a supporting route entered from Home. Settings appears in desktop account navigation and is reachable
 from Profile on compact screens. Free-time and planning screens are supporting
 flows. `/prototype/yzcommunity` remains a separate experimental screen.
 
@@ -51,7 +54,9 @@ Use one app-wide width breakpoint:
   readable with local maximum widths.
 
 Switch these structures together, including when resizing an existing page.
-Do not add 520px, 620px, 900px, or wide-screen layout modes. Use intrinsic
+Do not add additional app-wide layout modes. Home has an explicitly scoped
+<=520px content-density exception for two thought bubbles instead of three;
+navigation and all other shell behavior still switch at 800px. Use intrinsic
 grids and fluid dimensions within each mode. Event selection always navigates
 to `/events/detail`, including on wide desktops.
 
@@ -72,7 +77,25 @@ are independent of the single width breakpoint.
 - `src/App.tsx`: routes and shared messaging workspace.
 - `src/routes/PebbleApp.tsx`: prototype state, scene wrapper, CSS imports,
   development controls, and immersive layout.
-- `src/features/prototype/AppShell.tsx`: desktop and compact navigation.
+- `src/features/prototype/AppShell.tsx`: desktop and compact icon navigation.
+- `src/features/prototype/Home.tsx`: responsive discovery focal composition.
+- `src/features/prototype/AvailablePeoplePreview.tsx`, `available-people-preview.ts`,
+  and `home-preview.css`: local avatar/thought-bubble preview, isolated fictional
+  profile adapter, accessible 1750ms minimum refresh and Home-only positioning. These do
+  not query matchmaking or implement presence.
+- `src/features/prototype/PebbleGarden.tsx`: Community route and Build dialog.
+- `src/features/prototype/CommunityWorld.tsx`: depth-sorted interactive diorama; `village-art.css` shares the reference-inspired
+  artwork palette with every Build preview.
+- `src/features/pebble-art/`: supplied pixel art, shared display crops, and crisp
+  rendering for characters, currency, Build, geodes and gems.
+- `src/features/prototype/CommunityAreas.tsx`, `GeologyMuseum.tsx`, `museum.css`,
+  and `museum-model.ts`: horizontal village/museum panels, sixteen aligned
+  display cases and an isolated four-family, four-stage mineral exhibit.
+  `GemProgression.tsx` supplies expressive pixel sprites. The empty-state toggle
+  remains available; chat backend integration is deferred.
+- `src/features/prototype/CommunityHistory.tsx` and `community-history.ts`: interactive
+  weekly chart and isolated UI fixture (no dated activity ledger exists).
+- `src/features/prototype/calm.css`: shared visual refinement and focal scaling.
 - `src/features/prototype/prototype.css`: base components and compact styles.
 - `src/features/prototype/responsive.css`: shared shell variables and
   responsive workspaces.

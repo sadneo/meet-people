@@ -47,16 +47,15 @@ function EventsFeed() {
   function goPage(next: number) {
     setLoaded(null); setError(''); setSearch({ ...(category !== 'All' ? { category } : {}), page: String(next) })
   }
-  return <div className="ev-events-workspace"><section className="ev-events-feed">
-    <Header title="Events around campus" sub="Find something worth showing up for." />
+  return <div className={`ev-events-workspace ${!visible.length ? 'is-empty' : ''}`}><section className="ev-events-feed">
+    <Header title="Events" />
     <Chips label="Event category" options={[...new Set(['All', 'Music', 'Food', 'Outdoors', ...(result?.categories ?? []), category])]} values={[category]} onChange={([value]) => changeCategory(value)} />
-    <p className="ev-results-note"><Icon name="pin" size={16} />Upcoming events · dates in your local time zone</p>
-    <Button secondary onClick={() => {
+    <button className="ev-icon-button ev-location-control" aria-label="Show distances from me" title="Show distances from me" onClick={() => {
       if (!navigator.geolocation) { setGeoError('Location is unavailable in this browser.'); return }
       navigator.geolocation.getCurrentPosition(position => { setOrigin({ latitude: position.coords.latitude, longitude: position.coords.longitude }); setGeoError('') }, () => setGeoError('Could not access your location. Allow location access and try again.'), { timeout: 10000 })
-    }}>Show distances from me</Button>
+    }}><Icon name="pin" size={24} /></button>
     {geoError && <p role="alert">{geoError}</p>}
-    {error ? <div className="ev-empty" role="alert"><h2>Could not load events</h2><p>{error}</p><Button onClick={() => setRetry(value => value + 1)}>Retry</Button></div> : !result ? <p role="status">Loading events…</p> : !visible.length ? <div className="ev-empty"><h2>A quiet calendar</h2><p>No upcoming events in this category. Try another category.</p><Button onClick={() => changeCategory('All')}>Show all events</Button></div> : <div className="ev-event-grid">{visible.map(event => {
+    {error ? <div className="ev-empty ev-calm-empty" role="alert"><Icon name="events" size={72} /><h2>Events unavailable</h2><Button secondary onClick={() => setRetry(value => value + 1)}>Retry</Button></div> : !result ? <p role="status">Loading events…</p> : !visible.length ? <div className="ev-empty ev-calm-empty"><Icon name="events" size={72} /><h2>A quiet calendar</h2><Button onClick={() => changeCategory('All')}>Show all events</Button></div> : <div className="ev-event-grid">{visible.map(event => {
       const open = (click: React.MouseEvent<HTMLAnchorElement>) => {
         if (click.button === 0 && !click.ctrlKey && !click.metaKey && !click.shiftKey && !click.altKey && window.matchMedia('(min-width: 1800px)').matches) {
           click.preventDefault(); const next = new URLSearchParams(search); next.set('selected', event.id); setSearch(next, { replace: true })

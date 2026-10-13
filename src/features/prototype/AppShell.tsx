@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { usePrototype } from './context'
 import { scenePaths, type Scene } from './model'
-import { Avatar, Brand, Icon, Pebble } from './ui'
+import { Avatar, Brand, Icon } from './ui'
 import { useLogout } from '../../auth/useLogout'
 import { MatchingInbox } from '../matchmaking/MatchingInbox'
 
@@ -14,7 +14,7 @@ const primaryTabs: { label: Scene; icon: string }[] = [
 ]
 
 function Tab({ label, icon, active }: { label: Scene; icon: string; active: boolean }) {
-  return <Link to={scenePaths[label]} className={active ? 'is-active' : ''} aria-current={active ? 'page' : undefined}>{label === 'Home' ? <Pebble /> : <Icon name={icon} />}<span>{label}</span></Link>
+  return <Link to={scenePaths[label]} className={active ? 'is-active' : ''} aria-label={label} title={label} aria-current={active ? 'page' : undefined}><Icon name={icon} size={25} /><span>{label}</span></Link>
 }
 
 export function AppShell() {
@@ -23,7 +23,7 @@ export function AppShell() {
   const auth = useLogout()
   const main = useRef<HTMLElement>(null)
   const account = useRef<HTMLDetailsElement>(null)
-  const activeTab: Scene = scene === 'Event Detail' ? 'Events' : scene === 'Downtime Matchmaking' ? 'Matchmaking' : ['Free Time Match', 'Activities', 'Planning', 'Review', 'Confirmed', 'Connection'].includes(scene) ? 'Free Time' : scene === 'Chat' ? 'Messages' : ['Other User Profile', 'Settings'].includes(scene) ? 'Profile' : scene
+  const activeTab: Scene = scene === 'Community' ? 'Home' : scene === 'Event Detail' ? 'Events' : scene === 'Downtime Matchmaking' ? 'Matchmaking' : ['Free Time Match', 'Activities', 'Planning', 'Review', 'Confirmed', 'Connection'].includes(scene) ? 'Free Time' : scene === 'Chat' ? 'Messages' : ['Other User Profile', 'Settings'].includes(scene) ? 'Profile' : scene
 
   useEffect(() => {
     if (account.current) account.current.open = false
