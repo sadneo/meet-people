@@ -1,3 +1,8 @@
+> Current Community integration supersedes the historical Museum/reference-only
+> notes below. See [Community refinement](COMMUNITY-REFINEMENT.md): raster village
+> layers, a shared reference shadow, draggable local objects and four rare Pebbles.
+> The Museum is no longer mounted or navigable from the app.
+
 # Pebble pixel-art integration
 
 This pass builds on the existing uncommitted UI work. No commits or pushes.
