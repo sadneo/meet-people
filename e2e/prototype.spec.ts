@@ -1,7 +1,12 @@
 import { mockCurrentEvents } from './current-events-fixture'
 import { expect, test, type Page } from '@playwright/test'
 
-async function scene(page: Page, name: string) { await page.getByLabel('Review scene').selectOption(name) }
+async function scene(page: Page, name: string) {
+  const tab = page.getByRole('button', { name: 'Developer controls', exact: true })
+  if (await tab.getAttribute('aria-expanded') === 'false') await tab.click()
+  await page.getByLabel('Review scene').selectOption(name)
+  await tab.click()
+}
 async function startPlan(page: Page) {
   await page.goto('/free-time')
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
@@ -84,7 +89,7 @@ test('onboarding skip, all chapters, unique rewards and ordinary profile editing
   await expect(page.getByRole('heading', { name: 'Your Pebble is ready.' })).toBeVisible()
   await expect(page.locator('.pt-pouch-count')).toContainText('40')
   await page.getByRole('button', { name: 'Enter Pebble' }).click()
-  await expect(page.getByRole('heading', { name: 'Your Pebble community' })).toBeAttached()
+  await expect(page.getByRole('heading', { name: 'Who’s around?' })).toBeAttached()
   await expect(page.locator('[data-upgrade]')).toHaveCount(0)
   await expect(page.getByLabel('Pebble balance', { exact: true })).toContainText('40')
   await page.getByRole('link', { name: 'Profile', exact: true }).click()
@@ -127,11 +132,13 @@ test('all scenes fit a narrow phone; filters, empty states, reporting and blocki
   await expect(page.locator('.ev-event-card')).toHaveCount(1)
   await page.getByRole('button', { name: 'Outdoors', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'A quiet calendar' })).toBeVisible()
+  await page.getByRole('button', { name: 'Developer controls', exact: true }).click()
   await page.getByLabel('Empty states').check()
   await scene(page, 'Messages')
   await expect(page.getByRole('heading', { name: 'Your conversations start here' })).toBeVisible()
   await scene(page, 'Free Time Match')
   await expect(page.getByRole('heading', { name: 'No overlap just yet' })).toBeVisible()
+  await page.getByRole('button', { name: 'Developer controls', exact: true }).click()
   await page.getByLabel('Empty states').uncheck()
   await scene(page, 'Other User Profile')
   await page.getByRole('button', { name: 'Report user', exact: true }).click()
@@ -158,8 +165,8 @@ test('settings switches retain session changes and dialogs return focus', async 
   await notifications.focus()
   await page.keyboard.press('Space')
   await expect(notifications).not.toBeChecked()
-  await page.getByLabel('Review scene').selectOption('Profile')
-  await page.getByLabel('Review scene').selectOption('Settings')
+  await scene(page, 'Profile')
+  await scene(page, 'Settings')
   await expect(notifications).not.toBeChecked()
   const account = page.getByRole('button', { name: /^Account details/ })
   await account.click()

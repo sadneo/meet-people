@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useSession } from '../../auth/useSession'
-import { EmailLinkSignIn } from '../../auth/EmailLinkSignIn'
+import { supabase } from '../../supabase'
+import { Icon } from '../prototype/ui'
+import { PixelPebble } from '../pebble-art/PixelArt'
 import { MatchingProfileSchema, type MatchingMode, type MatchingProfile } from '../../../shared/matchmaking'
 import { useMatchmaking } from './useMatchmaking'
 import { DeviceDisplayPreferences } from './DeviceDisplayPreferences'
@@ -47,25 +49,29 @@ function AuthenticatedMatching({ mode, token }: { mode: MatchingMode; token: str
   const candidate = state.result?.candidate
   const closePreferences = () => { setPreferences(false); preferencesButton.current?.focus() }
   return <>
-    <section className="match-record-card"><h2>Matching queue</h2>
-      <p role="status" aria-live="polite">{state.busy ? 'Loading queue status…' : !state.known ? 'Queue status unavailable.' : state.mode ? `You are in the ${state.mode} queue.` : 'Ready when you are.'}</p>
-      {state.error && <p role="alert">{state.error} Last confirmed status is shown; refresh to check.</p>}
-      <div className="match-live-actions"><button type="button" className={`match-button match-button-${state.mode ? 'secondary' : 'primary'}`} disabled={state.busy || !state.known || (!state.mode && !state.canJoin)} onClick={() => void state.queue(state.mode ? 'leave' : 'join', mode)}>{state.mode ? mode === 'downtime' ? 'Pause downtime matching' : 'Cancel search' : mode === 'downtime' ? 'Turn on downtime matching' : 'Start matching'}</button>
-      {state.mode && state.mode !== mode && <button className="match-button match-button-secondary" disabled={state.busy || !state.canJoin} onClick={() => void state.queue('join', mode)}>Switch to {mode} queue</button>}
-      <button className="match-button match-button-secondary" disabled={state.busy} onClick={() => void state.queue('refresh')}>Refresh status</button>
-      {state.mode && <button className="match-button match-button-secondary" disabled={state.busy || state.checking || state.saving} onClick={() => void state.check()}>{state.checking ? 'Checking…' : 'Check for a match'}</button>}</div>
-      <p>One person at a time. Checking is manual; no background scoring or notifications.</p>
-      {!state.canJoin && <p>Load and save a matching profile before joining a queue. You can still refresh status or leave an existing queue.</p>}
+    <section className={`match-focus ${state.mode ? 'is-searching' : ''}`}>
+      {candidate ? <article className="match-person"><div className="match-person-portrait">{candidate.avatar ? <img src={candidate.avatar} alt="" referrerPolicy="no-referrer" /> : <Icon name="profile" size={80} />}</div><h2>{candidate.name}</h2><div className="match-person-interests">{candidate.interests.slice(0, 4).map(interest => <span key={interest}>{interest}</span>)}</div><p>Weekly overlap: {candidate.overlap === 'none' ? 'None' : candidate.overlap === 'some' ? 'Under two hours' : 'Two hours or more'}</p>{candidate.meetup && <section><h3>{candidate.meetup.title ?? 'Suggested meetup'}</h3>{candidate.meetup.location && <p>{candidate.meetup.location}</p>}{candidate.meetup.startsAt && <time dateTime={candidate.meetup.startsAt}>{new Date(candidate.meetup.startsAt).toLocaleString()}</time>}</section>}<small>Suggested match</small></article> : <div className="pt-mascot-scene match-mascot" aria-hidden="true"><PixelPebble thinking={Boolean(state.mode) || state.busy} /></div>}
+      <p className="match-focus-status" role="status" aria-live="polite">{state.busy ? 'Loading…' : !state.known ? 'Matching unavailable' : state.mode ? <>{candidate ? 'Someone to meet' : state.result ? 'No candidate yet' : 'Finding people…'}<span className="pt-sr-only"> You are in the {state.mode} queue.</span></> : 'Ready when you are.'}</p>
+      {state.error && <p className="match-error" role="alert">{state.error} Last confirmed status is shown; refresh to check.</p>}
+      <div className="match-focus-actions">
+        {state.mode && <button className="match-button match-button-primary" disabled={state.busy || state.checking || state.saving} onClick={() => void state.check()}>{state.checking ? 'Checking…' : 'Check for a match'}</button>}
+        <button type="button" className={`match-button match-button-${state.mode ? 'secondary' : 'primary'}`} disabled={state.busy || !state.known || (!state.mode && !state.canJoin)} onClick={() => void state.queue(state.mode ? 'leave' : 'join', mode)}>{state.mode ? mode === 'downtime' ? 'Pause downtime matching' : 'Cancel search' : mode === 'downtime' ? 'Turn on downtime matching' : 'Start matching'}</button>
+        {state.mode && state.mode !== mode && <button className="match-button match-button-secondary" disabled={state.busy || !state.canJoin} onClick={() => void state.queue('join', mode)}>Switch to {mode} queue</button>}
+      </div>
+      {state.profileLoading && <p>Loading profile…</p>}
+      {state.profileReady && !state.profile && <p>No matching profile saved yet.</p>}
+      {state.profileError && !preferences && <><p role="alert">{state.profileError}</p><button className="match-button match-button-secondary" disabled={state.profileLoading} onClick={() => void state.reloadProfile()}>Retry profile</button></>}
+      <div className="pt-focus-secondary">
+        <button className="pt-icon-button pt-quiet-icon" aria-label="Refresh status" title="Refresh status" disabled={state.busy} onClick={() => void state.queue('refresh')}><Icon name="refresh" size={24} /></button>
+        {state.profileReady && <button ref={preferencesButton} className="pt-icon-button pt-quiet-icon" aria-label="Preferences" title="Preferences" disabled={state.profileLoading} onClick={() => setPreferences(true)}><Icon name="settings" size={24} /></button>}
+      </div>
     </section>
-    {state.result && !candidate && <section className="match-record-card"><h2>No candidate yet</h2><p>You can check again later or cancel your search.</p></section>}
-    {candidate && <article className="match-record-card"><h2>{candidate.name}</h2>{candidate.avatar && <img src={candidate.avatar} alt="" width={64} height={64} referrerPolicy="no-referrer" />}<p>Shared interests: {candidate.interests.length ? candidate.interests.join(', ') : 'No shared labels returned'}</p><p>Weekly overlap: {candidate.overlap === 'none' ? 'None' : candidate.overlap === 'some' ? 'Under two hours' : 'Two hours or more'}</p>{candidate.meetup && <section><h3>{candidate.meetup.title ?? 'Suggested meetup'}</h3>{candidate.meetup.location && <p>{candidate.meetup.location}</p>}{candidate.meetup.startsAt && <time dateTime={candidate.meetup.startsAt}>{new Date(candidate.meetup.startsAt).toLocaleString()}</time>}</section>}<p>This is a suggestion, not an invitation or confirmed connection.</p></article>}
-    <section className="match-record-card"><h2>Matching profile</h2>{state.profileLoading && <p>Loading profile…</p>}{state.profileError && !preferences && <><p role="alert">{state.profileError}</p><button className="match-button match-button-secondary" disabled={state.profileLoading} onClick={() => void state.reloadProfile()}>Retry profile</button></>}{state.profileReady && <><p>{state.profile ? state.profile.display_name : 'No matching profile saved yet.'}</p>{state.profile && <p>{state.profile.interests.join(', ') || 'No interests added.'}</p>}<button ref={preferencesButton} className="match-button match-button-secondary" disabled={state.profileLoading} onClick={() => setPreferences(true)}>Preferences</button></>}<p>Birthdate is optional. Coordinates and travel limits are not collected here.</p></section>
-    <DeviceDisplayPreferences />
+    <details className="match-device-disclosure"><summary>On this device</summary><DeviceDisplayPreferences /></details>
     {preferences && <ProfileEditor initial={state.profile} busy={state.saving} error={state.profileError} save={state.save} close={closePreferences} />}
   </>
 }
 
 export function MatchingScreen({ mode }: { mode: MatchingMode }) {
   const { session, ready } = useSession()
-  return <div className="match-home match-live"><header className="match-topbar"><h1>{mode === 'active' ? 'Active matchmaking' : 'Downtime matchmaking'}</h1><Link className="match-mode-switch" to={mode === 'active' ? '/downtime-matchmaking' : '/matchmaking'}>{mode === 'active' ? 'Downtime matchmaking' : 'Active matchmaking'}</Link></header><p>{mode === 'active' ? 'Find someone through shared interests and the existing friendship signals.' : 'Find someone with overlapping weekly free time. Your queue stays on the server until you leave.'}</p>{!ready ? <p role="status">Loading session…</p> : !session ? <EmailLinkSignIn /> : <AuthenticatedMatching key={session.access_token} mode={mode} token={session.access_token} />}</div>
+  return <div className="match-home match-live match-calm"><header className="match-calm-toolbar"><h1 tabIndex={-1} className="pt-sr-only">{mode === 'active' ? 'Active matchmaking' : 'Downtime matchmaking'}</h1><Link className="pt-icon-button pt-quiet-icon" to={mode === 'active' ? '/downtime-matchmaking' : '/matchmaking'} aria-label={mode === 'active' ? 'Downtime matchmaking' : 'Active matchmaking'} title={mode === 'active' ? 'Downtime matchmaking' : 'Active matchmaking'}><Icon name={mode === 'active' ? 'time' : 'matchmaking'} size={24} /></Link></header>{!ready ? <section className="match-focus"><div className="pt-mascot-scene" aria-hidden="true"><PixelPebble thinking /></div><p role="status">Loading…</p></section> : !session ? <section className="match-focus"><div className="pt-mascot-scene" aria-hidden="true"><PixelPebble /></div><h2>Sign in to match</h2>{supabase ? <Link className="pt-button pt-discovery-action" to={`/login?returnTo=${mode === 'active' ? '/matchmaking' : '/downtime-matchmaking'}`}>Sign in</Link> : <><button className="pt-button pt-discovery-action" disabled>Sign in</button><small role="status">Sign-in unavailable</small></>}</section> : <AuthenticatedMatching key={session.access_token} mode={mode} token={session.access_token} />}</div>
 }

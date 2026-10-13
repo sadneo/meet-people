@@ -2,12 +2,12 @@ import { expect, test } from '@playwright/test'
 
 test('renders home, fallback routes, and API health', async ({ page, request }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Your Pebble community' })).toBeAttached()
+  await expect(page.getByRole('heading', { name: 'Who’s around?' })).toBeAttached()
 
   await page.goto('/events')
-  await expect(page.getByRole('heading', { name: 'Events around campus' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Events', exact: true })).toBeVisible()
 
-  for (const removed of ['/prototype', '/prototype?scene=events', '/community']) {
+  for (const removed of ['/prototype', '/prototype?scene=events']) {
     await page.goto(removed)
     await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible()
   }
@@ -75,12 +75,12 @@ for (const width of [801, 1280]) {
     await trigger.click()
     await expect(options).toBeHidden()
     await trigger.click()
-    await page.getByRole('heading', { name: 'Events around campus' }).click()
+    await page.getByRole('heading', { name: 'Events', exact: true }).click()
     await expect(options).toBeHidden()
 
     await page.goto('/messages/chat')
     await trigger.click()
-    expect(await options.evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)')
+    expect(await options.evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 254, 249)')
     for (const link of await options.getByRole('link').all()) {
       expect(await link.evaluate(element => {
         const bounds = element.getBoundingClientRect()
