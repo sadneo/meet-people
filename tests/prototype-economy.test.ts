@@ -4,7 +4,7 @@ import { initialState, reducer } from '../src/features/prototype/model'
 
 describe('manual community purchases', () => {
   it('deducts exact catalog prices and rejects duplicates and insufficient balances', () => {
-    expect(upgrades.map(item => item.cost)).toEqual([10, 15, 20, 25, 30, 40, 55, 70, 90, 120])
+    expect(upgrades.map(item => item.cost)).toEqual([10, 15, 20, 25, 30, 40, 55, 70, 90, 120, 300, 300, 300, 300])
     expect(purchase(emptyCommunity, 'flowers')).toBe(emptyCommunity)
     const bought = purchase({ ...emptyCommunity, balance: 10 }, 'flowers')
     expect(bought.balance).toBe(0)
@@ -28,6 +28,6 @@ describe('manual community purchases', () => {
     expect(repeat.community.balance).toBe(10)
     expect(repeat.community.owned).toEqual([])
     const reset = reducer(repeat, { type: 'reset-community' })
-    expect(reset.community).toEqual({ balance: 0, owned: [], earnedChapters: [0] })
+    expect(reset.community).toEqual({ balance: 0, owned: [], earnedChapters: [0], positions: {}, purchaseCosts: {} })
   })
 })

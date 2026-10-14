@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useSession } from '../../auth/useSession'
+import { getLocalDevelopmentEnvironment, isLocalDevelopment } from '../../auth/localDevelopment'
 import { supabase } from '../../supabase'
-import { Icon } from '../prototype/ui'
+import { Button, Icon } from '../prototype/ui'
 import { PixelPebble } from '../pebble-art/PixelArt'
 import { MatchingProfileSchema, type MatchingMode, type MatchingProfile } from '../../../shared/matchmaking'
 import { useMatchmaking } from './useMatchmaking'
@@ -85,7 +86,30 @@ function AuthenticatedMatching({ mode, token }: { mode: MatchingMode; token: str
   </>
 }
 
+function LocalQuickSignIn() {
+  const [busy, setBusy] = useState(false)
+  const requestPending = useRef(false)
+  const [message, setMessage] = useState('')
+  const [failed, setFailed] = useState(false)
+  return <div className="match-focus-actions">
+    <Button secondary disabled={!supabase || busy} onClick={async () => {
+      if (!import.meta.env.DEV || !isLocalDevelopment(getLocalDevelopmentEnvironment()) || !supabase || requestPending.current) return
+      requestPending.current = true
+      setBusy(true); setFailed(false); setMessage('Signing in locally…')
+      try {
+        const { error } = await supabase.auth.signInAnonymously()
+        if (error) throw error
+        setMessage('Signed in with a disposable local development session.')
+      } catch { setFailed(true); setMessage('Could not complete local quick sign-in. Check that anonymous Auth is enabled locally, or use the Sign in link.') }
+      finally { requestPending.current = false; setBusy(false) }
+    }}>{busy ? 'Signing in locally…' : 'Quick sign in (local only)'}</Button>
+    <small>Local development only: a disposable anonymous Supabase session, not a permanent email account.</small>
+    {message && <p className="match-error" role={failed ? 'alert' : 'status'}>{message}</p>}
+  </div>
+}
 export function MatchingScreen({ mode }: { mode: MatchingMode }) {
   const { session, ready } = useSession()
-  return <div className="match-home match-live match-calm"><header className="match-calm-toolbar"><h1 tabIndex={-1} className="pt-sr-only">{mode === 'active' ? 'Active matchmaking' : 'Downtime matchmaking'}</h1><Link className="pt-icon-button pt-quiet-icon" to={mode === 'active' ? '/downtime-matchmaking' : '/matchmaking'} aria-label={mode === 'active' ? 'Downtime matchmaking' : 'Active matchmaking'} title={mode === 'active' ? 'Downtime matchmaking' : 'Active matchmaking'}><Icon name={mode === 'active' ? 'time' : 'matchmaking'} size={24} /></Link></header>{!ready ? <section className="match-focus"><div className="pt-mascot-scene" aria-hidden="true"><PixelPebble thinking /></div><p role="status">Loading…</p></section> : !session ? <section className="match-focus"><div className="pt-mascot-scene" aria-hidden="true"><PixelPebble /></div><h2>Sign in to match</h2>{supabase ? <Link className="pt-button pt-discovery-action" to={`/login?returnTo=${mode === 'active' ? '/matchmaking' : '/downtime-matchmaking'}`}>Sign in</Link> : <><button className="pt-button pt-discovery-action" disabled>Sign in</button><small role="status">Sign-in unavailable</small></>}</section> : <AuthenticatedMatching key={session.access_token} mode={mode} token={session.access_token} />}</div>
+  const localDevelopment = import.meta.env.DEV && isLocalDevelopment(getLocalDevelopmentEnvironment())
+  return <div className="match-home match-live match-calm"><header className="match-calm-toolbar"><h1 tabIndex={-1} className="pt-sr-only">{mode === 'active' ? 'Active matchmaking' : 'Downtime matchmaking'}</h1><Link className="pt-icon-button pt-quiet-icon" to={mode === 'active' ? '/downtime-matchmaking' : '/matchmaking'} aria-label={mode === 'active' ? 'Downtime matchmaking' : 'Active matchmaking'} title={mode === 'active' ? 'Downtime matchmaking' : 'Active matchmaking'}><Icon name={mode === 'active' ? 'time' : 'matchmaking'} size={24} /></Link></header>{!ready ? <section className="match-focus"><div className="pt-mascot-scene" aria-hidden="true"><PixelPebble thinking /></div><p role="status">Loading…</p></section> : !session ? <section className="match-focus"><div className="pt-mascot-scene" aria-hidden="true"><PixelPebble /></div><h2>Sign in to match</h2>{supabase ? <Link className="pt-button pt-discovery-action" to={`/login?returnTo=${mode === 'active' ? '/matchmaking' : '/downtime-matchmaking'}`}>Sign in</Link> : <><button className="pt-button pt-discovery-action" disabled>Sign in</button><small role="status">Sign-in unavailable</small></>}{localDevelopment && <LocalQuickSignIn />}
+  </section> : <AuthenticatedMatching key={session.access_token} mode={mode} token={session.access_token} />}</div>
 }
