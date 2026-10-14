@@ -5,6 +5,7 @@ import { scenePaths, type Scene } from './model'
 import { Avatar, Brand, Icon } from './ui'
 import { useLogout } from '../../auth/useLogout'
 import { MatchingInbox } from '../matchmaking/MatchingInbox'
+import { isDatingView } from '../matchmaking/views'
 
 const primaryTabs: { label: Scene; icon: string }[] = [
   { label: 'Home', icon: 'home' },
@@ -19,7 +20,7 @@ function Tab({ label, icon, active }: { label: Scene; icon: string; active: bool
 
 export function AppShell() {
   const { scene, state } = usePrototype()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const auth = useLogout()
   const main = useRef<HTMLElement>(null)
   const account = useRef<HTMLDetailsElement>(null)
@@ -29,7 +30,7 @@ export function AppShell() {
     if (account.current) account.current.open = false
     main.current?.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true })
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [pathname])
+  }, [pathname, search])
 
   useEffect(() => {
     const dismiss = (event: PointerEvent | KeyboardEvent) => {
@@ -64,7 +65,7 @@ export function AppShell() {
       </nav>
     </header>
     {auth.error && <p className="pt-logout-error" role="alert">{auth.error}</p>}
-    <MatchingInbox />
+    {!isDatingView(pathname, search) && <MatchingInbox />}
     <main ref={main} className="pt-main"><Outlet /></main>
     <nav className="pt-bottom-nav" aria-label="Primary navigation">{[...primaryTabs, { label: 'Profile' as Scene, icon: 'profile' }].map(tab => <Tab key={tab.label} {...tab} active={activeTab === tab.label} />)}</nav>
   </>

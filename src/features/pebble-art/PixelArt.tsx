@@ -1,10 +1,12 @@
 import { characterViewBox, gemRegions, geodeRegions, pebbleAssets, type GemKind } from './assets'
+import { useState } from 'react'
 import './pixel-art.css'
 
 export function PixelPebble({ thinking = false, className = '' }: { thinking?: boolean; className?: string }) {
+  const [expression, setExpression] = useState({ thinking, changed: false })
+  if (expression.thinking !== thinking) setExpression({ thinking, changed: true })
   return <svg className={`pt-pebble pt-pixel-art pt-pixel-pebble ${className}`} viewBox={characterViewBox} aria-hidden="true" data-expression={thinking ? 'thinking' : 'happy'}>
-    <image className="pt-expression-image" href={pebbleAssets.happy} width="1254" height="1254" opacity={thinking ? 0 : 1} />
-    <image className="pt-expression-image" href={pebbleAssets.thinking} width="1254" height="1254" opacity={thinking ? 1 : 0} />
+    <image key={thinking ? 'thinking' : 'happy'} className={`pt-expression-image${expression.changed ? ' is-expression-change' : ''}`} href={thinking ? pebbleAssets.thinking : pebbleAssets.happy} width="1254" height="1254" opacity="1" />
   </svg>
 }
 export function CurrencyIcon() {

@@ -7,31 +7,45 @@ import { PixelPebble } from '../pebble-art/PixelArt'
 import { MatchingProfileSchema, type MatchingMode, type MatchingProfile } from '../../../shared/matchmaking'
 import { useMatchmaking } from './useMatchmaking'
 import { DeviceDisplayPreferences } from './DeviceDisplayPreferences'
+import { matchmakingClient } from './client'
+import { withAccountIdentity, type AccountProfile } from '../../../shared/account-profile'
 
 const blankProfile: MatchingProfile = { username: '', display_name: '', bio: null, birthdate: null, location_city: null, avatar_url: null, interests: [], availability: [] }
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-function ProfileEditor({ initial, busy, error, save, close }: { initial: MatchingProfile | null; busy: boolean; error: string; save: (profile: MatchingProfile) => Promise<boolean>; close: () => void }) {
+function ProfileEditor({ initial, busy, error, save, close, token }: { initial: MatchingProfile | null; busy: boolean; error: string; save: (profile: MatchingProfile) => Promise<boolean>; close: () => void; token: string }) {
   const [draft, setDraft] = useState(initial ?? blankProfile)
   const [validation, setValidation] = useState('')
   const dialog = useRef<HTMLDialogElement>(null)
+  const [account, setAccount] = useState<AccountProfile | null>(null)
+  const [compatibility, setCompatibility] = useState<'loading' | 'canonical' | 'legacy'>('loading')
+  useEffect(() => {
+    let live = true
+    void matchmakingClient(token).accountProfile().then(({ profile }) => { if (live) { setAccount(profile); setCompatibility('canonical') } })
+      .catch(() => { if (live) setCompatibility('legacy') })
+    return () => { live = false }
+  }, [token])
+  const blocked = busy || compatibility === 'loading' || (compatibility === 'canonical' && !account)
   useEffect(() => { dialog.current?.showModal() }, [])
   const update = (patch: Partial<MatchingProfile>) => setDraft(current => ({ ...current, ...patch }))
   const dismiss = () => { dialog.current?.close(); close() }
   return <dialog ref={dialog} className="match-preferences match-live-dialog" aria-labelledby="preferences-title" onCancel={event => { event.preventDefault(); if (!busy) dismiss() }}><form onSubmit={async event => {
     event.preventDefault()
-    const parsed = MatchingProfileSchema.safeParse(draft)
+    if (blocked) return
+    const parsed = MatchingProfileSchema.safeParse(account ? withAccountIdentity(draft, account) : draft)
     if (!parsed.success) { setValidation('Check your profile fields and non-overlapping same-day time windows.'); return }
     setValidation('')
     if (await save(parsed.data)) dismiss()
   }}><header><h2 id="preferences-title">Your preferences</h2><button type="button" className="match-close-button" aria-label="Close preferences" onClick={dismiss} disabled={busy}>×</button></header><div className="match-preferences-body">
-    <label>Username<input required maxLength={80} value={draft.username} onChange={event => update({ username: event.target.value })} /></label>
+    <Link to="/profile/account">Account profile</Link>
+    {compatibility === 'loading' ? <p>Checking account profile compatibility…</p> : compatibility === 'canonical' ? <p>{account ? 'Identity comes from your account profile.' : 'Save an account profile before matching preferences.'}</p> : <p>Account profile separation unavailable. Compatibility mode uses the full legacy Friends profile; these identity fields are not yet a separate account profile.</p>}
+    {compatibility !== 'canonical' && <fieldset><legend>Legacy identity compatibility</legend><label>Username<input required maxLength={80} value={draft.username} onChange={event => update({ username: event.target.value })} /></label>
     <label>Display name<input required maxLength={120} value={draft.display_name} onChange={event => update({ display_name: event.target.value })} /></label>
     <label>Bio<textarea maxLength={1000} value={draft.bio ?? ''} onChange={event => update({ bio: event.target.value || null })} /></label>
+    <label>Avatar URL (HTTPS, optional)<input type="url" maxLength={2048} value={draft.avatar_url ?? ''} onChange={event => update({ avatar_url: event.target.value || null })} /></label></fieldset>}
     <label>Birthdate (optional)<input type="date" value={draft.birthdate ?? ''} onChange={event => update({ birthdate: event.target.value || null })} /></label>
     <label>City or campus area<input maxLength={120} value={draft.location_city ?? ''} onChange={event => update({ location_city: event.target.value || null })} /></label>
     <p>Area text does not set coordinates or enforce a travel range.</p>
-    <label>Avatar URL (HTTPS, optional)<input type="url" maxLength={2048} value={draft.avatar_url ?? ''} onChange={event => update({ avatar_url: event.target.value || null })} /></label>
     <fieldset><legend>Interests</legend><p>Each field is one interest label; line breaks within a label are preserved.</p>{draft.interests.map((interest, index) => <div key={index}><label>Interest {index + 1}<textarea required maxLength={120} disabled={busy} value={interest} onChange={event => update({ interests: draft.interests.map((item, i) => i === index ? event.target.value : item) })} /></label><button type="button" className="match-button match-button-secondary" disabled={busy} onClick={() => update({ interests: draft.interests.filter((_, i) => i !== index) })}>Remove interest {index + 1}</button></div>)}<button type="button" className="match-button match-button-secondary" disabled={busy || draft.interests.length >= 30} onClick={() => update({ interests: [...draft.interests, ''] })}>Add interest</button></fieldset>
     <fieldset><legend>Weekly availability</legend><p>Times use America/New_York campus wall time. Same-day windows only; midnight ends are 24:00:00.</p>{draft.availability.map((window, index) => <div className="match-form-row" key={index}>
       <label>Day<select value={window.dow} onChange={event => update({ availability: draft.availability.map((item, i) => i === index ? { ...item, dow: Number(event.target.value) } : item) })}>{days.map((day, dow) => <option key={day} value={dow}>{day}</option>)}</select></label>
@@ -39,7 +53,7 @@ function ProfileEditor({ initial, busy, error, save, close }: { initial: Matchin
       <button type="button" className="match-button match-button-secondary" onClick={() => update({ availability: draft.availability.filter((_, i) => i !== index) })}>Remove window {index + 1}</button>
     </div>)}<button type="button" className="match-button match-button-secondary" disabled={draft.availability.length >= 56} onClick={() => update({ availability: [...draft.availability, { dow: 1, start_time: '17:00:00', end_time: '21:00:00' }] })}>Add time window</button></fieldset>
     {(error || validation) && <p role="alert">{validation || error}</p>}
-    </div><footer><button type="button" className="match-button match-button-secondary" disabled={busy} onClick={dismiss}>Cancel</button><button type="submit" className="match-button match-button-secondary" disabled={busy}>{busy ? 'Saving…' : 'Save preferences'}</button></footer></form></dialog>
+    </div><footer><button type="button" className="match-button match-button-secondary" disabled={busy} onClick={dismiss}>Cancel</button><button type="submit" className="match-button match-button-secondary" disabled={blocked}>{busy ? 'Saving…' : 'Save preferences'}</button></footer></form></dialog>
 }
 
 function AuthenticatedMatching({ mode, token }: { mode: MatchingMode; token: string }) {
@@ -50,7 +64,7 @@ function AuthenticatedMatching({ mode, token }: { mode: MatchingMode; token: str
   const closePreferences = () => { setPreferences(false); preferencesButton.current?.focus() }
   return <>
     <section className={`match-focus ${state.mode ? 'is-searching' : ''}`}>
-      {candidate ? <article className="match-person"><div className="match-person-portrait">{candidate.avatar ? <img src={candidate.avatar} alt="" referrerPolicy="no-referrer" /> : <Icon name="profile" size={80} />}</div><h2>{candidate.name}</h2><div className="match-person-interests">{candidate.interests.slice(0, 4).map(interest => <span key={interest}>{interest}</span>)}</div><p>Weekly overlap: {candidate.overlap === 'none' ? 'None' : candidate.overlap === 'some' ? 'Under two hours' : 'Two hours or more'}</p>{candidate.meetup && <section><h3>{candidate.meetup.title ?? 'Suggested meetup'}</h3>{candidate.meetup.location && <p>{candidate.meetup.location}</p>}{candidate.meetup.startsAt && <time dateTime={candidate.meetup.startsAt}>{new Date(candidate.meetup.startsAt).toLocaleString()}</time>}</section>}<small>Suggested match</small></article> : <div className="pt-mascot-scene match-mascot" aria-hidden="true"><PixelPebble thinking={Boolean(state.mode) || state.busy} /></div>}
+      {candidate ? <article className="match-person"><div className="match-person-portrait">{candidate.avatar ? <img src={candidate.avatar} alt="" referrerPolicy="no-referrer" /> : <Icon name="profile" size={80} />}</div><h2>{candidate.name}</h2><div className="match-person-interests">{candidate.interests.slice(0, 4).map(interest => <span key={interest}>{interest}</span>)}</div><p>Weekly overlap: {candidate.overlap === 'none' ? 'None' : candidate.overlap === 'some' ? 'Under two hours' : 'Two hours or more'}</p>{candidate.meetup && <section><h3>{candidate.meetup.title ?? 'Suggested meetup'}</h3>{candidate.meetup.location && <p>{candidate.meetup.location}</p>}{candidate.meetup.startsAt && <time dateTime={candidate.meetup.startsAt}>{new Date(candidate.meetup.startsAt).toLocaleString()}</time>}</section>}<small>Suggested match</small></article> : <div className="pt-mascot-scene match-mascot" aria-hidden="true">{state.known && <PixelPebble thinking={Boolean(state.mode)} />}</div>}
       <p className="match-focus-status" role="status" aria-live="polite">{state.busy ? 'Loading…' : !state.known ? 'Matching unavailable' : state.mode ? <>{candidate ? 'Someone to meet' : state.result ? 'No candidate yet' : 'Finding people…'}<span className="pt-sr-only"> You are in the {state.mode} queue.</span></> : 'Ready when you are.'}</p>
       {state.error && <p className="match-error" role="alert">{state.error} Last confirmed status is shown; refresh to check.</p>}
       <div className="match-focus-actions">
@@ -67,7 +81,7 @@ function AuthenticatedMatching({ mode, token }: { mode: MatchingMode; token: str
       </div>
     </section>
     <details className="match-device-disclosure"><summary>On this device</summary><DeviceDisplayPreferences /></details>
-    {preferences && <ProfileEditor initial={state.profile} busy={state.saving} error={state.profileError} save={state.save} close={closePreferences} />}
+    {preferences && <ProfileEditor token={token} initial={state.profile} busy={state.saving} error={state.profileError} save={state.save} close={closePreferences} />}
   </>
 }
 

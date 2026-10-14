@@ -1,6 +1,6 @@
-import { MatchingScreen } from '../matchmaking/MatchingScreen'
+import { MatchingViews } from '../matchmaking/MatchingViews'
 import './matchmaking.css'
 
 export default function MatchmakingHome() {
-  return <MatchingScreen mode="active" />
+  return <MatchingViews mode="active" />
 }

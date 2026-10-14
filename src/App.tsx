@@ -14,6 +14,7 @@ import { Home } from './features/prototype/Home'
 import { PebbleGarden } from './features/prototype/PebbleGarden'
 import MatchmakingHome from './features/prototype/MatchmakingHome'
 import DowntimeMatchmaking from './features/prototype/DowntimeMatchmaking'
+import { AccountProfileScreen } from './features/account/AccountProfile'
 
 function subscribeToCompactLayout(callback: () => void) {
   const query = window.matchMedia('(max-width: 800px)')
@@ -49,6 +50,7 @@ function App() {
           <Route path="messages" element={<MessagesWorkspace />} />
           <Route path="messages/chat" element={<MessagesWorkspace />} />
           <Route path="profile" element={<ProfileScreen />} />
+          <Route path="profile/account" element={<AccountProfileScreen />} />
           <Route path="profile/person" element={<ProfileScreen other />} />
           <Route path="settings" element={<Settings />} />
         </Route>

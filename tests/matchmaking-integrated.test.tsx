@@ -18,6 +18,7 @@ const requests: { path: string; method: string; authorization: string | null; bo
 const mockFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
   const path = String(input), method = init?.method ?? 'GET'
   requests.push({ path, method, authorization: new Headers(init?.headers).get('Authorization'), body: init?.body ? JSON.parse(String(init.body)) : null })
+  if (path.endsWith('/account-profile')) return Response.json({ code: 'unavailable', error: 'Account profile RPC not installed.' }, { status: 503 })
   if (path.endsWith('/profile')) return method === 'PUT' ? saveResponse ?? (saveUnavailable ? Response.json({ code: 'unavailable', error: 'Matching RPC is not available yet.' }, { status: 503 }) : Response.json({ profile: JSON.parse(String(init?.body)) })) : profileResponse ?? Response.json({ profile: { ...profile, interests: profileInterests } })
   if (path.endsWith('/result')) return resultResponse ?? Response.json({ candidate })
   if (method === 'POST') mode = JSON.parse(String(init?.body)).mode
@@ -37,6 +38,10 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
 const mount = (path = '/matchmaking') => render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
+async function openPreferences() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
+  await screen.findByText(/Account profile separation unavailable/)
+}
 
 for (const selected of ['active', 'downtime']) {
   const path = selected === 'active' ? '/matchmaking' : '/downtime-matchmaking'
@@ -50,7 +55,7 @@ for (const selected of ['active', 'downtime']) {
     expect(start.disabled).toBe(true)
     fireEvent.click(start)
     expect(requests.some(request => request.method === 'POST')).toBe(false)
-    fireEvent.click(screen.getByRole('button', { name: 'Preferences' }))
+    await openPreferences()
     fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'sam' } })
     fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Sam' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
@@ -144,7 +149,7 @@ it('ignores a late result after cancellation', async () => {
 })
 it('does not claim a profile save succeeded when the atomic RPC is unavailable', async () => {
   mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
+  await openPreferences()
   fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'New name' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
   await screen.findByRole('alert')
@@ -154,11 +159,11 @@ it('does not claim a profile save succeeded when the atomic RPC is unavailable',
 it('updates the profile only from a successful API save', async () => {
   saveUnavailable = false
   mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
+  await openPreferences()
   fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Saved name' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  fireEvent.click(screen.getByRole('button', { name: 'Preferences' }))
+  await openPreferences()
   expect((screen.getByLabelText('Display name') as HTMLInputElement).value).toBe('Saved name')
   expect(requests.find(request => request.method === 'PUT')).toMatchObject({ authorization: 'Bearer user-jwt', body: { display_name: 'Saved name', birthdate: null, location_city: null } })
 })
@@ -189,13 +194,13 @@ it('preserves a multiline interest on an unrelated profile edit, with per-label 
   profileInterests = ['Board games\nstrategy', 'Coffee']
   saveUnavailable = false
   mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
+  await openPreferences()
   expect(screen.getByLabelText('Interest 1').textContent).toBe('Board games\nstrategy')
   fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Saved name' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(requests.find(request => request.method === 'PUT')).toMatchObject({ body: { interests: profileInterests } })
-  fireEvent.click(screen.getByRole('button', { name: 'Preferences' }))
+  await openPreferences()
   expect((screen.getByLabelText('Display name') as HTMLInputElement).value).toBe('Saved name')
   fireEvent.change(screen.getByLabelText('Interest 1'), { target: { value: 'Board games\nnew strategy' } })
   fireEvent.click(screen.getByRole('button', { name: 'Remove interest 2' }))
@@ -210,7 +215,7 @@ it('clears a displayed candidate on profile save without automatic re-scoring', 
   mount()
   fireEvent.click(await screen.findByRole('button', { name: 'Check for a match' }))
   await screen.findByRole('heading', { name: 'Taylor' })
-  fireEvent.click(screen.getByRole('button', { name: 'Preferences' }))
+  await openPreferences()
   fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(screen.queryByRole('heading', { name: 'Taylor' })).toBeNull()
@@ -225,7 +230,7 @@ it(`invalidates a delayed lookup resolving ${lookupTiming} profile save, clears 
   saveResponse = new Promise(resolve => { finishSave = resolve })
   mount()
   fireEvent.click(await screen.findByRole('button', { name: 'Check for a match' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Preferences' }))
+  await openPreferences()
   fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
   expect(screen.queryByRole('button', { name: 'Checking…', hidden: true })).toBeNull()
   if (lookupTiming === 'during') {

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { isPublicSupabaseKey } from './env.js'
 import { JoinQueueSchema, MatchingProfileSchema, RawMatchSchema, RawQueueStatusSchema, type MatchingProfile } from '../shared/matchmaking.js'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, ListingIdSchema, ListingInterestRequestSchema, ListingMatchmakingStatusSchema, RawListingEventMatchesSchema } from '../shared/matchmaking.js'
+import { AccountProfileSchema, type AccountProfile } from '../shared/account-profile.js'
 
 type RpcResponse = { data: unknown; error: { code?: string } | null }
 export interface UserContextTransport {
@@ -15,6 +16,8 @@ export interface UserContextTransport {
     result(): PromiseLike<RpcResponse>
     profile(): PromiseLike<RpcResponse>
     save(profile: MatchingProfile): PromiseLike<RpcResponse>
+    accountProfile?(): PromiseLike<RpcResponse>
+    saveAccountProfile?(profile: AccountProfile): PromiseLike<RpcResponse>
     listingStatus(listingId: string): PromiseLike<RpcResponse>
     listingInterest(listingId: string): PromiseLike<RpcResponse>
     listingWithdraw(listingId: string): PromiseLike<RpcResponse>
@@ -41,6 +44,8 @@ export function createUserContextTransport(config: { url: string; publicKey: str
     actor(token) {
       const client = createClient(config.url, config.publicKey, { ...options, global: { fetch: config.fetch, headers: { Authorization: `Bearer ${token}` } } })
       return {
+        accountProfile: () => client.rpc('get_account_profile'),
+        saveAccountProfile: profile => client.rpc('save_account_profile', { profile_in: profile }),
         join: qtype => client.rpc('join_queue', { qtype }), leave: () => client.rpc('leave_queue'), status: () => client.rpc('get_queue_status'), result: () => client.rpc('get_queue_match'), profile: () => client.rpc('get_matchmaking_profile'), save: profile => client.rpc('save_matchmaking_profile', { profile_in: profile }),
         listingStatus: listingId => client.rpc('get_listing_matchmaking_status', { listing_id_in: listingId }),
         listingInterest: listingId => client.rpc('express_listing_matchmaking_interest', { listing_id_in: listingId }),
@@ -121,6 +126,19 @@ export function createMatchmakingRouter(transport: UserContextTransport | null) 
   router.get('/profile', async (_request, response) => {
     const data = unwrap(await actor(response).profile())
     response.json({ profile: data === null ? null : validate(MatchingProfileSchema, data) })
+  })
+  router.get('/account-profile', async (_request, response) => {
+    const read = actor(response).accountProfile
+    if (!read) throw new MatchingFailure(503, 'unavailable', 'Account profile RPC is not available yet.')
+    const data = unwrap(await read())
+    response.json({ profile: data === null ? null : validate(AccountProfileSchema, data) })
+  })
+  router.put('/account-profile', async (request, response) => {
+    const parsed = AccountProfileSchema.safeParse(request.body)
+    if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid account profile. No changes were saved.')
+    const save = actor(response).saveAccountProfile
+    if (!save) throw new MatchingFailure(503, 'unavailable', 'Account profile RPC is not available yet.')
+    response.json({ profile: validate(AccountProfileSchema, unwrap(await save(parsed.data))) })
   })
   router.put('/profile', async (request, response) => {
     const parsed = MatchingProfileSchema.safeParse(request.body)
