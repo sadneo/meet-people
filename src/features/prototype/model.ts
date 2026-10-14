@@ -1,4 +1,4 @@
-import { constrainPlacement, type MovableId, type Position } from './community-placement'
+import { constrainPlacement, defaultPlacements, type MovableId, type Position } from './community-placement'
 import { emptyCommunity, purchase, resetPurchases, type Community, type UpgradeId } from './economy'
 // Everything in this module is local design-review data, not a service contract.
 export const scenes = ['Home', 'Community', 'Matchmaking', 'Downtime Matchmaking', 'Intro', 'Login', 'Register', 'Onboarding', 'Events', 'Event Detail', 'Free Time', 'Free Time Match', 'Activities', 'Planning', 'Review', 'Confirmed', 'Messages', 'Chat', 'Connection', 'Profile', 'Other User Profile', 'Settings'] as const
@@ -97,6 +97,7 @@ export function validPlan(draft: Draft, blocked: string[] = []) {
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'move-community-item': {
+      if (!Object.hasOwn(defaultPlacements, action.id)) return state
       if (!['pebble', 'friend', 'friend-two', 'base-bench', 'base-cottage'].includes(action.id) && !state.community.owned.includes(action.id as UpgradeId)) return state
       return { ...state, community: { ...state.community, positions: { ...state.community.positions, [action.id]: constrainPlacement(action.position, action.id) } } }
     }

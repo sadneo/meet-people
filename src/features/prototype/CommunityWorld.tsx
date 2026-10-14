@@ -2,7 +2,8 @@ import { useId, useRef, useState, type PointerEvent } from 'react'
 import { constrainPlacement, defaultPlacements, type MovableId, type Position, type Positions } from './community-placement'
 import landscape from '../../assets/pebble/community/village-landscape.png'
 import rarePebbles from '../../assets/pebble/community/expressive-pebbles.png'
-import { type UpgradeId } from './economy'
+import { isLandscapeUpgrade, type MovableUpgradeId, type UpgradeId } from './economy'
+import { landscapeRegions, landscapeTrees as trees } from './community-landscape'
 import village from '../../assets/pebble/community/community-village.png'
 import emptyIsland from '../../assets/pebble/community/village-empty.png'
 import props from '../../assets/pebble/community/village-props.png'
@@ -31,6 +32,15 @@ function Sprite({ id, x, y, width }: { id: SpriteId; x: number; y: number; width
 }
 
 export function UpgradePicture({ id }: { id: UpgradeId }) {
+  const previewId = useId()
+  if (isLandscapeUpgrade(id)) {
+    const crop = id === 'tree-cluster' ? [687, 140, 215, 220] : landscapeRegions[id].crop
+    const outline = id === 'tree-cluster' ? trees[0].outline : landscapeRegions[id].outline
+    return <svg className="pt-upgrade-picture pt-village-art" viewBox={crop.join(' ')} aria-hidden="true">
+      <defs><clipPath id={previewId}><path d={outline} /></clipPath></defs>
+      <image clipPath={`url(#${previewId})`} href={landscape} width="1448" height="1086" />
+    </svg>
+  }
   return <svg className="pt-upgrade-picture pt-village-art" viewBox="0 0 180 150" aria-hidden="true"><Sprite id={id} x={90} y={140} width={125} /></svg>
 }
 
@@ -38,13 +48,7 @@ export function UpgradePicture({ id }: { id: UpgradeId }) {
 // Generated terrain layers are clipped to the complementary island silhouette,
 // so their independently baked shadows can never darken the common shadow.
 const islandClip = 'M0 0H1448V570H1364V660L716 1015 84 660V570H0Z'
-const trees = [
-  { id: 'tree-back', day: 1, depth: 358, outline: 'M687 140H902V306L849 320V360H768V316L695 299Z' },
-  { id: 'tree-left', day: 2, depth: 537, outline: 'M240 355H372V371H404V412H422V471L354 501V537H308V499L242 473Z' },
-  { id: 'tree-right', day: 5, depth: 569, outline: 'M1080 374H1204V399H1240V429H1260V493L1185 535V569H1141V532L1074 498Z' },
-  { id: 'tree-front', day: 6, depth: 795, outline: 'M438 648H536V666H564V698H582V752L532 772V795H486V766L439 752Z' },
-]
-const revealDay: Record<UpgradeId, number> = { flowers: 2, bridge: 3, garden: 4, bench: 4, picnic: 5, lanterns: 5, cafe: 6, stage: 6, cottage: 6, hall: 6, garnet: 6, sapphire: 6, emerald: 6, citrine: 6 }
+const revealDay: Record<MovableUpgradeId, number> = { flowers: 2, bridge: 3, garden: 4, bench: 4, picnic: 5, lanterns: 5, cafe: 6, stage: 6, cottage: 6, hall: 6, garnet: 6, sapphire: 6, emerald: 6, citrine: 6 }
 const baseItems: { id: MovableId; sprite: SpriteId; day: number; name: string }[] = [
   { id: 'pebble', sprite: 'pebble', day: 0, name: 'your Pebble' },
   { id: 'base-cottage', sprite: 'cottage', day: 4, name: 'Cottage' },
@@ -53,7 +57,7 @@ const baseItems: { id: MovableId; sprite: SpriteId; day: number; name: string }[
   { id: 'base-bench', sprite: 'bench', day: 6, name: 'Village bench' },
 ]
 
-export function CommunityWorld({ owned, stage = 6, positions = {}, onMove }: { owned: UpgradeId[]; stage?: number; positions?: Positions; onMove?: (id: MovableId, position: Position) => void }) {
+export function CommunityWorld({ owned, stage = 6, positions = {}, onMove, freshStart = false }: { owned: UpgradeId[]; stage?: number; positions?: Positions; freshStart?: boolean; onMove?: (id: MovableId, position: Position) => void }) {
   const [emote, setEmote] = useState(0)
   const [preview, setPreview] = useState<{ id: MovableId; position: Position } | null>(null)
   const [announcement, setAnnouncement] = useState('')
@@ -61,6 +65,11 @@ export function CommunityWorld({ owned, stage = 6, positions = {}, onMove }: { o
   const coordinates = useRef<SVGSVGElement>(null)
   const clipId = useId()
   const complete = stage >= 6
+  // Historical snapshots keep their original progression; only the current
+  // village starts over. New purchases remain visible on that empty terrain.
+  const terrainStage = complete && freshStart ? 0 : stage
+  const purchasedLandscape = complete ? owned.filter(isLandscapeUpgrade) : []
+  const purchasedTrees = purchasedLandscape.includes('tree-cluster')
   const editable = complete && !!onMove
   const pointFromEvent = (event: PointerEvent<SVGElement>): Position | null => {
     const matrix = coordinates.current?.getScreenCTM()
@@ -72,16 +81,17 @@ export function CommunityWorld({ owned, stage = 6, positions = {}, onMove }: { o
     setAnnouncement('Position saved. Use arrow keys to move the selected item.')
   }
   const items = [
-    ...baseItems.filter(item => stage >= item.day),
-    ...owned.filter(id => stage >= revealDay[id]).map(id => ({ id, sprite: id as SpriteId, name: id, day: revealDay[id] })),
+    ...baseItems.filter(item => terrainStage >= item.day),
+    ...owned.filter((id): id is MovableUpgradeId => !isLandscapeUpgrade(id)).filter(id => stage >= revealDay[id]).map(id => ({ id, sprite: id as SpriteId, name: id, day: revealDay[id] })),
   ].map(item => {
     const [x, y, width] = defaultPlacements[item.id]
-    const position = preview?.id === item.id ? preview.position : complete ? positions[item.id] ?? { x, y } : item.id === 'pebble' && stage === 0 ? { x: 724, y: 595 } : { x, y }
+    const origin = item.id === 'pebble' && terrainStage === 0 ? { x: 724, y: 595 } : { x, y }
+    const position = preview?.id === item.id ? preview.position : complete ? positions[item.id] ?? origin : origin
     return { ...item, ...position, width }
   })
   const layers = [
     ...items.map(item => ({ id: item.id, depth: item.y, item })),
-    ...trees.filter(tree => stage >= tree.day).map(tree => ({ id: tree.id, depth: tree.depth, item: null })),
+    ...trees.filter(tree => purchasedTrees || terrainStage >= tree.day).map(tree => ({ id: tree.id, depth: tree.depth, item: null })),
   ].sort((a, b) => a.depth - b.depth)
   return <div id="community-diorama" className="pt-diorama" data-stage={stage} data-editable={editable}>
     <svg className="pt-community-world pt-village-art" viewBox="0 0 800 455" role="group" aria-label={`Your Pebble virtual community, growth stage ${stage}`}>
@@ -110,19 +120,21 @@ export function CommunityWorld({ owned, stage = 6, positions = {}, onMove }: { o
         <defs>
           <clipPath id={`${clipId}-island`}><path d={islandClip} /></clipPath>
           <clipPath id={`${clipId}-shadow`}><path clipRule="evenodd" d={`M0 0H1448V1086H0Z ${islandClip}`} /></clipPath>
-          <clipPath id={`${clipId}-river`}><path d="M960 377 987 378 1049 413 1012 447 1027 473 1085 507 1078 534 1047 552 1063 582 1145 628 1188 656 1207 675 1136 726 1093 700 1090 681 1050 650 1023 629 1017 600 969 578 936 568 884 558 884 533 919 512 940 503 922 483 884 466 865 448 909 416 940 400Z" /></clipPath>
+          <clipPath id={`${clipId}-river`}><path d={landscapeRegions.river.outline} /></clipPath>
           <clipPath id={`${clipId}-path`}><path d="M511 472 601 473 615 504 675 544 748 579 800 611 770 645 722 676 776 711 841 753 919 796 886 832 804 811 735 766 670 724 596 695 582 675 603 644 649 612 620 586 562 548 492 513Z" /></clipPath>
+          {Object.entries(landscapeRegions).map(([id, region]) => <clipPath key={id} id={`${clipId}-purchase-${id}`}><path d={region.outline} /></clipPath>)}
           {trees.map(tree => <clipPath key={tree.id} id={`${clipId}-${tree.id}`}><path d={tree.outline} /></clipPath>)}
         </defs>
         <image data-platform-shadow="shared" clipPath={`url(#${clipId}-shadow)`} href={village} width="1448" height="1086" />
-        <image data-village-base={complete ? 'landscape' : 'empty'} clipPath={`url(#${clipId}-island)`} href={complete ? landscape : emptyIsland} width="1448" height="1086" />
-        {!complete && <>
-          {stage >= 3 && <g data-terrain="river" clipPath={`url(#${clipId}-river)`}><image href={landscape} width="1448" height="1086" /></g>}
-          {stage >= 4 && <g data-terrain="path" clipPath={`url(#${clipId}-path)`}><image href={landscape} width="1448" height="1086" /></g>}
+        <image data-village-base={terrainStage >= 6 ? 'landscape' : 'empty'} clipPath={`url(#${clipId}-island)`} href={terrainStage >= 6 ? landscape : emptyIsland} width="1448" height="1086" />
+        {terrainStage < 6 && <>
+          {terrainStage >= 3 && <g data-terrain="river" clipPath={`url(#${clipId}-river)`}><image href={landscape} width="1448" height="1086" /></g>}
+          {terrainStage >= 4 && <g data-terrain="path" clipPath={`url(#${clipId}-path)`}><image href={landscape} width="1448" height="1086" /></g>}
         </>}
+        {purchasedLandscape.filter(id => id !== 'tree-cluster').map(id => <g key={id} data-upgrade={id} data-landscape={id} pointerEvents="none" clipPath={`url(#${clipId}-purchase-${id})`}><image href={landscape} width="1448" height="1086" /></g>)}
         {layers.map(layer => {
           const item = layer.item
-          if (!item) return <g key={layer.id} data-object={layer.id} clipPath={`url(#${clipId}-${layer.id})`} pointerEvents="none"><image href={landscape} width="1448" height="1086" /></g>
+          if (!item) return <g key={layer.id} data-object={layer.id} data-landscape={purchasedTrees ? "tree-cluster" : undefined} data-upgrade={purchasedTrees && layer.id === "tree-back" ? "tree-cluster" : undefined} clipPath={`url(#${clipId}-${layer.id})`} pointerEvents="none"><image href={landscape} width="1448" height="1086" /></g>
           const movable = editable
           const height = item.width * crops[item.sprite][3] / crops[item.sprite][2]
           return <g key={item.id} data-object={item.id} data-upgrade={owned.includes(item.id as UpgradeId) ? item.id : undefined} data-movable={movable ? 'true' : undefined} transform={`translate(${item.x} ${item.y})`}

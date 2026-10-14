@@ -27,3 +27,24 @@
 .pt-build-reset-dialog > div { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
 .pt-build-reset-dialog .pt-reset-cancel { background: transparent; color: var(--pt-ink) !important; border-color: var(--pt-line); }
 .pt-build-reset-dialog .pt-reset-confirm { background: var(--pt-berry); border-color: var(--pt-berry); }
+/* A compact tool drawer leaves the village visible around its edges. */
+.pt-build-dialog {
+  inset: 12px 12px 12px auto; width: min(360px, calc(100vw - 24px));
+  height: calc(100dvh - 24px); max-height: calc(100dvh - 24px);
+  border: 1px solid var(--pt-line); border-radius: 18px;
+  background: color-mix(in srgb, var(--pt-cream) 94%, transparent);
+  backdrop-filter: blur(10px); box-shadow: -6px 8px 24px #36463214;
+}
+.pt-build-dialog::backdrop { background: #3646320a; }
+.pt-build-dialog > header { padding: 16px; gap: 8px; }
+.pt-build-dialog > header h2 { font-size: 18px; }
+.pt-build-dialog .pt-build-balance { font-size: 13px; gap: 6px; }
+.pt-build-dialog .pt-upgrade-list { padding-inline: 16px; }
+.pt-build-dialog .pt-upgrade-item { grid-template-columns: 60px minmax(0, 1fr); gap: 10px; padding: 13px 0; align-items: center; }
+.pt-build-dialog .pt-upgrade-item h3 { font-size: 15px; }
+.pt-build-dialog .pt-upgrade-picture { width: 60px; height: 60px; }
+.pt-build-dialog .pt-upgrade-purchase { gap: 8px; margin-top: 6px; font-size: 13px; }
+.pt-build-dialog .pt-upgrade-purchase .pt-button { padding: 8px 12px; }
+@media (max-width: 800px) {
+  .pt-build-dialog { inset: 8px 8px 8px auto; width: min(340px, calc(100vw - 24px)); height: calc(100dvh - 16px); max-height: calc(100dvh - 16px); }
+}
