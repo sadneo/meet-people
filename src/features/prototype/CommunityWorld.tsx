@@ -8,6 +8,7 @@ import village from '../../assets/pebble/community/community-village.png'
 import emptyIsland from '../../assets/pebble/community/village-empty.png'
 import props from '../../assets/pebble/community/village-props.png'
 import './village-art.css'
+import { GrassBreeze, TreeBreeze } from './CommunityBreeze'
 
 // Measured sprite bounds, rather than equal cells: the generated sheet has
 // uneven margins. Both Build previews and placed objects use these same crops.
@@ -23,9 +24,25 @@ const crops = {
 type SpriteId = keyof typeof crops
 const isRare = (id: string) => ['garnet', 'sapphire', 'emerald', 'citrine'].includes(id)
 
-function Sprite({ id, x, y, width }: { id: SpriteId; x: number; y: number; width: number }) {
+function Sprite({ id, x, y, width, idle = false }: { id: SpriteId; x: number; y: number; width: number; idle?: boolean }) {
   const crop = crops[id]
-  const height = width * crop[3] / crop[2]
+  const height = idle ? Math.round(width * crop[3] / crop[2]) : width * crop[3] / crop[2]
+  if (idle) {
+    // Three independently painted, nearest-neighbor frames. Only visibility
+    // changes: never transform a composited PNG or interpolate SVG geometry.
+    const quiet = id === 'garnet' || id === 'emerald'
+    const widen = isRare(id) && id !== 'citrine' ? 2 : 4
+    const poses = [
+      { name: 'normal', width, height },
+      { name: 'compressed', width: width + widen, height: height - (quiet ? 2 : 3) },
+      { name: 'stretched', width: width - 2, height: height + (id === 'sapphire' ? 1 : quiet ? 2 : 3) },
+    ]
+    return <>{poses.map(pose => <svg key={pose.name} className="pt-idle-frame" data-idle-pose={pose.name}
+      x={Math.round(x - pose.width / 2)} y={Math.round(y - pose.height)} width={pose.width} height={pose.height}
+      viewBox={crop.join(' ')} preserveAspectRatio="none" aria-hidden="true">
+      <image href={isRare(id) ? rarePebbles : props} width={isRare(id) ? 2172 : 1448} height={isRare(id) ? 724 : 1086} />
+    </svg>)}</>
+  }
   return <svg x={x - width / 2} y={y - height} width={width} height={height} viewBox={crop.join(' ')} aria-hidden="true">
     <image href={isRare(id) ? rarePebbles : props} width={isRare(id) ? 2172 : 1448} height={isRare(id) ? 724 : 1086} />
   </svg>
@@ -118,6 +135,7 @@ export function CommunityWorld({ owned, stage = 6, positions = {}, onMove, fresh
         onLostPointerCapture={event => { if (event.target === event.currentTarget) { drag.current = null; setPreview(null) } }}>
 
         <defs>
+          <radialGradient id={`${clipId}-lamp-light`}><stop stopColor="#fff4bb" stopOpacity=".9" /><stop offset=".45" stopColor="var(--pt-yellow)" stopOpacity=".6" /><stop offset="1" stopColor="var(--pt-yellow)" stopOpacity="0" /></radialGradient>
           <clipPath id={`${clipId}-island`}><path d={islandClip} /></clipPath>
           <clipPath id={`${clipId}-shadow`}><path clipRule="evenodd" d={`M0 0H1448V1086H0Z ${islandClip}`} /></clipPath>
           <clipPath id={`${clipId}-river`}><path d={landscapeRegions.river.outline} /></clipPath>
@@ -132,9 +150,14 @@ export function CommunityWorld({ owned, stage = 6, positions = {}, onMove, fresh
           {terrainStage >= 4 && <g data-terrain="path" clipPath={`url(#${clipId}-path)`}><image href={landscape} width="1448" height="1086" /></g>}
         </>}
         {purchasedLandscape.filter(id => id !== 'tree-cluster').map(id => <g key={id} data-upgrade={id} data-landscape={id} pointerEvents="none" clipPath={`url(#${clipId}-purchase-${id})`}><image href={landscape} width="1448" height="1086" /></g>)}
+        {(terrainStage >= 3 || purchasedLandscape.includes('river')) && <g className="pt-river-flow" data-community-motion="river" aria-hidden="true" pointerEvents="none" clipPath={`url(#${clipId}-river)`}>
+          <path d="M978 394 925 435 1008 482 980 535 1005 568 1060 620 1150 688 1136 726" />
+          <path d="M997 400 953 435 1030 482 1005 535 1028 564 1081 615 1172 680 1154 713" />
+        </g>}
+        {(terrainStage >= 6 || purchasedLandscape.includes('grass-detail')) && <GrassBreeze />}
         {layers.map(layer => {
           const item = layer.item
-          if (!item) return <g key={layer.id} data-object={layer.id} data-landscape={purchasedTrees ? "tree-cluster" : undefined} data-upgrade={purchasedTrees && layer.id === "tree-back" ? "tree-cluster" : undefined} clipPath={`url(#${clipId}-${layer.id})`} pointerEvents="none"><image href={landscape} width="1448" height="1086" /></g>
+          if (!item) return <g key={layer.id} data-object={layer.id} data-landscape={purchasedTrees ? "tree-cluster" : undefined} data-upgrade={purchasedTrees && layer.id === "tree-back" ? "tree-cluster" : undefined} clipPath={`url(#${clipId}-${layer.id})`} pointerEvents="none"><image href={landscape} width="1448" height="1086" /><TreeBreeze id={layer.id} /></g>
           const movable = editable
           const height = item.width * crops[item.sprite][3] / crops[item.sprite][2]
           return <g key={item.id} data-object={item.id} data-upgrade={owned.includes(item.id as UpgradeId) ? item.id : undefined} data-movable={movable ? 'true' : undefined} transform={`translate(${item.x} ${item.y})`}
@@ -160,7 +183,14 @@ export function CommunityWorld({ owned, stage = 6, positions = {}, onMove, fresh
               aria-label={item.id === 'pebble' ? 'Say hello to your Pebble' : movable ? `Move ${item.name}` : undefined}
               aria-describedby={movable ? `${clipId}-help` : undefined}
               x={-item.width / 2 - 8} y={-height - 8} width={item.width + 16} height={height + 16} rx="12" fill="transparent" />
-            <g pointerEvents="none"><Sprite id={item.sprite} x={0} y={0} width={item.width} /></g>
+            <g pointerEvents="none" className={item.sprite === 'pebble' ? 'pt-village-idle' : isRare(item.sprite) ? 'pt-village-idle pt-village-rock-idle' : undefined} data-community-motion={item.sprite === 'pebble' || isRare(item.sprite) ? 'pebble' : undefined}>
+              <Sprite id={item.sprite} x={0} y={0} width={item.width} idle={item.sprite === 'pebble' || isRare(item.sprite)} />
+              {item.sprite === 'lanterns' && <g className="pt-lantern-glow" data-community-motion="lamp" fill={`url(#${clipId}-lamp-light)`}>
+                <ellipse cx={-item.width * .37} cy={-height * .4} rx="18" ry="22" />
+                <ellipse cx={item.width * .08} cy={-height * .63} rx="18" ry="22" />
+                <ellipse cx={item.width * .26} cy={-height * .33} rx="18" ry="22" />
+              </g>}
+            </g>
             {item.id === 'pebble' && emote > 0 && <text key={emote} className="pt-character-heart" x="-12" y={-height - 10} fill="var(--pt-berry)" fontSize="38" pointerEvents="none">♥</text>}
           </g>
         })}

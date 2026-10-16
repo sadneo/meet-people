@@ -1,3 +1,15 @@
+/* Independently painted integer-sized poses; only visibility is animated. */
+.pt-home-idle-frame {
+  visibility: hidden; image-rendering: pixelated; transform: none; transition: none;
+  animation: pt-home-idle-rest 12s steps(1, end) infinite;
+}
+.pt-home-idle-frame image { image-rendering: pixelated; }
+.pt-home-idle-frame[data-home-pose="normal"] { visibility: visible; }
+.pt-home-idle-frame[data-home-pose="compressed"] { animation-name: pt-home-idle-out; }
+.pt-home-idle-frame[data-home-pose="stretched"] { animation-name: pt-home-idle-in; }
+@keyframes pt-home-idle-rest { 0%, 48%, 100% { visibility: visible; } 24%, 74% { visibility: hidden; } }
+@keyframes pt-home-idle-out { 0%, 36%, 86%, 100% { visibility: hidden; } 24%, 74% { visibility: visible; } }
+@keyframes pt-home-idle-in { 0%, 48%, 100% { visibility: hidden; } 36%, 86% { visibility: visible; } }
 /* Home only: retain the shared mascot scale without changing matching or Community. */
 .pt-home-focus .pt-available-preview {
   --thought-avatar: clamp(42px, 4.4vw, 72px);

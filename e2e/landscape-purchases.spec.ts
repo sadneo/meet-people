@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test'
 import { COMMUNITY_STORAGE_KEY, landscapeUpgrades } from '../src/features/prototype/economy'
 
 for (const [width, height] of [[390, 844], [1280, 720]]) {
-  test(`fixed landscape purchases, persistence and full refund at ${width}px`, async ({ page }) => {
+  test(`fixed landscape purchases, persistence and full refund at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height })
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.addInitScript(key => {
       if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({ balance: 1000, owned: [], earnedChapters: [0] }))
     }, COMMUNITY_STORAGE_KEY)
@@ -16,7 +17,11 @@ for (const [width, height] of [[390, 844], [1280, 720]]) {
     }
     await openBuild()
     await reset()
-    const emptyScene = await page.locator('.pt-community-world').screenshot()
+    // SVG visibility does not guarantee its external raster sprites are decoded.
+    await page.locator('.pt-community-world image').evaluateAll(async images => {
+      await Promise.all(images.map(async image => { const bitmap = new Image(); bitmap.src = image.getAttribute('href')!; await bitmap.decode() }))
+    })
+    const emptyScene = await page.locator('.pt-community-world').screenshot({ path: testInfo.outputPath('empty-scene.png') })
     await openBuild()
     const section = shop.getByRole('region', { name: 'Landscape', exact: true })
     await section.evaluate(el => el.scrollIntoView({ block: 'start' }))
@@ -81,7 +86,10 @@ for (const [width, height] of [[390, 844], [1280, 720]]) {
     await expect(page.getByLabel('Pebble balance', { exact: true })).toContainText('1000')
     await expect(page.locator('[data-landscape], [data-upgrade], [data-terrain]')).toHaveCount(0)
     await expect(page.locator('[data-object]')).toHaveCount(1)
-    expect(await page.locator('.pt-community-world').screenshot()).toEqual(emptyScene)
+    const resetScene = await page.locator('.pt-community-world').screenshot({ path: testInfo.outputPath('reset-scene.png') })
+    await testInfo.attach('empty-scene', { body: emptyScene, contentType: 'image/png' })
+    await testInfo.attach('reset-scene', { body: resetScene, contentType: 'image/png' })
+    expect(resetScene.equals(emptyScene), 'Reset must restore the exact empty scene (see image attachments)').toBe(true)
     expect(await stored()).toMatchObject({ owned: [], positions: {}, purchaseCosts: {}, freshStart: true, earnedChapters: [0] })
     await page.reload()
     await openBuild()

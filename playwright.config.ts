@@ -13,7 +13,8 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
-        command: 'VITE_PORT=3100 API_PORT=3101 PORT=3101 pnpm dev',
+        command: 'pnpm dev',
+        env: { VITE_PORT: '3100', API_PORT: '3101', PORT: '3101' },
         url: baseURL,
         reuseExistingServer: !process.env.CI,
       },

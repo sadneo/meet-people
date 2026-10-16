@@ -12,8 +12,8 @@ SQL activation is separate. Chat/planning remain prototypes.
 Imported event detail/preview use a server-backed group queue and persistent
 in-app proposal inbox; see `docs/event-group-queue.md` for the proposed parent SQL
 contracts and disabled worker. No Company/compatibility consent is reused.
-`docs/DESIGN.md` is the product-design authority. The fresh meadow palette is
-shared across routed screens; this color update preserves their layouts.
+`docs/DESIGN.md` is the product-design authority. The #DDCABC page/navigation token,
+light surfaces and forest foregrounds are shared without changing route layouts.
 
 ## Information Architecture
 
