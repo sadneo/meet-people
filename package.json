@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:e2e": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=\"$(command -v chromium || true)\" playwright test",
+    "test:e2e": "playwright test",
     "test:auth": "node scripts/test-local-auth.mjs",
     "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
     "start:api": "node dist/api/api/server.js",

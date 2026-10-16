@@ -35,10 +35,10 @@ provides semantic aliases and focal sizing. Avoid another theme layer.
 
 | Token | Value | Role |
 | --- | --- | --- |
-| `--pt-cream` | `#fffdf4` | Continuous ivory page and navigation |
+| `--pt-cream` | `#DDCABC` | Continuous warm tan page and navigation |
 | `--pt-surface` / `--pt-soft` | `#fffef9` / `#f4f9e8` | Neutral and light green surfaces |
 | `--pt-ink` | `#1f5a3c` | Forest text and active icons |
-| `--pt-muted` | `#587360` | Accessible muted forest text/icons |
+| `--pt-muted` | `#425b49` | Muted forest text/icons (4.69:1 on tan) |
 | `--pt-green` / `--pt-leaf` | `#42783f` / `#4f8a4c` | Accessible filled controls / fresh nature accents |
 | `--pt-fresh` | `#9bcb63` | Grass, highlights and progression |
 | `--pt-pale` | `#eaf5d9` | Mint selection and quiet controls |
@@ -71,7 +71,7 @@ use its own controlled natural palette.
 The active shell is `src/features/prototype/AppShell.tsx`, wrapped by
 `src/routes/PebbleApp.tsx`. The older design-system shell is not routed.
 
-- Expanded (>800px): cream header, wordmark, centered icon navigation,
+- Expanded (>800px): tan header, wordmark, centered icon navigation,
   account avatar at the right. No white strip or divider.
 - Compact (<=800px): five-item bottom navigation with accessible names and
   native hover tooltips. Labels are visually hidden. Active tabs use a soft
@@ -135,7 +135,13 @@ introduced. Keep fixture disclosure in code and developer controls.
 Community uses the supplied raster village art family on the square isometric
 platform. `village-landscape.png` removes the movable cottage, bench and Pebbles
 from the reference; `village-props.png` supplies their independent sprites.
-Permanent trees, river, terrain, rocks and wild landscape remain fixed. All
+Trees, river, terrain, rocks and wild landscape remain fixed. Build's compact
+Landscape section sells the river, four-tree cluster, walkway, flower meadow,
+shrubs, rock formation and grass details using original landscape pixels in
+predetermined positions. These purchases use the existing local economy and
+refund receipts but never enter the draggable-object or saved-position system.
+Reset removes purchased landscape along with objects, restoring plain grass
+and one Pebble. The demo history progression is independent of these purchases. All
 history stages clip their terrain to one island silhouette and share the
 original `community-village.png` shadow. Generated PNG shadows must never stack
 under the shared shadow. Sunday remains one centered Pebble on plain grass.
@@ -175,12 +181,21 @@ Build opens a native modal dialog with focus containment, Escape, focus return,
 and scrolling. The same catalog appears in two labelled sections: Rare Finds
 first, then Village Decorations. All four 300-Pebble rocks remain listed regardless
 of affordability/ownership; only their purchase buttons change state. Header and
-secondary Reset purchases footer stay visible while the catalog scrolls.
+secondary Reset purchases footer stay visible while the catalog scrolls. The
+right drawer is 360px on desktop, inset 12px, with a 94% light surface, restrained
+blur/shadow and a very light backdrop. Mobile uses up to 340px, leaving an outer
+gap. Item cards show image, short name, price and Build/Owned state only.
 
 Reset purchases requires a native confirmation dialog with Cancel focused first.
 It refunds each owned Build item once, clears ownership, purchase receipts and
-purchased-item positions, and preserves base-object positions, earned chapters
-and unrelated state. New purchases record the deducted price in optional local
+all Community object positions, and restores the current village to one centered
+Pebble on the same plain-grass platform as Sunday. Earned chapters and unrelated
+app state are preserved. The local `freshStart` flag survives reload; purchases
+then appear on the empty platform without restoring the developed base. Historical
+day selection still renders the existing 0–6 progression. Reset is available even
+without purchases when the current base is developed. Confirmation says “Reset
+your entire Pebble Community?” and “Reset everything”, explicitly showing the
+refund. Confirming closes Build so the restored scene is immediately visible. New purchases record the deducted price in optional local
 `purchaseCosts`. Older ownership-only saves use the unchanged catalog prices.
 Refunds are not capped by the demo funding limit. The existing local storage key
 and reducer persist everything; no backend/database schema change.
@@ -213,8 +228,24 @@ Keep prototype and fixture disclosures here, outside the normal composition.
 Semantic links/buttons, accessible names for every icon control, title tooltips,
 visible focus, readable contrast, and 44px touch targets. History buttons expose
 selected state, date, metric and scene relationship. Dialogs must work on short
-screens. Respect reduced motion. Use restrained state transitions; do not add
-constant idle motion or effects to every element.
+screens. Respect reduced motion. Community uses visible downstream river streaks,
+ground-anchored Pebble breathing and a soft 4.5s lantern glow. Pebbles hold three
+pixelated poses (normal, compressed, stretched) in independently painted,
+integer-sized SVG viewports. Only visibility changes with `steps(1, end)`;
+never tween SVG dimensions or interpolate raster scale/rotation: these
+compositor transforms blur the pixel edges. The center and bottom anchor stay
+fixed in every pose; maximum width/height changes are 4/3 SVG units. Stagger
+normal Pebbles and give rare rocks individual 9–14s rhythms and pose sizes
+matching their painted personalities. Current PNGs have no blink frames or separate facial layers;
+preserve their existing expressions. Animate the inner sprite;
+the outer group owns drag position. Buildings, paths, trunks and the island stay still.
+Trees have small inset canopy patches switching between integer horizontal
+offsets; three grass-tip patches use the same quiet, staggered breeze. Fixed
+masks preserve the baked landscape silhouettes without shifting the platform.
+Home's happy Pebble uses three separately painted integer-sized poses on a
+12-second stepped cycle, with less than 1% size variation and a fixed bottom
+anchor. The existing thinking sprite replaces these poses during refresh.
+Disable these decorative loops under `prefers-reduced-motion: reduce`.
 
 ## Team boundaries
 

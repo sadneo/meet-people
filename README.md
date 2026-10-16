@@ -75,7 +75,13 @@ Install a browser once when Playwright has not already provisioned one:
 pnpm exec playwright install chromium
 ```
 
-On NixOS, `pnpm test:e2e` uses an installed native `chromium` when available.
+Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to use an already installed browser.
+For example, in PowerShell:
+
+```powershell
+$env:PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+pnpm test:e2e
+```
 
 ## Production-Style Local Check
 

@@ -1,7 +1,7 @@
-import type { UpgradeId } from './economy'
+import type { MovableUpgradeId, UpgradeId } from './economy'
 
 export type Position = { x: number; y: number }
-export type MovableId = UpgradeId | 'pebble' | 'friend' | 'friend-two' | 'base-bench' | 'base-cottage'
+export type MovableId = MovableUpgradeId | 'pebble' | 'friend' | 'friend-two' | 'base-bench' | 'base-cottage'
 export type Positions = Partial<Record<MovableId, Position>>
 // Ground-contact points in the reference island's 1448 × 1086 coordinates.
 export const defaultPlacements: Record<MovableId, [number, number, number]> = {
