@@ -9,7 +9,7 @@
 | API          | **Node.js + Express 5**                    |
 | Validation   | **Zod**                                    |
 | Database     | **Supabase Postgres via Express API**       |
-| Auth         | **Deferred until a protected feature exists** |
+| Auth         | **Supabase Auth: email/password + Google** |
 | Images       | **Deferred**                                |
 | Realtime     | **Deferred**                                |
 | Location     | **PostGIS**                                |

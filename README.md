@@ -57,6 +57,10 @@ Use `{"mode":"full","dryRun":false}` to upsert all public events beginning in th
 
 ## Verification
 
+Account onboarding, persistent profile/settings, email/password and Google
+setup are documented in [the accounts guide](docs/accounts.md). Local auth
+emails appear in Mailpit at `http://127.0.0.1:54324`.
+
 ```bash
 pnpm supabase:reset
 pnpm supabase:types

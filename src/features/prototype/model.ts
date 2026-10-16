@@ -107,7 +107,7 @@ export function reducer(state: State, action: Action): State {
     case 'draft': return { ...state, draft: { ...state.draft, ...action.patch } }
     case 'profile': return { ...state, profile: action.profile }
     case 'chapter': {
-      const valid = [!!action.profile.photo && !!action.profile.name.trim() && !!action.profile.bio.trim(), !!action.profile.interests.length, !!action.profile.intents.length, !!action.profile.usual.length][action.chapter]
+      const valid = [!!action.profile.name.trim() && !!action.profile.bio.trim(), !!action.profile.interests.length, !!action.profile.intents.length, !!action.profile.usual.length][action.chapter]
       if (!valid || ![0, 1, 2, 3].includes(action.chapter) || Array.from({ length: action.chapter }, (_, i) => i).some(i => !state.completed.includes(i))) return state
       const earned = state.community.earnedChapters.includes(action.chapter)
       return { ...state, profile: action.profile, completed: state.completed.includes(action.chapter) ? state.completed : [...state.completed, action.chapter], community: earned ? state.community : { ...state.community, balance: state.community.balance + DEMO_CHAPTER_REWARD, earnedChapters: [...state.community.earnedChapters, action.chapter] } }

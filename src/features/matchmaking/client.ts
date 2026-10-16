@@ -1,4 +1,5 @@
 import { type z } from 'zod'
+import { AccountSchema, SaveAccountSchema, type Account } from '../../../shared/account'
 import { JoinQueueSchema, QueueStatusSchema, MatchResultSchema, MatchingProfileSchema, ProfileResponseSchema, SavedProfileResponseSchema, MatchingErrorSchema, type MatchingMode, type MatchingProfile } from '../../../shared/matchmaking'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, EventCompatibilityResponseSchema, ListingIdSchema, ListingMatchmakingStatusSchema } from '../../../shared/matchmaking'
 
@@ -28,6 +29,8 @@ export function matchmakingClient(token: string) {
     } finally { clearTimeout(timer) }
   }
   return {
+    account: () => request('account', AccountSchema),
+    saveAccount: (account: Account) => request('account', AccountSchema, 'PUT', SaveAccountSchema.parse(account)),
     status: () => request('status', QueueStatusSchema),
     join: (mode: MatchingMode) => request('queue', QueueStatusSchema, 'POST', JoinQueueSchema.parse({ mode })),
     leave: () => request('queue', QueueStatusSchema, 'DELETE'),

@@ -1,6 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import { AccountSchema, SaveAccountSchema, type Account } from '../shared/account.js'
 import { isPublicSupabaseKey } from './env.js'
 import { JoinQueueSchema, MatchingProfileSchema, RawMatchSchema, RawQueueStatusSchema, type MatchingProfile } from '../shared/matchmaking.js'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, ListingIdSchema, ListingInterestRequestSchema, ListingMatchmakingStatusSchema, RawListingEventMatchesSchema } from '../shared/matchmaking.js'
@@ -15,6 +16,8 @@ export interface UserContextTransport {
     result(): PromiseLike<RpcResponse>
     profile(): PromiseLike<RpcResponse>
     save(profile: MatchingProfile): PromiseLike<RpcResponse>
+    account?(): PromiseLike<RpcResponse>
+    saveAccount?(account: Account): PromiseLike<RpcResponse>
     listingStatus(listingId: string): PromiseLike<RpcResponse>
     listingInterest(listingId: string): PromiseLike<RpcResponse>
     listingWithdraw(listingId: string): PromiseLike<RpcResponse>
@@ -41,6 +44,8 @@ export function createUserContextTransport(config: { url: string; publicKey: str
     actor(token) {
       const client = createClient(config.url, config.publicKey, { ...options, global: { fetch: config.fetch, headers: { Authorization: `Bearer ${token}` } } })
       return {
+        account: () => client.rpc('get_account'),
+        saveAccount: account => client.rpc('save_account', { account_in: account }),
         join: qtype => client.rpc('join_queue', { qtype }), leave: () => client.rpc('leave_queue'), status: () => client.rpc('get_queue_status'), result: () => client.rpc('get_queue_match'), profile: () => client.rpc('get_matchmaking_profile'), save: profile => client.rpc('save_matchmaking_profile', { profile_in: profile }),
         listingStatus: listingId => client.rpc('get_listing_matchmaking_status', { listing_id_in: listingId }),
         listingInterest: listingId => client.rpc('express_listing_matchmaking_interest', { listing_id_in: listingId }),
@@ -63,6 +68,7 @@ function unwrap(result: RpcResponse): unknown {
   if (result.error) {
     if (['PGRST301', 'PGRST302', 'PGRST303', '28000'].includes(result.error.code ?? '')) throw new MatchingFailure(401, 'auth', 'Your session has expired. Sign in again.')
     if (['PGRST202', '42883'].includes(result.error.code ?? '')) throw new MatchingFailure(503, 'unavailable', 'Matching RPC is not available yet.')
+    if (['22023', '23505', '23514'].includes(result.error.code ?? '')) throw new MatchingFailure(400, 'invalid', 'Check your profile fields and onboarding steps. No changes were saved.')
     if (result.error.code === 'PT404') throw new MatchingFailure(404, 'unavailable', 'This event is no longer available.')
     if (result.error.code === 'PT409') throw new MatchingFailure(409, 'unavailable', 'Event matching prerequisites are not met. Check your saved profile, event availability and consent for this queue or compatibility action.')
     throw new MatchingFailure(503, 'provider', 'Matching service failed. Please try again.')
@@ -121,6 +127,14 @@ export function createMatchmakingRouter(transport: UserContextTransport | null) 
   router.get('/profile', async (_request, response) => {
     const data = unwrap(await actor(response).profile())
     response.json({ profile: data === null ? null : validate(MatchingProfileSchema, data) })
+  })
+  router.get('/account', async (_request, response) => {
+    response.json(validate(AccountSchema, unwrap(await actor(response).account!())))
+  })
+  router.put('/account', async (request, response) => {
+    const parsed = SaveAccountSchema.safeParse(request.body)
+    if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid account data. No changes were saved.')
+    response.json(validate(AccountSchema, unwrap(await actor(response).saveAccount!(parsed.data))))
   })
   router.put('/profile', async (request, response) => {
     const parsed = MatchingProfileSchema.safeParse(request.body)

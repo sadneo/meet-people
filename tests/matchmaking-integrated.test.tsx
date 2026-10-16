@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from '../src/App'
+import { emptyAccount } from '../shared/account'
 
 const auth = vi.hoisted(() => ({ session: { access_token: 'user-jwt', user: { id: 'a0000000-0000-4000-8000-000000000001' } } as { access_token: string; user: { id: string } } | null }))
 vi.mock('../src/auth/useSession', () => ({ useSession: () => ({ session: auth.session, ready: true }) }))
@@ -18,6 +19,7 @@ const requests: { path: string; method: string; authorization: string | null; bo
 const mockFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
   const path = String(input), method = init?.method ?? 'GET'
   requests.push({ path, method, authorization: new Headers(init?.headers).get('Authorization'), body: init?.body ? JSON.parse(String(init.body)) : null })
+  if (path.endsWith('/account')) return Response.json({ ...emptyAccount, profile, completed: [0, 1, 2, 3] })
   if (path.endsWith('/profile')) return method === 'PUT' ? saveResponse ?? (saveUnavailable ? Response.json({ code: 'unavailable', error: 'Matching RPC is not available yet.' }, { status: 503 }) : Response.json({ profile: JSON.parse(String(init?.body)) })) : profileResponse ?? Response.json({ profile: { ...profile, interests: profileInterests } })
   if (path.endsWith('/result')) return resultResponse ?? Response.json({ candidate })
   if (method === 'POST') mode = JSON.parse(String(init?.body)).mode
@@ -176,7 +178,7 @@ it('discards a late candidate from the previous session', async () => {
 })
 it('keeps places and travel range explicitly device-only and out of server profile writes', async () => {
   mount()
-  fireEvent.click(screen.getByText('On this device'))
+  fireEvent.click(await screen.findByText('On this device'))
   fireEvent.change(await screen.findByLabelText('Travel range (device only)'), { target: { value: 'Under 10 min' } })
   fireEvent.click(screen.getByLabelText('Coffee shops'))
   fireEvent.click(screen.getByRole('button', { name: 'Save device display fields' }))

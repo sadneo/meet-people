@@ -3,7 +3,9 @@ import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { EventGroupQueue } from '../src/features/events/EventGroupQueue'
 import { MatchingInbox } from '../src/features/matchmaking/MatchingInbox'
-import { Auth } from '../src/features/prototype/Onboarding'
+import { AuthScreen } from '../src/auth/AuthScreen'
+import { AccountBoundary } from '../src/auth/account'
+import { emptyAccount } from '../shared/account'
 
 const id = 'e0000000-0000-4000-8000-000000000001'
 const actorId = 'a0000000-0000-4000-8000-000000000001'
@@ -26,6 +28,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input), method = init?.method ?? 'GET'
     requests.push({ path, method, token: new Headers(init?.headers).get('Authorization') })
+    if (path.endsWith('/account')) return Response.json({ ...emptyAccount, completed: [0, 1, 2, 3] })
     if (path.endsWith('/profile')) return lateProfile ?? Response.json({ profile: saved ? profile : null })
     if (path.endsWith('/group-queue')) {
       if (queueUnavailable) return Response.json({ code: 'unavailable', error: 'Matching RPC is not available yet.' }, { status: 503 })
@@ -55,11 +58,11 @@ it('guest has one queue action to central sign-in, no inline email and no reques
   expect(requests).toHaveLength(0)
 })
 it('central callback returns signed-in account to a validated event path, never external URLs', async () => {
-  const view = render(<MemoryRouter initialEntries={[`/login?returnTo=${encodeURIComponent(`/events/${id}`)}`]}><Auth /><Path /></MemoryRouter>)
+  const view = render(<MemoryRouter initialEntries={[`/login?returnTo=${encodeURIComponent(`/events/${id}`)}`]}><AccountBoundary><AuthScreen /></AccountBoundary><Path /></MemoryRouter>)
   await waitFor(() => expect(screen.getByLabelText('Current path').textContent).toBe(`/events/${id}`))
   view.unmount()
-  render(<MemoryRouter initialEntries={['/login?returnTo=https%3A%2F%2Fevil.test']}><Auth /><Path /></MemoryRouter>)
-  expect(screen.getByLabelText('Current path').textContent).toBe('/login?returnTo=https%3A%2F%2Fevil.test')
+  render(<MemoryRouter initialEntries={['/login?returnTo=https%3A%2F%2Fevil.test']}><AccountBoundary><AuthScreen /></AccountBoundary><Path /></MemoryRouter>)
+  await waitFor(() => expect(screen.getByLabelText('Current path').textContent).toBe('/'))
 })
 it('queue enrollment is persisted status only, refresh recovers waiting, and failed leave reconciles honestly', async () => {
   const view = render(page())

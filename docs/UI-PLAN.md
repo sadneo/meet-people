@@ -6,9 +6,9 @@ Maintain a mobile-first visual prototype for a student-focused, platonic
 social app. It demonstrates world progression, matching, events, planning,
 conversations, and profile preferences. Home and Community fixtures are documented
 in source and developer controls without demo labels in their minimal product UI.
-Most flows remain local previews. Active/downtime matching and email-link
-sign-in now use the backend slice described in `docs/matchmaking-backend.md`;
-SQL activation is separate. Chat/planning remain prototypes.
+Active/downtime matching uses the backend slice in `docs/matchmaking-backend.md`.
+Email/password and Google sign-in, onboarding, profile and settings use the
+persistent account flow in `docs/accounts.md`. Chat/planning remain prototypes.
 Imported event detail/preview use a server-backed group queue and persistent
 in-app proposal inbox; see `docs/event-group-queue.md` for the proposed parent SQL
 contracts and disabled worker. No Company/compatibility consent is reused.
@@ -32,7 +32,8 @@ shared across routed screens; this color update preserves their layouts.
 | `/profile/person` | Another sample student's profile |
 | `/settings` | Local prototype and account preferences |
 | `/free-time` and nested routes | Availability, people, activities, planning, review, confirmation, and connection |
-| `/intro`, `/login`, `/register`, `/onboarding` | Preview introduction/onboarding; real email-link sign-in on login/register |
+| `/intro`, `/login`, `/register`, `/onboarding` | Introduction, authentication, and persistent account setup |
+| `/auth/callback`, `/forgot-password`, `/reset-password` | Authentication redirects and password recovery |
 | `*` | Not-found experience |
 
 Home, Matchmaking, Events, Messages, and Profile are the five icon-first navigation

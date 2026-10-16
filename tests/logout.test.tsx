@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from '../src/App'
 import { useSession } from '../src/auth/useSession'
+import { emptyAccount } from '../shared/account'
 
 const auth = vi.hoisted(() => ({
   session: null as Session | null,
@@ -36,7 +37,7 @@ beforeEach(() => {
     return { error: null }
   })
   vi.stubGlobal('scrollTo', () => {})
-  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => Response.json(String(input).endsWith('/profile') ? { profile: null } : { mode: null })))
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => Response.json(String(input).endsWith('/account') ? { ...emptyAccount, completed: [0, 1, 2, 3] } : String(input).endsWith('/profile') ? { profile: null } : { mode: null })))
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
 
@@ -45,10 +46,10 @@ for (const origin of ['shell', 'settings']) {
   async function logoutControl() {
     await waitFor(() => expect(screen.getByLabelText('Session identity').textContent).toContain('a0000000'))
     if (origin === 'shell') {
-      fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
-      return screen.getByRole('button', { name: 'Log out', exact: true })
+      fireEvent.click(await screen.findByRole('button', { name: 'Account menu' }))
+      return screen.findByRole('button', { name: 'Log out', exact: true })
     }
-    return within(screen.getByRole('region', { name: 'Account actions' })).getByRole('button', { name: 'Log out', exact: true })
+    return within(await screen.findByRole('region', { name: 'Account actions' })).findByRole('button', { name: 'Log out', exact: true })
   }
   it(`${origin} logout waits for actual signOut and clears session through auth notifications`, async () => {
     let finish!: () => void
