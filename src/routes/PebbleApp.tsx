@@ -11,12 +11,34 @@ import '../features/prototype/responsive.css'
 import '../features/prototype/settings.css'
 import '../features/prototype/calm.css'
 import { Icon } from '../features/prototype/ui'
+import { AccountBoundary } from '../auth/account'
+import { useAccount } from '../auth/account-context'
+import type { Action } from '../features/prototype/model'
+import { profileToAccount, accountToProfile } from '../auth/profile'
+import '../auth/account.css'
 
 export default function PebbleApp() {
+  return <AccountBoundary><PebbleWorkspace /></AccountBoundary>
+}
+
+function PebbleWorkspace() {
+  const account = useAccount()
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const scene = isEventDetailPath(pathname) ? 'Event Detail' : scenes.find(value => scenePaths[value] === pathname) ?? 'Home'
-  const [state, dispatch] = useReducer(reducer, initialState, initial => ({ ...initial, community: loadCommunity() }))
+  const [localState, localDispatch] = useReducer(reducer, initialState, initial => ({ ...initial, community: account?.session ? initial.community : loadCommunity() }))
+  const state = account?.session ? { ...localState, profile: accountToProfile(account.account), settings: account.account.settings, completed: account.account.completed } : localState
+  const dispatch = (action: Action) => {
+    if (account?.session && (action.type === 'profile' || action.type === 'chapter' || action.type === 'setting')) {
+      if (action.type === 'setting') {
+        void account.save({ ...account.account, settings: { ...account.account.settings, [action.key]: action.value } })
+      } else {
+        const next = profileToAccount(action.profile, account.account, account.session.user.id)
+        if (action.type === 'chapter') next.completed = [...new Set([...next.completed, action.chapter])].sort()
+        void account.save(next)
+      }
+    } else localDispatch(action)
+  }
   const [introRun, setIntroRun] = useState(0)
   const [devOpen, setDevOpen] = useState(false)
   const [empty, setEmpty] = useState(false)
@@ -25,9 +47,10 @@ export default function PebbleApp() {
   const [chatPerson, setChatPerson] = useState<string | null>(null)
 
   useEffect(() => {
+    if (account?.session) return
     try { localStorage.setItem(COMMUNITY_STORAGE_KEY, JSON.stringify(state.community)) }
     catch { console.warn('Pebble community storage unavailable; changes last for this session only.') }
-  }, [state.community])
+  }, [state.community, account?.session])
 
   const go = (next: Scene) => {
     if (next === 'Intro') setIntroRun(run => run + 1)

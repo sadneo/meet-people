@@ -7,6 +7,8 @@ import { jamieMessages, sampleConversations } from './messaging'
 import './messages.css'
 import './profile.css'
 import { useLogout } from '../../auth/useLogout'
+import { useAccount } from '../../auth/account-context'
+import { profileToAccount } from '../../auth/profile'
 
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -124,6 +126,7 @@ export function Connection() {
 }
 export function ProfileScreen({ other = false }: { other?: boolean }) {
   const { state, dispatch, go, personId } = usePrototype()
+  const account = useAccount()
   const person = people.find(p => p.id === personId) ?? people[0]
   const shown = other ? person : state.profile
   const [editing, setEditing] = useState(false)
@@ -138,8 +141,8 @@ export function ProfileScreen({ other = false }: { other?: boolean }) {
       <section className="pt-profile-summary" aria-label="Your profile">
         <img className="pt-profile-cover" src="/prototype/cafe-interior.jpg" alt="A welcoming campus café with leafy plants" />
         <div className="pt-profile-identity">
-          <div className="pt-profile-portrait"><Avatar person={shown} size="large" /><span aria-label="Sample presence indicator" /></div>
-          <div className="pt-profile-copy"><h1 tabIndex={-1}>{shown.name}</h1><p className="pt-profile-location"><Icon name="pin" size={17} />Around campus</p><p className="pt-profile-bio">{shown.bio}</p><div className="pt-static-chips">{shown.interests.map(interest => <span key={interest}>{interest}</span>)}</div></div>
+          <div className="pt-profile-portrait"><Avatar person={shown} size="large" />{!account?.session && <span aria-label="Sample presence indicator" />}</div>
+          <div className="pt-profile-copy"><h1 tabIndex={-1}>{shown.name}</h1><p className="pt-profile-location"><Icon name="pin" size={17} />{account?.session ? account.account.profile?.location_city || 'Location not set' : 'Around campus'}</p><p className="pt-profile-bio">{shown.bio}</p><div className="pt-static-chips">{shown.interests.map(interest => <span key={interest}>{interest}</span>)}</div></div>
           <Button secondary className="pt-profile-edit" onClick={() => { setProfile(state.profile); setEditing(true) }}><Icon name="edit" size={20} />Edit profile</Button>
         </div>
       </section>
@@ -152,14 +155,27 @@ export function ProfileScreen({ other = false }: { other?: boolean }) {
           <section className="pt-profile-growth" aria-labelledby="profile-community-title">
             <header><Pebble /><div><h2 id="profile-community-title">Your little community</h2><p>A small beginning, with room to grow.</p></div><span className="pt-profile-chapters">{state.completed.length}/4 chapters</span></header>
             <div className="pt-profile-progress" aria-hidden="true">{[0, 1, 2, 3].map(chapter => <span key={chapter} className={chapter <= state.completed.length ? 'is-current' : ''} />)}</div>
-            <div className="pt-profile-milestones">{['Find friends', 'Attend an event', 'Have a conversation', 'Make a plan'].map((label, chapter) => <div key={label} className={state.completed.includes(chapter) ? 'is-complete' : ''}><span className="pt-profile-milestone-pebbles"><Pebble />{chapter === 1 && <Pebble />}</span><span className="pt-profile-milestone-icon"><Icon name={['matchmaking', 'events', 'messages', 'plan'][chapter]} size={24} /></span><p>{label}</p><small>{state.completed.includes(chapter) ? 1 : 0}/1</small></div>)}</div>
+            <div className="pt-profile-milestones">{(account?.session ? ['Basic profile', 'Interests', 'Social intent', 'Availability'] : ['Find friends', 'Attend an event', 'Have a conversation', 'Make a plan']).map((label, chapter) => <div key={label} className={state.completed.includes(chapter) ? 'is-complete' : ''}><span className="pt-profile-milestone-pebbles"><Pebble />{chapter === 1 && <Pebble />}</span><span className="pt-profile-milestone-icon"><Icon name={['matchmaking', 'events', 'messages', 'plan'][chapter]} size={24} /></span><p>{label}</p><small>{state.completed.includes(chapter) ? 1 : 0}/1</small></div>)}</div>
             <footer><div><h3>Good things take time</h3><p>Every conversation, event, and plan helps you build your Pebbles community. You’re on your way!</p></div><ProfileGarden /></footer>
           </section>
           <button className="pt-profile-settings" onClick={() => go('Settings')}><Icon name="settings" size={30} /><span><strong>Settings & privacy</strong><small>Manage your account, notifications, and privacy preferences.</small></span><Icon name="back" size={20} /></button>
         </aside>
       </div>
     </>}
-    {editing && <Modal title="Edit your profile" onClose={() => setEditing(false)}><form onSubmit={e => { e.preventDefault(); if (profile.name.trim() && profile.bio.trim()) { dispatch({ type: 'profile', profile: { ...profile, name: profile.name.trim(), bio: profile.bio.trim() } }); setEditing(false) } }}><p className="pt-hint">Local demo edits. Your onboarding won’t replay.</p><label>Display name<input value={profile.name} required maxLength={30} onChange={e => setProfile({ ...profile, name: e.target.value })} /></label><label>Bio<textarea value={profile.bio} required maxLength={160} onChange={e => setProfile({ ...profile, bio: e.target.value })} /></label><fieldset><legend>Interests</legend><Chips label="Edit interests" options={interests} values={profile.interests} multi onChange={values => setProfile({ ...profile, interests: values })} /></fieldset><Button type="submit" className="pt-wide" disabled={!profile.name.trim() || !profile.bio.trim()}>Save profile</Button></form></Modal>}
+    {editing && <Modal title="Edit your profile" onClose={() => { if (!account?.busy) setEditing(false) }}><form onSubmit={async e => {
+      e.preventDefault()
+      if (!profile.name.trim() || !profile.bio.trim() || account?.busy) return
+      if (account?.session) { if (!await account.save(profileToAccount(profile, account.account, account.session.user.id))) return }
+      else dispatch({ type: 'profile', profile: { ...profile, name: profile.name.trim(), bio: profile.bio.trim() } })
+      setEditing(false)
+    }}><p className="pt-hint">{account?.session ? 'Changes are saved to your account.' : 'Local preview edits. Sign in to save your profile.'}</p><fieldset disabled={account?.busy}>
+      <label>Display name<input value={profile.name} required maxLength={120} onChange={e => setProfile({ ...profile, name: e.target.value })} /></label>
+      <label>Bio<textarea value={profile.bio} required maxLength={1000} onChange={e => setProfile({ ...profile, bio: e.target.value })} /></label>
+      <label>Photo URL (HTTPS, optional)<input type="url" pattern="https://.*" maxLength={2048} value={profile.photo === 'you.jpg' ? '' : profile.photo} onChange={e => setProfile({ ...profile, photo: e.target.value })} /></label>
+      <fieldset><legend>Interests</legend><Chips label="Edit interests" options={interests} values={profile.interests} multi onChange={values => setProfile({ ...profile, interests: values })} /></fieldset>
+      {account?.error && <p role="alert">{account.error}</p>}
+      <Button secondary type="submit" className="pt-wide" disabled={!profile.name.trim() || !profile.bio.trim() || account?.busy}>{account?.busy ? 'Saving…' : 'Save profile'}</Button>
+    </fieldset></form></Modal>}
     {safety && <Modal title={safety === 'report' ? `Report ${person.first}` : `${blocked ? 'Unblock' : 'Block'} ${person.first}?`} onClose={() => setSafety(null)}>{safety === 'block' ? <><p>{blocked ? 'They will appear in sample results again.' : 'They will be hidden from sample results. Messaging them will be disabled in this demo.'}</p><p className="pt-hint">Prototype control only. No real account is affected.</p><Button className="pt-wide" onClick={() => { dispatch({ type: blocked ? 'unblock' : 'block', id: person.id }); setSafety(null) }}>{blocked ? 'Unblock in demo' : 'Block in demo'}</Button></> : reported ? <div role="status"><p>Demo report recorded locally.</p><p className="pt-hint">This has not been sent to a moderation team. No real report was filed.</p><Button className="pt-wide" onClick={() => setSafety(null)}>Done</Button></div> : <form onSubmit={e => { e.preventDefault(); if (reason) setReported(true) }}><label>Reason<select required value={reason} onChange={e => setReason(e.target.value)}><option value="">Choose a reason</option><option>Harassment</option><option>Inappropriate content</option><option>Impersonation</option><option>Other concern</option></select></label><label>Additional context (optional)<textarea maxLength={400} placeholder="Use fictional details for this demo." /></label><p className="pt-hint">Prototype only. Nothing is submitted to a moderation team.</p><Button type="submit" className="pt-wide" disabled={!reason}>Submit demo report</Button></form>}</Modal>}
   </>
 }
@@ -170,23 +186,32 @@ function ProfileGarden({ trail = false }: { trail?: boolean }) {
 export function Settings() {
   const { state, dispatch, go } = usePrototype()
   const auth = useLogout()
+  const savedAccount = useAccount()
+  const updatePreferences = (patch: Partial<typeof state.profile>) => dispatch({ type: 'profile', profile: { ...state.profile, ...patch } })
   const [account, setAccount] = useState(false)
   const [safety, setSafety] = useState(false)
   const heading = (icon: string, title: string, description?: string) => <header className="pt-settings-heading"><Icon name={icon} size={24} /><div><h2>{title}</h2>{description && <p>{description}</p>}</div></header>
-  const toggle = (key: string, title: string, description: string) => <label className="pt-toggle-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" role="switch" aria-label={title} checked={state.settings[key]} onChange={e => dispatch({ type: 'setting', key, value: e.target.checked })} /></label>
+  const toggle = (key: string, title: string, description: string) => <label className="pt-toggle-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" role="switch" aria-label={title} checked={state.settings[key]} disabled={savedAccount?.busy} onChange={e => dispatch({ type: 'setting', key, value: e.target.checked })} /></label>
   return <>
     <div className="pt-settings-landscape" aria-hidden="true" />
     <div className="pt-settings">
       <header className="pt-settings-title"><span><Icon name="gear" size={28} /></span><div><h1 tabIndex={-1}>Settings</h1><p>Manage your account and preferences.</p></div></header>
+      {savedAccount?.busy && <p role="status">Saving settings…</p>}
       <section>{heading('profile', 'Account', 'Manage your account and profile information.')}<button className="pt-settings-row" onClick={() => setAccount(true)}><span><strong>Account details</strong><small>View and update your profile information.</small></span><Icon name="chevron" size={16} /></button></section>
       <section>{heading('bell', 'Notifications', 'Choose what notifications you receive.')}{toggle('notifications', 'Plan & message notifications', 'Get notified about new messages and activity in your conversations.')}</section>
       <section>{heading('shield', 'Privacy', 'Control who can find and see you on Pebble.')}{toggle('discoverable', 'Show me in discovery', 'Let other people find your profile.')}{toggle('availability', 'Share my availability', 'Show your free-time windows to connections.')}</section>
       <section>{heading('pin', 'Discovery & Availability', 'Settings that help people find you in the right place.')}{toggle('location', 'Nearby suggestions', 'Show people and events near your current location.')}</section>
+      {auth.session && <section>{heading('matchmaking', 'Social preferences', 'Your saved onboarding preferences.')}<fieldset disabled={savedAccount?.busy}>
+        <label>Comfortable distance<select value={state.profile.distance} onChange={event => updatePreferences({ distance: event.target.value })}><option>Nearby</option><option>5 miles</option><option>10 miles</option></select></label>
+        <label>Group preference<select value={state.profile.group} onChange={event => updatePreferences({ group: event.target.value })}><option>One-on-one</option><option>Small groups</option><option>Either</option></select></label>
+        <fieldset><legend>Usual free time</legend><Chips label="Usual free time" options={['Mornings', 'Afternoons', 'Evenings', 'Weekends']} values={state.profile.usual} multi onChange={usual => { if (usual.length) updatePreferences({ usual }) }} /></fieldset>
+        <p className="pt-hint">Changing time presets replaces your weekly matching windows. Fine-tune windows in matchmaking preferences. Distance and group choices are saved preferences.</p>
+      </fieldset></section>}
       <section>{heading('map', 'Location', 'Manage your location settings.')}<div className="pt-settings-row"><span><strong>Campus location (demo)</strong><small>Campus is the fixed demo location for this prototype. Location access is not required.</small></span></div></section>
       <section>{heading('matchmaking', 'Safety', 'Manage your interactions and blocked users.')}<button className="pt-settings-row" onClick={() => setSafety(true)}><span><strong>Blocked users</strong><small>Block or report someone from their profile. These controls are mock UI for review.</small></span><Icon name="chevron" size={16} /></button>{state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>)}</section>
       <section className="pt-settings-actions" aria-label="Account actions">{heading('logout', 'Account actions')}<div className="pt-settings-row"><span><strong>{auth.session ? 'Supabase session' : 'Sign in to Pebble'}</strong><small>{auth.session ? 'Log out of your account. Local preview purchases stay on this device.' : 'No active Supabase session. Local preview purchases stay on this device.'}</small></span>{!auth.ready ? <Button secondary disabled>Loading account…</Button> : auth.session ? <Button secondary disabled={auth.busy} onClick={() => void auth.logout()}>{auth.busy ? 'Logging out…' : 'Log out'}</Button> : <Link className="pt-button pt-secondary" to="/login">Sign in</Link>}</div>{auth.error && <p role="alert">{auth.error}</p>}</section>
     </div>
-    {account && <Modal title="Demo account" onClose={() => setAccount(false)}><p><strong>{state.profile.name}</strong></p><p>alex@example.com</p><p className="pt-hint">Placeholder account details. Authentication and account management are not connected.</p><Button onClick={() => { setAccount(false); go('Profile') }}>Go to profile</Button></Modal>}
+    {account && <Modal title={auth.session ? 'Your account' : 'Demo account'} onClose={() => setAccount(false)}><p><strong>{state.profile.name}</strong></p><p>{auth.session?.user.email ?? 'Guest preview'}</p><p className="pt-hint">{auth.session ? 'Your profile and settings are saved to your account.' : 'Sign in to save your profile and settings.'}</p><Button secondary onClick={() => { setAccount(false); go('Profile') }}>Go to profile</Button></Modal>}
     {safety && <Modal title="Blocked users" onClose={() => setSafety(false)}>{state.blocked.length ? state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>) : <p>No blocked users in this session.</p>}<p className="pt-hint">Block or report someone from their profile. These controls are mock UI for review.</p></Modal>}
   </>
 }

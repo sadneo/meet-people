@@ -1,0 +1,7 @@
+.pt-auth-form { display: grid; gap: 16px; }
+.pt-auth-form > p { margin: 0; }
+.pt-auth-form fieldset, .pt-chapter-form > fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.pt-auth-form fieldset { display: grid; gap: 16px; }
+.pt-avatar-empty { display: inline-flex !important; align-items: center; justify-content: center; background: var(--color-surface); border: 1px solid var(--color-line); color: var(--color-muted); }
+.pt-avatar-empty svg { width: 50%; height: 50%; }
+.pt-account-error { padding: 16px; color: var(--color-ink); background: var(--color-surface); }

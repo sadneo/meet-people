@@ -5,7 +5,8 @@ import NotFound from './routes/NotFound'
 import Community from './routes/Community'
 import PebbleApp, { ImmersiveLayout, IntroScreen } from './routes/PebbleApp'
 import { AppShell } from './features/prototype/AppShell'
-import { Auth, Onboarding } from './features/prototype/Onboarding'
+import { Onboarding } from './features/prototype/Onboarding'
+import { AuthScreen } from './auth/AuthScreen'
 import { EventDetail, EventsScreen } from './features/events/Browse'
 import { eventDetailRoute, eventsPath } from './features/events/routes'
 import { ActivityPaths, ConfirmedPlan, FreeTime, Matches, Planning, ReviewPlan } from './features/prototype/Planning'
@@ -54,8 +55,11 @@ function App() {
         </Route>
         <Route element={<ImmersiveLayout />}>
           <Route path="intro" element={<IntroScreen />} />
-          <Route path="login" element={<Auth />} />
-          <Route path="register" element={<Auth register />} />
+          <Route path="login" element={<AuthScreen />} />
+          <Route path="register" element={<AuthScreen mode="register" />} />
+          <Route path="auth/callback" element={<AuthScreen mode="callback" />} />
+          <Route path="forgot-password" element={<AuthScreen mode="forgot" />} />
+          <Route path="reset-password" element={<AuthScreen mode="reset" />} />
           <Route path="onboarding" element={<Onboarding />} />
         </Route>
       </Route>

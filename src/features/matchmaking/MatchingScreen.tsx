@@ -8,6 +8,7 @@ import { PixelPebble } from '../pebble-art/PixelArt'
 import { MatchingProfileSchema, type MatchingMode, type MatchingProfile } from '../../../shared/matchmaking'
 import { useMatchmaking } from './useMatchmaking'
 import { DeviceDisplayPreferences } from './DeviceDisplayPreferences'
+import { useAccount } from '../../auth/account-context'
 
 const blankProfile: MatchingProfile = { username: '', display_name: '', bio: null, birthdate: null, location_city: null, avatar_url: null, interests: [], availability: [] }
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -44,6 +45,7 @@ function ProfileEditor({ initial, busy, error, save, close }: { initial: Matchin
 }
 
 function AuthenticatedMatching({ mode, token }: { mode: MatchingMode; token: string }) {
+  const account = useAccount()
   const state = useMatchmaking(token)
   const [preferences, setPreferences] = useState(false)
   const preferencesButton = useRef<HTMLButtonElement>(null)
@@ -68,7 +70,7 @@ function AuthenticatedMatching({ mode, token }: { mode: MatchingMode; token: str
       </div>
     </section>
     <details className="match-device-disclosure"><summary>On this device</summary><DeviceDisplayPreferences /></details>
-    {preferences && <ProfileEditor initial={state.profile} busy={state.saving} error={state.profileError} save={state.save} close={closePreferences} />}
+    {preferences && <ProfileEditor initial={state.profile} busy={state.saving} error={state.profileError} save={async profile => { const saved = await state.save(profile); if (saved) await account?.reload(); return saved }} close={closePreferences} />}
   </>
 }
 

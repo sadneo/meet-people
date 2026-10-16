@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import type { Session } from '@supabase/supabase-js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Company } from '../src/features/events/Company'
+import { MemoryRouter } from 'react-router'
 
 const userId = 'a0000000-0000-4000-8000-000000000001'
 const eventId = 'e0000000-0000-4000-8000-000000000001'
@@ -44,7 +45,7 @@ describe('event company UI', () => {
     expect(screen.getByText('Taylor')).toBeTruthy()
   })
   it('does not fetch identities before sign-in', () => {
-    render(<Company id={eventId} title="Campus concert" session={null} authReady />)
+    render(<MemoryRouter><Company id={eventId} title="Campus concert" session={null} authReady /></MemoryRouter>)
     expect(screen.getByText('Sign in to see interested people and find company.')).toBeTruthy()
     expect(fetchMock).not.toHaveBeenCalled()
   })

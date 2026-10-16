@@ -25,7 +25,9 @@ export function useLogout() {
       if (error) throw error
       // The SDK's SIGNED_OUT notification clears every existing useSession subscriber.
       // Do not invent a local session change or navigate on a failed sign-out.
-      if (live.current) navigate('/login')
+      // Account identity changes intentionally unmount the old workspace.
+      // Successful logout must still navigate after that cleanup.
+      navigate('/login')
     } catch {
       if (live.current) setError('Could not log out. Your session may still be active. Please try again.')
     } finally {
