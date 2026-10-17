@@ -29,7 +29,7 @@ but have no entry point: **Message group** lives in
 | Deleting an account erased its messages for everyone | Messages stay; `sender_id` becomes null ("Deleted user"). |
 | No rate limit | 30 messages per sender per minute, enforced in SQL. |
 | Errors were silent and `42501` looked like "not a participant" | SQL raises app-specific codes (`MSG01`–`MSG12`); anything else is logged and returns 503. |
-| No incoming messages without Refresh | Visible-tab polling: open chat every 5s (`after=` cursor), inbox every 30s. |
+| No incoming messages without Refresh | Visible-tab polling: open chat every 5s (`after=` cursor), inbox every 30s, or every 5s while a request you sent is waiting so its chat appears soon after it is accepted. A sent request's **Connect** card also checks every 5s and switches to **Message**. |
 | No unread counts or read receipts | Per-member `last_read_seq`; inbox unread dot, "Seen" / "Seen by …" on your latest message. |
 | Names from `event_profiles` only, no avatars | `profiles.display_name`/`avatar_url` (active profiles only, https avatars only), then the event name, then "Student". |
 | Hand-written `database.ts` | Regenerated from the migrated database; it now also includes `dev`'s own tables. |

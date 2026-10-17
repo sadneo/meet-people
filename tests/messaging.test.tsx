@@ -14,12 +14,15 @@ const jordan = 'a0000000-0000-4000-8000-000000000003'
 const riley = 'a0000000-0000-4000-8000-000000000004'
 const a = 'c0000000-0000-4000-8000-000000000001'
 const b = 'c0000000-0000-4000-8000-000000000002'
+const c = 'c0000000-0000-4000-8000-000000000003'
 const first: Message = { id: 'b0000000-0000-4000-8000-000000000001', conversation_id: a, seq: 1, sender_id: taylor, body: 'Persisted hello', created_at: '2026-10-08T12:00:00Z' }
 let saved: Message[] = []
 let unread: Record<string, number> = {}
 let taylorRead = 0
 let canSend = true
 let incoming: { id: string; display_name: string; avatar_url: null; requested_at: string }[] = []
+let sent: typeof incoming = []
+let rileyChat = false
 let failSend = false
 let failHistory = false
 let empty = false
@@ -29,11 +32,11 @@ let holdHistory: (() => void) | null = null
 let delayHistory = false
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
 function participants(id: string): Participant[] {
-  return [{ id: user, display_name: 'Sam', avatar_url: null, last_read_seq: 0 }, id === a ? { id: taylor, display_name: 'Taylor', avatar_url: null, last_read_seq: taylorRead } : { id: jordan, display_name: 'Jordan', avatar_url: null, last_read_seq: 0 }]
+  return [{ id: user, display_name: 'Sam', avatar_url: null, last_read_seq: 0 }, id === a ? { id: taylor, display_name: 'Taylor', avatar_url: null, last_read_seq: taylorRead } : id === c ? { id: riley, display_name: 'Riley', avatar_url: null, last_read_seq: 0 } : { id: jordan, display_name: 'Jordan', avatar_url: null, last_read_seq: 0 }]
 }
 const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(String(input), 'http://app.test')
-  if (url.pathname === '/api/connections') return json({ incoming, sent: [], connected: [] })
+  if (url.pathname === '/api/connections') return json({ incoming, sent, connected: [] })
   if (url.pathname.startsWith('/api/connections/')) {
     incoming = incoming.filter(person => !url.pathname.includes(person.id))
     return json(url.pathname.endsWith('/accept') ? { status: 'connected', conversationId: a } : { status: 'none', conversationId: null })
@@ -55,17 +58,17 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => 
     if (id === a && delayHistory) await new Promise<void>(resolve => { holdHistory = resolve })
     if (failHistory) return json({ error: 'History unavailable.' }, 503)
     const after = Number(url.searchParams.get('after') ?? 0)
-    return json({ kind: id === a ? 'direct' : 'event_group', canSend, messages: inConversation.filter(message => message.seq > after), participants: participants(id), nextCursor: null })
+    return json({ kind: id === b ? 'event_group' : 'direct', canSend, messages: inConversation.filter(message => message.seq > after), participants: participants(id), nextCursor: null })
   }
-  return json({ conversations: empty ? [] : [a, b].map(id => ({ id, kind: id === a ? 'direct' : 'event_group', created_at: first.created_at, participants: participants(id), latest_message: saved.filter(message => message.conversation_id === id).at(-1) ?? null, unread_count: unread[id] ?? 0 })), hasMore: false })
+  return json({ conversations: empty ? [] : [a, b, ...(rileyChat ? [c] : [])].map(id => ({ id, kind: id === b ? 'event_group' : 'direct', created_at: first.created_at, participants: participants(id), latest_message: saved.filter(message => message.conversation_id === id).at(-1) ?? null, unread_count: unread[id] ?? 0 })), hasMore: false })
 })
 beforeEach(() => {
-  saved = [first]; unread = { [a]: 1 }; taylorRead = 0; canSend = true; incoming = []
+  saved = [first]; unread = { [a]: 1 }; taylorRead = 0; canSend = true; incoming = []; sent = []; rileyChat = false
   failSend = false; failHistory = false; empty = false; delaySend = false; resolveSend = null; delayHistory = false; holdHistory = null
   auth.session = { user: { id: user } } as Session
   vi.stubGlobal('fetch', fetchMock); fetchMock.mockClear()
 })
-afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers() })
 function CurrentRoute() { const route = useLocation(); return <output aria-label="Current route">{route.pathname}{route.search}</output> }
 function open(path = '/messages') { return render(<MemoryRouter initialEntries={[path]}><App /><CurrentRoute /></MemoryRouter>) }
 function history() { return within(screen.getByRole('region', { name: 'Message history' })) }
@@ -189,6 +192,20 @@ describe('persisted messaging UI with mocked API', () => {
     await waitFor(() => expect(screen.getByLabelText('Current route').textContent).toBe(`/messages/chat?conversation=${a}`))
     expect(posts(`/api/connections/${riley}/accept`)).toHaveLength(1)
     expect(screen.queryByRole('region', { name: 'Connection requests' })).toBeNull()
+  })
+  it('shows the new chat to the person who sent the request soon after it is accepted', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    sent = [{ id: riley, display_name: 'Riley', avatar_url: null, requested_at: first.created_at }]
+    open()
+    await screen.findByRole('button', { name: /Taylor.*Persisted hello/ })
+    sent = []; rileyChat = true
+    await act(() => vi.advanceTimersByTimeAsync(5000))
+    await screen.findByRole('button', { name: /Riley.*Say hello/ })
+    // With nothing waiting any more, the inbox goes back to its slower checks.
+    const inboxLoads = () => fetchMock.mock.calls.filter(([input]) => String(input) === '/api/conversations?page=1').length
+    const settled = inboxLoads()
+    await act(() => vi.advanceTimersByTimeAsync(5000))
+    expect(inboxLoads()).toBe(settled)
   })
   it('declines a connection request without opening anything', async () => {
     incoming = [{ id: riley, display_name: 'Riley', avatar_url: null, requested_at: first.created_at }]

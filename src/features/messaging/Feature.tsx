@@ -15,7 +15,9 @@ import { announceMessagesActivity } from './useMessagesActivity'
 import '../prototype/messages.css'
 import './messaging.css'
 
-// Polling stands in for realtime delivery; hidden tabs do not poll.
+// Polling stands in for realtime delivery; hidden tabs do not poll. While a request I
+// sent is waiting, the inbox checks as often as an open chat, so an accepted request
+// shows its new chat promptly.
 const INBOX_POLL_MS = 30000
 const CHAT_POLL_MS = 5000
 
@@ -61,6 +63,7 @@ function SignedInMessages({ userId }: { userId: string }) {
   const [hasMore, setHasMore] = useState(false)
   const [reload, setReload] = useState(0)
   const [requests, setRequests] = useState<ConnectionRequest[]>([])
+  const [waiting, setWaiting] = useState(false)
   const [requestError, setRequestError] = useState('')
   const [answering, setAnswering] = useState(false)
   const loadingRef = useRef(true)
@@ -78,7 +81,7 @@ function SignedInMessages({ userId }: { userId: string }) {
   }, [page, reload])
   useEffect(() => {
     const controller = new AbortController()
-    connections.list(controller.signal).then(data => { if (!controller.signal.aborted) setRequests(data.incoming) })
+    connections.list(controller.signal).then(data => { if (!controller.signal.aborted) { setRequests(data.incoming); setWaiting(data.sent.length > 0) } })
       .catch(() => { /* Requests stay as last loaded; the inbox shows its own errors. */ })
     return () => controller.abort()
   }, [reload])
@@ -89,11 +92,11 @@ function SignedInMessages({ userId }: { userId: string }) {
     try {
       const [data, list] = await Promise.all([messagingRequest('?page=1', ConversationsSchema), connections.list().catch(() => null)])
       setConversations(current => byActivity([...new Map([...current, ...data.conversations].map(item => [item.id, item])).values()]))
-      if (list) setRequests(list.incoming)
+      if (list) { setRequests(list.incoming); setWaiting(list.sent.length > 0) }
     } catch { /* The last loaded inbox stays; Refresh shows the error. */ }
     finally { polling.current = false }
   }, [])
-  useVisiblePolling(poll, INBOX_POLL_MS)
+  useVisiblePolling(poll, waiting ? CHAT_POLL_MS : INBOX_POLL_MS, false)
   const selected = conversations.find(item => item.id === selectedId)
   const visible = conversations.filter(item => `${nameOf(item, userId)} ${item.latest_message?.body ?? ''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
   function refresh() { setLoading(true); setPage(1); setReload(value => value + 1) }

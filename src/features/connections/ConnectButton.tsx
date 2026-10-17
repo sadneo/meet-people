@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import type { ConnectionState } from '../../../shared/connections'
+import { useVisiblePolling } from '../matchmaking/useVisiblePolling'
 import { conversationPath } from '../messaging/client'
 import { connections } from './client'
+
+const ANSWER_POLL_MS = 5000
 
 type Classes = { primary: string; secondary: string }
 const appClasses: Classes = { primary: 'pt-button', secondary: 'pt-button pt-secondary' }
@@ -16,6 +19,7 @@ export function ConnectButton({ userId, name, classes = appClasses }: { userId: 
   const [error, setError] = useState('')
   const live = useRef(true)
   const pending = useRef(false)
+  const changes = useRef(0)
   useEffect(() => { live.current = true; return () => { live.current = false } }, [])
   useEffect(() => {
     const controller = new AbortController()
@@ -26,11 +30,21 @@ export function ConnectButton({ userId, name, classes = appClasses }: { userId: 
   }, [userId])
   async function act(change: (id: string) => Promise<ConnectionState>) {
     if (pending.current) return
-    pending.current = true; setBusy(true); setError('')
+    pending.current = true; changes.current++; setBusy(true); setError('')
     try { const next = await change(userId); if (live.current) setState(next) }
     catch (failure) { if (live.current) setError(failureText(failure)) }
     finally { pending.current = false; if (live.current) setBusy(false) }
   }
+  // While my request waits, check for an answer so Message replaces Cancel request
+  // once they accept. A check overtaken by my own action is dropped.
+  const waiting = state?.status === 'sent'
+  const check = useCallback(async () => {
+    if (!waiting || pending.current) return
+    const before = changes.current
+    try { const next = await connections.state(userId); if (live.current && before === changes.current) setState(next) }
+    catch { /* Keep the last known state; the next check tries again. */ }
+  }, [userId, waiting])
+  useVisiblePolling(check, ANSWER_POLL_MS, false)
   const status = state?.status
   return <div className="pt-connect" aria-busy={busy}>
     {status === 'sent' && <p role="status">Request sent</p>}

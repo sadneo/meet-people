@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConnectButton } from '../src/features/connections/ConnectButton'
@@ -20,7 +20,7 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => 
   return json(state())
 })
 beforeEach(() => { status = 'none'; failure = null; vi.stubGlobal('fetch', fetchMock); fetchMock.mockClear() })
-afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers() })
 const mount = () => render(<MemoryRouter><ConnectButton userId={taylor} name="Taylor" /></MemoryRouter>)
 const calls = () => fetchMock.mock.calls.map(([input, init]) => `${init?.method ?? 'GET'} ${String(input)}`)
 
@@ -42,6 +42,23 @@ describe('connect button', () => {
     const message = await screen.findByRole('link', { name: 'Message' })
     expect(message.getAttribute('href')).toBe(`/messages/chat?conversation=${chat}`)
     expect(calls()).toContain(`POST /api/connections/${taylor}/accept`)
+  })
+  it('offers Message once the other person accepts my request', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    status = 'sent'
+    mount()
+    await screen.findByText('Request sent')
+    status = 'connected'
+    await act(() => vi.advanceTimersByTimeAsync(5000))
+    expect((await screen.findByRole('link', { name: 'Message' })).getAttribute('href')).toBe(`/messages/chat?conversation=${chat}`)
+    expect(screen.queryByRole('button', { name: 'Cancel request' })).toBeNull()
+  })
+  it('does not check for an answer when no request is waiting', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    mount()
+    await screen.findByRole('button', { name: 'Connect' })
+    await act(() => vi.advanceTimersByTimeAsync(15000))
+    expect(calls()).toEqual([`GET /api/connections/${taylor}`])
   })
   it('declines an incoming request', async () => {
     status = 'incoming'
