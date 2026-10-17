@@ -1,5 +1,6 @@
 import { supabase } from '../../supabase'
 import type { ZodType } from 'zod'
+import { apiUrl } from '../../platform/native'
 
 export async function eventRequest<T>(path: string, schema: ZodType<T>, options: { body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
