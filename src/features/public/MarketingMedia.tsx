@@ -40,9 +40,6 @@ export function PebblePouch() {
       <path d="M208 257Q300 286 392 257C383 286 415 324 416 366Q415 430 300 429Q185 430 184 366C185 324 217 286 208 257Z" fill="var(--pt-green)" stroke="var(--pt-ink)" strokeWidth="3" />
       <path d="M213 271Q300 298 387 271M206 365Q207 407 254 409" fill="none" stroke="var(--pt-fresh)" strokeWidth="2" strokeLinecap="round" opacity=".6" />
       <path d="M218 278C179 269 171 295 189 300C203 304 217 287 219 280C224 309 228 320 235 326M382 278C421 269 429 295 411 300C397 304 383 287 381 280C376 309 372 320 365 326" fill="none" stroke="var(--pt-sand)" strokeWidth="5" strokeLinecap="round" />
-      <rect x="257" y="330" width="86" height="59" rx="18" fill="var(--pt-sand)" />
-      <path d="M283 366L287 347L298 341L310 348L317 366L309 375H290Z" fill="var(--pt-stone-highlight)" stroke="var(--pt-ink)" strokeWidth="3" strokeLinejoin="round" />
-      <path d="M293 358V361M306 358V361M298 366H302" stroke="var(--pt-ink)" strokeWidth="3" strokeLinecap="round" />
     </g>
     <g className="marketing-pouch-rest"><MarketingSprite kind="garnet" x={110} y={358} width={58} /><MarketingSprite kind="pebble" x={429} y={362} width={58} /></g>
   </svg>
@@ -66,7 +63,7 @@ function CommunityBuildScene() {
   </svg>
 }
 
-export function CommunityMedia({ paused, reducedMotion }: { paused: boolean; reducedMotion: boolean }) {
+export function CommunityMedia({ reducedMotion }: { reducedMotion: boolean }) {
   const frame = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const [visible, setVisible] = useState(() => typeof IntersectionObserver === 'undefined')
@@ -84,14 +81,14 @@ export function CommunityMedia({ paused, reducedMotion }: { paused: boolean; red
     const media = video.current
     if (!media || !showVideo) return
     let cancelled = false
-    if (visible && !paused && !reducedMotion) {
+    if (visible && !reducedMotion) {
       void media.play().then(() => { if (!cancelled) setBlocked(false) }).catch(() => { if (!cancelled) setBlocked(true) })
     } else media.pause()
     return () => { cancelled = true; media.pause() }
-  }, [visible, paused, reducedMotion, showVideo, playRequested])
+  }, [visible, reducedMotion, showVideo, playRequested])
   return <div ref={frame} className="marketing-community-media" data-visible={visible} data-media={showVideo ? 'video' : 'illustration'}>
-    {showVideo ? <video ref={video} src={communityVideo} muted loop playsInline autoPlay={!paused && !reducedMotion && visible} preload="metadata" poster={village} aria-label="Pebble Community being built over time" onError={() => setFailed(true)} />
+    {showVideo ? <video ref={video} src={communityVideo} muted loop playsInline autoPlay={!reducedMotion && visible} preload="metadata" poster={village} aria-label="Pebble Community being built over time" onError={() => setFailed(true)} />
       : <div className="marketing-build-loop" role="img" aria-label="An illustrated Community preview: an island grows from one Pebble to trees, a cottage and friends"><CommunityBuildScene /></div>}
-    {showVideo && blocked && !paused && !reducedMotion && <button className="marketing-video-play" onClick={() => { void video.current?.play().catch(() => undefined); setPlayRequested(value => !value) }}>Play Community preview</button>}
+    {showVideo && blocked && !reducedMotion && <button className="marketing-video-play" onClick={() => { void video.current?.play().catch(() => undefined); setPlayRequested(value => !value) }}>Play Community preview</button>}
   </div>
 }

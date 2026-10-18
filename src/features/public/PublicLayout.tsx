@@ -47,7 +47,7 @@ export function PublicLayout() {
       <Link to="/" aria-label="Pebble home"><Brand /></Link>
       <nav aria-label="Public navigation">
         <NavLink to="/events">Explore events</NavLink>
-        {session ? <Link className="pt-button pt-discovery-action" to="/">Open Pebble</Link> : <><Link to={publicAuthPath('login')}>Sign in</Link><Link className="pt-button pt-discovery-action" to={publicAuthPath('register')}>Get started</Link></>}
+        {session ? <Link className="pt-button pt-discovery-action" to="/">Open Pebble</Link> : <><Link to={publicAuthPath('login')}>Sign in</Link>{pathname !== '/' && <Link className="pt-button pt-discovery-action" to={publicAuthPath('register')}>Get started</Link>}</>}
       </nav>
     </header>
     <main id="public-content" ref={main} tabIndex={-1} className="public-main public-width"><Outlet /></main>
