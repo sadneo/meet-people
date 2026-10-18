@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { sharedProfileFixture } from './shared-profile-fixture'
+import { chooseDistanceAndGroup, saveInterestChapter, saveSocialChapter } from './onboarding-fixture'
 
 for (const width of [320, 1440]) {
   test(`first-time Profile ${width}: explicit identity, initial preferences, readback and bidirectional route/reload`, async ({ page }) => {
@@ -24,12 +25,13 @@ for (const width of [320, 1440]) {
     await page.screenshot({ path: `worktree/profile-creation/identity-${width}.png`, animations: 'disabled' })
     await completion.getByRole('button', { name: 'Save identity and continue', exact: true }).click()
     await expect(page.locator('.pt-app')).toHaveCount(0)
+    await saveInterestChapter(page); await saveSocialChapter(page)
     const save = completion.getByRole('button', { name: 'Finish onboarding', exact: true })
     await expect(save).toBeEnabled()
     expect(fixture.account()).toEqual({ username: 'explicit-fixture', display_name: 'Explicit fixture', bio: 'User-entered fixture bio', avatar_url: null })
-    expect(fixture.profile()).toBeNull()
+    expect(fixture.profile()).toMatchObject({ interests: ['Music', 'Coffee', 'Art'], availability: [], birthdate: null, location_city: null })
     await expect(completion.getByLabel('Username', { exact: true })).toHaveCount(0)
-    for (const label of ['Music', 'Coffee', 'Art']) await completion.getByRole('button', { name: label, exact: true }).click()
+    await chooseDistanceAndGroup(page)
     await completion.getByRole('button', { name: 'Sunday late, not available', exact: true }).click()
     await completion.getByLabel('City or campus area').fill('User-entered campus')
     await completion.getByLabel('Birthdate', { exact: true }).fill('2001-02-03')
@@ -56,7 +58,7 @@ for (const width of [320, 1440]) {
     await expect(editor.getByRole('button', { name: 'Sports', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(editor.getByRole('button', { name: 'Music', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(editor.getByLabel('City or campus area')).toHaveValue('User-entered campus')
-    expect(fixture.calls.filter(call => call.method === 'PUT').map(call => call.path)).toEqual(['/api/matchmaking/account-profile', '/api/matchmaking/profile', '/api/matchmaking/profile'])
+    expect(fixture.calls.filter(call => call.method === 'PUT').map(call => call.path)).toEqual([...Array(4).fill('/api/matchmaking/account'), '/api/matchmaking/profile'])
     expect(fixture.calls.some(call => /\/(queue|result)$/.test(call.path))).toBe(false)
     expect(fixture.external).toEqual([])
   })
@@ -69,10 +71,10 @@ for (const width of [320, 1440]) test(`uninstalled identity support ${width} sta
   await expect(page.getByRole('heading', { name: 'Profile unavailable', exact: true })).toBeVisible()
   await expect(page.locator('.pt-app')).toHaveCount(0)
   await expect(page.getByLabel('Username', { exact: true })).toHaveCount(0)
-  await expect(page.getByRole('alert')).toContainText('Identity unavailable.')
+  await expect(page.getByRole('alert')).toContainText('Your saved account could not be read')
   await page.screenshot({ path: `worktree/profile-readiness/unavailable-${width}.png`, animations: 'disabled' })
-  await page.getByRole('button', { name: 'Retry profile', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('Identity unavailable.')
-  expect(fixture.calls.every(call => call.method === 'GET' && /\/(account-profile|profile)$/.test(call.path))).toBe(true)
+  await page.getByRole('button', { name: 'Retry account', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Your saved account could not be read')
+  expect(fixture.calls.every(call => call.method === 'GET' && call.path === '/api/matchmaking/account')).toBe(true)
   expect(fixture.external).toEqual([])
 })

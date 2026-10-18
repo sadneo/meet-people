@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { browserProfile, mockMatchingSession } from './matchmaking-fixture'
+import { browserAccount, browserProfile, mockMatchingSession } from './matchmaking-fixture'
 
 for (const width of [320, 390, 1440]) {
   test(`authenticated downtime opt-in ${width}: consent, readback, reload, guarded off and active replacement`, async ({ page }) => {
@@ -13,6 +13,7 @@ for (const width of [320, 390, 1440]) {
     await page.route('**/api/matchmaking/**', route => {
       const request = route.request(), path = new URL(request.url()).pathname
       if (path.endsWith('/notifications')) return route.fulfill({ json: { notifications: [], unreadCount: 0 } })
+      if (path.endsWith('/account')) return route.fulfill({ json: browserAccount() })
       if (path.endsWith('/account-profile')) return route.fulfill({ json: { profile: { username: browserProfile.username, display_name: browserProfile.display_name, bio: browserProfile.bio, avatar_url: browserProfile.avatar_url } } })
       if (path.endsWith('/profile')) return route.fulfill({ json: { profile: browserProfile } })
       if (path.endsWith('/result')) lookups.push(path)

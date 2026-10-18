@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { browserProfile, mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
+import { browserAccount, browserProfile, mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
+import type { Account } from '../shared/account'
 
 for (const width of [320, 801, 1440]) {
   test(`saved Friends dashboard at ${width}: real summary, PixelPebble, keyboard preferences and manual actions`, async ({ page }) => {
@@ -90,7 +91,7 @@ for (const width of [320, 801, 1440]) {
 
 for (const width of [320, 390, 801, 1440]) {
   test(`required onboarding at ${width}: real fields, weekly keyboard input, failed save and later manual queue transition`, async ({ page }) => {
-    const external: string[] = [], queueRequests: string[] = [], writes: unknown[] = []
+    const external: string[] = [], queueRequests: string[] = [], writes: Account[] = []
     await page.route('**/*', route => {
       if (new URL(route.request().url()).origin !== 'http://127.0.0.1:3194') { external.push(route.request().url()); return route.abort() }
       return route.continue()
@@ -98,13 +99,16 @@ for (const width of [320, 390, 801, 1440]) {
     await mockMatchingSession(page)
     await mockMatchingApi(page)
     let fails = true
-    let persisted: typeof browserProfile | null = null
-    await page.route('**/api/matchmaking/account-profile', route => route.fulfill({ json: { profile: { username: browserProfile.username, display_name: browserProfile.display_name, bio: browserProfile.bio, avatar_url: browserProfile.avatar_url } } }))
-    await page.route('**/api/matchmaking/profile', route => {
-      if (route.request().method() === 'GET') return route.fulfill({ json: { profile: persisted } })
+    let persisted = browserAccount({ ...browserProfile, birthdate: null, location_city: null, interests: ['Books', 'Games', 'Hiking'], availability: [] })
+    await page.route('**/api/matchmaking/account', route => {
+      if (route.request().method() === 'GET') return route.fulfill({ json: persisted })
       writes.push(route.request().postDataJSON())
       if (!fails) persisted = route.request().postDataJSON()
-      return fails ? route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Profile save unavailable.' } }) : route.fulfill({ json: { profile: route.request().postDataJSON() } })
+      return fails ? route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Profile save unavailable.' } }) : route.fulfill({ json: persisted })
+    })
+    await page.route('**/api/matchmaking/profile', route => {
+      if (route.request().method() === 'PUT') persisted = { ...persisted, profile: route.request().postDataJSON() }
+      return route.fulfill({ json: { profile: persisted.profile } })
     })
     page.on('request', request => { if (/\/(queue|result)$/.test(request.url())) queueRequests.push(request.url()) })
     await page.setViewportSize({ width, height: width === 320 ? 568 : width === 390 ? 844 : 900 })
@@ -124,6 +128,7 @@ for (const width of [320, 390, 801, 1440]) {
     await expect(page.getByRole('button', { name: 'Cancel search', exact: true })).toHaveCount(0)
     const save = workspace.getByRole('button', { name: 'Finish onboarding', exact: true })
     await expect(save).toBeEnabled()
+    for (const label of ['Books', 'Games', 'Hiking']) await workspace.getByRole('button', { name: label, exact: true }).click()
     const storage = await page.evaluate(() => [JSON.stringify(localStorage), JSON.stringify(sessionStorage)])
     const interestInput = workspace.getByLabel('Add a matching interest')
     await expect(interestInput).toHaveCSS('resize', 'none')
@@ -193,18 +198,19 @@ for (const width of [320, 390, 801, 1440]) {
       return element.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))
     })).toBe(true)
     await save.click()
-    await expect(workspace.getByRole('alert')).toHaveText('Profile save unavailable.')
+    await expect(workspace.getByRole('alert')).toContainText('Account save could not be confirmed')
     await expect(page.getByRole('button', { name: 'Cancel search', exact: true })).toHaveCount(0)
     expect(queueRequests).toEqual([])
     expect(await page.evaluate(() => [JSON.stringify(localStorage), JSON.stringify(sessionStorage)])).toEqual(storage)
     fails = false
-    await workspace.getByRole('button', { name: 'Retry profile', exact: true }).click()
+    await workspace.getByRole('button', { name: 'Retry account', exact: true }).click()
     await expect(save).toBeEnabled()
     await save.click()
     await expect(page.getByRole('button', { name: 'Find Friends', exact: true })).toBeEnabled()
     await expect(workspace).toHaveCount(0)
     expect(writes).toHaveLength(2)
-    expect(writes[1]).toEqual({ ...browserProfile, birthdate: '2001-02-03', location_city: 'Explicit campus', interests: ['Coffee', 'Music', 'Art'], availability: [{ dow: 1, start_time: '08:00:00', end_time: '12:00:00' }] })
+    expect(writes[1].profile).toEqual({ ...browserProfile, birthdate: '2001-02-03', location_city: 'Explicit campus', interests: ['Coffee', 'Music', 'Art'], availability: [{ dow: 1, start_time: '08:00:00', end_time: '12:00:00' }] })
+    expect(writes[1].completed).toEqual([0, 1, 2, 3])
     expect(await page.evaluate(() => localStorage.getItem('pebble.matchmaking-profile'))).toBeNull()
     expect(queueRequests).toEqual([])
     await page.getByRole('button', { name: 'Find Friends', exact: true }).click()
@@ -224,17 +230,16 @@ for (const width of [320, 390, 1440]) {
     })
     await mockMatchingSession(page)
     await mockMatchingApi(page)
-    await page.route('**/api/matchmaking/profile', route => route.fulfill({ json: { profile: null } }))
-    await page.route('**/api/matchmaking/account-profile', route => route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Account identity service unavailable.' } }))
+    await page.route('**/api/matchmaking/account', route => route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Account identity service unavailable.' } }))
     page.on('request', request => {
       const path = new URL(request.url()).pathname
-      if (path.startsWith('/api/') && !(request.method() === 'GET' && /^\/api\/matchmaking\/(profile|account-profile)$/.test(path))) forbidden.push(request.url())
+      if (path.startsWith('/api/') && !(request.method() === 'GET' && path === '/api/matchmaking/account')) forbidden.push(request.url())
     })
     await page.setViewportSize({ width, height: width === 320 ? 568 : width === 390 ? 844 : 900 })
     await page.goto('/matchmaking')
     const setup = page.locator('.pt-access-card')
     await expect(setup.getByRole('heading', { name: 'Profile unavailable', exact: true })).toBeVisible()
-    await expect(setup.getByRole('alert')).toContainText('Account identity service unavailable.')
+    await expect(setup.getByRole('alert')).toContainText('Your saved account could not be read')
     await expect(page.locator('.pt-app')).toHaveCount(0)
     await expect(page.getByRole('form', { name: 'Matching profile setup', exact: true })).toHaveCount(0)
     await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -247,7 +252,7 @@ for (const width of [320, 390, 1440]) {
     console.log(`Unavailable setup ${width} minimum target: ${JSON.stringify({ width: Math.min(...dimensions.map(box => box.width)), height: Math.min(...dimensions.map(box => box.height)) })}`)
     await page.screenshot({ path: `worktree/matchmaking-setup/setup-unavailable-${width}.png`, fullPage: true, animations: 'disabled' })
     await expect(setup.getByLabel('City or campus area')).toHaveCount(0)
-    const retry = setup.getByRole('button', { name: 'Retry profile', exact: true })
+    const retry = setup.getByRole('button', { name: 'Retry account', exact: true })
     await retry.evaluate(element => element.scrollIntoView({ block: 'center' }))
     await expect(retry).toBeInViewport()
     expect(await retry.evaluate(element => {
@@ -255,7 +260,7 @@ for (const width of [320, 390, 1440]) {
       return element.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))
     })).toBe(true)
     await retry.click()
-    await expect(setup.getByRole('alert')).toContainText('Account identity service unavailable.')
+    await expect(setup.getByRole('alert')).toContainText('Your saved account could not be read')
     await page.screenshot({ path: `worktree/matchmaking-setup/setup-unavailable-actions-${width}.png`, animations: 'disabled' })
     expect(forbidden).toEqual([])
     expect(unexpected).toEqual([])
@@ -283,7 +288,7 @@ for (const origin of ['shell', 'settings']) {
     await page.waitForLoadState('networkidle')
     const beforeSignOut = [...requests]
     expect(beforeSignOut.length).toBeGreaterThan(0)
-    expect(beforeSignOut.every(request => request.method === 'GET' && /^\/api\/matchmaking\/(account-profile|profile|status|notifications)$/.test(request.path))).toBe(true)
+    expect(beforeSignOut.every(request => request.method === 'GET' && /^\/api\/matchmaking\/(account|account-profile|profile|status|notifications)$/.test(request.path))).toBe(true)
     await controls.getByRole('button', { name: 'Log out', exact: true }).click()
     const login = `/login?${new URLSearchParams({ returnTo: path })}`
     await expect(page).toHaveURL(login)
@@ -336,18 +341,18 @@ for (const mode of ['active']) {
     await mockMatchingSession(page)
     await mockMatchingApi(page)
     let savesFail = true
-    let persisted: typeof browserProfile | null = null
+    let persisted = browserAccount({ ...browserProfile, birthdate: null, location_city: null, availability: [] })
     let joins = 0
     await page.route('**/api/matchmaking/queue', route => {
       if (route.request().method() === 'POST') joins++
       return route.fallback()
     })
-    await page.route('**/api/matchmaking/profile', route => {
-      if (route.request().method() === 'GET') return route.fulfill({ json: { profile: persisted } })
+    await page.route('**/api/matchmaking/account', route => {
+      if (route.request().method() === 'GET') return route.fulfill({ json: persisted })
       if (!savesFail) persisted = route.request().postDataJSON()
-      return savesFail ? route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Profile save unavailable.' } }) : route.fulfill({ json: { profile: route.request().postDataJSON() } })
+      return savesFail ? route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Profile save unavailable.' } }) : route.fulfill({ json: persisted })
     })
-    await page.route('**/api/matchmaking/account-profile', route => route.fulfill({ json: { profile: { username: browserProfile.username, display_name: browserProfile.display_name, bio: browserProfile.bio, avatar_url: browserProfile.avatar_url } } }))
+    await page.route('**/api/matchmaking/profile', route => route.fulfill({ json: { profile: persisted.profile } }))
     await page.goto(mode === 'active' ? '/matchmaking' : '/downtime-matchmaking')
     await expect(page.getByRole('heading', { name: 'Complete onboarding', exact: true })).toBeVisible()
     const start = page.getByRole('button', { name: startName, exact: true })
@@ -355,15 +360,14 @@ for (const mode of ['active']) {
       await expect(start).toHaveCount(0)
       const save = page.getByRole('button', { name: 'Finish onboarding', exact: true })
       await expect(save).toBeEnabled()
-      for (const label of ['Coffee', 'Music', 'Art']) await page.getByRole('button', { name: label, exact: true }).click()
       await page.getByLabel('City or campus area').fill('Explicit campus')
       await page.getByLabel('Birthdate', { exact: true }).fill('2001-02-03')
       await page.getByRole('button', { name: 'Monday morning, not available', exact: true }).click()
       await save.click()
-      await expect(page.getByRole('alert')).toContainText('Profile save unavailable')
+      await expect(page.getByRole('alert')).toContainText('Account save could not be confirmed')
       expect(joins).toBe(0)
       savesFail = false
-      await page.getByRole('button', { name: 'Retry profile', exact: true }).click()
+      await page.getByRole('button', { name: 'Retry account', exact: true }).click()
       await expect(save).toBeEnabled()
       await save.click()
       await expect(start).toBeEnabled()
@@ -401,16 +405,16 @@ for (const mode of ['active']) {
       if (route.request().method() === 'POST') joins++
       return route.fallback()
     })
-    await page.route('**/api/matchmaking/profile', route => fails ? route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Profile load unavailable.' } }) : route.fulfill({ json: { profile: browserProfile } }))
+    await page.route('**/api/matchmaking/account', route => fails ? route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Profile load unavailable.' } }) : route.fulfill({ json: browserAccount() }))
     await page.goto(mode === 'active' ? '/matchmaking' : '/downtime-matchmaking')
-    await expect(page.getByRole('alert')).toContainText('Profile load unavailable')
+    await expect(page.getByRole('alert')).toContainText('Your saved account could not be read')
     const start = page.getByRole('button', { name: startName, exact: true })
     await expect(start).toHaveCount(0)
-    await page.getByRole('button', { name: 'Retry profile', exact: true }).click()
+    await page.getByRole('button', { name: 'Retry account', exact: true }).click()
     await expect(start).toHaveCount(0)
     expect(joins).toBe(0)
     fails = false
-    await page.getByRole('button', { name: 'Retry profile' }).click()
+    await page.getByRole('button', { name: 'Retry account' }).click()
     await expect(start).toBeEnabled()
   })
   test(`mocked ${mode} profile failure blocks private queue controls without changing the existing queue`, async ({ page }) => {
@@ -419,7 +423,7 @@ for (const mode of ['active']) {
     let queued: string | null = mode === 'active' ? 'downtime' : 'active'
     let leaves = 0
     let joins = 0
-    await page.route('**/api/matchmaking/profile', route => route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Profile load unavailable.' } }))
+    await page.route('**/api/matchmaking/account', route => route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Profile load unavailable.' } }))
     await page.route('**/api/matchmaking/status', route => route.fulfill({ json: { mode: queued } }))
     await page.route('**/api/matchmaking/queue', route => {
       if (route.request().method() === 'POST') joins++
@@ -427,9 +431,9 @@ for (const mode of ['active']) {
       return route.fulfill({ json: { mode: queued } })
     })
     await page.goto(mode === 'active' ? '/matchmaking' : '/downtime-matchmaking')
-    await expect(page.getByRole('alert')).toContainText('Profile load unavailable')
+    await expect(page.getByRole('alert')).toContainText('Your saved account could not be read')
     await expect(page.getByRole('button', { name: startName, exact: true })).toHaveCount(0)
-    await page.getByRole('button', { name: 'Retry profile', exact: true }).click()
+    await page.getByRole('button', { name: 'Retry account', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Profile unavailable', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: leaveName, exact: true })).toHaveCount(0)
     await expect(page.getByRole('button', { name: startName, exact: true })).toHaveCount(0)

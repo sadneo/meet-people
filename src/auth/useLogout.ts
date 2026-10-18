@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { supabase } from '../supabase'
 import { useSession } from './useSession'
+import { centralSignInPath } from './returnTo'
 
 export function useLogout() {
   const { session, ready } = useSession()
   const navigate = useNavigate()
+  const { pathname, search, hash } = useLocation()
   const live = useRef(false)
   const pending = useRef(false)
   const [busy, setBusy] = useState(false)
@@ -16,7 +18,8 @@ export function useLogout() {
   }, [])
 
   async function logout() {
-    if (pending.current) return
+    if (!live.current || pending.current) return
+    const destination = centralSignInPath(`${pathname}${search}${hash}`)
     pending.current = true
     setBusy(true); setError('')
     try {
@@ -25,7 +28,9 @@ export function useLogout() {
       if (error) throw error
       // The SDK's SIGNED_OUT notification clears every existing useSession subscriber.
       // Do not invent a local session change or navigate on a failed sign-out.
-      if (live.current) navigate('/login')
+      // Account identity changes intentionally unmount the old workspace.
+      // Successful logout must still navigate after that cleanup.
+      navigate(destination, { replace: true })
     } catch {
       if (live.current) setError('Could not log out. Your session may still be active. Please try again.')
     } finally {

@@ -1,7 +1,9 @@
 import { type z } from 'zod'
+import { AccountSchema, SaveAccountSchema, type Account } from '../../../shared/account'
 import { JoinQueueSchema, QueueStatusSchema, MatchResultSchema, MatchingProfileSchema, ProfileResponseSchema, SavedProfileResponseSchema, MatchingErrorSchema, type MatchingMode, type MatchingProfile } from '../../../shared/matchmaking'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, EventCompatibilityResponseSchema, ListingIdSchema, ListingMatchmakingStatusSchema } from '../../../shared/matchmaking'
 import { AccountProfileSchema, AccountProfileResponseSchema, SavedAccountProfileResponseSchema, type AccountProfile } from '../../../shared/account-profile'
+import { apiUrl } from '../../platform/native'
 
 export class MatchmakingClientError extends Error {
   constructor(readonly code: string, readonly status: number, message: string) { super(message) }
@@ -12,7 +14,7 @@ export function matchmakingClient(token: string) {
     // Keep the deadline alive through JSON/body consumption, not just headers.
     const timer = setTimeout(() => controller.abort(), 15000)
     try {
-      const response = await fetch(`/api/matchmaking/${path}`, { method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store', signal: controller.signal })
+      const response = await fetch(apiUrl(`/api/matchmaking/${path}`), { method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store', signal: controller.signal })
       let data: unknown
       try { data = await response.json() } catch { throw new MatchmakingClientError('malformed', response.status, 'Matching service returned an invalid response.') }
       if (!response.ok) {
@@ -31,6 +33,8 @@ export function matchmakingClient(token: string) {
   return {
     accountProfile: () => request('account-profile', AccountProfileResponseSchema),
     saveAccountProfile: (profile: AccountProfile) => request('account-profile', SavedAccountProfileResponseSchema, 'PUT', AccountProfileSchema.parse(profile)),
+    account: () => request('account', AccountSchema),
+    saveAccount: (account: Account) => request('account', AccountSchema, 'PUT', SaveAccountSchema.parse(account)),
     status: () => request('status', QueueStatusSchema),
     join: (mode: MatchingMode) => request('queue', QueueStatusSchema, 'POST', JoinQueueSchema.parse({ mode })),
     leave: () => request('queue', QueueStatusSchema, 'DELETE'),

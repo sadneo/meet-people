@@ -13,7 +13,7 @@ beforeEach(() => {
   for (const fn of Object.values(auth)) fn.mockReset().mockResolvedValue({ error: null })
   auth.getSession.mockResolvedValue({ data: { session: { user: actor } }, error: null })
   auth.getUser.mockResolvedValue({ data: { user: actor }, error: null })
-  for (const fn of [auth.exchangeCodeForSession, auth.setSession, auth.verifyOtp]) fn.mockResolvedValue({ data: { session: { user: actor } }, error: null })
+  for (const fn of [auth.exchangeCodeForSession, auth.setSession, auth.verifyOtp, auth.signInWithPassword]) fn.mockResolvedValue({ data: { session: { user: actor } }, error: null })
 })
 afterEach(() => { cleanup(); window.history.replaceState({}, '', '/') })
 
@@ -54,6 +54,18 @@ it('implicit recovery validates server identity before returning to the one cred
   await waitFor(() => expect(screen.getByLabelText('Path').textContent).toBe('/settings?credentials=recovery'))
   expect(auth.getUser).toHaveBeenCalled()
   expect(window.location.hash).toBe('')
+})
+it('the public reset-password code alias is scrubbed and verified as recovery, even without an explicit flow parameter', async () => {
+  window.history.replaceState({}, '', '/reset-password?code=reset-alias-code&returnTo=%2Fevents')
+  let finish!: (value: unknown) => void
+  auth.getUser.mockReturnValue(new Promise(resolve => { finish = resolve }))
+  render(<MemoryRouter initialEntries={['/reset-password']}><AuthCallback /><Path /></MemoryRouter>)
+  await waitFor(() => expect(auth.getUser).toHaveBeenCalledTimes(1))
+  expect(window.location.pathname + window.location.search + window.location.hash).toBe('/auth/callback')
+  expect(screen.getByLabelText('Path').textContent).toBe('/reset-password')
+  await act(async () => { finish({ data: { user: actor }, error: null }) })
+  await waitFor(() => expect(screen.getByLabelText('Path').textContent).toBe('/settings?credentials=recovery'))
+  expect(auth.exchangeCodeForSession).toHaveBeenCalledExactlyOnceWith('reset-alias-code')
 })
 it('callback errors never fall back to an existing session or expose URL diagnostics', async () => {
   window.history.replaceState({}, '', '/auth/callback?error=access_denied&error_description=private-secret')

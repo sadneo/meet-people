@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from '../src/App'
 import { useSharedUserProfile } from '../src/features/account/useSharedUserProfile'
+import { accountFixture } from './complete-profile-fixture'
 
 vi.mock('../src/supabase', () => ({ supabase: null }))
 const auth = vi.hoisted(() => ({ ready: true, session: { access_token: 'shared-fixture', user: { id: 'shared-actor' } } }))
@@ -24,6 +25,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input), method = init?.method ?? 'GET', body = init?.body ? JSON.parse(String(init.body)) : null
     calls.push({ path, method, body })
+    if (path.endsWith('/account')) return identityUnavailable || profileUnavailable ? Response.json({ code: 'unavailable', error: 'Shared account unavailable.' }, { status: 503 }) : Response.json(accountFixture({ ...profile, ...account }))
     if (path.endsWith('/account-profile')) {
       if (identityUnavailable) return Response.json({ code: 'unavailable', error: 'Identity unavailable.' }, { status: 503 })
       if (method === 'PUT') account = body
@@ -43,6 +45,31 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
 const mount = () => render(<MemoryRouter initialEntries={['/profile']}><App /></MemoryRouter>)
 const button = (name: string) => screen.getByRole('button', { name, exact: true }) as HTMLButtonElement
 async function edit() { const opener = await screen.findByRole('button', { name: 'Edit profile', exact: true }); await waitFor(() => expect((opener as HTMLButtonElement).disabled).toBe(false)); opener.focus(); fireEvent.click(opener); await waitFor(() => expect(screen.queryByText('Checking saved identity…')).toBeNull()) }
+
+it('a held matching save restores focus to the current same-owner opener after authoritative account reload replaces the private tree', async () => {
+  const originalFetch = vi.mocked(fetch).getMockImplementation()!
+  let finish!: () => void
+  const pending = new Promise<void>(resolve => { finish = resolve })
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (String(input).endsWith('/profile') && init?.method === 'PUT') await pending
+    return originalFetch(input, init)
+  })
+  render(<MemoryRouter initialEntries={['/matchmaking']}><App /></MemoryRouter>)
+  const oldOpener = await screen.findByRole('button', { name: 'Preferences', exact: true })
+  oldOpener.focus(); fireEvent.click(oldOpener)
+  const editor = within(screen.getByRole('dialog'))
+  await waitFor(() => expect(screen.queryByText('Checking saved identity…')).toBeNull())
+  fireEvent.click(editor.getByRole('button', { name: 'Coffee', exact: true }))
+  fireEvent.click(editor.getByRole('button', { name: 'Save preferences', exact: true }))
+  expect(screen.getByRole('dialog')).toBeTruthy()
+  await act(async () => { finish(); await pending })
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Preferences', exact: true })))
+  expect(oldOpener.isConnected).toBe(false)
+  expect(calls.filter(call => call.method === 'PUT')).toHaveLength(1)
+  expect(calls.filter(call => call.path.endsWith('/account'))).toHaveLength(2)
+  expect(calls.some(call => /\/(queue|result)$/.test(call.path))).toBe(false)
+})
 
 it('Profile saves all shared fields using canonical identity, preserving more than five labels and exact custom windows', async () => {
   mount(); await edit()
@@ -92,7 +119,7 @@ it('an unavailable shared-profile API disables identity writes and never invents
   mount(); await screen.findByRole('heading', { name: 'Profile unavailable', exact: true })
   expect(screen.queryByRole('button', { name: 'Save identity', exact: true })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Save shared preferences', exact: true })).toBeNull()
-  expect(screen.getByRole('button', { name: 'Retry profile', exact: true })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Retry account', exact: true })).toBeTruthy()
   expect(calls.some(call => call.method === 'PUT')).toBe(false)
 })
 
@@ -109,7 +136,7 @@ it('matching edits are read back on Profile without sharing identity edit contro
   fireEvent.click(editor.getByRole('button', { name: 'Coffee', exact: true }))
   fireEvent.click(editor.getByRole('button', { name: 'Save preferences', exact: true }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  fireEvent.click(screen.getAllByRole('link', { name: 'Profile', exact: true })[0])
+  fireEvent.click((await screen.findAllByRole('link', { name: 'Profile', exact: true }))[0])
   await edit()
   expect(screen.getByLabelText('City or campus area')).toHaveProperty('value', 'Campus')
   expect(screen.getByLabelText('Birthdate')).toHaveProperty('value', '2000-01-01')
@@ -150,9 +177,9 @@ it('a session change discards a pending prior actor read before hydrating the ne
   let finish!: () => void
   const pending = new Promise<void>(resolve => { finish = resolve })
   vi.mocked(fetch).mockImplementation(async (input, init) => {
-    if (String(input).endsWith('/profile') && (init?.headers as Record<string, string>)?.Authorization === 'Bearer shared-fixture') {
+    if (String(input).endsWith('/account') && (init?.headers as Record<string, string>)?.Authorization === 'Bearer shared-fixture') {
       await pending
-      return Response.json({ profile: original })
+      return Response.json(accountFixture(original))
     }
     return originalFetch(input, init)
   })
@@ -198,7 +225,7 @@ it('main Friends also discards a prior session profile read instead of selecting
 it('main Friends treats a failed shared read as unavailable, not a missing profile or prototype interests', async () => {
   profileUnavailable = true
   render(<MemoryRouter initialEntries={['/matchmaking']}><App /></MemoryRouter>)
-  await screen.findByText('Shared profile unavailable.')
+  await screen.findByRole('heading', { name: 'Profile unavailable', exact: true })
   expect(screen.queryByText('No matching profile saved yet.')).toBeNull()
   expect(screen.queryByText('0/30 selected')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Coffee', exact: true })).toBeNull()

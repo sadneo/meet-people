@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { browserProfile, mockMatchingSession } from './matchmaking-fixture'
+import { browserAccount, mockMatchingSession } from './matchmaking-fixture'
 
 for (const [width, height] of [[320, 568], [390, 844], [800, 900], [801, 900], [1440, 900], [2560, 1440], [390, 420]]) {
   test(`downtime compatibility and Dating selector ${width}x${height}`, async ({ page }) => {
@@ -11,8 +11,7 @@ for (const [width, height] of [[320, 568], [390, 844], [800, 900], [801, 900], [
       if (url.origin !== 'http://127.0.0.1:3194') { external.push(url.origin); return route.abort() }
       if (url.pathname.startsWith('/api/')) {
         if (request.method() !== 'GET' || /\/(queue|result|status)$/.test(url.pathname)) forbidden.push(url.pathname)
-        if (url.pathname.endsWith('/account-profile')) return route.fulfill({ json: { profile: { username: 'fixture', display_name: 'Fixture', bio: null, avatar_url: null } } })
-        if (url.pathname.endsWith('/profile')) return route.fulfill({ json: { profile: browserProfile } })
+        if (url.pathname.endsWith('/account')) return route.fulfill({ json: browserAccount() })
         return route.fulfill({ json: { notifications: [], unreadCount: 0 } })
       }
       return route.continue()

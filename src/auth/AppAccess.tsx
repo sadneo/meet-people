@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { useSession } from './useSession'
 import { centralSignInPath, safeReturnTo } from './returnTo'
-import { useSharedUserProfile } from '../features/account/useSharedUserProfile'
-import { ProfileIdentityForm } from '../features/account/ProfileIdentityForm'
-import { isProfileReady } from '../../shared/profile-readiness'
-import { MatchingSetup } from '../features/matchmaking/MatchingScreen'
+import { useUnifiedAccount } from './useUnifiedAccount'
+import { completedAccountChapters } from '../../shared/account'
+import { AccountContext } from './account-context'
+import { RegistrationOnboarding } from './RegistrationOnboarding'
 import { AccountCredentials } from './AccountCredentials'
 import { useLogout } from './useLogout'
 import './app-access.css'
@@ -25,15 +25,17 @@ export function SessionRequired() {
 }
 
 function CanonicalAccess({ session }: { session: NonNullable<ReturnType<typeof useSession>['session']> }) {
-  const data = useSharedUserProfile(session.access_token)
+  const data = useUnifiedAccount(session.access_token)
   const location = useLocation()
   const completing = location.pathname === '/onboarding'
   const destination = safeReturnTo(new URLSearchParams(location.search).get('returnTo')) ?? '/'
   const [started, setStarted] = useState(false)
-  const [editingIdentity, setEditingIdentity] = useState(false)
+  const route = `${location.pathname}${location.search}${location.hash}`
+  const [focus, setFocus] = useState<{ target: 'matching-preferences'; route: string } | null>(null)
+  if (focus && focus.route !== route) setFocus(null)
   if (!data.loading && data.available && !started) setStarted(true)
-  if (!data.loading && !data.error && isProfileReady(data.account, data.profile)) {
-    return completing ? <Navigate replace to={destination} /> : <Outlet />
+  if (!data.loading && data.available && !data.error && data.account && completedAccountChapters(data.account).length === 4) {
+    return completing ? <Navigate replace to={destination} /> : <AccountContext.Provider value={{ session, account: data.account, loaded: true, busy: data.busy, error: data.error, save: data.save, reload: options => { setFocus(options?.restoreFocus ? { target: options.restoreFocus, route } : null); data.reload() }, focusTarget: focus?.route === route ? focus.target : undefined, focusRestored: () => setFocus(null) }}><Outlet /></AccountContext.Provider>
   }
   if (!data.loading && data.available && !data.error && !completing) {
     const target = safeReturnTo(`${location.pathname}${location.search}${location.hash}`) ?? '/'
@@ -43,13 +45,11 @@ function CanonicalAccess({ session }: { session: NonNullable<ReturnType<typeof u
     <h1>{started && completing ? 'Complete onboarding' : data.loading ? 'Your account' : 'Profile unavailable'}</h1>
     {data.loading && <p role="status">Checking your profile…</p>}
     {started && completing && <>
-      <p>Your real Profile, interests and free time are required before entering Pebble.</p>
-      <ol aria-label="Onboarding progress"><li>{data.account ? 'Identity saved' : '1. Create your identity'}</li><li>2. Interests, birthdate, area and availability</li></ol>
-      {!data.account || editingIdentity ? <ProfileIdentityForm account={data.account} enabled={data.canSaveIdentity} busy={data.busy} save={data.saveIdentity} onSaved={() => setEditingIdentity(false)} submitLabel="Save identity and continue" /> : <section><h2>Identity confirmed</h2><p>{data.account.display_name}</p><button type="button" className="pt-button pt-secondary" disabled={data.busy || data.loading} onClick={() => setEditingIdentity(true)}>Edit identity</button></section>}
-      {data.account && data.profileKnown && <MatchingSetup token={session.access_token} initial={data.profile} busy={data.busy} error="" save={data.saveShared} presentation="profile" minimumRequired writesAvailable={data.canWrite} submitLabel="Finish onboarding" />}
+      <p>Your real Profile and preferences are saved one chapter at a time.</p>
+      {data.account && <RegistrationOnboarding account={data.account} token={session.access_token} busy={data.busy} enabled={data.available && !data.loading} save={data.save} />}
     </>}
     {data.error && <p role="alert">{data.error}</p>}
-    {data.error && <button type="button" className="pt-button pt-secondary" disabled={data.busy || data.loading} onClick={data.reload}>Retry profile</button>}
+    {data.error && <button type="button" className="pt-button pt-secondary" disabled={data.busy || data.loading} onClick={data.reload}>Retry account</button>}
     <AccessAccountControls key={destination} session={session} recovery={new URL(destination, 'https://pebble.invalid').searchParams.get('credentials') === 'recovery'} />
   </section></main>
 }

@@ -3,7 +3,8 @@ import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { Session } from '@supabase/supabase-js'
 import App from '../src/App'
-import { requiredPreferences } from './complete-profile-fixture'
+import { requiredPreferences, accountFixture } from './complete-profile-fixture'
+import { emptyAccount } from '../shared/account'
 
 const auth = vi.hoisted(() => ({
   session: null as Session | null,
@@ -27,14 +28,14 @@ function emit() { auth.session = session; for (const listener of auth.listeners)
 beforeEach(() => {
   auth.session = null; auth.listeners.clear(); auth.getUser.mockReset(); auth.password.mockReset(); auth.exchange.mockReset(); auth.signOut.mockReset()
   vi.stubGlobal('scrollTo', () => {})
-  vi.stubGlobal('fetch', vi.fn(async input => Response.json(String(input).endsWith('/account-profile') ? { profile: account } : String(input).endsWith('/profile') ? { profile: { ...account, ...requiredPreferences } } : { notifications: [], unreadCount: 0 })))
+  vi.stubGlobal('fetch', vi.fn(async input => Response.json(String(input).endsWith('/account') ? accountFixture({ ...account, ...requiredPreferences }) : String(input).endsWith('/account-profile') ? { profile: account } : String(input).endsWith('/profile') ? { profile: { ...account, ...requiredPreferences } } : { notifications: [], unreadCount: 0 })))
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); window.history.replaceState({}, '', '/') })
 
 it('password SIGNED_IN does not leave the public entry or read canonical identity until getUser verification finishes', async () => {
   let finish!: (value: unknown) => void
   const verification = new Promise(resolve => { finish = resolve })
-  auth.password.mockImplementation(async () => { emit(); return { error: null } })
+  auth.password.mockImplementation(async () => { emit(); return { data: { session }, error: null } })
   auth.getUser.mockReturnValue(verification)
   window.history.replaceState({}, '', '/login?returnTo=%2F')
   render(<MemoryRouter initialEntries={['/login?returnTo=%2F']}><App /><Path /></MemoryRouter>)
@@ -47,7 +48,7 @@ it('password SIGNED_IN does not leave the public entry or read canonical identit
   expect(fetch).not.toHaveBeenCalled()
   await act(async () => { finish({ data: { user: session.user }, error: null }); await verification })
   await screen.findByRole('heading', { name: 'Verified private home', exact: true })
-  expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).endsWith('/account-profile'))).toBe(true)
+  expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).endsWith('/account'))).toBe(true)
 })
 
 it('callback SIGNED_IN stays outside the gate until verified exchange completion', async () => {
@@ -85,15 +86,15 @@ it('an existing entry session at login without returnTo proceeds into the gated 
   expect(screen.getByLabelText('Auth URL').textContent).toBe('/')
   expect(auth.password).not.toHaveBeenCalled()
   expect(auth.exchange).not.toHaveBeenCalled()
-  expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).endsWith('/account-profile'))).toBe(true)
+  expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).endsWith('/account'))).toBe(true)
 })
 
 it('existing login entry without a canonical profile still requires real completion, not an app bypass', async () => {
   auth.session = session
-  vi.mocked(fetch).mockImplementation(async () => Response.json({ profile: null }))
+  vi.mocked(fetch).mockImplementation(async () => Response.json(emptyAccount))
   render(<MemoryRouter initialEntries={['/login']}><App /><Path /></MemoryRouter>)
   await screen.findByRole('heading', { name: 'Complete onboarding', exact: true })
   expect(screen.getByLabelText('Username')).toHaveProperty('value', '')
   expect(screen.queryByRole('heading', { name: 'Verified private home', exact: true })).toBeNull()
-  expect(vi.mocked(fetch).mock.calls.every(([input, init]) => /\/(account-profile|profile)$/.test(String(input)) && init?.method === 'GET')).toBe(true)
+  expect(vi.mocked(fetch).mock.calls.every(([input, init]) => String(input).endsWith('/account') && init?.method === 'GET')).toBe(true)
 })

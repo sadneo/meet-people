@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
-import { browserProfile, mockMatchingSession } from './matchmaking-fixture'
+import { browserAccount, mockMatchingSession } from './matchmaking-fixture'
 import { sharedProfileFixture } from './shared-profile-fixture'
+import { chooseDistanceAndGroup, saveInterestChapter, saveSocialChapter } from './onboarding-fixture'
+import { emptyAccount, type Account } from '../shared/account'
 
 const privatePaths = ['/', '/events?source=access#anchor', '/community', '/prototype/yzcommunity', '/messages/chat', '/profile', '/settings', '/matchmaking?view=dating', '/downtime-matchmaking', '/intro', '/onboarding?returnTo=%2Fevents', '/free-time/plan', '/unknown?source=access#anchor']
 for (const path of privatePaths) test(`signed-out app denial ${path} without private requests/context`, async ({ page }) => {
@@ -41,8 +43,7 @@ test('hydration and canonical read both hold private mounts; expiry removes acce
     if (url.origin !== 'http://127.0.0.1:3194') return route.abort()
     if (url.pathname.startsWith('/api/')) {
       requests.push({ path: url.pathname, method: route.request().method() })
-      if (url.pathname.endsWith('/account-profile')) { await pending; return route.fulfill({ json: { profile: { username: 'fixture', display_name: 'Fixture', bio: null, avatar_url: null } } }) }
-      if (url.pathname.endsWith('/profile')) { await pending; return route.fulfill({ json: { profile: browserProfile } }) }
+      if (url.pathname.endsWith('/account')) { await pending; return route.fulfill({ json: browserAccount() }) }
       return route.fulfill({ json: { notifications: [], unreadCount: 0 } })
     }
     return route.continue()
@@ -55,7 +56,7 @@ test('hydration and canonical read both hold private mounts; expiry removes acce
   await expect(page.getByText('Checking your profile…')).toBeVisible()
   await expect(page.locator('.pt-app')).toHaveCount(0)
   expect(requests.length).toBeGreaterThan(0)
-  expect(requests.every(request => /\/api\/matchmaking\/(account-profile|profile)$/.test(request.path) && request.method === 'GET')).toBe(true)
+  expect(requests.every(request => request.path === '/api/matchmaking/account' && request.method === 'GET')).toBe(true)
   finish()
   await expect(page.getByRole('heading', { name: 'Who’s around?', exact: true })).toBeVisible()
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('fixture:session', { detail: null })))
@@ -63,7 +64,7 @@ test('hydration and canonical read both hold private mounts; expiry removes acce
   await expect(page.locator('.pt-app')).toHaveCount(0)
 })
 
-for (const width of [320, 1440]) test(`required canonical completion ${width}, safe return and no optional-profile/queue writes`, async ({ page }) => {
+for (const width of [320, 1440]) test(`required four-chapter completion ${width}, safe return and no compatibility-profile/queue writes`, async ({ page }) => {
   const fixture = await sharedProfileFixture(page, { identity: 'missing', missingProfile: true })
   await page.setViewportSize({ width, height: width === 320 ? 568 : 900 })
   await page.goto('/?source=gate#anchor')
@@ -88,17 +89,19 @@ for (const width of [320, 1440]) test(`required canonical completion ${width}, s
   await page.screenshot({ path: `worktree/app-access/completion-${width}.png`, fullPage: true })
   await page.getByRole('button', { name: 'Save identity and continue', exact: true }).click()
   await expect(page.locator('.pt-app')).toHaveCount(0)
+  await saveInterestChapter(page); await saveSocialChapter(page)
   const finish = page.getByRole('button', { name: 'Finish onboarding', exact: true })
   await expect(finish).toBeEnabled()
-  for (const label of ['Music', 'Coffee', 'Art']) await page.getByRole('button', { name: label, exact: true }).click()
+  await chooseDistanceAndGroup(page)
   await page.getByLabel('Birthdate', { exact: true }).fill('2001-02-03')
   await page.getByLabel('City or campus area').fill('Explicit onboarding campus')
   await page.getByRole('button', { name: 'Sunday late, not available', exact: true }).click()
   await finish.click()
   await expect(page).toHaveURL('/?source=gate#anchor')
   await expect(page.getByRole('heading', { name: 'Who’s around?', exact: true })).toBeVisible()
-  expect(fixture.calls.filter(call => call.method !== 'GET').map(call => call.path)).toEqual(['/api/matchmaking/account-profile', '/api/matchmaking/profile'])
-  expect(fixture.calls.filter(call => call.method === 'PUT')[0].body).toEqual({ username: 'explicit-gate-fixture', display_name: 'Explicit gate fixture', bio: null, avatar_url: null })
+  expect(fixture.calls.filter(call => call.method !== 'GET').map(call => call.path)).toEqual(Array(4).fill('/api/matchmaking/account'))
+  expect((fixture.calls.filter(call => call.method === 'PUT')[0].body as Account).profile).toEqual({ username: 'explicit-gate-fixture', display_name: 'Explicit gate fixture', bio: null, avatar_url: null, birthdate: null, location_city: null, interests: [], availability: [] })
+  expect(fixture.unified().completed).toEqual([0, 1, 2, 3])
   expect(fixture.profile()).toMatchObject({ interests: ['Music', 'Coffee', 'Art'], birthdate: '2001-02-03', location_city: 'Explicit onboarding campus', availability: [{ dow: 0, start_time: '21:00:00', end_time: '24:00:00' }] })
   expect(fixture.calls.some(call => /\/(queue|result)$/.test(call.path))).toBe(false)
   expect(fixture.external).toEqual([])
@@ -110,9 +113,9 @@ test('canonical service failure blocks app, keeps session classification, retry 
   await expect(page.getByRole('heading', { name: 'Profile unavailable', exact: true })).toBeVisible()
   await expect(page).toHaveURL('/settings')
   await expect(page.locator('.pt-app')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Retry profile', exact: true }).click()
+  await page.getByRole('button', { name: 'Retry account', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Profile unavailable', exact: true })).toBeVisible()
-  expect(fixture.calls.every(call => call.method === 'GET' && /\/(account-profile|profile)$/.test(call.path))).toBe(true)
+  expect(fixture.calls.every(call => call.method === 'GET' && call.path === '/api/matchmaking/account')).toBe(true)
 })
 
 test('direct signed-in completion refresh retains its validated destination without creating any record', async ({ page }) => {
@@ -126,7 +129,7 @@ test('direct signed-in completion refresh retains its validated destination with
   await expect(page.getByLabel('Display name', { exact: true })).toHaveValue('')
   await expect(page.locator('.pt-app')).toHaveCount(0)
   expect(fixture.calls.length).toBeGreaterThan(0)
-  expect(fixture.calls.every(call => call.method === 'GET' && /\/(account-profile|profile)$/.test(call.path))).toBe(true)
+  expect(fixture.calls.every(call => call.method === 'GET' && call.path === '/api/matchmaking/account')).toBe(true)
   expect(fixture.account()).toBeNull()
   expect(fixture.profile()).toBeNull()
 })
@@ -136,34 +139,37 @@ for (const outcome of ['save-failure', 'readback-null', 'readback-failure'] as c
     const fixture = await sharedProfileFixture(page, { identity: 'missing', missingProfile: true })
     const account = { username: 'failure-fixture', display_name: 'Failure fixture', bio: null, avatar_url: null }
     let attempted = false, reconciled = false
+    let stored: Account = structuredClone(emptyAccount)
     const calls: { method: string; body: unknown }[] = []
-    await page.route('**/api/matchmaking/account-profile', route => {
+    await page.route('**/api/matchmaking/account', route => {
       const request = route.request(), method = request.method()
       calls.push({ method, body: method === 'PUT' ? request.postDataJSON() : null })
       if (method === 'PUT') {
         attempted = true
-        return outcome === 'save-failure' ? route.fulfill({ status: 503, json: { code: 'provider', error: 'Fixture write outcome uncertain.' } }) : route.fulfill({ json: { profile: account } })
+        stored = request.postDataJSON()
+        return outcome === 'save-failure' ? route.fulfill({ status: 503, json: { code: 'provider', error: 'Fixture write outcome uncertain.' } }) : route.fulfill({ json: stored })
       }
-      if (reconciled) return route.fulfill({ json: { profile: account } })
+      if (reconciled) return route.fulfill({ json: stored })
       if (attempted && outcome === 'readback-failure') return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Fixture readback unavailable.' } })
-      return route.fulfill({ json: { profile: null } })
+      return route.fulfill({ json: emptyAccount })
     })
     await page.goto('/')
     await expect(page.getByRole('heading', { name: 'Complete onboarding', exact: true })).toBeVisible()
     await page.getByLabel('Username', { exact: true }).fill(account.username)
     await page.getByLabel('Display name', { exact: true }).fill(account.display_name)
     await page.getByRole('button', { name: 'Save identity and continue', exact: true }).click()
-    await expect(page.getByRole('alert')).toContainText(outcome === 'save-failure' ? 'Fixture write outcome uncertain.' : 'authoritative readback is unavailable')
+    await expect(page.getByRole('alert')).toContainText('Account save could not be confirmed')
     await expect(page.locator('.pt-app')).toHaveCount(0)
     await expect(page.getByLabel('Username', { exact: true })).toHaveValue(account.username)
     await expect(page.getByLabel('Display name', { exact: true })).toHaveValue(account.display_name)
     await expect(page.getByRole('button', { name: 'Save identity and continue', exact: true })).toBeDisabled()
-    expect(calls.filter(call => call.method === 'PUT')).toEqual([{ method: 'PUT', body: account }])
+    expect(calls.filter(call => call.method === 'PUT')).toHaveLength(1)
+    expect((calls.find(call => call.method === 'PUT')!.body as Account).profile).toMatchObject(account)
     reconciled = true
-    await page.getByRole('button', { name: 'Retry profile', exact: true }).click()
-    await expect(page.getByRole('heading', { name: 'Identity confirmed', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Retry account', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Interests', level: 2, exact: true })).toBeVisible()
     await expect(page.locator('.pt-app')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Finish onboarding', exact: true })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Save interests and continue', exact: true })).toBeEnabled()
     expect(calls.filter(call => call.method === 'PUT')).toHaveLength(1)
     expect(fixture.calls.some(call => call.method !== 'GET' || /\/(queue|result)$/.test(call.path))).toBe(false)
     expect(fixture.external).toEqual([])

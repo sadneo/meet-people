@@ -6,6 +6,7 @@ import Community from './routes/Community'
 import PebbleApp, { ImmersiveLayout, IntroScreen } from './routes/PebbleApp'
 import { AppShell } from './features/prototype/AppShell'
 import { Auth } from './features/prototype/Onboarding'
+import NativeBridge from './platform/NativeBridge'
 import { EventDetail, EventsScreen } from './features/events/Browse'
 import { eventDetailRoute, eventsPath } from './features/events/routes'
 import { ActivityPaths, ConfirmedPlan, FreeTime, Matches, Planning, ReviewPlan } from './features/prototype/Planning'
@@ -32,12 +33,14 @@ function MessagesWorkspace() {
 
 function App() {
   return (
-    <Routes>
+    <><NativeBridge /><Routes>
       <Route element={<PublicAuthLayout />}>
         <Route path="login" element={<Auth />} />
         <Route path="register" element={<Auth register />} />
         <Route path="auth/callback" element={<AuthCallback />} />
         <Route path="auth/forgot-password" element={<ForgotPassword />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password" element={<AuthCallback />} />
       </Route>
       <Route element={<SessionRequired />}>
       <Route path="complete-profile" element={null} />
@@ -71,7 +74,7 @@ function App() {
       <Route path="/prototype/yzcommunity" element={<Community />} />
       <Route path="*" element={<NotFound />} />
       </Route>
-    </Routes>
+    </Routes></>
   )
 }
 

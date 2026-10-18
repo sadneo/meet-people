@@ -18,6 +18,7 @@ for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [1280, 720],
     await page.screenshot({ path: `/tmp/pebble-assets-${width}-home.png`, fullPage: true })
     await page.clock.resume()
     await page.getByRole('link', { name: 'Community', exact: true }).click()
+    await expect(page.locator('.pt-community-page .pt-calm-balance .pt-currency-art')).toBeVisible()
     expect(await page.locator('.pt-calm-balance .pt-currency-art').evaluate(el => ({ html: el.innerHTML, width: getComputedStyle(el).width, height: getComputedStyle(el).height }))).toEqual(homeCurrency)
     await expect(page.locator('.pt-build-control image')).toHaveAttribute('href', /build-icon/)
     await page.screenshot({ path: `/tmp/pebble-assets-${width}-village.png`, fullPage: true })

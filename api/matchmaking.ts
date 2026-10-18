@@ -1,6 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import { AccountSchema, SaveAccountSchema, completedAccountChapters, type Account } from '../shared/account.js'
 import { isPublicSupabaseKey } from './env.js'
 import { JoinQueueSchema, MatchingProfileSchema, RawMatchSchema, RawQueueStatusSchema, type MatchingProfile } from '../shared/matchmaking.js'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, ListingIdSchema, ListingInterestRequestSchema, ListingMatchmakingStatusSchema, RawListingEventMatchesSchema } from '../shared/matchmaking.js'
@@ -18,6 +19,8 @@ export interface UserContextTransport {
     save(profile: MatchingProfile): PromiseLike<RpcResponse>
     accountProfile?(): PromiseLike<RpcResponse>
     saveAccountProfile?(profile: AccountProfile): PromiseLike<RpcResponse>
+    account?(): PromiseLike<RpcResponse>
+    saveAccount?(account: Account): PromiseLike<RpcResponse>
     listingStatus(listingId: string): PromiseLike<RpcResponse>
     listingInterest(listingId: string): PromiseLike<RpcResponse>
     listingWithdraw(listingId: string): PromiseLike<RpcResponse>
@@ -44,8 +47,8 @@ export function createUserContextTransport(config: { url: string; publicKey: str
     actor(token) {
       const client = createClient(config.url, config.publicKey, { ...options, global: { fetch: config.fetch, headers: { Authorization: `Bearer ${token}` } } })
       return {
-        accountProfile: () => client.rpc('get_account_profile'),
-        saveAccountProfile: profile => client.rpc('save_account_profile', { profile_in: profile }),
+        account: () => client.rpc('get_account'),
+        saveAccount: account => client.rpc('save_account', { account_in: account }),
         join: qtype => client.rpc('join_queue', { qtype }), leave: () => client.rpc('leave_queue'), status: () => client.rpc('get_queue_status'), result: () => client.rpc('get_queue_match'), profile: () => client.rpc('get_matchmaking_profile'), save: profile => client.rpc('save_matchmaking_profile', { profile_in: profile }),
         listingStatus: listingId => client.rpc('get_listing_matchmaking_status', { listing_id_in: listingId }),
         listingInterest: listingId => client.rpc('express_listing_matchmaking_interest', { listing_id_in: listingId }),
@@ -68,6 +71,7 @@ function unwrap(result: RpcResponse): unknown {
   if (result.error) {
     if (['PGRST301', 'PGRST302', 'PGRST303', '28000'].includes(result.error.code ?? '')) throw new MatchingFailure(401, 'auth', 'Your session has expired. Sign in again.')
     if (['PGRST202', '42883'].includes(result.error.code ?? '')) throw new MatchingFailure(503, 'unavailable', 'Matching RPC is not available yet.')
+    if (['22023', '23505', '23514'].includes(result.error.code ?? '')) throw new MatchingFailure(400, 'invalid', 'Check your profile fields and onboarding steps. No changes were saved.')
     if (result.error.code === 'PT404') throw new MatchingFailure(404, 'unavailable', 'This event is no longer available.')
     if (result.error.code === 'PT409') throw new MatchingFailure(409, 'unavailable', 'Event matching prerequisites are not met. Check your saved profile, event availability and consent for this queue or compatibility action.')
     throw new MatchingFailure(503, 'provider', 'Matching service failed. Please try again.')
@@ -95,6 +99,18 @@ export function createMatchmakingRouter(transport: UserContextTransport | null) 
     } catch (error) { next(error) }
   })
   const actor = (response: Response): ReturnType<UserContextTransport['actor']> => response.locals.actor
+  const readAccount = async (response: Response) => {
+    const read = actor(response).account
+    if (!read) throw new MatchingFailure(503, 'unavailable', 'Unified account RPC is not available yet.')
+    return validate(AccountSchema, unwrap(await read()))
+  }
+  const writeAccount = async (response: Response, next: Account, previous: Account) => {
+    const save = actor(response).saveAccount
+    if (!save) throw new MatchingFailure(503, 'unavailable', 'Unified account RPC is not available yet.')
+    const before = completedAccountChapters(previous).length
+    if (completedAccountChapters(next).length < before || next.completed.length > before + 1) throw new MatchingFailure(400, 'invalid', 'Preserve required fields and complete chapters sequentially.')
+    return validate(AccountSchema, unwrap(await save(SaveAccountSchema.parse(next))))
+  }
   const status = async (response: Response) => {
     const [row] = validate(RawQueueStatusSchema, unwrap(await actor(response).status()))
     if (row.my_queue === 'dating') throw new MatchingFailure(409, 'unavailable', 'You are in a queue outside active or downtime matching.')
@@ -128,22 +144,34 @@ export function createMatchmakingRouter(transport: UserContextTransport | null) 
     response.json({ profile: data === null ? null : validate(MatchingProfileSchema, data) })
   })
   router.get('/account-profile', async (_request, response) => {
-    const read = actor(response).accountProfile
-    if (!read) throw new MatchingFailure(503, 'unavailable', 'Account profile RPC is not available yet.')
-    const data = unwrap(await read())
-    response.json({ profile: data === null ? null : validate(AccountProfileSchema, data) })
+    const account = await readAccount(response)
+    const profile = account.profile
+    response.json({ profile: profile ? AccountProfileSchema.parse({ username: profile.username, display_name: profile.display_name, bio: profile.bio, avatar_url: profile.avatar_url }) : null })
   })
   router.put('/account-profile', async (request, response) => {
     const parsed = AccountProfileSchema.safeParse(request.body)
     if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid account profile. No changes were saved.')
-    const save = actor(response).saveAccountProfile
-    if (!save) throw new MatchingFailure(503, 'unavailable', 'Account profile RPC is not available yet.')
-    response.json({ profile: validate(AccountProfileSchema, unwrap(await save(parsed.data))) })
+    const previous = await readAccount(response)
+    if (previous.profile && previous.profile.username !== parsed.data.username) throw new MatchingFailure(409, 'unavailable', 'Reload your existing identity before editing.')
+    const saved = await writeAccount(response, { ...previous, profile: { ...(previous.profile ?? { birthdate: null, location_city: null, interests: [], availability: [] }), ...parsed.data }, completed: previous.completed.length ? previous.completed : [0] }, previous)
+    response.json({ profile: AccountProfileSchema.parse({ username: saved.profile!.username, display_name: saved.profile!.display_name, bio: saved.profile!.bio, avatar_url: saved.profile!.avatar_url }) })
+  })
+  router.get('/account', async (_request, response) => {
+    response.json(await readAccount(response))
+  })
+  router.put('/account', async (request, response) => {
+    const parsed = SaveAccountSchema.safeParse(request.body)
+    if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid account data. No changes were saved.')
+    response.json(await writeAccount(response, parsed.data, await readAccount(response)))
   })
   router.put('/profile', async (request, response) => {
     const parsed = MatchingProfileSchema.safeParse(request.body)
     if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid matching profile. No changes were saved.')
-    response.json({ profile: validate(MatchingProfileSchema, unwrap(await actor(response).save(parsed.data))) })
+    const previous = await readAccount(response)
+    if (!previous.profile) throw new MatchingFailure(409, 'unavailable', 'Create your identity through onboarding first.')
+    if (['username', 'display_name', 'bio', 'avatar_url'].some(key => parsed.data[key as keyof MatchingProfile] !== previous.profile![key as keyof MatchingProfile])) throw new MatchingFailure(400, 'invalid', 'Edit identity on Profile, not matching preferences.')
+    const saved = await writeAccount(response, { ...previous, profile: parsed.data }, previous)
+    response.json({ profile: saved.profile })
   })
   const listingId = (request: Request) => {
     const parsed = ListingIdSchema.safeParse(request.params.listingId)

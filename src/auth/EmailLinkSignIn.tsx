@@ -7,15 +7,15 @@ import { authCallbackUrl } from './credential-policy'
 import { getLocalDevelopmentEnvironment, isLocalDevelopment } from './localDevelopment'
 import { useAuthRequest } from './useAuthRequest'
 
-export function EmailLinkSignIn() {
+export function EmailLinkSignIn({ register = false }: { register?: boolean }) {
   const location = useLocation()
-  return <SignInForm key={location.key} />
+  return <SignInForm key={location.key} register={register} />
 }
 
-function SignInForm() {
+function SignInForm({ register }: { register: boolean }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [passwordMode, setPasswordMode] = useState(false)
+  const [passwordMode, setPasswordMode] = useState(register)
   const navigate = useNavigate()
   const [pending, setPending] = useState<'email' | 'development' | null>(null)
   const request = useAuthRequest()
@@ -32,12 +32,14 @@ function SignInForm() {
       if (passwordMode) {
         const secret = password
         setPassword('')
-        const result = await supabase!.auth.signInWithPassword({ email: email.trim(), password: secret })
+        if (register && secret.length < 8) throw new Error('Use at least eight characters.')
+        const result = register ? await supabase!.auth.signUp({ email: email.trim(), password: secret, options: { emailRedirectTo: authCallbackUrl(returnTo ?? '/') } }) : await supabase!.auth.signInWithPassword({ email: email.trim(), password: secret })
         if (!request.current(id)) return
         if (result.error) throw result.error
+        if (register && !result.data.session) { setMessage('Check your email to confirm your account, then sign in.'); return }
         const verified = await supabase!.auth.getUser()
         if (!request.current(id)) return
-        if (verified.error || !verified.data.user) throw new Error('Readback unavailable')
+        if (verified.error || !verified.data.user || (result.data.session && verified.data.user.id !== result.data.session.user.id)) throw new Error('Readback unavailable')
         navigate(returnTo ?? '/settings', { replace: true })
       } else {
         const { error } = await supabase!.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: authCallbackUrl(returnTo ?? '/settings') } })
@@ -47,7 +49,7 @@ function SignInForm() {
       }
     } catch { if (request.current(id)) { setFailed(true); setMessage(passwordMode ? 'Could not sign in. Check your credentials or request a recovery link.' : 'Could not send a sign-in link. Please try again.') } }
     finally { if (request.finish(id)) setPending(null) }
-  }}><label>Email<input name="email" autoComplete={passwordMode ? 'username' : 'email'} type="email" required maxLength={254} value={email} onChange={event => setEmail(event.target.value)} /></label>{passwordMode && <label>Password<input name="password" type="password" autoComplete="current-password" required maxLength={128} value={password} onChange={event => setPassword(event.target.value)} /></label>}<Button secondary disabled={pending !== null} type="submit">{pending === 'email' ? passwordMode ? 'Signing in…' : 'Sending…' : passwordMode ? 'Sign in with password' : 'Send sign-in link'}</Button><Button secondary disabled={pending !== null} onClick={() => { setPassword(''); setPasswordMode(!passwordMode); setMessage('') }}>{passwordMode ? 'Use email link' : 'Use password'}</Button><Link to="/auth/forgot-password">Forgot password?</Link></form>}
+  }}><label>Email<input name="email" autoComplete={passwordMode ? 'username' : 'email'} type="email" required maxLength={254} value={email} onChange={event => setEmail(event.target.value)} /></label>{passwordMode && <label>Password<input name="password" type="password" autoComplete={register ? 'new-password' : 'current-password'} required minLength={register ? 8 : undefined} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} /></label>}<Button secondary disabled={pending !== null} type="submit">{pending === 'email' ? passwordMode ? register ? 'Creating account…' : 'Signing in…' : 'Sending…' : passwordMode ? register ? 'Create account' : 'Sign in with password' : 'Send sign-in link'}</Button><Button secondary disabled={pending !== null} onClick={() => { setPassword(''); setPasswordMode(!passwordMode); setMessage('') }}>{passwordMode ? 'Use email link' : 'Use password'}</Button><Link to="/auth/forgot-password">Forgot password?</Link></form>}
     {import.meta.env.DEV && isLocalDevelopment(getLocalDevelopmentEnvironment()) && <div>
       <p>Use the operator-provisioned local development account. No account or example data is created here.</p>
       <Button secondary disabled={!supabase || pending !== null} onClick={async () => {

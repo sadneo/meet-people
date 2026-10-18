@@ -6,9 +6,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import type { Plugin } from 'vite'
-import { AccountProfileSchema } from '../shared/account-profile.js'
-import { MatchingProfileSchema } from '../shared/matchmaking.js'
-import { isProfileReady } from '../shared/profile-readiness.js'
+import { AccountSchema, completedAccountChapters } from '../shared/account.js'
 
 const loopback = (value: string | undefined) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '')
 const localUrl = (value: string) => {
@@ -46,7 +44,7 @@ export async function authenticateDevelopmentAccount(input: unknown, network: ty
   let requests = 0
   const boundedFetch: typeof fetch = async (input, init) => {
     const url = new URL(String(input))
-    if (++requests > 4 || url.origin !== base || !['/auth/v1/token', '/auth/v1/user', '/rest/v1/rpc/get_account_profile', '/rest/v1/rpc/get_matchmaking_profile'].includes(url.pathname) || init?.method !== (url.pathname === '/auth/v1/user' ? 'GET' : 'POST')) throw new Error('Unexpected local request')
+    if (++requests > 3 || url.origin !== base || !['/auth/v1/token', '/auth/v1/user', '/rest/v1/rpc/get_account'].includes(url.pathname) || init?.method !== (url.pathname === '/auth/v1/user' ? 'GET' : 'POST')) throw new Error('Unexpected local request')
     const response = await network(url.href, { ...init, redirect: 'error', signal: AbortSignal.timeout(5000) })
     const reader = response.body?.getReader()
     const chunks: Uint8Array[] = []
@@ -71,11 +69,9 @@ export async function authenticateDevelopmentAccount(input: unknown, network: ty
   const user = verified.data.user
   if (verified.error || !user || user.id !== credentials.accountId || user.email !== credentials.email || user.is_anonymous !== false) throw new Error(unavailable)
   const actor = createClient(credentials.url, credentials.publicKey, { ...options, global: { fetch: boundedFetch, headers: { Authorization: `Bearer ${session.access_token}` } } })
-  const account = await actor.rpc('get_account_profile')
-  const profile = await actor.rpc('get_matchmaking_profile')
-  const identity = AccountProfileSchema.nullable().safeParse(account.data)
-  const preferences = MatchingProfileSchema.nullable().safeParse(profile.data)
-  if (account.error || profile.error || !identity.success || !preferences.success || !isProfileReady(identity.data, preferences.data)) throw new Error(unavailable)
+  const result = await actor.rpc('get_account')
+  const account = AccountSchema.safeParse(result.data)
+  if (result.error || !account.success || completedAccountChapters(account.data).length !== 4) throw new Error(unavailable)
   // No password, configuration, provider detail, admin capability or profile defaults.
   return { access_token: session.access_token, refresh_token: session.refresh_token, expires_in: session.expires_in, token_type: session.token_type, user: { id: user.id } }
 }

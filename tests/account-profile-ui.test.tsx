@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { MemoryRouter, useLocation, useNavigate, useNavigationType } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from '../src/App'
-import { requiredPreferences } from './complete-profile-fixture'
+import { requiredPreferences, accountFixture } from './complete-profile-fixture'
 
 vi.mock('../src/supabase', () => ({ supabase: null }))
 const auth = vi.hoisted(() => ({ session: { access_token: 'test-jwt', user: { id: 'a0000000-0000-4000-8000-000000000001' } } as { access_token: string; user: { id: string } } | null }))
@@ -24,6 +24,7 @@ beforeEach(() => {
     const path = String(input)
     if (init?.method === 'PUT' || init?.method === 'POST') writes.push({ path, body: JSON.parse(String(init.body)) })
     else reads.push(path)
+    if (path.endsWith('/account')) return available ? Response.json(accountFixture(missingAccount ? null : missingLegacy ? { ...account, interests: [], availability: [], birthdate: null, location_city: null } : { ...legacy, ...account })) : Response.json({ code: 'unavailable', error: 'Account unavailable.' }, { status: 503 })
     if (path.endsWith('/account-profile')) {
       if (accountRead) return (await accountRead).clone()
       if (!available) return Response.json({ code: 'unavailable', error: 'Account profile unavailable.' }, { status: 503 })
@@ -110,14 +111,16 @@ for (const canonical of ['available', 'missing', 'unavailable']) {
 it('uses authoritative canonical identity and requires real preferences onboarding when no matching profile exists', async () => {
   missingLegacy = true; mount('/matchmaking')
   await screen.findByRole('heading', { name: 'Complete onboarding', exact: true })
-  await screen.findByText(/Using your saved account identity/)
+  await screen.findByRole('heading', { name: 'Interests', level: 2, exact: true })
   expect(screen.getByText(account.display_name, { exact: true })).toBeTruthy()
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Preferences', exact: true })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Cancel search', exact: true })).toBeNull()
   expect(writes).toEqual([])
   expect(screen.queryByRole('button', { name: 'Find Friends', exact: true })).toBeNull()
-  expect(screen.getByLabelText('City or campus area')).toHaveProperty('value', '')
+  expect(screen.queryByLabelText('City or campus area')).toBeNull()
+  expect(screen.queryByLabelText('Username')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Save interests and continue', exact: true })).toBeTruthy()
   expect(reads.some(path => /\/(queue|result)$/.test(path))).toBe(false)
 })
 
@@ -154,6 +157,6 @@ it('an unavailable canonical identity blocks shared and identity writes on Profi
   available = false; mount('/profile')
   await screen.findByRole('heading', { name: 'Profile unavailable', exact: true })
   expect(screen.queryByRole('form')).toBeNull()
-  expect(reads.every(path => /\/(account-profile|profile)$/.test(path))).toBe(true)
+  expect(reads.every(path => path.endsWith('/account'))).toBe(true)
   expect(writes).toEqual([])
 })

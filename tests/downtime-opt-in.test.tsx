@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from '../src/App'
-import { requiredPreferences } from './complete-profile-fixture'
+import { requiredPreferences, accountFixture } from './complete-profile-fixture'
 
 const auth = vi.hoisted(() => ({ ready: true, session: { access_token: 'fixture-token', user: { id: 'fixture-actor' } } as { access_token: string; user: { id: string } } | null }))
 vi.mock('../src/auth/useSession', () => ({ useSession: () => auth }))
@@ -23,6 +23,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input), method = init?.method ?? 'GET', body = init?.body ? JSON.parse(String(init.body)) : null
     calls.push({ path, method, body })
+    if (path.endsWith('/account')) return Response.json(accountFixture(missingProfile || missingIdentity ? null : profile))
     if (path.endsWith('/notifications')) return Response.json({ notifications: [], unreadCount: 0 })
     if (path.endsWith('/account-profile')) return Response.json({ profile: missingIdentity ? null : { username: profile.username, display_name: profile.display_name, bio: profile.bio, avatar_url: profile.avatar_url } })
     if (path.endsWith('/profile')) return Response.json({ profile: missingProfile ? null : profile })

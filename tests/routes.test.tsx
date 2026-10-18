@@ -2,13 +2,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../src/App'
-import { requiredPreferences } from './complete-profile-fixture'
+import { requiredPreferences, accountFixture } from './complete-profile-fixture'
 vi.mock('../src/supabase', () => ({ supabase: null }))
 vi.mock('../src/auth/useSession', () => ({ useSession: () => ({ ready: true, session: { access_token: 'route-fixture', user: { id: 'route-fixture' } } }) }))
 beforeEach(() => {
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
   vi.stubGlobal('scrollTo', () => {})
-  vi.stubGlobal('fetch', vi.fn(async input => Response.json(String(input).endsWith('/account-profile') ? { profile: { username: 'route-fixture', display_name: 'Route fixture', bio: null, avatar_url: null } } : String(input).endsWith('/notifications') ? { notifications: [], unreadCount: 0 } : String(input).endsWith('/profile') ? { profile: { username: 'route-fixture', display_name: 'Route fixture', bio: null, avatar_url: null, ...requiredPreferences } } : { mode: null })))
+  vi.stubGlobal('fetch', vi.fn(async input => Response.json(String(input).endsWith('/account') ? accountFixture({ username: 'route-fixture', display_name: 'Route fixture', bio: null, avatar_url: null, ...requiredPreferences }) : String(input).endsWith('/account-profile') ? { profile: { username: 'route-fixture', display_name: 'Route fixture', bio: null, avatar_url: null } } : String(input).endsWith('/notifications') ? { notifications: [], unreadCount: 0 } : String(input).endsWith('/profile') ? { profile: { username: 'route-fixture', display_name: 'Route fixture', bio: null, avatar_url: null, ...requiredPreferences } } : { mode: null })))
 })
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })

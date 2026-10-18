@@ -148,15 +148,20 @@ ordering (interest text; availability dow/start/end) in returned snapshots.
 The save must be **one transaction**, serialized per `auth.uid()` (e.g.
 transaction-scoped advisory lock), including creation/upsert of profiles and
 interest/availability reconciliation. Username uniqueness conflicts and every
-constraint/embedding/provider failure must abort all changes. Only update the
+constraint/profile-write failure must abort all changes. Optional interest
+embedding failure now preserves the label with a null embedding; see
+`20261013121000_optional_interest_enrichment.sql` and `docs/accounts.md`.
+Only update the
 listed profile columns plus updated_at; preserve coordinates, active flag,
 last_seen_at, created_at and other unowned fields. Reconcile unchanged interest
 rows without delete/reinsert or updates to text, preserving embeddings and
 avoiding unnecessary embedding triggers; remove absent actor-owned interests
 and insert new labels using the existing trigger. Reconcile availability only
 for the actor. Return the persisted canonical snapshot in the same transaction.
-Never catch a failure and return synthetic success. There is no Express
-multi-table write fallback. These functions are now authored, but not installed in the running database. Missing live RPCs still return503.
+Never return synthetic profile-save success. There is no Express multi-table
+write fallback. Apply the checked-in migrations to activate these functions;
+missing live RPCs return 503. The app-wide account flow extends these RPCs
+with private settings and onboarding progress; see `docs/accounts.md`.
 
 ### Timezone and midnight
 
@@ -226,7 +231,9 @@ Winso's unqualified legacy trigger requires public helper lookup: save temporari
 sets pg_catalog, public at interest insertion, fails closed if anon/authenticated
 have public CREATE privilege, then restores its fixed empty search_path. All tables
 are qualified; this does not change Winso's ranking, trigger or broader RLS.
-New interest saves still require the real embedding service when activated.
+The historical checks above predate the account-enrichment migration.
+New interest saves no longer require provider availability; `pnpm test:auth`
+verifies account persistence with unavailable optional enrichment.
 
 SQL char_length counts Unicode codepoints, matching the installed Zod 4.6.5 implementation (verified by execution and package source). The shared restricted HTTPS avatar policy
 accepts an ASCII hostname with a letter-leading final label, no credentials/numeric IP hosts, an

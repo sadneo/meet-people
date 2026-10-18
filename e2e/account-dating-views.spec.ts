@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { browserProfile, mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
+import { browserAccount, browserProfile, mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
 
 const path = '/downtime-matchmaking'
   for (const width of [320, 390, 800, 801, 1440]) {
@@ -10,8 +10,7 @@ const path = '/downtime-matchmaking'
       await page.route('**/api/matchmaking/**', route => {
         const request = route.request(), endpoint = new URL(request.url()).pathname
         requests.push({ path: endpoint, method: request.method() })
-        if (endpoint.endsWith('/account-profile') && request.method() === 'GET') return route.fulfill({ json: { profile: { username: 'fixture', display_name: 'Fixture', bio: null, avatar_url: null } } })
-        if (endpoint.endsWith('/profile') && request.method() === 'GET') return route.fulfill({ json: { profile: browserProfile } })
+        if (endpoint.endsWith('/account') && request.method() === 'GET') return route.fulfill({ json: browserAccount() })
         return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Should not be called by Dating.' } })
       })
       await page.goto(`${path}?source=home&view=dating`)
@@ -30,10 +29,10 @@ const path = '/downtime-matchmaking'
       expect(mascotBox.height).toBeGreaterThan(150)
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
       expect(requests.length).toBeGreaterThan(0)
-      expect(requests.every(request => request.method === 'GET' && /^\/api\/matchmaking\/(account-profile|profile)$/.test(request.path))).toBe(true)
+      expect(requests.every(request => request.method === 'GET' && request.path === '/api/matchmaking/account')).toBe(true)
       await page.reload()
       await expect(page.getByRole('link', { name: 'Dating', exact: true })).toHaveAttribute('aria-current', 'page')
-      expect(requests.every(request => request.method === 'GET' && /^\/api\/matchmaking\/(account-profile|profile)$/.test(request.path))).toBe(true)
+      expect(requests.every(request => request.method === 'GET' && request.path === '/api/matchmaking/account')).toBe(true)
       await page.screenshot({ path: `worktree/downtime-layout/downtime-dating-mascot-${width}.png`, fullPage: true })
       await mockMatchingApi(page)
       const friends = page.getByRole('link', { name: 'Friends', exact: true })
@@ -89,6 +88,7 @@ test('downtime Dating preserves an enrolled Friends queue across switching and r
     const request = route.request(), endpoint = new URL(request.url()).pathname
     if (request.method() === 'GET') reads.push(endpoint)
     else writes.push(endpoint)
+    if (endpoint.endsWith('/account')) return route.fulfill({ json: browserAccount() })
     if (endpoint.endsWith('/profile')) return route.fulfill({ json: { profile: browserProfile } })
     if (endpoint.endsWith('/account-profile')) return route.fulfill({ json: { profile: { username: browserProfile.username, display_name: browserProfile.display_name, bio: browserProfile.bio, avatar_url: browserProfile.avatar_url } } })
     if (endpoint.endsWith('/notifications')) return route.fulfill({ json: { notifications: [], unreadCount: 0 } })
@@ -105,7 +105,7 @@ test('downtime Dating preserves an enrolled Friends queue across switching and r
   const previousReads = reads.length
   await page.reload()
   await expect(page.locator('.dating-mascot .pt-pixel-pebble')).toBeVisible()
-  expect(reads.slice(previousReads).every(endpoint => /\/(account-profile|profile)$/.test(endpoint))).toBe(true)
+  expect(reads.slice(previousReads).every(endpoint => endpoint === '/api/matchmaking/account')).toBe(true)
   expect(mode).toBe('downtime')
   expect(writes).toEqual(['/api/matchmaking/queue'])
   await page.getByRole('link', { name: 'Friends', exact: true }).click()
@@ -171,7 +171,7 @@ test('Profile identity writes stay separate from authoritative matching saves an
 test('account browser unavailable blocks private legacy views and never claims canonical persistence', async ({ page }) => {
   await mockMatchingSession(page)
   await mockMatchingApi(page)
-  await page.route('**/api/matchmaking/account-profile', route => route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Account RPC not installed.' } }))
+  await page.route('**/api/matchmaking/account', route => route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Account RPC not installed.' } }))
   await page.goto('/profile/account')
   await expect(page).toHaveURL('/profile/account')
   await expect(page.getByRole('heading', { name: 'Profile unavailable', exact: true })).toBeVisible()

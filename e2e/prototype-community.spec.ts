@@ -2,6 +2,9 @@ import { mockCurrentEvents, testEventId } from './current-events-fixture'
 import { expect, test } from '@playwright/test'
 import { COMMUNITY_STORAGE_KEY, upgrades } from '../src/features/prototype/economy'
 
+const catalogTotal = upgrades.reduce((sum, item) => sum + item.cost, 0)
+const remainder = Math.ceil(catalogTotal / 100) * 100 - catalogTotal
+
 for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 1000 }, { width: 3840, height: 2160 }]) {
   test(`contained community persists manual purchases at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport)
@@ -23,7 +26,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 1000
       await expect(page.getByRole('button', { name: `Owned ${upgrade.name}`, exact: true })).toBeDisabled()
       await expect(page.locator(`[data-upgrade="${upgrade.id}"]`)).toBeAttached()
     }
-    await expect(page.locator('.pt-build-dialog')).toContainText('25 Pebbles available')
+    await expect(page.locator('.pt-build-dialog')).toContainText(`${remainder} Pebbles available`)
     await page.keyboard.press('Escape')
     await expect(page.locator('.pt-build-dialog')).toBeHidden()
     await page.getByRole('link', { name: 'Events', exact: true }).click()
@@ -31,7 +34,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 1000
     await page.getByRole('link', { name: 'Community', exact: true }).click()
     await page.reload()
     await expect(page.locator('[data-upgrade]')).toHaveCount(upgrades.length)
-    await expect(page.getByLabel('Pebble balance', { exact: true })).toContainText('25')
+    await expect(page.getByLabel('Pebble balance', { exact: true })).toContainText(String(remainder))
     await page.getByRole('button', { name: 'Say hello to your Pebble', exact: true }).click()
     await expect(page.locator('.pt-character-heart')).toBeVisible()
     await page.getByRole('button', { name: 'Developer controls', exact: true }).click()

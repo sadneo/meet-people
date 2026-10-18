@@ -2,11 +2,13 @@
 
 ## Ordinary accounts
 
-Authenticate normally. Before any private shell mounts, Pebble reads canonical
-identity and matching preferences. Missing/partial data enters `/onboarding`:
-explicit username/display name (optional bio), then at least three unique interests,
-valid birthdate, nonempty city/campus area and at least one availability window.
-There are no ordinary-user defaults or local completion flags. Saves require
+Authenticate normally; there is no guest preview. Before any private shell mounts,
+Pebble reads `GET /api/matchmaking/account`. Missing/partial data enters four real
+chapters: explicit username/display name (optional bio), at least three unique
+interests, social intent, then valid birthdate, nonempty city/campus area, at least
+one availability window and explicit distance/group choices. Persisted valid data
+maps to a prefix; ready no-marker accounts do not repeat onboarding. There are no
+generated ordinary-user fields or local completion flags. Unified PUT saves require
 authoritative readback. Interrupted accounts resume; ready accounts return to the
 validated original destination. Errors block with read-only retry/logout; uncertain
 writes are not automatically resubmitted. No queues start during onboarding.
@@ -44,10 +46,10 @@ size/time and local network calls, and never follows provider redirects. Missing
 invalid or unready provisioning yields a redacted 503. A busy request yields 429.
 
 Server-side Supabase password authentication disables session persistence and auto
-refresh. `getUser` must match configured UUID/email and be nonanonymous. Existing
-`get_account_profile` and `get_matchmaking_profile` RPCs run directly against local
-Supabase under that user token, avoiding proxy self-deadlock. Both must establish
-readiness. Only normal short-lived session fields are returned; the browser uses
+refresh. `getUser` must match configured UUID/email and be nonanonymous. The unified
+`get_account` RPC runs directly against local Supabase under that user token,
+avoiding proxy self-deadlock. Its validated persisted fields must establish all
+four chapters of readiness. Only normal short-lived session fields are returned; the browser uses
 SDK `setSession` and `getUser` verification, then the ordinary readiness gate.
 No rejected attempt revokes shared-account sessions. Normal password/email login
 remains a separate fallback and never fills ordinary-user fields automatically.
@@ -57,8 +59,13 @@ remains a separate fallback and never fills ordinary-user fields automatically.
 **The dedicated account is not provisioned or demonstrated usable by this source
 work.** Parent reports interest INSERT/UPDATE triggers invoke
 `get_gemini_embedding` with unavailable placeholder/local provider configuration.
-Do not bypass triggers, fake embeddings, disable constraints or claim population
-complete. Provider readiness and authorized provisioning remain parent blockers.
+Optional enrichment is accepted: label persistence with NULL vectors on provider
+failure, never fake vectors or disabled triggers. Parent reports this passing with
+a provider-RAISE stub in a network-none disposable DB, not the running stack.
+Do not claim live provider readiness, installed reconciliation or populated account
+completion. See [dev-account-reconciliation.md](dev-account-reconciliation.md) for
+the prerequisite order and evidence boundary. Running-DB application still requires
+explicit user approval; dedicated-account provisioning remains parent-owned.
 
 All agent tests use explicit fake filesystem, SDK and network seams. No real
 credential file, Auth, database or provider was accessed. Browser fixtures mock

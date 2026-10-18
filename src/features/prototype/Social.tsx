@@ -12,6 +12,7 @@ import './messages.css'
 import './profile.css'
 import { useLogout } from '../../auth/useLogout'
 import { AccountCredentials } from '../../auth/AccountCredentials'
+import { useAccount } from '../../auth/account-context'
 
 function Modal({ title, children, onClose, className = '' }: { title: string; children: ReactNode; onClose: () => void; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -131,6 +132,7 @@ export function ProfileScreen({ other = false }: { other?: boolean }) {
   const { state, dispatch, go, personId } = usePrototype()
   const auth = useSession()
   const shared = useSharedUserProfile(!other ? auth.session?.access_token ?? null : null)
+  const account = useAccount()
   const person = people.find(p => p.id === personId) ?? people[0]
   const identity = shared.account ?? shared.profile
   const shown = other ? person : { ...state.profile, name: identity?.display_name ?? 'Your profile', bio: identity?.bio ?? '', interests: shared.profile?.interests ?? [] }
@@ -160,7 +162,7 @@ export function ProfileScreen({ other = false }: { other?: boolean }) {
           <section className="pt-profile-growth" aria-labelledby="profile-community-title">
             <header><Pebble /><div><h2 id="profile-community-title">Your little community</h2><p>A small beginning, with room to grow.</p></div><span className="pt-profile-chapters">{state.completed.length}/4 chapters</span></header>
             <div className="pt-profile-progress" aria-hidden="true">{[0, 1, 2, 3].map(chapter => <span key={chapter} className={chapter <= state.completed.length ? 'is-current' : ''} />)}</div>
-            <div className="pt-profile-milestones">{['Find friends', 'Attend an event', 'Have a conversation', 'Make a plan'].map((label, chapter) => <div key={label} className={state.completed.includes(chapter) ? 'is-complete' : ''}><span className="pt-profile-milestone-pebbles"><Pebble />{chapter === 1 && <Pebble />}</span><span className="pt-profile-milestone-icon"><Icon name={['matchmaking', 'events', 'messages', 'plan'][chapter]} size={24} /></span><p>{label}</p><small>{state.completed.includes(chapter) ? 1 : 0}/1</small></div>)}</div>
+            <div className="pt-profile-milestones">{(account?.session ? ['Basic profile', 'Interests', 'Social intent', 'Availability'] : ['Find friends', 'Attend an event', 'Have a conversation', 'Make a plan']).map((label, chapter) => <div key={label} className={state.completed.includes(chapter) ? 'is-complete' : ''}><span className="pt-profile-milestone-pebbles"><Pebble />{chapter === 1 && <Pebble />}</span><span className="pt-profile-milestone-icon"><Icon name={['matchmaking', 'events', 'messages', 'plan'][chapter]} size={24} /></span><p>{label}</p><small>{state.completed.includes(chapter) ? 1 : 0}/1</small></div>)}</div>
             <footer><div><h3>Good things take time</h3><p>Every conversation, event, and plan helps you build your Pebbles community. You’re on your way!</p></div><ProfileGarden /></footer>
           </section>
           <button className="pt-profile-settings" onClick={() => go('Settings')}><Icon name="settings" size={30} /><span><strong>Settings & privacy</strong><small>Manage your account, notifications, and privacy preferences.</small></span><Icon name="back" size={20} /></button>
@@ -180,10 +182,14 @@ function ProfileGarden({ trail = false }: { trail?: boolean }) {
 export function Settings() {
   const { state, dispatch } = usePrototype()
   const auth = useLogout()
+  const savedAccount = useAccount()
+  const updatePreferences = (patch: Partial<NonNullable<typeof savedAccount>['account']['preferences']>) => {
+    if (savedAccount) void savedAccount.save({ ...savedAccount.account, preferences: { ...savedAccount.account.preferences, ...patch } })
+  }
   const [safety, setSafety] = useState(false)
   const [credentialsOpen, setCredentialsOpen] = useState(false)
   const heading = (icon: string, title: string, description?: string) => <header className="pt-settings-heading"><Icon name={icon} size={24} /><div><h2>{title}</h2>{description && <p>{description}</p>}</div></header>
-  const toggle = (key: string, title: string, description: string) => <label className="pt-toggle-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" role="switch" aria-label={title} checked={state.settings[key]} onChange={e => dispatch({ type: 'setting', key, value: e.target.checked })} /></label>
+  const toggle = (key: string, title: string, description: string) => <label className="pt-toggle-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" role="switch" aria-label={title} checked={state.settings[key]} disabled={savedAccount?.busy} onChange={e => dispatch({ type: 'setting', key, value: e.target.checked })} /></label>
   return <>
     <div className="pt-settings-landscape" aria-hidden="true" />
     <div className="pt-settings">
@@ -192,6 +198,12 @@ export function Settings() {
       <section>{heading('shield', 'Privacy', 'Control who can find and see you on Pebble.')}{toggle('discoverable', 'Show me in discovery', 'Let other people find your profile.')}{toggle('availability', 'Share my availability', 'Show your free-time windows to connections.')}</section>
       <section>{heading('pin', 'Discovery & Availability', 'Settings that help people find you in the right place.')}{toggle('location', 'Nearby suggestions', 'Show people and events near your current location.')}</section>
       <section aria-label="Matchmaking">{heading('matchmaking', 'Matchmaking')}<DowntimeOptIn /></section>
+      {savedAccount?.busy && <p role="status">Saving settings…</p>}
+      {auth.session && <section>{heading('matchmaking', 'Social preferences', 'Your saved onboarding preferences.')}<fieldset disabled={savedAccount?.busy}>
+        <label>Comfortable distance<select value={state.profile.distance} onChange={event => updatePreferences({ distance: event.target.value as NonNullable<typeof savedAccount>['account']['preferences']['distance'] })}><option>Nearby</option><option>5 miles</option><option>10 miles</option></select></label>
+        <label>Group preference<select value={state.profile.group} onChange={event => updatePreferences({ group: event.target.value as NonNullable<typeof savedAccount>['account']['preferences']['group'] })}><option>One-on-one</option><option>Small groups</option><option>Either</option></select></label>
+        <p className="pt-hint">Distance and group choices are saved preferences, not enforced travel limits. Edit real weekly windows on Profile or in matching preferences.</p>
+      </fieldset></section>}
       <section>{heading('map', 'Location', 'Manage your location settings.')}<div className="pt-settings-row"><span><strong>Campus location (demo)</strong><small>Campus is the fixed demo location for this prototype. Location access is not required.</small></span></div></section>
       <section>{heading('matchmaking', 'Safety', 'Manage your interactions and blocked users.')}<button className="pt-settings-row" onClick={() => setSafety(true)}><span><strong>Blocked users</strong><small>Block or report someone from their profile. These controls are mock UI for review.</small></span><Icon name="chevron" size={16} /></button>{state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>)}</section>
       <section className="pt-settings-actions" aria-label="Account actions">

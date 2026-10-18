@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import { completedAccountChapters, emptyAccount, type Account } from '../shared/account'
 
 // Browser-only module interception; never a production session bypass.
 export async function mockMatchingSession(page: Page, signedIn = true, signOutFailures = 0) {
@@ -34,13 +35,23 @@ export async function mockMatchingSession(page: Page, signedIn = true, signOutFa
   ` }))
 }
 export const browserProfile = { username: 'sam', display_name: 'Sam', bio: null, birthdate: '2000-01-01', location_city: 'Campus', avatar_url: null, interests: ['Coffee', 'Books', 'Games'], availability: [{ dow: 0, start_time: '21:00:00', end_time: '24:00:00' }] }
+// Explicit synthetic persisted choices, never a runtime default or session bypass.
+export function browserAccount(profile: Account['profile'] = browserProfile): Account {
+  const account: Account = { ...emptyAccount, profile, preferences: { intents: ['Meet new people'], usual: [], distance: 'Nearby', group: 'Either' }, completed: [] }
+  return { ...account, completed: completedAccountChapters(account) }
+}
 export async function mockMatchingApi(page: Page) {
   let mode: string | null = null
   let profile = browserProfile
+  let account = browserAccount(profile)
   await page.route('**/api/matchmaking/**', route => {
     const request = route.request()
     const path = new URL(request.url()).pathname
     if (path.endsWith('/notifications')) return route.fulfill({ json: { notifications: [], unreadCount: 0 } })
+    if (path.endsWith('/account')) {
+      if (request.method() === 'PUT') { account = request.postDataJSON(); profile = account.profile as typeof browserProfile }
+      return route.fulfill({ json: { ...account, profile } })
+    }
     if (path.endsWith('/account-profile')) return route.fulfill({ json: { profile: { username: browserProfile.username, display_name: browserProfile.display_name, bio: browserProfile.bio, avatar_url: browserProfile.avatar_url } } })
     if (path.endsWith('/profile')) { if (request.method() === 'PUT') profile = request.postDataJSON(); return route.fulfill({ json: { profile } }) }
     if (request.method() === 'POST') mode = request.postDataJSON().mode

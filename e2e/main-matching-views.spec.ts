@@ -1,5 +1,45 @@
 import { expect, test, type Locator } from '@playwright/test'
-import { mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
+import { browserAccount, browserProfile, mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
+
+for (const width of [390, 1440]) test(`authenticated Home/Community incoming landscape smoke ${width}`, async ({ page }) => {
+  await mockMatchingSession(page); await mockMatchingApi(page)
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  const writes: string[] = []
+  page.on('request', request => { if (request.url().includes('/api/') && request.method() !== 'GET') writes.push(request.url()) })
+  await page.goto('/')
+  await expect(page.locator('.pt-app')).toHaveCount(1)
+  await expect(page.getByRole('heading', { name: 'Who’s around?', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Community', exact: true })).toBeVisible()
+  await page.screenshot({ path: `worktree/dev-reconciliation/home-${width}.png`, fullPage: true })
+  await page.getByRole('link', { name: 'Community', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Pebble community', exact: true })).toBeVisible()
+  const days = page.getByRole('group', { name: 'Select a day', exact: true }).getByRole('button')
+  await expect(days).toHaveCount(7); await days.first().click(); await expect(days.first()).toHaveAttribute('aria-pressed', 'true')
+  await days.last().click(); await expect(days.last()).toHaveAttribute('aria-pressed', 'true')
+  // Explicit prototype funds, not invented account/onboarding fields or real currency.
+  await page.getByRole('button', { name: 'Developer controls', exact: true }).click()
+  await page.getByRole('button', { name: 'Add 100 demo Pebbles', exact: true }).click()
+  await page.getByRole('button', { name: 'Developer controls', exact: true }).click()
+  const open = page.getByRole('button', { name: 'Build your community', exact: true })
+  await open.click()
+  const shop = page.getByRole('dialog', { name: 'Build your community', exact: true })
+  const landscape = shop.getByRole('region', { name: 'Landscape', exact: true })
+  await expect(landscape.getByRole('article')).toHaveCount(7)
+  await landscape.getByRole('button', { name: 'Build River', exact: true }).click()
+  await expect(landscape.getByRole('button', { name: 'Owned River', exact: true })).toBeDisabled()
+  await shop.getByRole('button', { name: 'Reset purchases', exact: true }).click()
+  const confirmation = page.getByRole('alertdialog')
+  await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(landscape.getByRole('button', { name: 'Owned River', exact: true })).toBeDisabled()
+  await page.keyboard.press('Escape'); await expect(open).toBeFocused()
+  await expect(page.locator('[data-landscape][data-movable]')).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+  await page.screenshot({ path: `worktree/dev-reconciliation/community-${width}.png`, fullPage: true })
+  await page.getByRole('link', { name: 'Back to Home', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Who’s around?', exact: true })).toBeVisible()
+  expect(writes).toEqual([])
+})
 
 async function checkContrast(link: Locator) {
   const ratio = await link.evaluate(element => {
@@ -25,7 +65,7 @@ for (const width of [320, 1440]) {
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await mockMatchingSession(page, state !== 'signed-out')
       await mockMatchingApi(page)
-      if (state === 'missing') await page.route('**/api/matchmaking/profile', route => route.fulfill({ json: { profile: null } }))
+      if (state === 'missing') await page.route('**/api/matchmaking/account', route => route.fulfill({ json: browserAccount({ ...browserProfile, interests: [], availability: [], birthdate: null, location_city: null }) }))
       const forbidden: string[] = []
       page.on('request', request => { if (request.url().includes('/api/') && (request.method() !== 'GET' || /\/(queue|result)$/.test(new URL(request.url()).pathname))) forbidden.push(request.url()) })
       await page.goto('/matchmaking')
@@ -40,7 +80,9 @@ for (const width of [320, 1440]) {
         await expect(page.getByRole('heading', { name: 'Complete onboarding', exact: true })).toBeVisible()
         await expect(page.locator('.pt-app')).toHaveCount(0)
         await expect(page.getByRole('navigation', { name: 'Matching views', exact: true })).toHaveCount(0)
-        await expect(page.getByLabel('City or campus area')).toHaveValue('')
+        await expect(page.getByLabel('City or campus area')).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Save interests and continue', exact: true })).toBeEnabled()
+        await expect(page.getByText('0/30 selected', { exact: true })).toBeVisible()
         expect(forbidden).toEqual([])
         return
       }
@@ -100,9 +142,9 @@ for (const width of [320, 1440]) {
       await expect(page.locator('.dating-mascot .pt-pixel-pebble[data-expression="happy"] image')).toHaveCount(1)
       await expect(page.locator('.dating-heart-thought')).toHaveAttribute('aria-hidden', 'true')
       expect(requests.length).toBeGreaterThan(0)
-      expect(requests.every(request => request.method === 'GET' && /^\/api\/matchmaking\/(account-profile|profile)$/.test(request.path))).toBe(true)
+      expect(requests.every(request => request.method === 'GET' && request.path === '/api/matchmaking/account')).toBe(true)
       await page.reload(); await expect(dating).toHaveAttribute('aria-current', 'page')
-      expect(requests.every(request => request.method === 'GET' && /^\/api\/matchmaking\/(account-profile|profile)$/.test(request.path))).toBe(true)
+      expect(requests.every(request => request.method === 'GET' && request.path === '/api/matchmaking/account')).toBe(true)
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
       await action.scrollIntoViewIfNeeded(); await expect(action).toBeInViewport()
       if (path === '/matchmaking') await page.screenshot({ path: `worktree/interest-selection-review/selector-dating-${width}.png`, fullPage: true, animations: 'disabled' })
@@ -122,7 +164,7 @@ for (const width of [320, 1440]) {
       const beforeForward = requests.length
       await page.goForward(); await expect(dating).toHaveAttribute('aria-current', 'page')
       await page.reload(); await expect(heading).toBeVisible()
-      expect(requests.slice(beforeForward).every(request => request.method === 'GET' && /^\/api\/matchmaking\/(account-profile|profile)$/.test(request.path))).toBe(true)
+      expect(requests.slice(beforeForward).every(request => request.method === 'GET' && request.path === '/api/matchmaking/account')).toBe(true)
       expect(requests.every(request => request.method === 'GET' && !/\/(queue|result)$/.test(request.path))).toBe(true)
       const beforeSignOut = requests.length
       await mockMatchingSession(page, false); await page.reload(); await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()

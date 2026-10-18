@@ -9,6 +9,11 @@
 
 ## Local Setup
 
+**Paused account reconciliation:** do not use the setup/migration/reset commands
+below as integration validation. The unified-account candidate is not installed
+in a running DB; prerequisites and explicit installation approval are required.
+See [the reconciliation order and offline evidence](docs/dev-account-reconciliation.md).
+
 ```bash
 nix develop
 pnpm install --frozen-lockfile
@@ -32,8 +37,8 @@ The Supabase wrapper automatically uses a rootless Podman socket when one is ava
 
 `pnpm env:local` writes public browser values and private API values to ignored `.env.local`. The API development command loads this file. Never expose the service-role key through a `VITE_*` variable.
 
-The live events UI is available at `/events`. Apply pending local migrations with
-`pnpm exec supabase migration up --local`. See [the events backend guide](docs/events-backend.md)
+The authenticated events UI is available at `/events`. Do not blindly apply pending
+account migrations during reconciliation. See [the events backend guide](docs/events-backend.md)
 for sign-in, persistent event groups, verification, and later prototype merging.
 
 ## SB Engaged ingestion
@@ -57,13 +62,25 @@ Use `{"mode":"full","dryRun":false}` to upsert all public events beginning in th
 
 ## Verification
 
+The app requires verified Auth and four persisted onboarding chapters: explicit
+identity, at least three interests, social intent, then birthdate/city/availability
+and distance/group choices. There is no guest preview or automatic queue entry.
+See [accounts](docs/accounts.md), [access policy](docs/app-access.md) and the guarded
+[DEV account runbook](docs/development-onboarding.md). Google is not activated.
+Live installation/provider readiness and development-account population are not
+established by source checks or disposable DB tests.
+
 ```bash
-pnpm supabase:reset
-pnpm supabase:types
-pnpm test:auth
-pnpm verify
-pnpm test:e2e
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm build
+git diff --check
 ```
+
+Parent runs isolated mocked browser suites and reviews screenshots. Real Auth
+scripts (`pnpm test:auth`), services, resets, schema installation and provider calls
+are separate operations requiring approval, not part of these source-only checks.
 
 Install a browser once when Playwright has not already provisioned one:
 
@@ -71,7 +88,13 @@ Install a browser once when Playwright has not already provisioned one:
 pnpm exec playwright install chromium
 ```
 
-On NixOS, `pnpm test:e2e` uses an installed native `chromium` when available.
+Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to use an already installed browser.
+For example, in PowerShell:
+
+```powershell
+$env:PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+pnpm test:e2e
+```
 
 ## Production-Style Local Check
 

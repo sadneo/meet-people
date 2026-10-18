@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { Readable } from 'node:stream'
 import { constants } from 'node:fs'
+import { accountFixture } from './complete-profile-fixture'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { developmentLoginEnabled, developmentLoginPlugin, developmentLoginHandler, authenticateDevelopmentAccount, parseDevelopmentCredentials, readDevelopmentCredentials } from '../dev/development-login'
@@ -83,11 +84,11 @@ it('fake local Auth and read-only RPCs verify exact configured user and readines
   const network = vi.fn(async (input: string, init?: RequestInit) => {
     expect(init?.redirect).toBe('error'); expect(init?.signal).toBeInstanceOf(AbortSignal)
     if (input.includes('/rest/')) expect(new Headers(init?.headers).get('Authorization')).toBe(`Bearer ${session.access_token}`)
-    return Response.json(input.includes('/token') ? session : input.includes('/user') ? { id: credentials.accountId, email: credentials.email, is_anonymous: false } : input.endsWith('get_account_profile') ? identity : profile)
+    return Response.json(input.includes('/token') ? session : input.includes('/user') ? { id: credentials.accountId, email: credentials.email, is_anonymous: false } : accountFixture(profile))
   })
   const result = await authenticateDevelopmentAccount(credentials, network)
   expect(result.access_token).toBe(session.access_token)
-  expect(network.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(['/auth/v1/token', '/auth/v1/user', '/rest/v1/rpc/get_account_profile', '/rest/v1/rpc/get_matchmaking_profile'])
+  expect(network.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(['/auth/v1/token', '/auth/v1/user', '/rest/v1/rpc/get_account'])
 })
 it.each(['missing', 'wrong-owner', 'wrong-email', 'anonymous', 'partial', 'network', 'oversized'])('fails closed for %s without writes or revocation', async failure => {
   const network = vi.fn(async (input: string) => {

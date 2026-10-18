@@ -6,14 +6,14 @@ Maintain a mobile-first, authenticated student-focused, platonic social app.
 Its supporting prototype flows demonstrate world progression, matching, events, planning,
 conversations, and profile preferences. Home and Community fixtures are documented
 in source and developer controls without demo labels in their minimal product UI.
-Most flows remain local previews. Active/downtime matching and email-link
-sign-in now use the backend slice described in `docs/matchmaking-backend.md`;
-SQL activation is separate. Chat/planning remain prototypes.
+Active/downtime matching uses the backend slice in `docs/matchmaking-backend.md`.
+Email/password sign-in, onboarding, profile and settings use the
+persistent account flow in `docs/accounts.md`. Chat/planning remain prototypes.
 Imported event detail/preview use a server-backed group queue and persistent
 in-app proposal inbox; see `docs/event-group-queue.md` for the proposed parent SQL
 contracts and disabled worker. No Company/compatibility consent is reused.
-`docs/DESIGN.md` is the product-design authority. The fresh meadow palette is
-shared across routed screens; this color update preserves their layouts.
+`docs/DESIGN.md` is the product-design authority. The #DDCABC page/navigation token,
+light surfaces and forest foregrounds are shared without changing route layouts.
 
 ## Information Architecture
 
@@ -33,10 +33,11 @@ shared across routed screens; this color update preserves their layouts.
 | `/settings` | Account preferences and real authenticated downtime opt-in |
 | `/free-time` and nested routes | Availability, people, activities, planning, review, confirmation, and connection |
 | `/intro` | Protected supporting introduction after readiness |
-| `/onboarding` | Required real identity, interests, birthdate/area and availability before private context |
+| `/onboarding` | Four persisted chapters: identity, ≥3 interests, social intent, then birthdate/area/windows/distance/group |
 | `/login`, `/register`, `/auth/callback`, `/auth/forgot-password` | Public sign-in/verification/recovery entry only |
 | `/complete-profile` | Signed-in legacy redirect to `/onboarding`, preserving validated return destination |
 | `*` | Protected not-found experience |
+| `/forgot-password`, `/reset-password` | Public recovery aliases using the same verified lifecycle |
 
 Home, Matchmaking, Events, Messages, and Profile are the five icon-first navigation
 destinations. Community is a supporting route entered from Home. Settings appears in desktop account navigation and is reachable
@@ -50,19 +51,28 @@ flow and unknown route waits for session hydration outside the private shell and
 prototype context. Signed-out users are redirected to Login with a validated
 internal return destination. Signed-in users need persisted canonical identity and
 matching preferences: at least three unique interests, valid birthdate, nonempty
-city/campus area and one availability window. Null/partial accounts resume real
+city/campus area, one availability window, social intent and explicit distance/group
+preferences. Unified `get_account`/`save_account` owns private settings and four
+sequential chapters. Null/partial accounts resume real
 `/onboarding`; ready accounts skip it on later login/refresh. Read failures block
 with retry/logout. This supersedes identity-only/optional-preferences access.
 Shared forms use no invented defaults; save/readback must confirm readiness.
 Uncertain writes require explicit read-only reconciliation, never auto-resubmission.
 Profile/matching editing preserves minimum requirements. There is no automatic queue,
-Dating activation or extra photo/group/distance requirement. Public sign-in and
+Dating activation or photo requirement. Google activation remains out of scope. Public sign-in and
 callback pages retain their verified completion lifecycle. See
 [`app-access.md`](app-access.md) for the state machine, safety limits and tests.
 The DEV loopback one-click account option authenticates only an already populated
 operator-owned local account; no anonymous session, seeding, credential bundle or
 production endpoint exists. See [`development-onboarding.md`](development-onboarding.md)
 for the fixed server-only file contract and unresolved provisioning/provider blocker.
+The reconciliation is not installed in the running DB. Parent's network-none
+evidence and the required accounts-schema prerequisite order are recorded in
+[`dev-account-reconciliation.md`](dev-account-reconciliation.md); explicit approval
+is still required before any running-DB application. Profile/matching refresh
+preserves same-owner keyboard focus, while logout replaces history with the safe
+captured original destination. Incoming Home/Community landscape/purchase/history
+features remain authenticated prototypes, not server-backed community progression.
 
 ## Responsive Layout
 

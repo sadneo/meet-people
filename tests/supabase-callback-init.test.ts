@@ -4,7 +4,7 @@ const create = vi.hoisted(() => vi.fn<(url: string, key: string, options?: unkno
 vi.mock('@supabase/supabase-js', () => ({ createClient: create }))
 vi.mock('../src/env', () => ({ env: { VITE_SUPABASE_URL: 'http://127.0.0.1:54321', VITE_SUPABASE_PUBLISHABLE_KEY: 'public-fixture-not-a-real-key' } }))
 afterEach(() => { create.mockClear(); window.history.replaceState({}, '', '/') })
-for (const path of ['/auth/callback', '/auth/callback/', '/AUTH/CALLBACK', '/auth/%63allback']) {
+for (const path of ['/auth/callback', '/auth/callback/', '/AUTH/CALLBACK', '/auth/%63allback', '/reset-password', '/reset-password/', '/RESET-PASSWORD', '/reset-%70assword']) {
   it(`disables automatic URL detection on callback route ${path}`, async () => {
     vi.resetModules(); window.history.replaceState({}, '', `${path}?code=fixture`)
     await import('../src/supabase')

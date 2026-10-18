@@ -7,10 +7,11 @@ import { PixelPebble } from '../pebble-art/PixelArt'
 import { MatchingProfileSchema, type MatchingMode, type MatchingProfile } from '../../../shared/matchmaking'
 import { useMatchmaking } from './useMatchmaking'
 import { DeviceDisplayPreferences } from './DeviceDisplayPreferences'
-import { withAccountIdentity } from '../../../shared/account-profile'
+import { withAccountIdentity, type AccountProfile } from '../../../shared/account-profile'
 import { ProfileInterests } from '../prototype/ProfileInterests'
 import { useSavedIdentity } from '../account/useSavedIdentity'
 import { ReadyPreferencesSchema, readinessMessage } from '../../../shared/profile-readiness'
+import { useAccount } from '../../auth/account-context'
 
 const blankProfile: MatchingProfile = { username: '', display_name: '', bio: null, birthdate: null, location_city: null, avatar_url: null, interests: [], availability: [] }
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -24,10 +25,11 @@ const setupBlocks = [
 
 // This workspace owns only a server-profile draft. It never reads PrototypeContext
 // or device storage, and uses the same identity prerequisite as the existing editor.
-export function MatchingSetup({ token, initial = null, busy, error, save, findFriends, searching = false, presentation = 'setup', writesAvailable = true, minimumRequired = false, submitLabel }: { token: string; initial?: MatchingProfile | null; busy: boolean; error: string; save: (profile: MatchingProfile) => Promise<boolean>; findFriends?: (profile: MatchingProfile) => Promise<boolean>; searching?: boolean; navigation?: boolean; presentation?: 'setup' | 'profile'; writesAvailable?: boolean; minimumRequired?: boolean; submitLabel?: string }) {
+export function MatchingSetup({ token, initial = null, busy, error, save, findFriends, searching = false, presentation = 'setup', writesAvailable = true, minimumRequired = false, submitLabel, canonicalIdentity }: { token: string; initial?: MatchingProfile | null; busy: boolean; error: string; save: (profile: MatchingProfile) => Promise<boolean>; findFriends?: (profile: MatchingProfile) => Promise<boolean>; searching?: boolean; navigation?: boolean; presentation?: 'setup' | 'profile'; writesAvailable?: boolean; minimumRequired?: boolean; submitLabel?: string; canonicalIdentity?: AccountProfile }) {
   const [draft, setDraft] = useState(initial ?? blankProfile)
   const [validation, setValidation] = useState('')
-  const account = useSavedIdentity(token)
+  const read = useSavedIdentity(canonicalIdentity ? null : token)
+  const account = canonicalIdentity ? { ...read, account: canonicalIdentity, loading: false } : read
   const submitting = useRef(false)
   const identity = account.account
   const blocked = busy || account.loading || !identity || !writesAvailable
@@ -135,6 +137,7 @@ function MatchingProfileSummary({ profile }: { profile: MatchingProfile }) {
 }
 
 function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode; token: string; navigation: boolean }) {
+  const account = useAccount()
   const state = useMatchmaking(token)
   const identity = useSavedIdentity(token)
   const canonical = identity.account
@@ -146,6 +149,11 @@ function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode
   const queuedHere = state.mode === mode
   const replacing = !!state.mode && !queuedHere
   const dashboard = mode === 'active' && state.profileReady && !!state.profile && !state.profileLoading
+  useEffect(() => {
+    if (account?.focusTarget !== 'matching-preferences' || state.profileLoading || identity.loading) return
+    const opener = preferencesButton.current
+    if (opener && !opener.disabled) { opener.focus(); account.focusRestored?.() }
+  }, [account, dashboard, state.profileLoading, identity.loading])
   const closePreferences = () => { setPreferences(false); preferencesButton.current?.focus() }
   const joinExplanation = !queuedHere && !state.canJoin
     ? state.profileLoading ? 'Loading matching preferences before joining Friends.'
@@ -184,7 +192,7 @@ function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode
       </div>
     </section>
     <details className="match-device-disclosure"><summary>On this device</summary><DeviceDisplayPreferences /></details>
-    {preferences && <ProfileEditor token={token} initial={state.profile} busy={state.saving || searching} error={state.profileError} save={state.save} close={closePreferences} />}
+    {preferences && <ProfileEditor token={token} initial={state.profile} busy={state.saving || searching} error={state.profileError} save={async profile => { const saved = await state.save(profile); if (saved) account?.reload({ restoreFocus: 'matching-preferences' }); return saved }} close={closePreferences} />}
     {replacement}
   </>
 }

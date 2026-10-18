@@ -1,10 +1,11 @@
 import { safeReturnTo } from './returnTo'
+import { authRedirect } from '../platform/native'
 
 export function authCallbackUrl(returnTo = '/settings', recovery = false) {
   const url = new URL('/auth/callback', window.location.origin)
   url.searchParams.set('returnTo', safeReturnTo(returnTo) ?? '/settings')
   if (recovery) url.searchParams.set('flow', 'recovery')
-  return url.href
+  return authRedirect(`${url.pathname}${url.search}`)
 }
 export const validPassword = (value: string) => value.length >= 8 && value.length <= 128
 export function credentialError(error: unknown) {

@@ -1,10 +1,10 @@
 /* Shared meadow palette. Feature namespaces alias these tokens; no local themes. */
 :root {
-  --pt-cream: #fffdf4;
+  --pt-cream: #DDCABC;
   --pt-surface: #fffef9;
   --pt-soft: #f4f9e8;
   --pt-ink: #1f5a3c;
-  --pt-muted: #587360;
+  --pt-muted: #425b49;
   --pt-green: #42783f; /* Small white labels meet AA; leaf stays brighter for art. */
   --pt-leaf: #4f8a4c;
   --pt-fresh: #9bcb63;

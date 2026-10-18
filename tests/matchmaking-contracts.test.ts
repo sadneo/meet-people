@@ -4,6 +4,7 @@ import { createMatchmakingRouter, createUserContextTransport, type UserContextTr
 import { MatchingProfileSchema } from '../shared/matchmaking'
 import { parseApiEnv } from '../api/env'
 import { matchmakingClient } from '../src/features/matchmaking/client'
+import { accountFixture } from './complete-profile-fixture'
 
 const id = 'a0000000-0000-4000-8000-000000000001'
 const profile = { username: 'sam', display_name: 'Sam', bio: null, birthdate: null, location_city: null, avatar_url: null, interests: ['Coffee'], availability: [] }
@@ -22,6 +23,8 @@ const actor = {
   result: vi.fn(async () => ({ data: result, error: providerError })),
   profile: vi.fn(async () => ({ data: profile, error: providerError })),
   save: vi.fn(async (value: unknown) => ({ data: value, error: providerError })),
+  account: vi.fn(async () => ({ data: accountFixture(profile), error: providerError })),
+  saveAccount: vi.fn(async (value: unknown) => ({ data: value, error: providerError })),
   listingStatus: vi.fn(async (listingId: string) => { void listingId; return { data: listingStatus, error: providerError } }),
   listingInterest: vi.fn(async (listingId: string) => { void listingId; return { data: { ...listingStatus, isInterested: true }, error: providerError } }),
   listingWithdraw: vi.fn(async (listingId: string) => { void listingId; return { data: { ...listingStatus, isInterested: false }, error: providerError } }),
@@ -201,10 +204,11 @@ it('distinguishes genuine empty, not queued, malformed, unavailable and provider
   providerError = { code: 'XX000' }
   expect((await request('/result')).status).toBe(503)
 })
-it('uses one atomic profile RPC, returns persisted data and rejects unknown or overlapping fields', async () => {
+it('compatibility preferences use one unified account writer, preserve private choices and reject unknown or overlapping fields', async () => {
   expect(await request('/profile')).toEqual({ status: 200, data: { profile } })
   expect(await request('/profile', 'PUT', profile)).toEqual({ status: 200, data: { profile } })
-  expect(actor.save).toHaveBeenCalledWith(profile)
+  expect(actor.saveAccount).toHaveBeenCalledWith(accountFixture(profile))
+  expect(actor.save).not.toHaveBeenCalled()
   expect((await request('/profile', 'PUT', { ...profile, age: 21 })).status).toBe(400)
   expect(MatchingProfileSchema.safeParse({ ...profile, availability: [{ dow: 6, start_time: '21:00:00', end_time: '24:00:00' }] }).success).toBe(true)
   expect(MatchingProfileSchema.safeParse({ ...profile, availability: [{ dow: 6, start_time: '21:00:00', end_time: '00:00:00' }] }).success).toBe(false)

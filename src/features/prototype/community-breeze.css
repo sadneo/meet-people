@@ -1,0 +1,14 @@
+/* Long rests and single pixel-art steps: no raster transforms or crossfades. */
+.pt-breeze-frame {
+  visibility: hidden; image-rendering: pixelated; transform: none; transition: none;
+  animation: pt-breeze-rest var(--breeze-duration) steps(1, end) var(--breeze-delay) infinite;
+}
+.pt-breeze-frame[data-breeze-pose="0"] { visibility: visible; }
+.pt-breeze-frame[data-breeze-pose="1"] { animation-name: pt-breeze-right; }
+.pt-breeze-frame[data-breeze-pose="2"] { animation-name: pt-breeze-left; }
+@keyframes pt-breeze-rest { 0%, 38%, 78%, 100% { visibility: visible; } 26%, 66% { visibility: hidden; } }
+@keyframes pt-breeze-right { 0%, 38%, 100% { visibility: hidden; } 26% { visibility: visible; } }
+@keyframes pt-breeze-left { 0%, 78%, 100% { visibility: hidden; } 66% { visibility: visible; } }
+@media (prefers-reduced-motion: reduce) {
+  .pt-breeze-frame { animation: none; }
+}

@@ -56,7 +56,8 @@ export function AuthCallback() {
       if (result.error || !result.data.session?.user.id) throw new Error('Callback exchange failed')
       const verified = await supabase.auth.getUser()
       if (verified.error || !verified.data.user || verified.data.user.id !== result.data.session.user.id) throw new Error('Unverified callback')
-      return { information: false, destination: parsed.recovery ? '/settings?credentials=recovery' : safeReturnTo(incoming.searchParams.get('returnTo')) ?? '/settings' }
+      const recovery = parsed.recovery || decodeURIComponent(incoming.pathname).replace(/\/+$/, '').toLowerCase() === '/reset-password'
+      return { information: false, destination: recovery ? '/settings?credentials=recovery' : safeReturnTo(incoming.searchParams.get('returnTo')) ?? '/settings' }
     })()
     void completion.current.then(result => {
       if (!live) return

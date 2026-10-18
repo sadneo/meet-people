@@ -1,10 +1,11 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { Session } from '@supabase/supabase-js'
-import { MemoryRouter, useLocation } from 'react-router'
+import { MemoryRouter, useLocation, useNavigationType } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from '../src/App'
 import { useSession } from '../src/auth/useSession'
-import { requiredPreferences } from './complete-profile-fixture'
+import { useLogout } from '../src/auth/useLogout'
+import { requiredPreferences, accountFixture } from './complete-profile-fixture'
 
 const auth = vi.hoisted(() => ({
   session: null as Session | null,
@@ -27,6 +28,14 @@ function Identity() {
   return <output aria-label="Session identity">{ready ? session?.user.id ?? 'guest' : 'loading'}</output>
 }
 function Path() { return <output aria-label="Current path">{useLocation().pathname}</output> }
+function FullPath() {
+  const location = useLocation(), type = useNavigationType()
+  return <><output aria-label="Full logout URL">{location.pathname}{location.search}{location.hash}</output><output aria-label="Logout navigation">{type}</output></>
+}
+function DirectLogout() {
+  const logout = useLogout()
+  return <button disabled={!logout.ready || logout.busy} onClick={() => void logout.logout()}>Direct sign out</button>
+}
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
@@ -42,12 +51,40 @@ beforeEach(() => {
   vi.stubGlobal('scrollTo', () => {})
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
     const path = String(input)
+    if (path.endsWith('/account')) return Response.json(accountFixture({ username: 'fixture', display_name: 'Fixture', bio: null, avatar_url: null, ...requiredPreferences }))
     if (path.endsWith('/account-profile')) return Response.json({ profile: { username: 'fixture', display_name: 'Fixture', bio: null, avatar_url: null } })
     if (path.endsWith('/profile')) return Response.json({ profile: { username: 'fixture', display_name: 'Fixture', bio: null, avatar_url: null, ...requiredPreferences } })
     return Response.json({ mode: null })
   }))
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
+
+it('the logout hook itself preserves a safe return URL without relying on the route guard to repair navigation', async () => {
+  const path = '/settings?tab=privacy#account'
+  render(<MemoryRouter initialEntries={[path]}><DirectLogout /><Identity /><FullPath /></MemoryRouter>)
+  const control = screen.getByRole('button', { name: 'Direct sign out' })
+  await waitFor(() => expect((control as HTMLButtonElement).disabled).toBe(false))
+  fireEvent.click(control)
+  await waitFor(() => expect(screen.getByLabelText('Full logout URL').textContent).toBe(`/login?${new URLSearchParams({ returnTo: path })}`))
+  expect(screen.getByLabelText('Logout navigation').textContent).toBe('REPLACE')
+  expect(screen.getByLabelText('Session identity').textContent).toBe('guest')
+  expect(auth.signOut).toHaveBeenCalledExactlyOnceWith({ scope: 'local' })
+})
+
+it('real signout notifications preserve the captured safe path/query/hash and replace history even as the private tree unmounts', async () => {
+  const path = '/settings?tab=privacy#account'
+  let finish!: () => void
+  auth.pending = new Promise(resolve => { finish = resolve })
+  render(<MemoryRouter initialEntries={[path]}><App /><Identity /><FullPath /></MemoryRouter>)
+  const actions = within(await screen.findByRole('region', { name: 'Account actions' }))
+  fireEvent.click(await actions.findByRole('button', { name: 'Log out', exact: true }))
+  expect(screen.getByLabelText('Full logout URL').textContent).toBe(path)
+  await act(async () => { finish(); await auth.pending })
+  await waitFor(() => expect(screen.getByLabelText('Full logout URL').textContent).toBe(`/login?${new URLSearchParams({ returnTo: path })}`))
+  expect(screen.getByLabelText('Logout navigation').textContent).toBe('REPLACE')
+  expect(screen.getByLabelText('Session identity').textContent).toBe('guest')
+  expect(document.querySelector('.pt-app')).toBeNull()
+})
 
 it('Settings opens a single-title credential dialog without Cancel and preserves close/cancel-event focus return', async () => {
   render(<MemoryRouter initialEntries={['/settings']}><App /></MemoryRouter>)
