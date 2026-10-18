@@ -6,13 +6,15 @@ import { useSession } from './useSession'
 import { useAccount } from './account-context'
 import { safeReturnTo } from './returnTo'
 import { getLocalDevelopmentEnvironment, isLocalDevelopment } from './localDevelopment'
+import { apiUrl, authRedirect, isNative } from '../platform/native'
+import { Browser } from '@capacitor/browser'
 
 type Mode = 'login' | 'register' | 'forgot' | 'reset' | 'callback'
 type Step = 'email' | 'password' | 'register' | 'confirmation'
 class AuthMessage extends Error {}
 
 async function emailExists(email: string) {
-  const response = await fetch('/api/auth/email', {
+  const response = await fetch(apiUrl('/api/auth/email'), {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }), cache: 'no-store', signal: AbortSignal.timeout(10_000),
   })
@@ -43,7 +45,7 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
   const account = useAccount()
   const returnTo = safeReturnTo(new URLSearchParams(location.search).get('returnTo')) ?? '/'
   const link = (path: string) => `${path}?${new URLSearchParams({ returnTo })}`
-  const redirectTo = `${window.location.origin}${link('/auth/callback')}`
+  const redirectTo = authRedirect(link('/auth/callback'))
   const routeState = location.state as { authStep?: Step; email?: string } | null
   const step: Step = ['password', 'register', 'confirmation'].includes(routeState?.authStep ?? '') ? routeState!.authStep! : 'email'
   const [email, setEmail] = useState(routeState?.email ?? '')
@@ -110,8 +112,10 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
     } finally { working.current = false; setPending('') }
   }
   const oauth = () => void run('google', async () => {
-    const { error } = await supabase!.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })
+    const native = isNative()
+    const { data, error } = await supabase!.auth.signInWithOAuth({ provider: 'google', options: { redirectTo, ...(native ? { skipBrowserRedirect: true } : {}) } })
     if (error) throw new AuthMessage('Google sign-in did not complete. Please try again or continue with email.')
+    if (native && data.url) await Browser.open({ url: data.url })
   })
   const resend = () => void run('resend', async () => {
     const { error } = await supabase!.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: redirectTo } })
@@ -126,7 +130,7 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
         const exists = await emailExists(email.trim())
         go(exists ? 'password' : 'register')
       } else if (mode === 'forgot') {
-        const { error } = await supabase!.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}${link('/reset-password')}` })
+        const { error } = await supabase!.auth.resetPasswordForEmail(email.trim(), { redirectTo: authRedirect(link('/reset-password')) })
         if (currentPage.current !== page) return
         if (error) throw new AuthMessage(authError(error, 'Could not send the reset link. Please try again.'))
         setRecoverySent(true)

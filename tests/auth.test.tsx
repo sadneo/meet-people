@@ -2,12 +2,15 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { AuthScreen } from '../src/auth/AuthScreen'
+import { Capacitor } from '@capacitor/core'
+import { Browser } from '@capacitor/browser'
 
 const auth = vi.hoisted(() => ({
   session: null as { user: { id: string } } | null,
   signInWithPassword: vi.fn(), signUp: vi.fn(), signInWithOAuth: vi.fn(), resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), resend: vi.fn(),
 }))
 const lookup = vi.fn()
+vi.mock('@capacitor/browser', () => ({ Browser: { open: vi.fn() } }))
 vi.mock('../src/auth/useSession', () => ({ useSession: () => ({ session: auth.session, ready: true }) }))
 vi.mock('../src/supabase', () => ({ supabase: { auth } }))
 vi.mock('../src/auth/account-context', () => ({ useAccount: () => ({ loaded: true, account: { completed: [0, 1, 2, 3] } }) }))
@@ -38,7 +41,23 @@ beforeEach(() => {
   vi.stubGlobal('fetch', lookup)
   for (const method of [auth.signInWithPassword, auth.signUp, auth.signInWithOAuth, auth.resetPasswordForEmail, auth.updateUser, auth.resend]) method.mockReset().mockResolvedValue({ data: { session: null }, error: null })
 })
-afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks() })
+
+it('uses the hosted API and native redirects for Android sign-in and recovery', async () => {
+  vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true)
+  vi.stubEnv('VITE_API_BASE_URL', 'https://pebble.example/')
+  const open = vi.spyOn(Browser, 'open').mockResolvedValue()
+  auth.signInWithOAuth.mockResolvedValue({ data: { url: 'https://accounts.google.com/oauth' }, error: null })
+  show('/login?returnTo=%2Fevents')
+  fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }))
+  await waitFor(() => expect(open).toHaveBeenCalledWith({ url: 'https://accounts.google.com/oauth' }))
+  expect(auth.signInWithOAuth).toHaveBeenCalledWith({ provider: 'google', options: { redirectTo: 'com.cse416.meetpeople://app/auth/callback?returnTo=%2Fevents', skipBrowserRedirect: true } })
+  await continueEmail(true)
+  expect(lookup).toHaveBeenCalledWith('https://pebble.example/api/auth/email', expect.any(Object))
+  fireEvent.click(screen.getByRole('link', { name: 'Forgot password?' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send reset link' }))
+  await waitFor(() => expect(auth.resetPasswordForEmail).toHaveBeenCalledWith('student@example.test', { redirectTo: 'com.cse416.meetpeople://app/reset-password?returnTo=%2Fevents' }))
+})
 
 it('starts with email only, branches new emails into registration, and confirms without a session', async () => {
   show()
@@ -150,7 +169,7 @@ it('does not let a late email lookup undo browser back navigation', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Change', exact: true }))
   let finish!: (response: Response) => void
   lookup.mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve }))
-  fireEvent.click(screen.getByRole('button', { name: 'Continue with email' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Continue with email' }))
   expect((screen.getByRole('button', { name: 'Continuing…' }) as HTMLButtonElement).disabled).toBe(true)
   fireEvent.click(screen.getByRole('button', { name: 'Browser back' }))
   await screen.findByRole('heading', { name: 'Welcome back' })
