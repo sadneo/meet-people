@@ -44,7 +44,10 @@ function EventsFeed() {
   const visible = result?.page === page ? result.events : []
   const previewId = visible.find(event => event.id === selected)?.id ?? visible[0]?.id
   function changeCategory(value: string) {
-    setLoaded(null); setError(''); setSearch(value === 'All' ? {} : { category: value })
+    // The fetch effect depends on the normalized query. Re-selecting the same
+    // category on page 1 must not discard a result without starting a new request.
+    if (value !== category || page !== 1) { setLoaded(null); setError('') }
+    setSearch(value === 'All' ? {} : { category: value })
   }
   function goPage(next: number) {
     setLoaded(null); setError(''); setSearch({ ...(category !== 'All' ? { category } : {}), page: String(next) })
