@@ -126,6 +126,21 @@ export type Database = {
           },
         ]
       }
+      connection_request_log: {
+        Row: {
+          created_at: string
+          initiated_by: string
+        }
+        Insert: {
+          created_at?: string
+          initiated_by: string
+        }
+        Update: {
+          created_at?: string
+          initiated_by?: string
+        }
+        Relationships: []
+      }
       connections: {
         Row: {
           created_at: string | null
@@ -178,41 +193,64 @@ export type Database = {
           },
         ]
       }
-      conversations: {
+      conversation_participants: {
         Row: {
-          created_at: string | null
-          id: number
-          user_a: string | null
-          user_b: string | null
+          conversation_id: string
+          joined_after_seq: number
+          joined_at: string
+          last_read_seq: number
+          left_at: string | null
+          user_id: string
         }
         Insert: {
-          created_at?: string | null
-          id?: never
-          user_a?: string | null
-          user_b?: string | null
+          conversation_id: string
+          joined_after_seq?: number
+          joined_at?: string
+          last_read_seq?: number
+          left_at?: string | null
+          user_id: string
         }
         Update: {
-          created_at?: string | null
-          id?: never
-          user_a?: string | null
-          user_b?: string | null
+          conversation_id?: string
+          joined_after_seq?: number
+          joined_at?: string
+          last_read_seq?: number
+          left_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "conversations_user_a_fkey"
-            columns: ["user_a"]
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversations_user_b_fkey"
-            columns: ["user_b"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
         ]
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          last_seq: number
+          source_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          last_seq?: number
+          source_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          last_seq?: number
+          source_key?: string
+        }
+        Relationships: []
       }
       dating_matches: {
         Row: {
@@ -744,27 +782,30 @@ export type Database = {
       messages: {
         Row: {
           body: string
-          conversation_id: number | null
-          created_at: string | null
-          id: number
-          read_at: string | null
+          client_request_id: string
+          conversation_id: string
+          created_at: string
+          id: string
           sender_id: string | null
+          seq: number
         }
         Insert: {
           body: string
-          conversation_id?: number | null
-          created_at?: string | null
-          id?: never
-          read_at?: string | null
+          client_request_id: string
+          conversation_id: string
+          created_at?: string
+          id?: string
           sender_id?: string | null
+          seq: number
         }
         Update: {
           body?: string
-          conversation_id?: number | null
-          created_at?: string | null
-          id?: never
-          read_at?: string | null
+          client_request_id?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
           sender_id?: string | null
+          seq?: number
         }
         Relationships: [
           {
@@ -775,11 +816,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "messages_sender_id_fkey"
-            columns: ["sender_id"]
+            foreignKeyName: "messages_conversation_id_sender_id_fkey"
+            columns: ["conversation_id", "sender_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedRelation: "conversation_participants"
+            referencedColumns: ["conversation_id", "user_id"]
           },
         ]
       }
@@ -910,7 +951,25 @@ export type Database = {
         Args: { job_id_in: string; lease_token_in: string; members: string[] }
         Returns: Json
       }
+      connection_accept: {
+        Args: { p_other_id: string; p_user_id: string }
+        Returns: Json
+      }
+      connection_list: { Args: { p_user_id: string }; Returns: Json }
+      connection_person_json: { Args: { p_user_id: string }; Returns: Json }
+      connection_remove: {
+        Args: { p_other_id: string; p_user_id: string }
+        Returns: Json
+      }
+      connection_request: {
+        Args: { p_other_id: string; p_user_id: string }
+        Returns: Json
+      }
       connection_requests_today: { Args: never; Returns: number }
+      connection_state: {
+        Args: { p_other_id: string; p_user_id: string }
+        Returns: Json
+      }
       end_dating_match: { Args: { match_id: number }; Returns: undefined }
       event_categories: { Args: never; Returns: Json }
       event_company_action: {
@@ -1031,19 +1090,6 @@ export type Database = {
       }
       get_matching_notifications: { Args: never; Returns: Json }
       get_matchmaking_profile: { Args: never; Returns: Json }
-      get_my_conversations: {
-        Args: never
-        Returns: {
-          avatar_url: string
-          conversation_id: number
-          display_name: string
-          last_message: string
-          last_message_at: string
-          other_user_id: string
-          unread_count: number
-          username: string
-        }[]
-      }
       get_queue_match: {
         Args: never
         Returns: {
@@ -1097,7 +1143,6 @@ export type Database = {
           username: string
         }[]
       }
-      get_unread_count: { Args: never; Returns: number }
       join_event_group_queue: { Args: { listing_id_in: string }; Returns: Json }
       join_queue: { Args: { qtype: string }; Returns: undefined }
       leave_event_group_queue: {
@@ -1105,12 +1150,95 @@ export type Database = {
         Returns: Json
       }
       leave_queue: { Args: never; Returns: undefined }
-      mark_conversation_read: { Args: { conv_id: number }; Returns: number }
       mark_matching_notification_read: {
         Args: { notification_id_in: string }
         Returns: Json
       }
       meetup_embedding: { Args: { m_id: number }; Returns: number[] }
+      messaging_activity: { Args: { p_user_id: string }; Returns: Json }
+      messaging_blocked: {
+        Args: { p_a: string; p_b: string }
+        Returns: boolean
+      }
+      messaging_close_direct: {
+        Args: { p_a: string; p_b: string }
+        Returns: undefined
+      }
+      messaging_ensure_event_conversation: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: string
+      }
+      messaging_hidden: {
+        Args: { p_sender: string; p_viewer: string }
+        Returns: boolean
+      }
+      messaging_history: {
+        Args: {
+          p_after?: number
+          p_before?: number
+          p_conversation_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      messaging_join: {
+        Args: {
+          p_conversation_id: string
+          p_keep_history: boolean
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      messaging_leave: {
+        Args: { p_conversation_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      messaging_list_conversations: {
+        Args: { p_page?: number; p_user_id: string }
+        Returns: Json
+      }
+      messaging_mark_read: {
+        Args: { p_conversation_id: string; p_seq: number; p_user_id: string }
+        Returns: number
+      }
+      messaging_member: {
+        Args: { p_conversation_id: string; p_user_id: string }
+        Returns: {
+          conversation_id: string
+          joined_after_seq: number
+          joined_at: string
+          last_read_seq: number
+          left_at: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "conversation_participants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      messaging_open_direct: {
+        Args: { p_a: string; p_b: string }
+        Returns: string
+      }
+      messaging_participants_json: {
+        Args: { p_conversation_id: string }
+        Returns: Json
+      }
+      messaging_send: {
+        Args: {
+          p_body: string
+          p_conversation_id: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      messaging_send_blocker: {
+        Args: { p_conversation_id: string; p_user_id: string }
+        Returns: string
+      }
       person_dating_score: {
         Args: { me: string; other: string }
         Returns: number

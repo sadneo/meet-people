@@ -20,12 +20,25 @@ export async function mockMatchingSession(page: Page, signedIn = true, signOutFa
   ` }))
 }
 export const browserProfile = { username: 'sam', display_name: 'Sam', bio: null, birthdate: null, location_city: 'Campus', avatar_url: null, interests: ['Coffee'], availability: [] }
+// Onboarding is finished, so signed-in pages open instead of redirecting to /onboarding.
+export const browserAccount = { profile: browserProfile, preferences: { intents: ['Meet new people'], usual: ['Evenings'], distance: '5 miles', group: 'Either' }, settings: { notifications: true, availability: true, discoverable: true, location: false }, completed: [0, 1, 2, 3] }
 export async function mockMatchingApi(page: Page) {
   let mode: string | null = null
+  // Signed-in shell and candidate card: the Messages dot and per-person connection state.
+  const connections = new Map<string, string>()
+  await page.route('**/api/conversations/activity', route => route.fulfill({ json: { unreadConversations: 0, incomingRequests: 0 } }))
+  await page.route('**/api/connections/**', route => {
+    const request = route.request()
+    const id = new URL(request.url()).pathname.split('/')[3]
+    if (request.method() === 'POST') connections.set(id, 'sent')
+    if (request.method() === 'DELETE') connections.delete(id)
+    return route.fulfill({ json: { status: connections.get(id) ?? 'none', conversationId: null } })
+  })
   await page.route('**/api/matchmaking/**', route => {
     const request = route.request()
     const path = new URL(request.url()).pathname
     if (path.endsWith('/notifications')) return route.fulfill({ json: { notifications: [], unreadCount: 0 } })
+    if (path.endsWith('/account')) return route.fulfill({ json: request.method() === 'PUT' ? request.postDataJSON() : browserAccount })
     if (path.endsWith('/profile')) return route.fulfill({ json: { profile: request.method() === 'PUT' ? request.postDataJSON() : browserProfile } })
     if (request.method() === 'POST') mode = request.postDataJSON().mode
     if (request.method() === 'DELETE') mode = null

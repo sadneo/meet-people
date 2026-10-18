@@ -1,9 +1,11 @@
 import express from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { env } from './env.js'
+import { createConnectionsRouter } from './connections.js'
 import { createEventsRouter } from './events.js'
 import { createAuthRouter } from './auth.js'
 import { createMatchmakingRouter, createUserContextTransport } from './matchmaking.js'
+import { createMessagingRouter } from './messaging.js'
 import { HealthResponseSchema, HelloRequestSchema, HelloResponseSchema } from '../shared/schemas.js'
 import cors from 'cors'
 
@@ -25,6 +27,8 @@ const eventsClient = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null
 app.use('/api/events', createEventsRouter(eventsClient))
+app.use('/api/conversations', createMessagingRouter(eventsClient))
+app.use('/api/connections', createConnectionsRouter(eventsClient))
 app.use('/api/auth', createAuthRouter(eventsClient))
 app.use('/api/matchmaking', createMatchmakingRouter(env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY
   ? createUserContextTransport({ url: env.SUPABASE_URL, publicKey: env.SUPABASE_PUBLISHABLE_KEY, verificationKey: env.SUPABASE_SERVICE_ROLE_KEY })
