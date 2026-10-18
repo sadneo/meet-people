@@ -60,7 +60,11 @@ do $$ begin
  assert not has_function_privilege('anon','public.save_account_profile(jsonb)','EXECUTE');
  assert not has_table_privilege('authenticated','public.account_profiles','INSERT');
  assert not has_table_privilege('authenticated','public.account_profiles','UPDATE');
- assert not has_table_privilege('authenticated','public.account_profiles','DELETE');
+  assert not has_table_privilege('authenticated','public.account_profiles','DELETE');
+  assert not has_table_privilege('authenticated','public.profiles','INSERT,UPDATE,DELETE'), 'Legacy browser DML bypass';
+  assert not has_any_column_privilege('authenticated','public.profiles','INSERT'), 'Legacy column INSERT bypass';
+  assert not has_any_column_privilege('authenticated','public.profiles','UPDATE'), 'Legacy column UPDATE bypass';
+  assert not has_table_privilege('anon','public.profiles','INSERT,UPDATE,DELETE'), 'Anonymous legacy DML bypass';
 end $$;
 set local role anon;
 do $$ begin

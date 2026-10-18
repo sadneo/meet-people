@@ -21,7 +21,7 @@ export function useLogout() {
     setBusy(true); setError('')
     try {
       if (!supabase) throw new Error('Sign-out unavailable')
-      const { error } = await supabase.auth.signOut()
+      const { error } = await supabase.auth.signOut({ scope: 'local' })
       if (error) throw error
       // The SDK's SIGNED_OUT notification clears every existing useSession subscriber.
       // Do not invent a local session change or navigate on a failed sign-out.

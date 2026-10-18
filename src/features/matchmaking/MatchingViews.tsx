@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router'
 import type { MatchingMode } from '../../../shared/matchmaking'
-import { MatchingScreen } from './MatchingScreen'
+import { MatchingNavigation, MatchingScreen } from './MatchingScreen'
 import { isDatingView } from './views'
 import { PixelPebble } from '../pebble-art/PixelArt'
 import './dating-views.css'
@@ -14,8 +14,7 @@ export function MatchingViews({ mode }: { mode: MatchingMode }) {
     else query.delete('view')
     return `${pathname}${query.size ? `?${query}` : ''}`
   }
-  if (mode === 'active') return <MatchingScreen mode={mode} />
-  return <><nav className="match-view-segments" aria-label="Matching views">
+  return <div className={mode === 'active' ? 'match-main-views' : 'match-home match-live match-calm'}>{mode !== 'active' && <MatchingNavigation mode={mode} />}<nav className="match-view-segments" aria-label="Matching views">
     <Link to={target('friends')} aria-current={!dating ? 'page' : undefined}>Friends</Link>
     <Link to={target('dating')} aria-current={dating ? 'page' : undefined}>Dating</Link>
   </nav>{dating ? <section className="match-home match-calm dating-view" aria-labelledby="dating-title">
@@ -31,5 +30,5 @@ export function MatchingViews({ mode }: { mode: MatchingMode }) {
       </div>
       <small>Your Friends queue stays as it is.</small>
     </div>
-  </section> : <MatchingScreen mode={mode} />}</>
+  </section> : mode === 'active' ? <MatchingScreen mode={mode} /> : <section className="match-focus downtime-compatibility" aria-labelledby="downtime-settings-title"><div className="pt-mascot-scene" aria-hidden="true"><PixelPebble /></div><h1 id="downtime-settings-title" tabIndex={-1}>Manage downtime in Settings</h1><p>Allow downtime matching in Settings. Only one Friends queue can be active at a time.</p><Link className="match-button match-button-secondary" to="/settings">Open matchmaking settings</Link></section>}</div>
 }

@@ -59,7 +59,7 @@ it('central callback returns signed-in account to a validated event path, never 
   await waitFor(() => expect(screen.getByLabelText('Current path').textContent).toBe(`/events/${id}`))
   view.unmount()
   render(<MemoryRouter initialEntries={['/login?returnTo=https%3A%2F%2Fevil.test']}><Auth /><Path /></MemoryRouter>)
-  expect(screen.getByLabelText('Current path').textContent).toBe('/login?returnTo=https%3A%2F%2Fevil.test')
+  expect(screen.getByLabelText('Current path').textContent).toBe('/')
 })
 it('queue enrollment is persisted status only, refresh recovers waiting, and failed leave reconciles honestly', async () => {
   const view = render(page())

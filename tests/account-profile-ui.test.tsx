@@ -1,111 +1,159 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter, useLocation, useNavigate, useNavigationType } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from '../src/App'
+import { requiredPreferences } from './complete-profile-fixture'
 
 vi.mock('../src/supabase', () => ({ supabase: null }))
 const auth = vi.hoisted(() => ({ session: { access_token: 'test-jwt', user: { id: 'a0000000-0000-4000-8000-000000000001' } } as { access_token: string; user: { id: string } } | null }))
 vi.mock('../src/auth/useSession', () => ({ useSession: () => ({ ready: true, session: auth.session }) }))
-const account = { username: 'sam', display_name: 'Sam', bio: null, avatar_url: null }
-const legacy = { ...account, birthdate: null, location_city: null, interests: ['Coffee'], availability: [] }
-let available = true, missing = false, saveFails = false
+const account = { username: 'canonical-sam', display_name: 'Canonical Sam', bio: 'Account bio', avatar_url: null }
+const legacy = { username: 'legacy-sam', display_name: 'Legacy Sam', bio: 'Legacy bio', avatar_url: null, ...requiredPreferences, interests: ['Board games\nstrategy', 'Coffee', 'Art'] }
+let available = true, missingAccount = false, missingLegacy = false
 let accountRead: Promise<Response> | null = null
+let profileSave: Promise<Response> | null = null
 const writes: { path: string; body: unknown }[] = []
+const reads: string[] = []
 beforeEach(() => {
-  available = true; missing = false; saveFails = false; accountRead = null; writes.length = 0
+  available = true; missingAccount = false; missingLegacy = false; accountRead = null; profileSave = null; writes.length = 0; reads.length = 0
   auth.session = { access_token: 'test-jwt', user: { id: 'a0000000-0000-4000-8000-000000000001' } }
   vi.stubGlobal('scrollTo', () => {})
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input)
-    if (init?.method === 'PUT') writes.push({ path, body: JSON.parse(String(init.body)) })
+    if (init?.method === 'PUT' || init?.method === 'POST') writes.push({ path, body: JSON.parse(String(init.body)) })
+    else reads.push(path)
     if (path.endsWith('/account-profile')) {
-      if (init?.method !== 'PUT' && accountRead) return accountRead
-      if (!available || (init?.method === 'PUT' && saveFails)) return Response.json({ code: 'unavailable', error: 'Account profile unavailable. No changes were saved.' }, { status: 503 })
-      return Response.json({ profile: init?.method === 'PUT' ? JSON.parse(String(init.body)) : missing ? null : account })
+      if (accountRead) return (await accountRead).clone()
+      if (!available) return Response.json({ code: 'unavailable', error: 'Account profile unavailable.' }, { status: 503 })
+      return Response.json({ profile: missingAccount ? null : account })
     }
-    if (path.endsWith('/profile')) return Response.json({ profile: init?.method === 'PUT' ? JSON.parse(String(init.body)) : legacy })
+    if (path.endsWith('/profile')) return init?.method === 'PUT' && profileSave ? profileSave : Response.json({ profile: init?.method === 'PUT' ? JSON.parse(String(init.body)) : missingLegacy ? null : legacy })
     if (path.endsWith('/notifications')) return Response.json({ notifications: [], unreadCount: 0 })
+    if (path.endsWith('/queue') && init?.method === 'POST') return Response.json({ mode: 'active' })
     return Response.json({ mode: null })
   }))
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
-const mount = (path = '/profile/account') => render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
-it('account UI loads authenticated canonical identity and saves no matching fields', async () => {
-  mount()
-  const name = await screen.findByLabelText('Display name')
-  expect((name as HTMLInputElement).value).toBe('Sam')
-  expect(screen.queryByText('Weekly availability')).toBeNull()
-  fireEvent.change(name, { target: { value: 'New Sam' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Save account profile' }))
-  await screen.findByText('Account profile saved.')
-  expect(writes).toEqual([{ path: '/api/matchmaking/account-profile', body: { ...account, display_name: 'New Sam' } }])
+const mount = (path = '/profile') => render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
+const save = () => screen.getByRole('button', { name: 'Save preferences' }) as HTMLButtonElement
+async function preferences() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
+  await waitFor(() => expect(screen.queryByText('Checking saved identity…')).toBeNull())
+}
+function History() {
+  const location = useLocation(), type = useNavigationType(), navigate = useNavigate()
+  return <><output aria-label="Route">{location.pathname} {type}</output><button onClick={() => navigate(-1)}>History back</button></>
+}
+
+it('old account route replaces history with the shared Profile without automatic writes', async () => {
+  render(<MemoryRouter initialEntries={['/settings', '/profile/account']} initialIndex={1}><App /><History /></MemoryRouter>)
+  await waitFor(() => expect(screen.getByLabelText('Route').textContent).toBe('/profile REPLACE'))
+  expect(screen.getByRole('button', { name: 'Edit profile', exact: true })).toBeTruthy()
+  expect(screen.queryByRole('link', { name: 'Account profile', exact: true })).toBeNull()
+  await screen.findByRole('heading', { name: account.display_name, exact: true })
+  expect(reads.some(path => path.endsWith('/account-profile'))).toBe(true)
+  expect(writes).toEqual([])
+  expect(screen.queryByRole('button', { name: 'Save account profile' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'History back' }))
+  await waitFor(() => expect(screen.getByLabelText('Route').textContent).toBe('/settings POP'))
 })
-it('account UI unavailable never invents identity or claims a successful save', async () => {
-  available = false; mount()
-  await screen.findByText(/Account profile unavailable/)
-  expect(screen.queryByLabelText('Display name')).toBeNull()
-  expect(writes).toHaveLength(0)
+
+it('Profile navigation reaches the canonical identity editor and writes identity only through account-profile', async () => {
+  mount('/settings')
+  await screen.findByRole('heading', { name: 'Settings', exact: true })
+  expect(within(document.querySelector('.pt-settings')!).queryByRole('link', { name: 'Profile', exact: true })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+  const row = within(screen.getByRole('navigation', { name: 'Account navigation' })).getByRole('link', { name: 'Profile', exact: true })
+  expect(row.getAttribute('href')).toBe('/profile')
+  fireEvent.click(row)
+  await screen.findByRole('heading', { name: account.display_name, exact: true })
+  fireEvent.click(screen.getByRole('button', { name: 'Edit profile', exact: true }))
+  fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Session Alex' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save identity', exact: true }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(writes).toEqual([{ path: '/api/matchmaking/account-profile', body: { ...account, display_name: 'Session Alex' } }])
   expect(screen.queryByText('Account profile saved.')).toBeNull()
 })
-it('account UI creates blank identity only with supported backend and retains draft on failed save', async () => {
-  missing = true; mount()
-  expect((await screen.findByLabelText('Username') as HTMLInputElement).value).toBe('')
-  fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'real-sam' } })
-  fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Real Sam' } })
-  saveFails = true
-  fireEvent.click(screen.getByRole('button', { name: 'Save account profile' }))
-  await screen.findByRole('alert')
-  expect((screen.getByLabelText('Display name') as HTMLInputElement).value).toBe('Real Sam')
-  expect(screen.queryByText('Account profile saved.')).toBeNull()
-})
-it('account UI signed out does not request or fabricate an account', () => {
-  auth.session = null; mount()
-  expect(screen.getByRole('heading', { name: 'Sign in to manage your account profile' })).toBeTruthy()
+
+it('signed-out old account route redirects to login without account identity reads', async () => {
+  auth.session = null; mount('/profile/account')
+  await screen.findByRole('heading', { name: 'Sign in', exact: true })
   expect(screen.queryByLabelText('Username')).toBeNull()
-  expect(fetch).not.toHaveBeenCalled()
+  expect(reads).toEqual([])
 })
-it('account UI is reachable from forest Profile and Settings', () => {
-  const view = mount('/profile')
-  expect(screen.getByRole('link', { name: 'Account profile', exact: true }).getAttribute('href')).toBe('/profile/account')
-  view.unmount(); mount('/settings')
-  expect(screen.getByRole('link', { name: 'Account profile', exact: true }).getAttribute('href')).toBe('/profile/account')
+
+for (const canonical of ['available', 'missing', 'unavailable']) {
+  it(`shared preferences preserve interests and require canonical identity when canonical is ${canonical}`, async () => {
+    available = canonical !== 'unavailable'; missingAccount = canonical === 'missing'
+    mount('/matchmaking')
+    if (canonical !== 'available') {
+      await screen.findByRole('heading', { name: canonical === 'missing' ? 'Complete onboarding' : 'Profile unavailable', exact: true })
+      expect(screen.queryByRole('button', { name: 'Preferences', exact: true })).toBeNull()
+      expect(writes).toEqual([])
+      expect(reads.some(path => /\/(queue|result)$/.test(path))).toBe(false)
+      return
+    }
+    await preferences()
+    await screen.findByText(/Using your saved account identity/)
+    for (const label of ['Username', 'Display name', 'Bio', 'Avatar URL (HTTPS, optional)']) expect(screen.queryByLabelText(label)).toBeNull()
+    expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'Profile', exact: true }).getAttribute('href')).toBe('/profile')
+    expect(screen.queryByLabelText('City or campus area')).toBeNull()
+    expect(screen.queryByLabelText('Birthdate (optional)')).toBeNull()
+    fireEvent.click(save())
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(writes).toEqual([{ path: '/api/matchmaking/profile', body: { ...legacy, ...account } }])
+  })
+}
+
+it('uses authoritative canonical identity and requires real preferences onboarding when no matching profile exists', async () => {
+  missingLegacy = true; mount('/matchmaking')
+  await screen.findByRole('heading', { name: 'Complete onboarding', exact: true })
+  await screen.findByText(/Using your saved account identity/)
+  expect(screen.getByText(account.display_name, { exact: true })).toBeTruthy()
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Preferences', exact: true })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Cancel search', exact: true })).toBeNull()
+  expect(writes).toEqual([])
+  expect(screen.queryByRole('button', { name: 'Find Friends', exact: true })).toBeNull()
+  expect(screen.getByLabelText('City or campus area')).toHaveProperty('value', '')
+  expect(reads.some(path => /\/(queue|result)$/.test(path))).toBe(false)
 })
-it('separated preferences use canonical identity through the full legacy adapter without duplicated editable fields', async () => {
-  mount('/matchmaking')
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
-  await screen.findByText('Identity comes from your account profile.')
-  for (const label of ['Username', 'Display name', 'Bio', 'Avatar URL (HTTPS, optional)']) expect(screen.queryByLabelText(label)).toBeNull()
-  expect(screen.getByRole('link', { name: 'Account profile', exact: true })).toBeTruthy()
-  fireEvent.change(screen.getByLabelText('City or campus area'), { target: { value: 'Campus' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  expect(writes).toEqual([{ path: '/api/matchmaking/profile', body: { ...legacy, location_city: 'Campus' } }])
-})
-it('separated preferences require a canonical account when supported and never submit invalid legacy data', async () => {
-  missing = true; mount('/matchmaking')
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
-  await screen.findByText('Save an account profile before matching preferences.')
-  expect((screen.getByRole('button', { name: 'Save preferences' }) as HTMLButtonElement).disabled).toBe(true)
-  expect(screen.queryByLabelText('Username')).toBeNull()
-  expect(writes).toHaveLength(0)
-})
-it('compatibility preferences preserve the real Friends legacy save contract when account RPCs are absent', async () => {
-  available = false; mount('/matchmaking')
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
-  await screen.findByText(/Account profile separation unavailable/)
-  expect((screen.getByLabelText('Username') as HTMLInputElement).value).toBe('sam')
-  fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  expect(writes).toEqual([{ path: '/api/matchmaking/profile', body: legacy }])
-})
-it('separated preferences cannot save while account compatibility is still loading', async () => {
+
+for (const canonical of ['missing', 'unavailable']) {
+  it(`missing server identity blocks save when canonical is ${canonical}; session edits cannot supply it`, async () => {
+    missingLegacy = true; missingAccount = true; available = canonical !== 'unavailable'
+    mount('/profile')
+    await screen.findByRole('heading', { name: canonical === 'missing' ? 'Complete onboarding' : 'Profile unavailable', exact: true })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Preferences', exact: true })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Find Friends', exact: true })).toBeNull()
+    expect(writes).toEqual([])
+    expect(reads.some(path => /\/(queue|result)$/.test(path))).toBe(false)
+    expect(screen.queryByRole('button', { name: 'Cancel search', exact: true })).toBeNull()
+    if (canonical === 'missing') expect(screen.getByLabelText('Username')).toHaveProperty('value', '')
+    else expect(screen.queryByLabelText('Username')).toBeNull()
+    expect(screen.queryByText('Account profile saved.')).toBeNull()
+  })
+}
+
+it('cannot save while identity compatibility is loading', async () => {
   let finish!: (response: Response) => void
   accountRead = new Promise(resolve => { finish = resolve })
   mount('/matchmaking')
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
-  expect((screen.getByRole('button', { name: 'Save preferences' }) as HTMLButtonElement).disabled).toBe(true)
+  await screen.findByText('Checking your profile…')
+  expect(screen.queryByRole('button', { name: 'Preferences' })).toBeNull()
+  expect(writes).toEqual([])
   await act(async () => { finish(Response.json({ profile: account })); await accountRead })
-  expect((screen.getByRole('button', { name: 'Save preferences' }) as HTMLButtonElement).disabled).toBe(false)
+  await preferences()
+  await waitFor(() => expect(save().disabled).toBe(false))
+})
+
+it('an unavailable canonical identity blocks shared and identity writes on Profile', async () => {
+  available = false; mount('/profile')
+  await screen.findByRole('heading', { name: 'Profile unavailable', exact: true })
+  expect(screen.queryByRole('form')).toBeNull()
+  expect(reads.every(path => /\/(account-profile|profile)$/.test(path))).toBe(true)
+  expect(writes).toEqual([])
 })
