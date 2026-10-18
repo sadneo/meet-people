@@ -82,7 +82,8 @@ The active shell is `src/features/prototype/AppShell.tsx`, wrapped by
   account avatar at the right. No white strip or divider.
 - Compact (<=800px): five-item bottom navigation with accessible names and
   native hover tooltips. Labels are visually hidden. Active tabs use a soft
-  background plus a small dot; focus remains visible.
+  background plus a small dot; focus remains visible. A raspberry dot at the
+  Messages icon's top right marks unread messages or connection requests.
 - Navigation graphics are 25px inside approximately 48px targets; secondary
   icon controls use 24px graphics and 44–48px targets. Home Community and Community
   Build use `clamp(32px, 2.5vw, 36px)` graphics in 56px targets. Home currency
@@ -212,7 +213,10 @@ and reducer persist everything; no backend/database schema change.
 Minimal state structure: central visual or candidate, concise status, one
 primary action, quiet supporting controls. Candidate portraits/avatars and up
 to four shared interests are prominent. The current API returns suggestions;
-do not invent acceptance, invitations, or conversations.
+do not invent acceptance, invitations, or conversations. **Connect** on a
+candidate is the real exception: it sends a connection request, and acceptance
+opens a direct chat (`docs/MESSAGING-M3.md`). While a candidate is shown,
+Connect is the one primary action.
 
 Checking for a match remains manual. The queue does not acquire new polling or
 matching logic as part of visual work. Preferences retains all server fields;

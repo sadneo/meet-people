@@ -1,9 +1,10 @@
 import { supabase } from '../../supabase'
 import type { ZodType } from 'zod'
+import { apiUrl } from '../../platform/native'
 
 export async function eventRequest<T>(path: string, schema: ZodType<T>, options: { body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
-  const response = await fetch(`/api/events${path}`, {
+  const response = await fetch(apiUrl(`/api/events${path}`), {
     method: options.body ? 'POST' : 'GET', signal: options.signal,
     headers: { ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}), ...(options.body ? { 'Content-Type': 'application/json' } : {}) },
     body: options.body ? JSON.stringify(options.body) : undefined,

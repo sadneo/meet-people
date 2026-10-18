@@ -22,6 +22,8 @@
 .pt-app .pt-desktop-nav a > svg, .pt-app .pt-bottom-nav a > svg { width: 25px; height: 25px; margin: 0; }
 .pt-app .pt-desktop-nav a > span, .pt-app .pt-bottom-nav a > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .pt-app .pt-desktop-nav a.is-active::after, .pt-app .pt-bottom-nav a.is-active::after { content: ''; position: absolute; width: 4px; height: 4px; border-radius: 50%; background: currentColor; bottom: 3px; }
+/* Unread messages or connection requests; distinct from the active tab's bottom dot. */
+.pt-app .pt-desktop-nav a > .pt-nav-activity, .pt-app .pt-bottom-nav a > .pt-nav-activity { position: absolute; top: 8px; left: calc(50% + 6px); width: 10px; height: 10px; border: 2px solid var(--pt-cream); border-radius: 50%; background: var(--pt-berry); }
 .pt-app .pt-app-header .pt-account-nav .pt-avatar { width: 44px; height: 44px; }
 .pt-icon-button { width: var(--pt-control-size); height: var(--pt-control-size); text-decoration: none; color: var(--pt-green); }
 .pt-icon-button > svg { width: 24px; height: 24px; }
