@@ -18,8 +18,10 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
     const brandFont = await page.locator('.pt-app-header .pt-brand').evaluate(element => getComputedStyle(element).font)
     for (const route of ['/', '/community', '/events', '/events/detail', '/matchmaking', '/downtime-matchmaking', '/messages', '/messages/chat', '/profile', '/settings', '/free-time', '/free-time/matches', '/free-time/plan', '/register', '/onboarding']) {
       if (route === '/free-time/plan') {
-        await page.goto('/messages/chat')
+        await page.goto('/free-time/connection')
         await page.getByRole('button', { name: 'Make a plan', exact: true }).click()
+        await page.getByRole('group', { name: 'Activities' }).getByRole('button').first().click()
+        await page.getByRole('button', { name: 'Choose a time', exact: true }).click()
         await expect(page).toHaveURL(route)
       } else {
         await page.goto(route)
@@ -62,13 +64,8 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
       }
 
       if (route.startsWith('/messages')) {
-        await expect(page.locator('.pt-inbox-pane')).toBeVisible({ visible: !compact || route === '/messages' })
-        await expect(page.locator('.pt-conversation-pane')).toBeVisible({ visible: !compact || route === '/messages/chat' })
-        if (route === '/messages/chat') {
-          const composer = await page.locator('.pt-composer').boundingBox()
-          const navigation = compact ? await page.locator('.pt-bottom-nav').boundingBox() : null
-          expect(composer!.y + composer!.height).toBeLessThanOrEqual(navigation?.y ?? 844)
-        }
+        // Signed out here. Signed-in panes and composer clearance: messaging-persistence.spec.ts.
+        await expect(page.getByText('Sign in to open your saved conversations.')).toBeVisible()
       }
       const grid = route === '/profile' ? '.pt-profile-support' : route === '/free-time/plan' ? '.pt-planning-grid' : null
       if (grid) {
@@ -89,7 +86,10 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
 }
 
 test('an existing messaging workspace switches with navigation when resized', async ({ page }) => {
-  await page.goto('/messages/chat')
+  await mockMatchingSession(page)
+  await mockMatchingApi(page)
+  await mockMessagingApi(page)
+  await page.goto(`/messages/chat?conversation=${directConversation}`)
   for (const width of [801, 800, 799, 801]) {
     await page.setViewportSize({ width, height: 844 })
     await expect(page.locator('.pt-app-header')).toBeVisible({ visible: width > 800 })
@@ -125,3 +125,4 @@ test('navigation and preferences share safe-area clearance on a short screen', a
   expect(entry!.y + entry!.height).toBeLessThanOrEqual(navigation!.y)
 })
 import { mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
+import { directConversation, mockMessagingApi } from './messaging-fixture'

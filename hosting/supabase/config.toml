@@ -1,0 +1,13 @@
+# Hosted-only settings. Undeclared properties are left unchanged by config push.
+# Never push the development supabase/config.toml to the hosted project.
+project_id = "meet-people"
+
+[auth]
+site_url = "https://cse416-meet-people.web.app"
+additional_redirect_urls = ["https://cse416-meet-people.web.app/auth/callback**", "https://cse416-meet-people.web.app/reset-password**"]
+enable_signup = false
+minimum_password_length = 8
+
+[auth.email]
+enable_confirmations = true
+secure_password_change = true
