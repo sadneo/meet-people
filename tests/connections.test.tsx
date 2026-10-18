@@ -20,7 +20,7 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => 
   return json(state())
 })
 beforeEach(() => { status = 'none'; failure = null; vi.stubGlobal('fetch', fetchMock); fetchMock.mockClear() })
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers() })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.useRealTimers() })
 const mount = () => render(<MemoryRouter><ConnectButton userId={taylor} name="Taylor" /></MemoryRouter>)
 const calls = () => fetchMock.mock.calls.map(([input, init]) => `${init?.method ?? 'GET'} ${String(input)}`)
 
@@ -75,6 +75,12 @@ describe('connect button', () => {
     fireEvent.click(connect)
     expect((await screen.findByRole('alert')).textContent).toBe('You’ve sent a lot of requests today. Try again tomorrow.')
     expect(screen.getByRole('button', { name: 'Connect' })).toBeTruthy()
+  })
+  it('sends requests to the hosted API in the Android build', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://pebble.example/')
+    mount()
+    await screen.findByRole('button', { name: 'Connect' })
+    expect(calls()).toEqual([`GET https://pebble.example/api/connections/${taylor}`])
   })
   it('disables Connect until the current state is known', () => {
     fetchMock.mockImplementationOnce(() => new Promise(() => {}))

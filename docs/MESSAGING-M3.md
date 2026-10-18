@@ -35,7 +35,7 @@ but have no entry point: **Message group** lives in
 | Hand-written `database.ts` | Regenerated from the migrated database; it now also includes `dev`'s own tables. |
 | Old `e2e/messages.spec.ts` assumed sample chats | Removed; specs that visited `/messages` now expect the real signed-out or mocked signed-in UI. |
 
-## Database (`supabase/migrations/20261013120000_messaging.sql`)
+## Database (`supabase/migrations/20261013125000_messaging.sql`)
 
 | Table | Notes |
 | --- | --- |
@@ -144,9 +144,10 @@ PostgreSQL. To run them: apply migrations to a **test** database, then
 
 1. Apply migrations locally (`pnpm supabase:reset` on a disposable local DB, or
    `pnpm exec supabase migration up --local`), then `pnpm env:local` and `pnpm dev`.
-2. Sign in as two users with email links in two browser profiles (local mail
-   viewer: `pnpm exec supabase status`). Each saves a matching profile.
-3. Have them meet in matchmaking, or with only two users, call
+2. Sign in at `/login` as two seeded users in two browser profiles, for
+   example `alice@example.com` and `erin@example.com` (password `password123`).
+   Seeded users have finished onboarding, and erin's request to alice is pending.
+3. For new pairs, have them meet in matchmaking, or call
    `POST /api/connections/<other user id>` from one browser's session. On
    **Connect**, the other sees **Requests** in Messages and a dot on the tab;
    **Accept** opens the chat.

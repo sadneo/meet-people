@@ -6,22 +6,22 @@ Maintain a mobile-first visual prototype for a student-focused, platonic
 social app. It demonstrates world progression, matching, events, planning,
 conversations, and profile preferences. Home and Community fixtures are documented
 in source and developer controls without demo labels in their minimal product UI.
-Most flows remain local previews. Active/downtime matching and email-link
-sign-in now use the backend slice described in `docs/matchmaking-backend.md`;
-SQL activation is separate. Messages uses the saved messaging backend in
-`docs/MESSAGING-M3.md`; planning remains a prototype.
+Active/downtime matching uses the backend slice in `docs/matchmaking-backend.md`.
+Email/password and Google sign-in, onboarding, profile and settings use the
+persistent account flow in `docs/accounts.md`. Messages uses the saved messaging
+backend in `docs/MESSAGING-M3.md`; planning remains a prototype.
 Imported event detail/preview use a server-backed group queue and persistent
 in-app proposal inbox; see `docs/event-group-queue.md` for the proposed parent SQL
 contracts and disabled worker. No Company/compatibility consent is reused.
-`docs/DESIGN.md` is the product-design authority. The fresh meadow palette is
-shared across routed screens; this color update preserves their layouts.
+`docs/DESIGN.md` is the product-design authority. The #DDCABC page/navigation token,
+light surfaces and forest foregrounds are shared without changing route layouts.
 
 ## Information Architecture
 
 | Route | Purpose |
 | --- | --- |
 | `/` | Minimal Pebble focal composition and discovery entry |
-| `/community` | Village and weekly activity, balance/upgrades, horizontally adjacent geology museum |
+| `/community` | Village and weekly activity, balance/upgrades, local drag placement |
 | `/matchmaking` | Authenticated active queue, single-person result and profile preferences |
 | `/downtime-matchmaking` | Authenticated downtime queue and shared profile preferences |
 | `/events` | Browse sample events |
@@ -33,7 +33,8 @@ shared across routed screens; this color update preserves their layouts.
 | `/profile/person` | Another sample student's profile |
 | `/settings` | Local prototype and account preferences |
 | `/free-time` and nested routes | Availability, people, activities, planning, review, confirmation, and connection |
-| `/intro`, `/login`, `/register`, `/onboarding` | Preview introduction/onboarding; real email-link sign-in on login/register |
+| `/intro`, `/login`, `/register`, `/onboarding` | Introduction, authentication, and persistent account setup |
+| `/auth/callback`, `/forgot-password`, `/reset-password` | Authentication redirects and password recovery |
 | `*` | Not-found experience |
 
 Home, Matchmaking, Events, Messages, and Profile are the five icon-first navigation
@@ -85,15 +86,12 @@ are independent of the single width breakpoint.
   profile adapter, accessible 1750ms minimum refresh and Home-only positioning. These do
   not query matchmaking or implement presence.
 - `src/features/prototype/PebbleGarden.tsx`: Community route and Build dialog.
-- `src/features/prototype/CommunityWorld.tsx`: depth-sorted interactive diorama; `village-art.css` shares the reference-inspired
-  artwork palette with every Build preview.
-- `src/features/pebble-art/`: supplied pixel art, shared display crops, and crisp
-  rendering for characters, currency, Build, geodes and gems.
-- `src/features/prototype/CommunityAreas.tsx`, `GeologyMuseum.tsx`, `museum.css`,
-  and `museum-model.ts`: horizontal village/museum panels, sixteen aligned
-  display cases and an isolated four-family, four-stage mineral exhibit.
-  `GemProgression.tsx` supplies expressive pixel sprites. The empty-state toggle
-  remains available; chat backend integration is deferred.
+- `src/features/prototype/CommunityWorld.tsx`: raster village, shared platform shadow,
+  fixed landscape, depth-sorted mouse/touch/keyboard placement and sprite previews.
+- `src/features/prototype/community-placement.ts`: ground bounds, snapping and
+  validated local position data; `economy.ts` includes four 300-Pebble collectibles.
+- `src/features/pebble-art/`: supplied pixel art and shared character/currency crops.
+- Museum components and assets are unused; no Museum is mounted in the app.
 - `src/features/prototype/CommunityHistory.tsx` and `community-history.ts`: interactive
   weekly chart and isolated UI fixture (no dated activity ledger exists).
 - `src/features/prototype/calm.css`: shared visual refinement and focal scaling.

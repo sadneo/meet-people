@@ -1,12 +1,15 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import App from '../src/App'
 import type { Message, Participant } from '../shared/messaging'
 
 const auth = vi.hoisted(() => ({ session: { user: { id: 'a0000000-0000-4000-8000-000000000001' } } as Session | null }))
 vi.mock('../src/auth/useSession', () => ({ useSession: () => ({ session: auth.session, ready: true }) }))
+// Accounts and onboarding have their own tests; here the signed-in user is already set up.
+vi.mock('../src/auth/account', () => ({ AccountBoundary: ({ children }: { children: ReactNode }) => children }))
 vi.mock('../src/supabase', () => ({ supabase: { auth: { getSession: async () => ({ data: { session: { access_token: 'real-session' } } }) } } }))
 const user = 'a0000000-0000-4000-8000-000000000001'
 const taylor = 'a0000000-0000-4000-8000-000000000002'

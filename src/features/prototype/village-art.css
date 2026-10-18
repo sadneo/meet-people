@@ -1,3 +1,90 @@
 /* Preserve the original artwork colors; SVG only positions/crops raster assets. */
+/* Three independently rasterized poses share the same center/ground anchor.
+   Only visibility steps; no transform, opacity blending or geometry tweening. */
+.pt-village-idle { --idle-duration: 10s; --idle-delay: -1.5s; }
+.pt-idle-frame {
+  visibility: hidden; image-rendering: pixelated; transform: none; transition: none;
+  animation: pt-idle-normal var(--idle-duration) steps(1, end) var(--idle-delay) infinite;
+}
+.pt-idle-frame image { image-rendering: pixelated; }
+.pt-idle-frame[data-idle-pose="normal"] { visibility: visible; }
+.pt-idle-frame[data-idle-pose="compressed"] { animation-name: pt-idle-compressed; }
+.pt-idle-frame[data-idle-pose="stretched"] { animation-name: pt-idle-stretched; }
+[data-object="friend"] .pt-village-idle { --idle-delay: -4s; --idle-duration: 11.6s; }
+[data-object="friend-two"] .pt-village-idle { --idle-delay: -7s; --idle-duration: 9.4s; }
+/* Distinct rhythms and integer-pixel poses preserve the painted personalities. */
+[data-object="garnet"] .pt-village-idle { --idle-duration: 11s; --idle-delay: -2s; }
+[data-object="sapphire"] .pt-village-idle { --idle-duration: 14s; --idle-delay: -6s; }
+[data-object="emerald"] .pt-village-idle { --idle-duration: 12.5s; --idle-delay: -8s; }
+[data-object="citrine"] .pt-village-idle { --idle-duration: 9s; --idle-delay: -3.5s; }
+.pt-village-movable:active .pt-idle-frame { animation-play-state: paused; }
+/* Coordinates scale to about half-size on desktop: keep currents legible there. */
+.pt-river-flow path { fill: none; stroke: #e5fff5; stroke-width: 8; stroke-linecap: butt; stroke-dasharray: 24 72; opacity: .8; animation: pt-river-current 3.6s linear infinite; }
+.pt-river-flow path + path { stroke: #b8eee7; stroke-width: 6; stroke-dasharray: 18 78; opacity: .7; animation-delay: -1.8s; animation-duration: 4.8s; }
+.pt-lantern-glow { opacity: .16; animation: pt-lamp-glow 4.5s ease-in-out infinite; }
+@keyframes pt-idle-normal {
+  0%, 48%, 100% { visibility: visible; }
+  24%, 74% { visibility: hidden; }
+}
+@keyframes pt-idle-compressed {
+  0%, 36%, 86%, 100% { visibility: hidden; }
+  24%, 74% { visibility: visible; }
+}
+@keyframes pt-idle-stretched {
+  0%, 48%, 100% { visibility: hidden; }
+  36%, 86% { visibility: visible; }
+}
+@keyframes pt-river-current { to { stroke-dashoffset: -96; } }
+@keyframes pt-lamp-glow { 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) {
+  .pt-idle-frame, .pt-river-flow path, .pt-lantern-glow { animation: none; transform: none; }
+}
 .pt-village-art { image-rendering: pixelated; }
 .pt-village-art .pt-world-character:focus-visible > rect { stroke-width: 6; }
+.pt-build-slot { display: flex; align-items: center; width: 56px; height: 48px; }
+.pt-community-village { width: 100%; flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; }
+.pt-community-village .pt-diorama { flex-shrink: 0; max-width: 100%; }
+.pt-village-movable { cursor: grab; touch-action: none; outline: none; }
+.pt-village-movable:active { cursor: grabbing; }
+.pt-village-movable > rect:focus-visible { stroke: var(--pt-green); stroke-width: 4; stroke-dasharray: 8 6; }
+.pt-placement-hint { color: var(--pt-muted); text-align: center; font-size: 12px; margin: 4px 0 0; }
+@media (max-width: 800px) { .pt-community-village { width: calc(100% + 28px); max-width: calc(100vw - 12px); } .pt-community-village .pt-community-history { max-width: 100%; } }
+
+.pt-village-movable > rect { outline: none; touch-action: none; }
+.pt-world-character > rect:focus-visible { outline: none; stroke: var(--pt-green); stroke-width: 4; }
+/* Chromium decides gesture ownership at the HTML scene boundary. SVG children
+   alone do not reliably prevent touch panning/cancellation during a drag. */
+.pt-diorama[data-editable="true"] { touch-action: none; }
+/* Keep the entire catalog reachable, with persistent header and reset control. */
+.pt-build-dialog > header, .pt-build-footer { flex-shrink: 0; }
+.pt-build-dialog .pt-upgrade-list { flex: 1; min-height: 0; }
+.pt-build-dialog .pt-build-section-title { padding-top: 16px; font-size: 15px; color: var(--pt-muted); }
+.pt-build-footer { padding: 8px 20px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid var(--pt-line); }
+.pt-reset-purchases { min-height: 44px; border: 0; padding: 8px 0; background: transparent; color: var(--pt-berry) !important; font-size: 14px !important; text-decoration: underline; text-underline-offset: 3px; }
+.pt-build-reset-dialog { margin: auto; max-width: min(380px, calc(100vw - 32px)); border: 1px solid var(--pt-line); border-radius: 16px; padding: 24px; color: var(--pt-ink); background: var(--pt-surface); }
+.pt-build-reset-dialog::backdrop { background: #36463266; }
+.pt-build-reset-dialog p + p { margin-top: 12px; color: var(--pt-muted); font-size: 14px; }
+.pt-build-reset-dialog > div { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+.pt-build-reset-dialog .pt-reset-cancel { background: transparent; color: var(--pt-ink) !important; border-color: var(--pt-line); }
+.pt-build-reset-dialog .pt-reset-confirm { background: var(--pt-berry); border-color: var(--pt-berry); }
+/* A compact tool drawer leaves the village visible around its edges. */
+.pt-build-dialog {
+  inset: 12px 12px 12px auto; width: min(360px, calc(100vw - 24px));
+  height: calc(100dvh - 24px); max-height: calc(100dvh - 24px);
+  border: 1px solid var(--pt-line); border-radius: 18px;
+  background: color-mix(in srgb, var(--pt-surface) 94%, transparent);
+  backdrop-filter: blur(10px); box-shadow: -6px 8px 24px #36463214;
+}
+.pt-build-dialog::backdrop { background: #3646320a; }
+.pt-build-dialog > header { padding: 16px; gap: 8px; }
+.pt-build-dialog > header h2 { font-size: 18px; }
+.pt-build-dialog .pt-build-balance { font-size: 13px; gap: 6px; }
+.pt-build-dialog .pt-upgrade-list { padding-inline: 16px; }
+.pt-build-dialog .pt-upgrade-item { grid-template-columns: 60px minmax(0, 1fr); gap: 10px; padding: 13px 0; align-items: center; }
+.pt-build-dialog .pt-upgrade-item h3 { font-size: 15px; }
+.pt-build-dialog .pt-upgrade-picture { width: 60px; height: 60px; }
+.pt-build-dialog .pt-upgrade-purchase { gap: 8px; margin-top: 6px; font-size: 13px; }
+.pt-build-dialog .pt-upgrade-purchase .pt-button { padding: 8px 12px; }
+@media (max-width: 800px) {
+  .pt-build-dialog { inset: 8px 8px 8px auto; width: min(340px, calc(100vw - 24px)); height: calc(100dvh - 16px); max-height: calc(100dvh - 16px); }
+}

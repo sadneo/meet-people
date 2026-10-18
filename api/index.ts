@@ -6,8 +6,16 @@ import { createEventsRouter } from './events.js'
 import { createMatchmakingRouter, createUserContextTransport } from './matchmaking.js'
 import { createMessagingRouter } from './messaging.js'
 import { HealthResponseSchema, HelloRequestSchema, HelloResponseSchema } from '../shared/schemas.js'
+import cors from 'cors'
 
 export const app = express()
+
+const allowedOrigins = new Set(['https://localhost', 'capacitor://localhost', ...(process.env.CORS_ORIGINS?.split(',') ?? [])])
+app.use(cors({
+  origin: (origin, callback) => callback(null, !origin || allowedOrigins.has(origin)),
+  allowedHeaders: ['Authorization', 'Content-Type'],
+  maxAge: 600,
+}))
 
 app.use(express.json())
 const eventsClient = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY

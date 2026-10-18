@@ -35,10 +35,10 @@ provides semantic aliases and focal sizing. Avoid another theme layer.
 
 | Token | Value | Role |
 | --- | --- | --- |
-| `--pt-cream` | `#fffdf4` | Continuous ivory page and navigation |
+| `--pt-cream` | `#DDCABC` | Continuous warm tan page and navigation |
 | `--pt-surface` / `--pt-soft` | `#fffef9` / `#f4f9e8` | Neutral and light green surfaces |
 | `--pt-ink` | `#1f5a3c` | Forest text and active icons |
-| `--pt-muted` | `#587360` | Accessible muted forest text/icons |
+| `--pt-muted` | `#425b49` | Muted forest text/icons (4.69:1 on tan) |
 | `--pt-green` / `--pt-leaf` | `#42783f` / `#4f8a4c` | Accessible filled controls / fresh nature accents |
 | `--pt-fresh` | `#9bcb63` | Grass, highlights and progression |
 | `--pt-pale` | `#eaf5d9` | Mint selection and quiet controls |
@@ -71,7 +71,7 @@ use its own controlled natural palette.
 The active shell is `src/features/prototype/AppShell.tsx`, wrapped by
 `src/routes/PebbleApp.tsx`. The older design-system shell is not routed.
 
-- Expanded (>800px): cream header, wordmark, centered icon navigation,
+- Expanded (>800px): tan header, wordmark, centered icon navigation,
   account avatar at the right. No white strip or divider.
 - Compact (<=800px): five-item bottom navigation with accessible names and
   native hover tooltips. Labels are visually hidden. Active tabs use a soft
@@ -133,39 +133,39 @@ Home does not infer presence from it. Replace this adapter when real available
 users are supplied. No presence polling, backend contract or persistence is
 introduced. Keep fixture disclosure in code and developer controls.
 
-Community uses a shallow diamond slab with visible top and two side faces.
-Objects remain upright, anchored by ground-contact coordinates, and render
-back-to-front by depth. Each placement and artwork primitive can be replaced
-independently. This is 2D composition, not a 3D engine.
+Community uses the supplied raster village art family on the square isometric
+platform. `village-landscape.png` removes the movable cottage, bench and Pebbles
+from the reference; `village-props.png` supplies their independent sprites.
+Trees, river, terrain, rocks and wild landscape remain fixed. Build's compact
+Landscape section sells the river, four-tree cluster, walkway, flower meadow,
+shrubs, rock formation and grass details using original landscape pixels in
+predetermined positions. These purchases use the existing local economy and
+refund receipts but never enter the draggable-object or saved-position system.
+Reset removes purchased landscape along with objects, restoring plain grass
+and one Pebble. The demo history progression is independent of these purchases. All
+history stages clip their terrain to one island silhouette and share the
+original `community-village.png` shadow. Generated PNG shadows must never stack
+under the shared shadow. Sunday remains one centered Pebble on plain grass.
 
-The supplied village PNG is an art-direction reference, not a replacement for
-the interactive scene. `CommunityAreas` keeps that village and its history in
-the left panel and adds a horizontally scrollable museum on the right. An
-icon-only control at the center-right screen edge uses a museum above a right
-arrow to enter. In the museum, the return control moves to the center-left
-edge, with the Home tree above a left arrow. Arrow keys also
-move between panels. Build is available only in the village; currency stays
-visible in both areas. Off-screen
-content is inert and hidden from assistive technology.
+There is no user-facing Museum or area navigation. Its unused components/assets
+are retained for possible future reuse; Community does not import them.
 
-The museum concept is reference-only. `GeologyMuseum` builds a mostly-white SVG
-room with exactly 16 identical display cases in a wall-aligned 4×4 isometric
-grid. Case steps are 86×43 SVG units along the isometric axes, using the room's
-available width/depth without shrinking cases. The current prototype exhibit
-fills all sixteen cases with four rows of four stages: Red Garnet (determined),
-Blue Sapphire (wistful), Green Emerald (content), and Yellow Citrine (excited).
-Each isometric row progresses left-to-right from colored cracks to emerging
-crystal, revealed crystal, and an expressive final gem. `GemProgression.tsx`
-provides simple editable pixel SVG sprites because the supplied sheets do not
-include these four expressive families. The developer empty-state toggle still
-clears all sixteen cases. This is fixed art-direction data, not chat activity,
-relationship scores, or earned rewards.
+Saturday is the editable current village; other days are read-only growth
+snapshots. Drag placed decorations, structures and Pebbles with mouse, pen or
+touch; arrow keys move a focused item. Ground-contact positions snap to a loose
+12px grid and stay on the inset island, clear of water and tree trunks (the
+footbridge may cross water). Objects and permanent tree overlays sort by ground
+depth. Escape/cancel discards an in-progress drag. Position updates use the
+existing local Community reducer/save, not a server or database. Reset clears
+positions as well as purchases. Old saves without positions remain valid.
 
-The village and all Build previews share the artwork-only `village-art.css`
-palette: muted sage grass, layered olive foliage, warm plaster and terracotta,
-honey wood, and soft blue water. Tree silhouettes, wall shading, ground pixels,
-and stream highlights follow `community/community-village.png`; the original
-PNG is unchanged and the scene remains made of individually gated objects.
+Garnet (determined), Sapphire (wistful), Emerald (content), and Citrine (excited)
+are rare expressive geological Pebbles. `expressive-pebbles.png` uses the same
+soft pixel outline, face, cheeks and squat shape as the mascot. Each costs 300
+Pebbles, above the normal catalog's 10–120. The existing Build dialog handles
+affordability, single ownership and currency deduction. Buying selects Saturday
+and places the item at a default position ready to drag. There is no additional
+currency, museum progression or backend dependency.
 
 `community-history.ts` is an isolated UI-only fixture because the local economy
 has balance, upgrades, and earned chapter IDs but no dated activity ledger.
@@ -174,13 +174,32 @@ landscape/visitor stage: Sunday has only one centered Pebble on plain grass;
 Monday adds the back tree, Tuesday the left tree, Wednesday the river, Thursday
 the path/cottage, Friday the right tree/friend, and Saturday the front tree and
 second friend. Owned upgrades join cumulatively in a fixed demo reveal order;
-all appear by Saturday. This presentation order does not represent purchase
+all appear by Saturday; rare Pebbles appear only then. This presentation order does not represent purchase
 dates, earn currency, or change saved ownership. The fixture distinction is documented in developer
 controls and `VISUAL-REVIEW.md`, without a visible “Demo history” label.
 
 Build opens a native modal dialog with focus containment, Escape, focus return,
-and scrolling. Purchases retain their existing prices, balance checks, reducer,
-and local persistence. No new backend or storage schema.
+and scrolling. The same catalog appears in two labelled sections: Rare Finds
+first, then Village Decorations. All four 300-Pebble rocks remain listed regardless
+of affordability/ownership; only their purchase buttons change state. Header and
+secondary Reset purchases footer stay visible while the catalog scrolls. The
+right drawer is 360px on desktop, inset 12px, with a 94% light surface, restrained
+blur/shadow and a very light backdrop. Mobile uses up to 340px, leaving an outer
+gap. Item cards show image, short name, price and Build/Owned state only.
+
+Reset purchases requires a native confirmation dialog with Cancel focused first.
+It refunds each owned Build item once, clears ownership, purchase receipts and
+all Community object positions, and restores the current village to one centered
+Pebble on the same plain-grass platform as Sunday. Earned chapters and unrelated
+app state are preserved. The local `freshStart` flag survives reload; purchases
+then appear on the empty platform without restoring the developed base. Historical
+day selection still renders the existing 0–6 progression. Reset is available even
+without purchases when the current base is developed. Confirmation says “Reset
+your entire Pebble Community?” and “Reset everything”, explicitly showing the
+refund. Confirming closes Build so the restored scene is immediately visible. New purchases record the deducted price in optional local
+`purchaseCosts`. Older ownership-only saves use the unchanged catalog prices.
+Refunds are not capped by the demo funding limit. The existing local storage key
+and reducer persist everything; no backend/database schema change.
 
 ## Matchmaking and service states
 
@@ -213,8 +232,24 @@ Keep prototype and fixture disclosures here, outside the normal composition.
 Semantic links/buttons, accessible names for every icon control, title tooltips,
 visible focus, readable contrast, and 44px touch targets. History buttons expose
 selected state, date, metric and scene relationship. Dialogs must work on short
-screens. Respect reduced motion. Use restrained state transitions; do not add
-constant idle motion or effects to every element.
+screens. Respect reduced motion. Community uses visible downstream river streaks,
+ground-anchored Pebble breathing and a soft 4.5s lantern glow. Pebbles hold three
+pixelated poses (normal, compressed, stretched) in independently painted,
+integer-sized SVG viewports. Only visibility changes with `steps(1, end)`;
+never tween SVG dimensions or interpolate raster scale/rotation: these
+compositor transforms blur the pixel edges. The center and bottom anchor stay
+fixed in every pose; maximum width/height changes are 4/3 SVG units. Stagger
+normal Pebbles and give rare rocks individual 9–14s rhythms and pose sizes
+matching their painted personalities. Current PNGs have no blink frames or separate facial layers;
+preserve their existing expressions. Animate the inner sprite;
+the outer group owns drag position. Buildings, paths, trunks and the island stay still.
+Trees have small inset canopy patches switching between integer horizontal
+offsets; three grass-tip patches use the same quiet, staggered breeze. Fixed
+masks preserve the baked landscape silhouettes without shifting the platform.
+Home's happy Pebble uses three separately painted integer-sized poses on a
+12-second stepped cycle, with less than 1% size variation and a fixed bottom
+anchor. The existing thinking sprite replaces these poses during refresh.
+Disable these decorative loops under `prefers-reduced-motion: reduce`.
 
 ## Team boundaries
 

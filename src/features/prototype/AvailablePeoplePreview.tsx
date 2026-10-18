@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Icon } from './ui'
-import { PixelPebble } from '../pebble-art/PixelArt'
+import { HomeIdlePebble } from './HomeIdlePebble'
 import { previewPeople, type AvailablePerson } from './available-people-preview'
 import './home-preview.css'
 
@@ -59,7 +59,7 @@ export function AvailablePeoplePreview({ people, openProfile, refreshPeople }: {
       {visible.map((person, index) => <AvailablePersonBubble key={person.id} person={person} slot={index} thinking={thinking} open={openProfile} />)}
     </div>
     <button type="button" className="pt-pebble-refresh" aria-label="Refresh people who are available now" title="Refresh people who are available now" aria-disabled={thinking} onClick={refresh}>
-      <PixelPebble thinking={thinking} />
+      <HomeIdlePebble thinking={thinking} />
     </button>
     <p className="pt-sr-only" role="status">{announcement}</p>
   </div>

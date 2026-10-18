@@ -183,6 +183,18 @@ insert into availability (profile_id, dow, start_time, end_time) values
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 4, '18:00', '21:00');
 
 -- ============================================
+-- ACCOUNT SETTINGS
+-- Everyone has finished onboarding, so signing in opens the app instead of
+-- /onboarding.
+-- ============================================
+insert into account_settings (user_id, preferences, settings, completed)
+select id,
+  '{"intents": ["Meet new people"], "usual": ["Evenings"], "distance": "5 miles", "group": "Either"}',
+  '{"notifications": true, "availability": true, "discoverable": true, "location": false}',
+  '[0, 1, 2, 3]'
+from profiles;
+
+-- ============================================
 -- MEETUPS
 -- ============================================
 insert into meetups (host_id, title, description, category,

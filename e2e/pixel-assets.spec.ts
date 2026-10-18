@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
 
 for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [1280, 720], [2560, 1440]]) {
-  test(`pixel assets and museum at ${width}px`, async ({ page }) => {
+  test(`pixel assets and village at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height })
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/')
@@ -18,39 +18,13 @@ for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [1280, 720],
     await page.screenshot({ path: `/tmp/pebble-assets-${width}-home.png`, fullPage: true })
     await page.clock.resume()
     await page.getByRole('link', { name: 'Community', exact: true }).click()
+    await expect(page.locator('.pt-community-page .pt-calm-balance .pt-currency-art')).toBeVisible()
     expect(await page.locator('.pt-calm-balance .pt-currency-art').evaluate(el => ({ html: el.innerHTML, width: getComputedStyle(el).width, height: getComputedStyle(el).height }))).toEqual(homeCurrency)
     await expect(page.locator('.pt-build-control image')).toHaveAttribute('href', /build-icon/)
     await page.screenshot({ path: `/tmp/pebble-assets-${width}-village.png`, fullPage: true })
-    await page.getByRole('button', { name: 'Explore geology museum' }).click()
-    await expect(page.locator('.pt-museum-zone')).not.toHaveAttribute('inert')
-    await expect(page.getByRole('button', { name: 'Build your community', exact: true })).toHaveCount(0)
-    await expect(page.getByLabel('Pebble balance', { exact: true })).toBeVisible()
-    const back = page.getByRole('button', { name: 'Back to village' })
-    await expect(back).toHaveText('')
-    const control = (await back.boundingBox())!
-    expect(Math.abs(control.y + control.height / 2 - height / 2)).toBeLessThan(1)
-    expect(control.x).toBeLessThanOrEqual(24)
-    await expect.poll(() => page.locator('.pt-community-panels').evaluate(el => Math.round(el.scrollLeft / el.clientWidth))).toBe(1)
-    const cases = page.locator('.pt-museum-case')
-    await expect(cases).toHaveCount(16)
-    await expect(page.locator('.pt-museum-case[data-occupied="false"]')).toHaveCount(0)
-    for (let row = 0; row < 4; row++) await expect(page.locator(`.pt-museum-case[data-row="${row}"]`)).toHaveCount(4)
-    for (let column = 0; column < 4; column++) await expect(page.locator(`.pt-museum-case[data-column="${column}"]`)).toHaveCount(4)
+    await expect(page.getByRole('button', { name: /museum/i })).toHaveCount(0)
+    await expect(page.locator('.pt-museum-case')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
-    // Capture the viewport: Chromium full-page capture changes nested scroller
-    // offsets when the document is taller than the viewport.
-    await page.screenshot({ path: `/tmp/pebble-assets-${width}-museum.png` })
-    for (const [row, family] of ['garnet', 'sapphire', 'emerald', 'citrine'].entries()) {
-      const familyCases = page.locator(`.pt-museum-case[data-row="${row}"]`)
-      await expect(familyCases).toHaveCount(4)
-      expect(await familyCases.evaluateAll(els => els.map(el => el.getAttribute('data-family')))).toEqual(Array(4).fill(family))
-      expect(await familyCases.evaluateAll(els => els.map(el => el.getAttribute('data-stage')))).toEqual(['0', '1', '2', '3'])
-      await expect(familyCases.locator('[data-expression]')).toHaveCount(1)
-    }
-    await page.getByLabel('Display case', { exact: true }).selectOption('15')
-    await expect(page.locator('.pt-geology-museum').getByRole('status')).toContainText('Expressive gem · Excited')
-    await page.getByRole('button', { name: 'Back to village' }).click()
-    await expect(page.locator('.pt-village-zone')).not.toHaveAttribute('inert')
     await page.getByRole('button', { name: 'Build your community', exact: true }).click()
     await expect(page.locator('.pt-build-dialog')).toBeVisible()
     await page.keyboard.press('Escape')
@@ -67,23 +41,4 @@ test('matching artwork follows the existing queue state', async ({ page }) => {
   await page.getByRole('button', { name: 'Start matching', exact: true }).click()
   await expect(page.locator('.match-mascot .pt-pixel-pebble')).toHaveAttribute('data-expression', 'thinking')
   await page.screenshot({ path: '/tmp/pebble-assets-matching-searching.png' })
-})
-
-test('museum pans with the keyboard, survives resizing, and supports empty cases', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.setViewportSize({ width: 1280, height: 720 })
-  await page.goto('/community')
-  const panels = page.getByRole('region', { name: 'Village and geology museum, scroll horizontally' })
-  await panels.focus()
-  await page.keyboard.press('ArrowRight')
-  await expect(page.getByRole('button', { name: 'Back to village' })).toBeVisible()
-  await page.setViewportSize({ width: 390, height: 844 })
-  await expect.poll(() => panels.evaluate(el => Math.round(el.scrollLeft / el.clientWidth))).toBe(1)
-  await page.getByRole('button', { name: 'Developer controls' }).click()
-  await page.getByLabel('Empty states', { exact: true }).check()
-  await expect(page.locator('.pt-museum-case[data-occupied="false"]')).toHaveCount(16)
-  await page.getByRole('button', { name: 'Developer controls' }).click()
-  await panels.focus()
-  await page.keyboard.press('ArrowLeft')
-  await expect(page.getByRole('button', { name: 'Explore geology museum' })).toBeVisible()
 })

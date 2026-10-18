@@ -1,10 +1,12 @@
 import type { ZodType } from 'zod'
 import { supabase } from '../supabase'
+import { apiUrl } from '../platform/native'
 
 // A JSON request to this app's API, signed with the current Supabase session.
+// The Android build sends it to the hosted API (see apiUrl).
 export async function authorizedRequest<T>(url: string, schema: ZodType<T>, options: { method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
-  const response = await fetch(url, {
+  const response = await fetch(apiUrl(url), {
     method: options.method ?? (options.body ? 'POST' : 'GET'), signal: options.signal,
     headers: { ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}), ...(options.body ? { 'Content-Type': 'application/json' } : {}) },
     body: options.body ? JSON.stringify(options.body) : undefined,

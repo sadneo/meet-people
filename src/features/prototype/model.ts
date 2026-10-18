@@ -1,4 +1,5 @@
-import { emptyCommunity, purchase, type Community, type UpgradeId } from './economy'
+import { constrainPlacement, defaultPlacements, type MovableId, type Position } from './community-placement'
+import { emptyCommunity, purchase, resetPurchases, type Community, type UpgradeId } from './economy'
 // Everything in this module is local design-review data, not a service contract.
 export const scenes = ['Home', 'Community', 'Matchmaking', 'Downtime Matchmaking', 'Intro', 'Login', 'Register', 'Onboarding', 'Events', 'Event Detail', 'Free Time', 'Free Time Match', 'Activities', 'Planning', 'Review', 'Confirmed', 'Messages', 'Chat', 'Connection', 'Profile', 'Other User Profile', 'Settings'] as const
 export type Scene = typeof scenes[number]
@@ -71,8 +72,10 @@ export const initialState: State = {
 }
 export type Action =
   | { type: 'build'; id: UpgradeId }
+  | { type: 'move-community-item'; id: MovableId; position: Position }
   | { type: 'demo-funds' }
   | { type: 'reset-community' }
+  | { type: 'reset-purchases' }
   | { type: 'draft'; patch: Partial<Draft> }
   | { type: 'profile'; profile: Profile }
   | { type: 'chapter'; chapter: number; profile: Profile }
@@ -93,13 +96,19 @@ export function validPlan(draft: Draft, blocked: string[] = []) {
 }
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'move-community-item': {
+      if (!Object.hasOwn(defaultPlacements, action.id)) return state
+      if (!['pebble', 'friend', 'friend-two', 'base-bench', 'base-cottage'].includes(action.id) && !state.community.owned.includes(action.id as UpgradeId)) return state
+      return { ...state, community: { ...state.community, positions: { ...state.community.positions, [action.id]: constrainPlacement(action.position, action.id) } } }
+    }
     case 'build': return { ...state, community: purchase(state.community, action.id) }
-    case 'demo-funds': return { ...state, community: { ...state.community, balance: Math.min(1_000_000, state.community.balance + 100) } }
-    case 'reset-community': return { ...state, community: { ...state.community, balance: 0, owned: [] } }
+    case 'reset-purchases': return { ...state, community: resetPurchases(state.community) }
+    case 'demo-funds': return { ...state, community: { ...state.community, balance: Math.max(state.community.balance, Math.min(1_000_000, state.community.balance + 100)) } }
+    case 'reset-community': return { ...state, community: { ...state.community, balance: 0, owned: [], positions: {}, purchaseCosts: {} } }
     case 'draft': return { ...state, draft: { ...state.draft, ...action.patch } }
     case 'profile': return { ...state, profile: action.profile }
     case 'chapter': {
-      const valid = [!!action.profile.photo && !!action.profile.name.trim() && !!action.profile.bio.trim(), !!action.profile.interests.length, !!action.profile.intents.length, !!action.profile.usual.length][action.chapter]
+      const valid = [!!action.profile.name.trim() && !!action.profile.bio.trim(), !!action.profile.interests.length, !!action.profile.intents.length, !!action.profile.usual.length][action.chapter]
       if (!valid || ![0, 1, 2, 3].includes(action.chapter) || Array.from({ length: action.chapter }, (_, i) => i).some(i => !state.completed.includes(i))) return state
       const earned = state.community.earnedChapters.includes(action.chapter)
       return { ...state, profile: action.profile, completed: state.completed.includes(action.chapter) ? state.completed : [...state.completed, action.chapter], community: earned ? state.community : { ...state.community, balance: state.community.balance + DEMO_CHAPTER_REWARD, earnedChapters: [...state.community.earnedChapters, action.chapter] } }

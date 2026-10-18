@@ -34,6 +34,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_settings: {
+        Row: {
+          completed: Json
+          preferences: Json
+          settings: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: Json
+          preferences: Json
+          settings: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: Json
+          preferences?: Json
+          settings?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       availability: {
         Row: {
           created_at: string | null
@@ -973,6 +997,7 @@ export type Database = {
         Args: { job_id_in: string; lease_token_in: string; reason_code: string }
         Returns: Json
       }
+      get_account: { Args: never; Returns: Json }
       get_dating_match: {
         Args: never
         Returns: {
@@ -1263,6 +1288,7 @@ export type Database = {
         Returns: undefined
       }
       request_dating_match: { Args: { other_id: string }; Returns: number }
+      save_account: { Args: { account_in: Json }; Returns: Json }
       save_matchmaking_profile: { Args: { profile_in: Json }; Returns: Json }
       search_people: {
         Args: { max_results?: number; q: string }
