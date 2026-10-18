@@ -1,5 +1,13 @@
 # Meet People
 
+## Hosting setup — action needed
+
+**[Start here: finish the hosted beta setup → HOSTING-SETUP.md](HOSTING-SETUP.md)**
+
+The app is live at https://cse416-meet-people.web.app. The checklist explains exactly
+what you need to do for email delivery, deployment credentials, Google/Gemini,
+billing, and outage notifications.
+
 ## Requirements
 
 - Node.js 22

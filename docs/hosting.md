@@ -1,5 +1,8 @@
 # Private beta hosting
 
+**Looking for your next steps? [Start with the owner setup checklist](../HOSTING-SETUP.md).**
+This page is the technical deployment and recovery runbook.
+
 ## Deployed environment
 
 | Resource | Value |
