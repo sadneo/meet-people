@@ -2,6 +2,43 @@
 
 ## Flow
 
+Authentication starts with email only. `POST /api/auth/email` validates the email
+and uses the server's service-role client to call `auth_email_exists`. Existing
+accounts proceed to password sign-in; new emails proceed to registration. Google
+is available at either step, including for Google-only accounts. Supabase still
+performs all password verification, registration, confirmation, OAuth and recovery.
+Only a valid session enters account loading/onboarding or the requested internal
+destination. Email/step navigation uses router history state; passwords stay in
+component memory and are cleared when the email changes. Recovery reuses the email.
+
+### Email lookup security and privacy
+
+Automatic branching **reveals whether an email is registered**. This is an
+intentional product/privacy tradeoff; it cannot be eliminated while retaining
+account-existence branching. The response contains only a boolean, never user
+IDs, providers, passwords or profile data. Recovery messages remain non-enumerating.
+
+The migration `20261016120000_auth_email_lookup.sql` is required. Its fixed-search-path
+function performs one exact email lookup (using the non-SSO email index), excludes
+deleted/anonymous accounts, and grants execution only to `service_role`, with
+`PUBLIC`, `anon` and `authenticated` explicitly revoked. No users are listed or
+enumerated in application code. Service credentials stay in the API environment.
+Missing keys/migrations and database failures fail closed; the UI never guesses
+that an email is new after a lookup failure. SAML SSO accounts are outside this
+app's supported email/Google provider flow.
+
+The API accepts JSON only, rejects browser cross-site requests, returns no-store
+responses and generic errors, and bounds lookups to 10 attempts per socket IP
+and 1,000 total per ten-minute window. It does not trust `X-Forwarded-For`.
+These limits are in-memory and single-process: restarts reset them, and multiple
+replicas each have their own budget. Deploy shared gateway/WAF rate limiting and
+bot protection before scaling or exposing this endpoint to sustained automated
+abuse. Behind a proxy, socket-IP limits conservatively group all traffic from
+that proxy; configure client-IP limits at the trusted edge, not by trusting
+arbitrary forwarded headers in Express. Supabase's own Auth rate limits remain
+in effect for sign-in, registration and recovery, but do not protect this lookup.
+Do not log submitted emails or request bodies at the API or gateway.
+
 Supabase Auth supplies identity. After login, the app loads
 `GET /api/matchmaking/account` using the access token. New or incomplete
 accounts enter `/onboarding`; completed accounts return to their requested
@@ -98,7 +135,8 @@ For hosted Supabase, enable Google and enter the client ID/secret in
 1. Apply the checked-in migrations to the intended Supabase project.
 2. Set browser URL/publishable key and API URL/publishable/service-role keys.
 3. Set the Site URL to your app origin; allow its `/auth/callback` redirects,
-   including the `returnTo` query string, and `/reset-password` URL. Use
+   including the `returnTo` query string, and `/reset-password` URL with its
+   `returnTo` query string. Use
    environment-specific allowlists. Google redirects to Supabase first,
    then Supabase redirects to the app.
 4. Enable email confirmation and minimum password length eight.

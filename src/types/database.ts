@@ -936,6 +936,7 @@ export type Database = {
     }
     Functions: {
       accept_dating_match: { Args: { match_id: number }; Returns: undefined }
+      auth_email_exists: { Args: { email_in: string }; Returns: boolean }
       availability_overlap_minutes: {
         Args: { a: string; b: string }
         Returns: number

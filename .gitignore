@@ -11,3 +11,7 @@ test-results/
 .agents/
 .playwright-mcp/
 worktree/
+.firebase/
+firebase-debug*.log
+gha-creds-*.json
+hosting/supabase/.temp/

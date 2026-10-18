@@ -20,6 +20,8 @@ const password = 'local-smoke-test-password'
 const rpc = async (actor, name, args) => { const { data, error } = await actor.rpc(name, args); if (error) throw error; return data }
 try {
   const a = client(), b = client()
+  assert.equal(await rpc(admin, 'auth_email_exists', { email_in: `missing-${randomUUID()}@example.test` }), false)
+  assert.ok((await a.rpc('auth_email_exists', { email_in: 'private@example.test' })).error, 'Anonymous browsers cannot look up accounts.')
   const users = []
   for (const actor of [a, b]) {
     const email = `smoke-${randomUUID()}@example.test`
@@ -35,6 +37,8 @@ try {
     if (signed.error) throw signed.error
     assert.ok(signed.data.session)
     users.push({ email, id: data.user.id })
+    assert.equal(await rpc(admin, 'auth_email_exists', { email_in: ` ${email.toUpperCase()} ` }), true)
+    assert.ok((await actor.rpc('auth_email_exists', { email_in: email })).error, 'Authenticated browsers cannot look up accounts either.')
   }
   let account = await rpc(a, 'get_account')
   assert.equal(account.profile, null)

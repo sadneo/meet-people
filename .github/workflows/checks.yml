@@ -1,0 +1,43 @@
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm supabase:start
+      - run: pnpm supabase:check
+      - name: Verify SQL security contracts
+        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/hosted-services.sql
+      - run: pnpm env:local
+      - run: pnpm test:auth
+      - run: pnpm verify
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Browser tests against production artifacts
+        run: pnpm test:built e2e/hosting.spec.ts e2e/auth.spec.ts e2e/events.spec.ts --workers=2
+      - run: docker build --tag pebble-api:check .
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
