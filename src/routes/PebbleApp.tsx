@@ -16,9 +16,10 @@ import { useAccount } from '../auth/account-context'
 import type { Action } from '../features/prototype/model'
 import { profileToAccount, accountToProfile } from '../auth/profile'
 import '../auth/account.css'
+import NativeBridge from '../platform/NativeBridge'
 
 export default function PebbleApp() {
-  return <AccountBoundary><PebbleWorkspace /></AccountBoundary>
+  return <><NativeBridge /><AccountBoundary><PebbleWorkspace /></AccountBoundary></>
 }
 
 function PebbleWorkspace() {
