@@ -53,14 +53,14 @@ export function AppShell() {
       <Link className="pt-logo-link" to="/" aria-label="Pebble home"><Brand /></Link>
       <nav className="pt-desktop-nav" aria-label="Primary navigation">{primaryTabs.map(tab => <Tab key={tab.label} {...tab} active={activeTab === tab.label} />)}</nav>
       <nav className="pt-account-nav" aria-label="Account navigation">
-        <details ref={account} className="pt-account-dropdown" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }}>
+        {auth.ready && !auth.session ? <Link className="pt-button" to={scenePaths.Login}>Sign in</Link> : <details ref={account} className="pt-account-dropdown" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }}>
           <summary role="button" aria-label="Account menu"><Avatar person={state.profile} /></summary>
           <div className="pt-account-options" onClick={() => { if (account.current) account.current.open = false }}>
             <Tab label="Profile" icon="profile" active={activeTab === 'Profile' && scene !== 'Settings'} />
             <Tab label="Settings" icon="settings" active={scene === 'Settings'} />
             {!auth.ready ? <button type="button" disabled>Loading account…</button> : auth.session ? <button type="button" disabled={auth.busy} onClick={() => void auth.logout()}>{auth.busy ? 'Logging out…' : 'Log out'}</button> : <Link to={scenePaths.Login}>Sign in</Link>}
           </div>
-        </details>
+        </details>}
       </nav>
     </header>
     {auth.error && <p className="pt-logout-error" role="alert">{auth.error}</p>}

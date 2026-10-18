@@ -28,6 +28,7 @@ The Supabase wrapper automatically uses a rootless Podman socket when one is ava
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Public | Supabase publishable key for the browser client. |
 | `SUPABASE_URL` | Server-only | Supabase URL for privileged API operations. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only | Supabase service-role key for privileged API operations. |
+| `SUPABASE_PUBLISHABLE_KEY` | Public value, API configuration | Supabase public key for user-context matchmaking operations. |
 | `PORT` | Server-only | API listening port; defaults to `3001`. |
 
 `pnpm env:local` writes public browser values and private API values to ignored `.env.local`. The API development command loads this file. Never expose the service-role key through a `VITE_*` variable.
@@ -104,4 +105,7 @@ PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e
 
 ## Hosted Environments
 
-Staging and production Supabase, Firebase, Cloud Run, and CI/CD configuration start in Phase 6. No hosted deployment commands are documented yet because they have not been verified.
+The private beta is hosted at **https://cse416-meet-people.web.app** using Firebase
+Hosting, Cloud Run, and Supabase. See [the deployment runbook](docs/hosting.md)
+for configuration, invite-only auth, event ingestion, verified smoke checks,
+release workflows, remaining provider setup, and rollback.
