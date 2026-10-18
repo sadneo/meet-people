@@ -27,12 +27,12 @@ function App() {
       <Route element={<PublicOrAppLayout />}>
         <Route element={<MemberShell />}>
           <Route index element={<HomeEntry />} />
-          <Route path={eventsPath} element={<EventsScreen />} />
-          <Route path={eventDetailRoute} element={<EventDetail />} />
           <Route path="home" element={<Home />} />
           <Route path="community" element={<PebbleGarden />} />
           <Route path="matchmaking" element={<MatchmakingHome />} />
           <Route path="downtime-matchmaking" element={<DowntimeMatchmaking />} />
+          <Route path={eventsPath} element={<EventsScreen />} />
+          <Route path={eventDetailRoute} element={<EventDetail />} />
           <Route path="free-time" element={<FreeTime />} />
           <Route path="free-time/matches" element={<Matches />} />
           <Route path="free-time/activities" element={<ActivityPaths />} />

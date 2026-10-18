@@ -3,8 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router'
 import { EventSchema, EventsResponseSchema, type LiveEvent } from '../../../shared/events'
 import { eventDate, eventImagePlaceholder, eventRequest, safeImage, sourceLink } from './client'
 import { Button, Chips, Header, Icon } from './ui'
-import { PublicEventAction } from '../public/PublicEventAction'
-import { useSession } from '../../auth/useSession'
+import { EventGroupQueue } from './EventGroupQueue'
 import { EventsFeature } from './Feature'
 import { eventDetailPath, eventsPath } from './routes'
 
@@ -21,7 +20,6 @@ export function EventsScreen() {
 }
 
 function EventsFeed() {
-  const { session } = useSession()
   const [search, setSearch] = useSearchParams()
   const category = search.get('category') ?? 'All'
   const page = Math.max(1, Number(search.get('page')) || 1)
@@ -44,24 +42,20 @@ function EventsFeed() {
   const visible = result?.page === page ? result.events : []
   const previewId = visible.find(event => event.id === selected)?.id ?? visible[0]?.id
   function changeCategory(value: string) {
-    // The fetch effect depends on the normalized query. Re-selecting the same
-    // category on page 1 must not discard a result without starting a new request.
-    if (value !== category || page !== 1) { setLoaded(null); setError('') }
-    setSearch(value === 'All' ? {} : { category: value })
+    setLoaded(null); setError(''); setSearch(value === 'All' ? {} : { category: value })
   }
   function goPage(next: number) {
     setLoaded(null); setError(''); setSearch({ ...(category !== 'All' ? { category } : {}), page: String(next) })
   }
   return <div className={`ev-events-workspace ${!visible.length ? 'is-empty' : ''}`}><section className="ev-events-feed">
     <Header title="Events" />
-    {!session && <p className="public-events-note">Find something worth making time for. Browse now, then sign up to look for company.</p>}
     <Chips label="Event category" options={[...new Set(['All', 'Music', 'Food', 'Outdoors', ...(result?.categories ?? []), category])]} values={[category]} onChange={([value]) => changeCategory(value)} />
     <button className="ev-icon-button ev-location-control" aria-label="Show distances from me" title="Show distances from me" onClick={() => {
       if (!navigator.geolocation) { setGeoError('Location is unavailable in this browser.'); return }
       navigator.geolocation.getCurrentPosition(position => { setOrigin({ latitude: position.coords.latitude, longitude: position.coords.longitude }); setGeoError('') }, () => setGeoError('Could not access your location. Allow location access and try again.'), { timeout: 10000 })
     }}><Icon name="pin" size={24} /></button>
     {geoError && <p role="alert">{geoError}</p>}
-    {error ? <div className="ev-empty ev-calm-empty" role="alert"><Icon name="events" size={72} /><h2>Events unavailable</h2><p>We couldn’t load the listings. Try again in a moment.</p><Button secondary onClick={() => setRetry(value => value + 1)}>Retry</Button></div> : !result ? <p role="status">Loading events…</p> : !visible.length ? <div className="ev-empty ev-calm-empty"><Icon name="events" size={72} /><h2>A quiet calendar</h2><p>{category === 'All' ? 'No upcoming events are listed right now. Check back soon.' : 'No events in this category right now.'}</p><Button onClick={() => changeCategory('All')}>Show all events</Button></div> : <div className="ev-event-grid">{visible.map(event => {
+    {error ? <div className="ev-empty ev-calm-empty" role="alert"><Icon name="events" size={72} /><h2>Events unavailable</h2><Button secondary onClick={() => setRetry(value => value + 1)}>Retry</Button></div> : !result ? <p role="status">Loading events…</p> : !visible.length ? <div className="ev-empty ev-calm-empty"><Icon name="events" size={72} /><h2>A quiet calendar</h2><Button onClick={() => changeCategory('All')}>Show all events</Button></div> : <div className="ev-event-grid">{visible.map(event => {
       const open = (click: React.MouseEvent<HTMLAnchorElement>) => {
         if (click.button === 0 && !click.ctrlKey && !click.metaKey && !click.shiftKey && !click.altKey && window.matchMedia('(min-width: 1800px)').matches) {
           click.preventDefault(); const next = new URLSearchParams(search); next.set('selected', event.id); setSearch(next, { replace: true })
@@ -112,7 +106,7 @@ function EventDetailContent({ id, preview }: { id: string; preview: boolean }) {
         {event.address && <p>{event.address}</p>}<p className="ev-description">{event.description ?? 'No description provided.'}</p>
         <span className="ev-hint">Source: {event.source}{safeImage(event.image_url) === eventImagePlaceholder || failedImage === safeImage(event.image_url) ? ' · Pebble placeholder illustration (not an event photo)' : ''}</span>
         {url && <p><a className="ev-text-button" href={url} target="_blank" rel="noopener noreferrer">View original listing</a></p>}
-      </div><PublicEventAction listingId={id} /></div>
+      </div><EventGroupQueue listingId={id} /></div>
     </article>}
   </>
 }

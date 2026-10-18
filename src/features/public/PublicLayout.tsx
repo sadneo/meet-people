@@ -7,7 +7,6 @@ import { AppShell } from '../prototype/AppShell'
 import { Home } from '../prototype/Home'
 import PebbleApp from '../../routes/PebbleApp'
 import { MarketingPage } from './MarketingPage'
-import { isEventDetailPath } from '../events/routes'
 import './public.css'
 
 // Guest pages do not mount prototype state, developer controls or the account loader.
@@ -16,14 +15,14 @@ export function PublicOrAppLayout() {
   const { session, ready } = useSession()
   const { pathname } = useLocation()
   if (!ready) return <div className="pt-app public-loading" role="status">Opening Pebble…</div>
-  const publicRoute = pathname === '/' || pathname === '/events' || isEventDetailPath(pathname)
+  const publicRoute = pathname === '/'
   return !session && publicRoute ? <PublicLayout /> : <PebbleApp />
 }
 
 export function MemberShell() {
   const { session } = useSession()
   const { pathname } = useLocation()
-  const publicRoute = pathname === '/' || pathname === '/events' || isEventDetailPath(pathname)
+  const publicRoute = pathname === '/'
   return !session && publicRoute ? <Outlet /> : <AppShell />
 }
 
@@ -39,7 +38,7 @@ export function PublicLayout() {
   useEffect(() => {
     window.scrollTo(0, 0)
     main.current?.focus({ preventScroll: true })
-    const title = ({ '/': 'Find a little time in common', '/terms': 'Terms of Service', '/privacy': 'Privacy Policy', '/cookies': 'Cookie Policy' } as Record<string, string>)[pathname] ?? 'Events'
+    const title = ({ '/': 'Find a little time in common', '/terms': 'Terms of Service', '/privacy': 'Privacy Policy', '/cookies': 'Cookie Policy' } as Record<string, string>)[pathname] ?? 'Pebble'
     document.title = `${title} | Pebble`
   }, [pathname])
   return <div className="pt-app public-site">

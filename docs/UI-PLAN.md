@@ -26,7 +26,7 @@ light surfaces and forest foregrounds are shared without changing route layouts.
 | `/community` | Village and weekly activity, balance/upgrades, local drag placement |
 | `/matchmaking` | Authenticated active queue, single-person result and profile preferences |
 | `/downtime-matchmaking` | Authenticated downtime queue and shared profile preferences |
-| `/events` | Shared public/member server-backed event feed |
+| `/events` | Browse sample events |
 | `/events/detail` | Event details and demo event-group formation |
 | `/events/:listingId` | Imported-event detail and authenticated group queue (SQL activation separate) |
 | `/messages` | Conversation inbox |

@@ -33,12 +33,6 @@
 .public-skip { position: fixed; top: -100px; left: 20px; z-index: 100; padding: 14px; background: var(--pt-surface); color: var(--pt-ink); }
 .public-skip:focus { top: 12px; }
 .public-loading { min-height: 100dvh; display: grid; place-items: center; }
-.public-site .ev-feature { padding-block: 40px; }
-.public-site .ev-name-link { color: var(--pt-ink); text-decoration: none; }
-.public-site .ev-calm-empty { min-height: 40vh; }
-.public-event-action { align-self: start; padding: 24px; background: var(--pt-soft); border-radius: 18px; }
-.ev-feature .public-event-action p { margin-block: 16px; }
-.public-events-note { margin-bottom: 28px !important; max-width: 60ch; }
 .public-site .legal-layout { display: grid; grid-template-columns: minmax(160px, 240px) minmax(0, 760px); justify-content: center; gap: clamp(36px, 6vw, 100px); padding-block: 56px 80px; }
 .public-site .legal-copy h1 { font-size: clamp(38px, 4.5vw, 62px); letter-spacing: -.035em; }
 .legal-meta { margin-top: 16px !important; font-size: 14px; }
