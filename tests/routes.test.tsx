@@ -13,16 +13,17 @@ function CurrentPath() {
 }
 
 describe('routes', () => {
-  it('renders the home route', () => {
+  it('renders the public landing page for a signed-out visitor', () => {
     render(
       <MemoryRouter initialEntries={['/']}><App /></MemoryRouter>,
     )
 
-    expect(screen.getByRole('heading', { name: 'Who’s around?' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Find a little time in common.' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Developer controls' })).toBeNull()
   })
 
   it('opens the dedicated interactive matchmaking page from the prototype homepage', () => {
-    render(<MemoryRouter initialEntries={['/']}><App /><CurrentPath /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/home']}><App /><CurrentPath /></MemoryRouter>)
 
     fireEvent.click(screen.getByRole('link', { name: 'Find people' }))
 
@@ -33,7 +34,7 @@ describe('routes', () => {
   })
 
   it('shows Matchmaking before Events and opens active matchmaking', () => {
-    render(<MemoryRouter initialEntries={['/']}><App /><CurrentPath /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/home']}><App /><CurrentPath /></MemoryRouter>)
 
     const desktopNavigation = screen.getAllByRole('navigation', { name: 'Primary navigation' })[0]
     const links = Array.from(desktopNavigation.querySelectorAll('a')).map(link => link.textContent)
@@ -51,7 +52,7 @@ describe('routes', () => {
   })
 
   it('opens standalone downtime matchmaking from the prototype homepage', () => {
-    render(<MemoryRouter initialEntries={['/']}><App /><CurrentPath /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/home']}><App /><CurrentPath /></MemoryRouter>)
 
     fireEvent.click(screen.getByRole('link', { name: 'Downtime matchmaking' }))
 
@@ -83,7 +84,7 @@ describe('routes', () => {
   })
 
   it('opens Community from Home without changing the primary destinations', () => {
-    render(<MemoryRouter initialEntries={['/']}><App /><CurrentPath /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/home']}><App /><CurrentPath /></MemoryRouter>)
     fireEvent.click(screen.getByRole('link', { name: 'Community', exact: true }))
     expect(screen.getByRole('link', { name: 'Back to Home' })).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Community' })).toBeNull()
