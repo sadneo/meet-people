@@ -1,4 +1,17 @@
 import { parsePositions, type Positions } from './community-placement'
+export const landscapeUpgrades = [
+  { id: 'river', name: 'River', cost: 80 },
+  { id: 'tree-cluster', name: 'Tree Cluster', cost: 60 },
+  { id: 'walkway', name: 'Walkway', cost: 45 },
+  { id: 'flower-meadow', name: 'Flower Meadow', cost: 25 },
+  { id: 'shrubs', name: 'Shrub Patch', cost: 30 },
+  { id: 'rock-formation', name: 'Rock Formation', cost: 35 },
+  { id: 'grass-detail', name: 'Grass Details', cost: 20 },
+] as const
+export type LandscapeId = typeof landscapeUpgrades[number]['id']
+export function isLandscapeUpgrade(id: UpgradeId): id is LandscapeId {
+  return landscapeUpgrades.some(item => item.id === id)
+}
 // Review-only prices. Kept in one catalog so the team can tune them together.
 export const upgrades = [
   { id: 'flowers', name: 'Wildflower Patch', cost: 10, icon: 'tree', detail: 'Little clusters of color in the grass.' },
@@ -15,9 +28,11 @@ export const upgrades = [
   { id: 'sapphire', name: 'Sapphire', cost: 300, icon: 'profile', detail: 'A wistful blue companion.' },
   { id: 'emerald', name: 'Emerald', cost: 300, icon: 'profile', detail: 'A quietly content companion.' },
   { id: 'citrine', name: 'Citrine', cost: 300, icon: 'profile', detail: 'A sunny burst of excitement.' },
+  ...landscapeUpgrades,
 ] as const
 export type UpgradeId = typeof upgrades[number]['id']
-export type Community = { balance: number; owned: UpgradeId[]; earnedChapters: number[]; positions?: Positions; purchaseCosts?: Partial<Record<UpgradeId, number>> }
+export type MovableUpgradeId = Exclude<UpgradeId, LandscapeId>
+export type Community = { balance: number; owned: UpgradeId[]; earnedChapters: number[]; positions?: Positions; purchaseCosts?: Partial<Record<UpgradeId, number>>; freshStart?: boolean }
 export const COMMUNITY_STORAGE_KEY = 'pebble:full-ui:community:v1'
 export const emptyCommunity: Community = { balance: 0, owned: [], earnedChapters: [] }
 
@@ -40,6 +55,7 @@ export function parseCommunity(raw: string | null): Community {
     return {
       balance: saved.balance!,
       owned,
+      ...(saved.freshStart === true ? { freshStart: true } : {}),
       ...(saved.purchaseCosts ? { purchaseCosts } : {}),
       ...(saved.positions ? { positions: parsePositions(saved.positions, owned) } : {}),
       earnedChapters: [...new Set(saved.earnedChapters.filter(id => Number.isInteger(id) && id >= 0 && id < 4))],
@@ -64,12 +80,12 @@ export function purchaseRefund(community: Community): number {
   }, 0)
 }
 export function resetPurchases(community: Community): Community {
-  if (!community.owned.length) return community
-  const positions = Object.fromEntries(Object.entries(community.positions ?? {}).filter(([id]) => !upgrades.some(item => item.id === id)))
-  return { ...community, balance: community.balance + purchaseRefund(community), owned: [], purchaseCosts: {}, positions }
+  if (community.freshStart && !community.owned.length && !Object.keys(community.positions ?? {}).length) return community
+  return { ...community, balance: community.balance + purchaseRefund(community), owned: [], purchaseCosts: {}, positions: {}, freshStart: true }
 }
 
 export const buildSections = [
   { name: 'Rare Finds', items: upgrades.filter(item => ['garnet', 'sapphire', 'emerald', 'citrine'].includes(item.id)) },
-  { name: 'Village Decorations', items: upgrades.filter(item => !['garnet', 'sapphire', 'emerald', 'citrine'].includes(item.id)) },
+  { name: 'Landscape', items: landscapeUpgrades },
+  { name: 'Village Decorations', items: upgrades.filter(item => !isLandscapeUpgrade(item.id) && !['garnet', 'sapphire', 'emerald', 'citrine'].includes(item.id)) },
 ]

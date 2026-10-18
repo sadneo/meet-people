@@ -4,7 +4,7 @@ import { initialState, reducer } from '../src/features/prototype/model'
 
 describe('manual community purchases', () => {
   it('deducts exact catalog prices and rejects duplicates and insufficient balances', () => {
-    expect(upgrades.map(item => item.cost)).toEqual([10, 15, 20, 25, 30, 40, 55, 70, 90, 120, 300, 300, 300, 300])
+    expect(upgrades.map(item => item.cost)).toEqual([10, 15, 20, 25, 30, 40, 55, 70, 90, 120, 300, 300, 300, 300, 80, 60, 45, 25, 30, 35, 20])
     expect(purchase(emptyCommunity, 'flowers')).toBe(emptyCommunity)
     const bought = purchase({ ...emptyCommunity, balance: 10 }, 'flowers')
     expect(bought.balance).toBe(0)

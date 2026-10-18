@@ -5,6 +5,7 @@ import { createEventsRouter } from './events.js'
 import { createAuthRouter } from './auth.js'
 import { createMatchmakingRouter, createUserContextTransport } from './matchmaking.js'
 import { HealthResponseSchema, HelloRequestSchema, HelloResponseSchema } from '../shared/schemas.js'
+import cors from 'cors'
 
 export const app = express()
 
@@ -12,6 +13,13 @@ app.use('/api', (_request, response, next) => {
   response.set('Cache-Control', 'private, no-store')
   next()
 })
+const allowedOrigins = new Set(['https://localhost', 'capacitor://localhost', ...(process.env.CORS_ORIGINS?.split(',') ?? [])])
+app.use(cors({
+  origin: (origin, callback) => callback(null, !origin || allowedOrigins.has(origin)),
+  allowedHeaders: ['Authorization', 'Content-Type'],
+  maxAge: 600,
+}))
+
 app.use(express.json())
 const eventsClient = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
