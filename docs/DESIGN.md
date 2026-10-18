@@ -11,6 +11,13 @@ full-screen world on Home and permanently labelled navigation directions.
 
 ## Product structure
 
+Signed-out `/` is the public marketing page; signed-in `/` remains Home.
+Public Events reuse the existing feed/detail with a public header and footer.
+Terms, Privacy and Cookie drafts stay reachable without account/onboarding gates.
+Public pages reuse the palette, typography and 800px breakpoint below, with
+marketing compositions rather than the signed-in icon navigation. See
+`PUBLIC-FRONTEND.md` for the route boundary, design and integration notes.
+
 Five primary destinations remain Home, Matchmaking, Events, Messages, and
 Profile. Community is a supporting route (`/community`) entered from Home;
 Home remains active in primary navigation. Settings, free-time planning, and

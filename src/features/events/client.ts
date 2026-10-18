@@ -8,8 +8,8 @@ export async function eventRequest<T>(path: string, schema: ZodType<T>, options:
     headers: { ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}), ...(options.body ? { 'Content-Type': 'application/json' } : {}) },
     body: options.body ? JSON.stringify(options.body) : undefined,
   })
-  const data = await response.json()
-  if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : 'Events are unavailable. Try again.')
+  const data: unknown = await response.json().catch(() => { throw new Error('Events are unavailable. Try again.') })
+  if (!response.ok) throw new Error(data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : 'Events are unavailable. Try again.')
   return schema.parse(data)
 }
 

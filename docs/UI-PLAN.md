@@ -19,11 +19,13 @@ light surfaces and forest foregrounds are shared without changing route layouts.
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Minimal Pebble focal composition and discovery entry |
+| `/` | Public marketing for guests; existing Home for signed-in users |
+| `/home` | Direct Home preview for UI review |
+| `/terms`, `/privacy`, `/cookies` | Public legal drafts |
 | `/community` | Village and weekly activity, balance/upgrades, local drag placement |
 | `/matchmaking` | Authenticated active queue, single-person result and profile preferences |
 | `/downtime-matchmaking` | Authenticated downtime queue and shared profile preferences |
-| `/events` | Browse sample events |
+| `/events` | Shared public/member server-backed event feed |
 | `/events/detail` | Event details and demo event-group formation |
 | `/events/:listingId` | Imported-event detail and authenticated group queue (SQL activation separate) |
 | `/messages` | Conversation inbox |
