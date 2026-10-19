@@ -69,8 +69,7 @@ function UsualPreferences({ data }: { data: ReturnType<typeof useSharedUserProfi
   </>
 }
 
-type Plan = { title: string; when: string; open: () => void } | null
-export function OwnerProfile({ data, ready, signedIn, edit, plan, inactive = false }: { inactive?: boolean; data: ReturnType<typeof useSharedUserProfile>; ready: boolean; signedIn: boolean; edit: () => void; plan: Plan }) {
+export function OwnerProfile({ data, ready, signedIn, edit, inactive = false }: { inactive?: boolean; data: ReturnType<typeof useSharedUserProfile>; ready: boolean; signedIn: boolean; edit: () => void }) {
   const identity = data.account ?? data.profile
   const age = calculatedAge(data.profile?.birthdate)
   const photo = useProfilePhoto()
@@ -101,19 +100,11 @@ export function OwnerProfile({ data, ready, signedIn, edit, plan, inactive = fal
       </section>
       <UsualPreferences data={data} />
       {data.account && data.profile && <ProfileDetails name={data.account.display_name} bio={data.account.bio} city={data.profile.location_city} age={age} picture={picture} />}
-      <section className="account-panel account-plans" aria-labelledby="account-plans-title">
-        <header className="account-panel-head"><h2 id="account-plans-title">Something to look forward to.</h2></header>
-        {plan ? <button type="button" className="account-plan" onClick={plan.open}><Icon name="events" /><span><strong>{plan.title}</strong><small>{plan.when} · local plan</small></span><Icon name="chevron" /></button> : <div className="account-plan-empty"><ProfilePebble /><div><h3>Room for a good plan.</h3><p>Your next shared coffee, walk, or little adventure starts with a hello.</p></div><Link className="account-secondary" to="/matchmaking">Find your people<Icon name="arrow" size={14} /></Link></div>}
-      </section>
     </div>
     <section className="account-panel account-community" aria-labelledby="account-community-title">
       <header className="account-panel-head"><div className="account-community-title"><ProfilePebble /><div><h2 id="account-community-title">Your little community</h2><p>A small beginning, with room to grow.</p></div></div><span className="account-community-count">{completion.filter(item => item.done).length}/4 chapters</span></header>
       <div className="account-community-steps">{completion.map(item => <div key={item.label} className={item.done ? 'is-complete' : ''}><span aria-hidden="true">{item.done ? '✓' : '○'}</span><strong>{item.label}</strong><small>{item.done ? 'Added' : 'Add yours'}</small></div>)}</div>
       <p className="account-community-copy"><strong>Good things take time.</strong>Every conversation and shared plan helps your little community grow.</p>
-    </section>
-    <section className="account-spotlight" aria-labelledby="account-hello-title">
-      <div className="account-reward-art" aria-hidden="true"><span /><ProfilePebble className="account-reward-main" /><ProfilePebble className="account-reward-friend" /><i>✦</i><i>✧</i></div>
-      <div><span className="account-eyebrow">Little connections. New beginnings.</span><h2 id="account-hello-title">A little hello goes a long way.</h2><p>Find your people and make time for a little adventure.</p><Link className="account-green-action" to="/matchmaking">Find your people<Icon name="arrow" size={14} /></Link></div>
     </section>
     <Link className="account-settings-row" to="/settings"><span className="account-settings-icon"><Icon name="settings" size={19} /></span><span><strong>Settings &amp; privacy</strong><small>Make Pebble feel right for you.</small></span><Icon name="chevron" size={16} /></Link>
   </div>

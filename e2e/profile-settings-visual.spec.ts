@@ -17,13 +17,14 @@ for (const [width, height] of [[320, 568], [375, 812], [390, 844], [390, 420], [
     await expect(profile).not.toContainText('2000-01-01')
     await expect(page.getByRole('tab')).toHaveCount(0)
     await expect(profile.getByRole('link', { name: 'Settings', exact: true })).toHaveCount(0)
+    await expect(profile.getByRole('heading', { name: 'Something to look forward to.' })).toHaveCount(0)
+    await expect(profile.getByRole('heading', { name: 'A little hello goes a long way.' })).toHaveCount(0)
+    await expect(profile.getByRole('heading', { name: 'Your little community', exact: true })).toBeVisible()
     const facts = (await profile.locator('.account-facts').boundingBox())!
     const interests = (await profile.locator('.account-usual-interests').boundingBox())!
     if (width > 700) {
       expect(Math.abs(facts.y - interests.y)).toBeLessThan(1)
       expect(interests.x).toBeGreaterThan(facts.x + facts.width)
-      await expect(profile.locator('.account-reward-art')).toHaveCSS('width', '132px')
-      await expect(profile.locator('.account-plan-empty > img')).toHaveCSS('width', '82px')
     } else expect(interests.y).toBeGreaterThan(facts.y + facts.height)
     if (width >= 520) {
       const monday = (await profile.getByRole('button', { name: 'Monday morning, not available', exact: true }).boundingBox())!
@@ -166,7 +167,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 760, height: 1440 }, {
   const portrait = page.locator('.account-profile-page img[src="https://profile-fixture.invalid/reference-portrait.jpg"]')
   await expect(portrait).toBeVisible()
   expect(await portrait.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
-  console.log(`Profile comparison ${size.width}: ${JSON.stringify(await page.locator('.account-identity, .account-facts, .account-usual-interests, .account-usual-week, .account-plans, .account-community, .account-spotlight').evaluateAll(elements => elements.map(element => ({ section: element.className, y: element.getBoundingClientRect().y, height: element.getBoundingClientRect().height }))))}`)
+  console.log(`Profile comparison ${size.width}: ${JSON.stringify(await page.locator('.account-identity, .account-facts, .account-usual-interests, .account-usual-week, .account-community').evaluateAll(elements => elements.map(element => ({ section: element.className, y: element.getBoundingClientRect().y, height: element.getBoundingClientRect().height }))))}`)
   await page.screenshot({ path: `${evidence}/comparison-${size.width}x${size.height}.png` })
   await page.screenshot({ path: `${evidence}/comparison-full-${size.width}x${size.height}.png`, fullPage: true })
   expect(fixture.external).toEqual([])

@@ -47,7 +47,7 @@
 .account-custom-interest input { width: 100%; min-width: 0; flex: 1 1 140px; min-height: 44px; border: 1px solid var(--account-line); border-radius: 10px; background: #fff; padding: 10px; color: var(--account-ink); }
 .account-save-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 15px; }
 .account-save-row > span { flex-basis: 100%; color: var(--account-muted); font-size: 11px; }
-.account-usual-week, .account-plans, .account-inline-error { grid-column: 1 / -1; }
+.account-usual-week, .account-inline-error { grid-column: 1 / -1; }
 .account-usual-week .friends-availability { border: 0; padding: 0; background: transparent; }
 .account-usual-week .friends-availability > header { display: flex; justify-content: flex-end; }
 .account-usual-week .friends-availability h3 { display: none; }
@@ -63,15 +63,7 @@
 .account-usual-week td button[aria-pressed='true'] { background: var(--account-sage); border-color: #9cbd7a; }
 .account-usual-week td button[aria-pressed='mixed'] { background: linear-gradient(135deg, #bdd4a3 50%, transparent 50%); color: #285b41; }
 .account-profile-page .account-caption { margin-top: 10px; color: var(--account-muted); font-size: 11px; line-height: 1.6; }
-.account-plan-empty { display: flex; gap: 14px; align-items: center; }
 .account-pixel { object-fit: contain; image-rendering: pixelated; }
-.account-plan-empty > img { width: 82px; height: 82px; flex-shrink: 0; }
-.account-profile-page .account-plan-empty h3 { font: 600 20px/1.3 Arial, sans-serif; color: #356044; margin-bottom: 8px; }
-.account-profile-page .account-plan-empty p { font-size: 11px; line-height: 1.6; color: var(--account-muted); max-width: 340px; }
-.account-plan-empty > a { margin-left: auto; flex-shrink: 0; }
-.account-plan { width: 100%; display: flex; gap: 15px; align-items: center; border: 0; background: transparent; padding: 12px 0; color: var(--account-ink); text-align: left; }
-.account-plan > span { flex: 1; }
-.account-plan small { display: block; margin-top: 6px; }
 .account-community { margin-top: 17px; }
 .account-community-title { display: flex; align-items: center; gap: 10px; }
 .account-community-title > img { width: 38px; height: 38px; }
@@ -84,17 +76,6 @@
 .account-community-steps > div > span { font-size: 12px; color: #587b43; }
 .account-profile-page .account-community-copy { font-size: 11px; line-height: 1.7; color: var(--account-muted); margin-top: 16px; }
 .account-community-copy strong { display: block; color: #456e3a; font-size: 12px; }
-.account-spotlight { display: flex; align-items: center; gap: 25px; background: linear-gradient(115deg,#f1f4e5,#fffdf4); border: 1px solid #e3e6d4; border-radius: 22px; padding: 25px 30px; margin-top: 17px; }
-.account-reward-art { width: 132px; height: 120px; flex: 0 0 132px; position: relative; }
-.account-reward-art > span { position: absolute; inset: 6px 8px; background: #e5ecd6; border-radius: 50%; transform: rotate(-10deg); }
-.account-reward-art img { position: absolute; }
-.account-reward-main { width: 88px; height: 88px; left: 12px; top: 13px; transform: rotate(-8deg); }
-.account-reward-friend { width: 48px; height: 48px; right: 0; bottom: 8px; transform: rotate(11deg); }
-.account-reward-art i { position: absolute; right: 7px; top: 12px; font-size: 16px; font-style: normal; color: #829563; }
-.account-reward-art i:last-child { left: 0; top: auto; bottom: 6px; }
-.account-eyebrow { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #667a50; }
-.account-profile-page .account-spotlight h2 { font-size: 21px; line-height: 1.3; letter-spacing: -.4px; margin: 9px 0 8px; }
-.account-profile-page .account-spotlight p { font-size: 12px; line-height: 1.7; color: var(--account-muted); margin-bottom: 14px; max-width: 400px; }
 .account-green-action { background: #456e43; color: white; font-weight: 600; }
 .account-green-action:hover { background: #365c35; }
 .account-settings-row { width: 100%; display: flex; align-items: center; gap: 13px; padding: 18px 20px; margin-top: 12px; background: var(--account-paper); border: 1px solid #eeeade; border-radius: 17px; color: #366449; text-align: left; text-decoration: none; }
@@ -118,11 +99,6 @@
   .account-profile-page h2 { font-size: 13px; }
   .account-usual-week { padding: 18px 6px; }
   .account-usual-week > .account-panel-head, .account-usual-week > .account-hint, .account-usual-week > .account-caption { margin-inline: 12px; }
-  .account-plan-empty { flex-wrap: wrap; gap: 12px; }
-  .account-plan-empty > img { width: 64px; height: 64px; }
-  .account-plan-empty > div { flex: 1; min-width: 140px; }
-  .account-plan-empty > a { margin-left: 76px; }
-  .account-profile-page .account-plan-empty h3 { font-size: 17px; }
   .account-community-title { gap: 7px; }
   .account-community-title > img { width: 32px; height: 32px; }
   .account-community-title h2 { font-size: 12px; }
@@ -131,13 +107,6 @@
   .account-community-steps { gap: 5px; margin-top: 14px; }
   .account-community-steps > div { padding: 10px 3px; border-radius: 10px; }
   .account-community-steps strong, .account-community-steps small { font-size: 10px; }
-  .account-spotlight { gap: 13px; padding: 20px 17px; border-radius: 18px; }
-  .account-reward-art { width: 82px; height: 99px; flex-basis: 82px; }
-  .account-reward-main { width: 69px; height: 69px; left: 0; top: 13px; }
-  .account-reward-friend { width: 36px; height: 36px; right: -7px; bottom: 5px; }
-  .account-eyebrow { font-size: 8px; letter-spacing: 1px; }
-  .account-profile-page .account-spotlight h2 { font-size: 16px; margin: 7px 0; }
-  .account-profile-page .account-spotlight p { font-size: 11px; margin-bottom: 12px; }
   .account-settings-row { padding: 15px 17px; gap: 11px; }
 }
 @media (max-width: 519px) {
@@ -221,7 +190,6 @@
 .account-chips { row-gap: 2px; }
 @media (min-width: 701px) {
   .account-profile-page h2 { font-size: 15px; }
-  .account-profile-page .account-spotlight h2 { font-size: 21px; }
 }
 .account-profile-page { line-height: normal; }
 .account-identity-body { padding-bottom: 24px; }
