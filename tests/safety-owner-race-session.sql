@@ -32,7 +32,7 @@ select :'mode'='setup' as setup_mode, :'mode' in ('run','hold_row') as run_mode,
 \if :setup_mode
 select set_config('pebble.safety_race_scenario', :'scenario',true);
 do $$ begin
-  if current_setting('pebble.safety_race_scenario') not in ('request','accept','send','receipt','block_delete') then raise exception 'Invalid scenario'; end if;
+  if current_setting('pebble.safety_race_scenario') not in ('request','accept','send','receipt','block_delete','event_interest') then raise exception 'Invalid scenario'; end if;
   if to_regnamespace('safety_race_fixture') is not null or exists(select 1 from auth.users where id in ('ca100000-0000-4000-8000-000000000001','ca100000-0000-4000-8000-000000000002'))
     or exists(select 1 from public.profiles where username in ('safety-race-a','safety-race-b')) then raise exception 'Race namespace occupied'; end if;
 end $$;
@@ -40,8 +40,24 @@ create schema safety_race_fixture;
 revoke all on schema safety_race_fixture from public,anon;
 grant usage on schema safety_race_fixture to authenticated;
 insert into auth.users(id) values('ca100000-0000-4000-8000-000000000001'),('ca100000-0000-4000-8000-000000000002');
-insert into public.profiles(id,username,display_name) values('ca100000-0000-4000-8000-000000000001','safety-race-a','Synthetic race A'),('ca100000-0000-4000-8000-000000000002','safety-race-b','Synthetic race B');
+insert into public.profiles(id,username,display_name,birthdate,location_city) values('ca100000-0000-4000-8000-000000000001','safety-race-a','Synthetic race A','2000-01-01','Synthetic campus'),('ca100000-0000-4000-8000-000000000002','safety-race-b','Synthetic race B','2000-01-01','Synthetic campus');
+-- Real canonical readiness, so privacy-aware admission cannot fail for an
+-- unrelated incomplete-profile reason. Standalone owner tests predate settings.
+insert into public.user_interests(profile_id,text) select p.id,label from public.profiles p cross join unnest(array['Art','Coffee','Music']) label where p.id in('ca100000-0000-4000-8000-000000000001','ca100000-0000-4000-8000-000000000002');
+insert into public.availability(profile_id,dow,start_time,end_time) select p.id,1,'12:00','17:00' from public.profiles p where p.id in('ca100000-0000-4000-8000-000000000001','ca100000-0000-4000-8000-000000000002');
+do $$ begin
+ if to_regclass('public.account_settings') is not null then
+  insert into public.account_settings(user_id,preferences,settings,completed) select p.id,'{"distance":"Nearby","group":"One-on-one","intents":["Activity partners"],"usual":[]}','{"notifications":false,"availability":false,"discoverable":true,"location":false}','[0,1,2,3]' from public.profiles p where p.id in('ca100000-0000-4000-8000-000000000001','ca100000-0000-4000-8000-000000000002');
+ end if;
+end $$;
 create table safety_race_fixture.connection_ids(id bigint primary key);
+create table safety_race_fixture.event_ids(id bigint primary key);
+do $$ declare event_in bigint; begin
+ if current_setting('pebble.safety_race_scenario')='event_interest' then
+  insert into public.meetups(host_id,title,starts_at,is_public) values('ca100000-0000-4000-8000-000000000002','Synthetic race event',statement_timestamp()+interval '1 day',true) returning id into event_in;
+  insert into safety_race_fixture.event_ids values(event_in);
+ end if;
+end $$;
 create function safety_race_fixture.request() returns void language sql security definer set search_path='' as $$
  insert into public.connections(user_a,user_b,initiated_by) values('ca100000-0000-4000-8000-000000000001','ca100000-0000-4000-8000-000000000002',auth.uid()); $$;
 create function safety_race_fixture.accept() returns void language plpgsql security definer set search_path='' as $$
@@ -66,6 +82,8 @@ create function safety_race_fixture.social_send() returns void language plpgsql 
 begin perform public.social_send((select alias.id from social_private.conversations alias join public.conversations c on c.id=alias.legacy_id where c.user_a='ca100000-0000-4000-8000-000000000001' and c.user_b='ca100000-0000-4000-8000-000000000002'),'Synthetic race message','cd100000-0000-4000-8000-000000000001'); end $$;
 create function safety_race_fixture.social_read() returns void language plpgsql security definer set search_path='' as $$
 begin perform public.social_read((select alias.id from social_private.conversations alias join public.conversations c on c.id=alias.legacy_id where c.user_a='ca100000-0000-4000-8000-000000000001' and c.user_b='ca100000-0000-4000-8000-000000000002'),(select max(m.id) from public.messages m join public.conversations c on c.id=m.conversation_id where c.user_a='ca100000-0000-4000-8000-000000000001' and c.user_b='ca100000-0000-4000-8000-000000000002')); end $$;
+create function safety_race_fixture.event_interest() returns void language plpgsql security definer set search_path='' as $$
+begin perform public.express_event_interest((select id from safety_race_fixture.event_ids),null); end $$;
 create function safety_race_fixture.profile_delete() returns void language plpgsql security definer set search_path='' as $$
 declare n int; begin
  if auth.uid() is distinct from 'ca100000-0000-4000-8000-000000000001'::uuid then raise exception 'Fixture profile owner required' using errcode='42501'; end if;
@@ -100,7 +118,7 @@ insert into safety_race_fixture.connection_ids select id from public.connections
 commit;
 \elif :run_mode
 select set_config('pebble.safety_race_operation', :'operation',true),set_config('application_name','pebble-safety-race-'||:'participant',true),set_config('pebble.safety_race_report_request_id',:'report_request_id',true);
-do $$ begin if current_setting('pebble.safety_race_operation') not in ('block','legacy_block','legacy_unblock','request','accept','send','receipt','social_send','social_read','report','profile_delete') then raise exception 'Invalid operation'; end if; end $$;
+do $$ begin if current_setting('pebble.safety_race_operation') not in ('block','legacy_block','legacy_unblock','request','accept','send','receipt','social_send','social_read','event_interest','report','profile_delete') then raise exception 'Invalid operation'; end if; end $$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub',case when :'operation' in ('block','legacy_block','legacy_unblock','accept','receipt','social_read') then 'ca100000-0000-4000-8000-000000000002' else 'ca100000-0000-4000-8000-000000000001' end,true),set_config('request.jwt.claims','{}',true);
 \if :hold_row_mode
@@ -125,6 +143,7 @@ do $$ begin
     when 'receipt' then perform safety_race_fixture.receipt();
     when 'social_send' then perform safety_race_fixture.social_send();
     when 'social_read' then perform safety_race_fixture.social_read();
+    when 'event_interest' then perform safety_race_fixture.event_interest();
     when 'report' then perform public.submit_safety_report(jsonb_build_object('requestId',current_setting('pebble.safety_race_report_request_id'),'targetId','ca100000-0000-4000-8000-000000000002','reason','Other','context','Synthetic race report'));
     when 'profile_delete' then perform safety_race_fixture.profile_delete();
   end case;
@@ -171,8 +190,8 @@ do $$ begin
 end $$;
 delete from safety_private.revoked_connections where connection_id in(select id from safety_race_fixture.connection_ids union select id from public.connections where user_a='ca100000-0000-4000-8000-000000000001' and user_b='ca100000-0000-4000-8000-000000000002');
 delete from auth.users where id in ('ca100000-0000-4000-8000-000000000001','ca100000-0000-4000-8000-000000000002');
-drop function safety_race_fixture.request(),safety_race_fixture.accept(),safety_race_fixture.send(),safety_race_fixture.receipt(),safety_race_fixture.legacy_block(),safety_race_fixture.legacy_unblock(),safety_race_fixture.profile_delete(),safety_race_fixture.hold_row(text),safety_race_fixture.social_send(),safety_race_fixture.social_read();
-drop table safety_race_fixture.connection_ids;
+drop function safety_race_fixture.request(),safety_race_fixture.accept(),safety_race_fixture.send(),safety_race_fixture.receipt(),safety_race_fixture.legacy_block(),safety_race_fixture.legacy_unblock(),safety_race_fixture.profile_delete(),safety_race_fixture.hold_row(text),safety_race_fixture.social_send(),safety_race_fixture.social_read(),safety_race_fixture.event_interest();
+drop table safety_race_fixture.connection_ids,safety_race_fixture.event_ids;
 drop schema safety_race_fixture;
 commit;
 \else
