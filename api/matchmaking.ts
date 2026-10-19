@@ -14,6 +14,8 @@ import type { SaveDetailedSettings } from '../shared/detailed-settings.js'
 import { createDetailedSettingsRouter } from './detailed-settings.js'
 import type { SaveDatingAggregate } from '../shared/dating.js'
 import { createDatingRouter } from './dating.js'
+import { createSearchLocationsRouter } from './search-locations.js'
+import type { BrowserSearchLocation, ResolveSearchArea } from '../shared/search-locations.js'
 import type { SubmitSafetyReport } from '../shared/safety.js'
 import { createSafetyRouter } from './safety.js'
 
@@ -39,6 +41,10 @@ export interface UserContextTransport {
     saveDetailedSettings?(settings: SaveDetailedSettings): PromiseLike<RpcResponse>
     datingAggregate?(): PromiseLike<RpcResponse>
     saveDatingAggregate?(aggregate: SaveDatingAggregate): PromiseLike<RpcResponse>
+    searchPlaces?(query: string): PromiseLike<RpcResponse>
+    resolveSearchArea?(request: ResolveSearchArea): PromiseLike<RpcResponse>
+    browserSearchLocation?(request: BrowserSearchLocation): PromiseLike<RpcResponse>
+    searchLocationReceipt?(mode: 'friends' | 'dating', reference: string): PromiseLike<RpcResponse>
     socialConnection?(target: string, action: 'get' | 'request' | 'accept' | 'remove'): PromiseLike<RpcResponse>
     socialConnectionList?(): PromiseLike<RpcResponse>
     socialInbox?(page: number): PromiseLike<RpcResponse>
@@ -88,6 +94,10 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         saveDetailedSettings: settings => client.rpc('save_detailed_settings', { settings_in: settings }),
         datingAggregate: () => client.rpc('get_dating_preferences'),
         saveDatingAggregate: aggregate => client.rpc('save_dating_preferences', { aggregate_in: aggregate }),
+        searchPlaces: query => client.rpc('search_location_places', { query_in: query }),
+        resolveSearchArea: request => client.rpc('resolve_search_area', { resolution_in: request }),
+        browserSearchLocation: request => client.rpc('issue_browser_search_location', { location_in: request }),
+        searchLocationReceipt: (mode, reference) => client.rpc('get_search_location_receipt', { mode_in: mode, reference_in: reference }),
         socialConnection: (target, action) => client.rpc('social_connection', { target_in: target, action_in: action }),
         socialConnectionList: () => client.rpc('social_connection_list'),
         socialInbox: page => client.rpc('social_inbox', { page_in: page }),
@@ -157,6 +167,7 @@ export function createMatchmakingRouter(transport: UserContextTransport | null) 
   router.use('/detailed-settings', createDetailedSettingsRouter())
   router.use('/dating-preferences', createDatingRouter())
   router.use('/safety', createSafetyRouter())
+  router.use('/search-locations', createSearchLocationsRouter())
   const readAccount = async (response: Response) => {
     const read = actor(response).account
     if (!read) throw new MatchingFailure(503, 'unavailable', 'Unified account RPC is not available yet.')

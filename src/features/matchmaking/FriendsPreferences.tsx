@@ -21,7 +21,7 @@ function FriendsResource({ owner, token, busy, home, open, close }: { owner: str
     setSaved(false)
     const confirmed = await resource.save(value)
     if (confirmed) {
-      if (confirmed.preferences?.searchArea.resolvedLocationRef === null) homeBinding.current.changed = false
+      if (homeBinding.current.home === home) homeBinding.current.changed = false
       setSaved(true)
     }
     return confirmed

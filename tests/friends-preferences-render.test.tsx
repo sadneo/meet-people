@@ -131,7 +131,7 @@ it.each(['source', 'label', 'explicit-clear'])('invalidates a stored ref on %s e
   } else if (change === 'label') {
     fireEvent.change(dialog.getByLabelText('Temporary city or campus'), { target: { value: 'Other campus' } })
     fireEvent.change(dialog.getByLabelText('Temporary city or campus'), { target: { value: 'Original campus' } })
-  } else fireEvent.click(dialog.getByRole('button', { name: 'Clear stored location reference' }))
+  } else fireEvent.click(dialog.getByRole('button', { name: 'Clear chosen location' }))
   fireEvent.click(save()); await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(fixture.puts()[0].body?.preferences.searchArea).toEqual({ source: 'temporary', areaLabel: 'Original campus', resolvedLocationRef: null })
 })

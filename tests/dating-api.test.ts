@@ -109,9 +109,9 @@ it('conflicts on either revision without partial updates and requires new clarif
   expect(stored.get(first)).toEqual(baseline)
 })
 it('never treats missing/malformed dependencies, partial response or failed canonical readback as saved; does not retry', async () => {
-  for (const code of ['DA409', '28000', '22023', 'PGRST202', 'XX000']) {
+  for (const code of ['LC409', 'DA409', '28000', '22023', 'PGRST202', 'XX000']) {
     error = code
-    expect((await request('PUT', draft)).status).toBe(({ DA409: 409, '28000': 401, '22023': 400, PGRST202: 503, XX000: 503 } as Record<string, number>)[code])
+    expect((await request('PUT', draft)).status).toBe(({ LC409: 400, DA409: 409, '28000': 401, '22023': 400, PGRST202: 503, XX000: 503 } as Record<string, number>)[code])
   }
   error = null; badRead = true
   const before = writes.mock.calls.length

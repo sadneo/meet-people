@@ -68,7 +68,7 @@ it('fails unavailable/malformed honestly and never invokes queue/result/profile 
   expect((await request('GET', undefined, 'first', '/friends-search-preferences', missing)).status).toBe(503)
   expect((await request('PUT', { expectedRevision: 0, preferences }, 'first', '/friends-search-preferences', missing)).status).toBe(503)
   expect((await request('GET', undefined, 'first', '/friends-search-preferences', null)).status).toBe(503)
-  for (const [code, status, kind] of [['PGRST202', 503, 'unavailable'], ['25001', 503, 'unavailable'], ['28000', 401, 'auth'], ['22P05', 400, 'invalid'], ['XX000', 503, 'provider']] as const) {
+  for (const [code, status, kind] of [['LC409', 400, 'invalid'], ['PGRST202', 503, 'unavailable'], ['25001', 503, 'unavailable'], ['28000', 401, 'auth'], ['22P05', 400, 'invalid'], ['XX000', 503, 'provider']] as const) {
     rpcError = code
     expect(await request()).toMatchObject({ status, data: { code: kind } })
   }

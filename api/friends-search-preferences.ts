@@ -12,6 +12,7 @@ function unwrap(result: { data: unknown; error: { code?: string } | null }) {
     const code = result.error.code ?? ''
     if (['PGRST301', 'PGRST302', 'PGRST303', '28000'].includes(code)) throw new PreferencesFailure(401, 'auth', 'Your session has expired. Sign in again.')
     if (code === 'FP409') throw new PreferencesFailure(409, 'conflict', 'Friends preferences changed. Reload before saving again.')
+    if (code === 'LC409') throw new PreferencesFailure(400, 'invalid', 'Your search location expired or changed. Choose it again; no changes were saved.')
     if (['22023', '23514', '22P05', '22021'].includes(code)) throw new PreferencesFailure(400, 'invalid', 'Invalid Friends preferences or location reference. No changes were saved.')
     if (['PGRST202', '42883', '42P01', '42501', '25001'].includes(code)) throw new PreferencesFailure(503, 'unavailable', 'Friends search preferences are not available yet.')
     throw new PreferencesFailure(503, 'provider', 'Friends preferences could not be confirmed. Reload before retrying.')

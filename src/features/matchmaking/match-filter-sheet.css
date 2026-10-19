@@ -110,3 +110,14 @@
 .match-filter-sheet .dpf-clarification p, .match-filter-sheet .dpf-compatibility { color: #586c4d; font-size: 11px; line-height: 1.7; }
 .match-filter-sheet .dpf-clarification [role=group] { display: grid; grid-template-columns: 1fr 1fr; }
 .pt-app .friends-page .friends-shared-note { color: #596d50; font-size: 12px; line-height: 1.7; margin: 0; padding-inline: 14px; }
+
+/* Location controls share the existing sheet palette and native touch targets. */
+.match-filter-sheet .mfs-location-resolution { padding: 18px 0; border-bottom: 1px solid #e0e4d5; min-width: 0; }
+.match-filter-sheet .mfs-location-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.match-filter-sheet .mfs-location-resolution button { min-height: 44px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; cursor: pointer; font: 12px Arial, sans-serif; }
+.match-filter-sheet .mfs-location-resolution .mfs-reset { flex: 1 1 130px; border-radius: 11px; }
+.match-filter-sheet .mfs-location-results { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 8px; }
+.match-filter-sheet .mfs-location-results button { width: 100%; padding: 12px; display: grid; gap: 5px; text-align: left; background: #fffef9; color: #314b37; border: 1px solid #d8e1cb; border-radius: 11px; }
+.match-filter-sheet .mfs-location-results small, .match-filter-sheet .mfs-location-results span { color: #586c4d; font-size: 11px; }
+.match-filter-sheet .mfs-location-results button:hover:not(:disabled) { border-color: #6d8b59; background: #eaf0df; }
+.match-filter-sheet .mfs-location-resolution a { display: inline-flex; align-items: center; min-height: 44px; color: #3e5c35; text-decoration: underline; }

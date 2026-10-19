@@ -12,6 +12,7 @@ function unwrap(result: { data: unknown; error: { code?: string } | null }) {
     const code = result.error.code ?? ''
     if (['PGRST301', 'PGRST302', 'PGRST303', '28000'].includes(code)) throw new DatingFailure(401, 'auth', 'Your session has expired. Sign in again.')
     if (code === 'DA409') throw new DatingFailure(409, 'conflict', 'Dating preferences changed. Reload the whole aggregate before saving.')
+    if (code === 'LC409') throw new DatingFailure(400, 'invalid', 'Your search location expired or changed. Choose it again; no changes were saved.')
     if (['22023', '23514', '22P05', '22021'].includes(code)) throw new DatingFailure(400, 'invalid', 'Invalid Dating draft or eligibility. No changes were saved.')
     if (['PGRST202', '42883', '42P01', '42501', '25001'].includes(code)) throw new DatingFailure(503, 'unavailable', 'Dating preferences are not available yet.')
     throw new DatingFailure(503, 'provider', 'Dating save/read could not be confirmed. Reload before retrying.')
