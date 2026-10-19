@@ -1,3 +1,4 @@
+import { AccountUiPreviewProvider } from '../features/account/AccountUiPreview'
 import { useEffect, useReducer, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router'
 import { PrototypeContext, usePrototype } from '../features/prototype/context'
@@ -11,15 +12,14 @@ import '../features/prototype/responsive.css'
 import '../features/prototype/settings.css'
 import '../features/prototype/calm.css'
 import { Icon } from '../features/prototype/ui'
-import { AccountBoundary } from '../auth/account'
 import { useAccount } from '../auth/account-context'
 import type { Action } from '../features/prototype/model'
 import { profileToAccount, accountToProfile } from '../auth/profile'
 import '../auth/account.css'
-import NativeBridge from '../platform/NativeBridge'
 
 export default function PebbleApp() {
-  return <><NativeBridge /><AccountBoundary><PebbleWorkspace /></AccountBoundary></>
+  const account = useAccount()
+  return <AccountUiPreviewProvider key={account?.session?.user.id ?? 'guest'}><PebbleWorkspace /></AccountUiPreviewProvider>
 }
 
 function PebbleWorkspace() {

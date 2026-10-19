@@ -1,7 +1,7 @@
 :root {
   font-family: Inter, system-ui, sans-serif;
   color: #213547;
-  background: #f5f7fa;
+  background: var(--pt-page-canvas, #ffffff);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }

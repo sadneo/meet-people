@@ -1,5 +1,16 @@
 # Pebble Design System
 
+## Real matchmaking demo scope (2026-10-19)
+
+Daniel explicitly authorized real signed-in Dating and one shared uploaded profile
+photo for the demo. Capability-gated real Dating, current Friends filter consumption
+and confirmed private photo storage supersede older prototype-only/preview-only
+statements below **only when their installed backend capability is confirmed**.
+Otherwise retain honest unavailable/prototype states and the exact local disclosure.
+See [demo-matchmaking-readiness.md](demo-matchmaking-readiness.md) for behavior,
+actual bounded verification, privacy limits and pending activation. This document
+change does not claim app installation or live Auth/PostgREST acceptance.
+
 ## Direction
 
 Pebble is a friends-first college social app: find people, make a plan, meet in
@@ -42,7 +53,8 @@ provides semantic aliases and focal sizing. Avoid another theme layer.
 
 | Token | Value | Role |
 | --- | --- | --- |
-| `--pt-cream` | `#DDCABC` | Continuous warm tan page and navigation |
+| `--pt-page-canvas` | `#ffffff` | Default page canvas and standard desktop/mobile navigation, including above/below Friends |
+| `--pt-cream` | `#DDCABC` | Existing cream surfaces, not the page canvas or standard navigation |
 | `--pt-surface` / `--pt-soft` | `#fffef9` / `#f4f9e8` | Neutral and light green surfaces |
 | `--pt-ink` | `#1f5a3c` | Forest text and active icons |
 | `--pt-muted` | `#425b49` | Muted forest text/icons (4.69:1 on tan) |
@@ -61,6 +73,14 @@ provides semantic aliases and focal sizing. Avoid another theme layer.
 Events and matching reference these tokens; Messages, Profile and Settings
 inherit them. Keep stronger color for social CTAs, selections and nature details.
 Messages bubbles stay soft green/mint. Do not restore per-screen color themes.
+The white canvas supersedes earlier continuous warm-tan canvas guidance. Friends
+matching uses the later approved light `#FAFBF7` canvas, white panels and sage
+selected states in `friends.css`; preserve the `#DFCBBD` sand mascot scene,
+original pixel artwork and animations. Dating keeps its
+photo cards on the white canvas and its exact local-only disclosure. Profile and
+Settings retain off-white cards/dialogs; green/berry controls and inputs are not
+recolored. Existing `--color-page` aliases used inside controls remain unchanged;
+full-page backgrounds use `--pt-page-canvas` instead.
 White on raspberry has 4.53:1 contrast; do not substitute off-white button text.
 Leaf green is artwork/indicator color; filled green controls use the darker
 `--pt-green` to preserve contrast for small white labels.
@@ -78,8 +98,11 @@ use its own controlled natural palette.
 The active shell is `src/features/prototype/AppShell.tsx`, wrapped by
 `src/routes/PebbleApp.tsx`. The older design-system shell is not routed.
 
-- Expanded (>800px): tan header, wordmark, centered icon navigation,
-  account avatar at the right. No white strip or divider.
+- Expanded (>800px): white header, wordmark, centered icon navigation, account
+  avatar at the right. Compact bottom navigation is white too, including on Friends;
+  Friends content uses its approved light palette and sand artwork. Public header/footer
+  remain on the white public canvas. Forest icons/text, pale-green selected tabs,
+  active dots, focus treatment, geometry and target sizes are unchanged.
 - Compact (<=800px): five-item bottom navigation with accessible names and
   native hover tooltips. Labels are visually hidden. Active tabs use a soft
   background plus a small dot; focus remains visible. A raspberry dot at the
@@ -265,3 +288,24 @@ Disable these decorative loops under `prefers-reduced-motion: reduce`.
 This visual pass does not change matchmaking algorithms/contracts, authentication
 logic, database schemas, messaging APIs, deployment, Android, or Profile behavior.
 The separate `/prototype/yzcommunity` experiment remains intact.
+
+## Matchmaking, Profile and Settings ownership
+
+Profile and Friends share one saved selection of interests and one exact weekly
+schedule. Explicit saves update that shared source; filters do not overwrite home
+city, private birthdate or identity. Active Friends takes priority and turns
+downtime off; downtime never silently resumes. Friends still suggests at most one
+real candidate through its existing manual queue flow. The 1–3 new-people control
+is a disclosed presentation preference until a real group-session contract exists.
+
+Profile uses one global picture and bio. Education, occupation and languages are
+optional shared facts with per-field visibility. Own gender/sexuality, intentions,
+relationship style and height belong to Dating. Gender plus sexuality resolves
+clear matching targets; ambiguous combinations ask for a matching clarification.
+Field visibility does not activate Dating. Keep exact local-only disclosure.
+
+New unsupported UI fields are explicitly memory-only previews, scoped to the
+current actor. They must not be written into legacy account documents or device
+storage. Show unavailable safety states rather than an invented empty blocklist
+or successful report. See `FRONTEND-READINESS-HANDOFF.md` for resource contracts,
+verification and which controls still need backend integration.

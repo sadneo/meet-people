@@ -1,0 +1,232 @@
+/* Profile/Settings handoff surfaces on the shared white page canvas.
+   The host shell and navigation retain their existing colors and geometry. */
+.pt-app .pt-main:has(.account-profile-page), .pt-app .pt-main:has(.account-settings-page) {
+  background: var(--pt-page-canvas); padding: 22px max(25px, calc((100% - 980px) / 2)) calc(var(--pt-navigation-clearance) + 28px);
+}
+.account-profile-page, .account-settings-page {
+  --account-paper: #fffef8; --account-ink: #285b41; --account-muted: #62795b;
+  --account-line: #dbe3cd; --account-sage: #e8f3d7;
+  color: var(--account-ink); font-family: Arial, Helvetica, sans-serif; font-size: 12px;
+}
+.account-profile-page *, .account-settings-page * { box-sizing: border-box; }
+.account-profile-page :is(h1,h2,h3,p,dl,dd), .account-settings-page :is(h1,h2,p) { margin: 0; }
+.account-profile-page :is(button,a,input):focus-visible, .account-settings-page :is(button,a,input):focus-visible { outline: 3px solid var(--pt-focus); outline-offset: 3px; }
+.account-profile-page :is(button,a,input), .account-settings-page :is(button,a,input) { scroll-margin-block: 16px calc(var(--pt-navigation-clearance) + 16px); }
+.account-profile-page button { font: inherit; cursor: pointer; }
+.account-profile-page button:disabled { cursor: not-allowed; opacity: .6; }
+.account-identity { overflow: hidden; border: 1px solid #eeeade; border-radius: 24px; background: var(--account-paper); margin-bottom: 18px; }
+.account-cover { display: block; width: 100%; height: 150px; object-fit: cover; object-position: center 48%; }
+.account-identity-body { position: relative; padding: 51px 24px 26px; }
+.account-portrait { position: absolute; top: -46px; left: 24px; width: 86px; height: 86px; border: 5px solid var(--account-paper); border-radius: 50%; object-fit: cover; }
+.account-avatar-placeholder { display: grid; place-items: center; color: #6f8960; background: #e8f0dc; }
+.account-profile-page h1 { font: 600 30px/1.2 Arial, sans-serif; letter-spacing: -.7px; color: var(--account-ink); }
+.account-profile-page .account-age { color: #6f8b62; font-size: 20px; font-weight: 400; margin-left: 15px; letter-spacing: 0; }
+.account-profile-page .account-city { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--account-muted); margin: 10px 0 15px; }
+.account-profile-page .account-bio { font-size: 13px; line-height: 1.7; color: var(--account-muted); overflow-wrap: anywhere; }
+.pt-app .account-profile-page .account-edit { position: absolute; right: 24px; top: 39px; min-height: 44px; padding: 9px 14px; font: 600 11px Arial, sans-serif; border: 1px solid var(--account-line); border-radius: 11px; background: transparent; color: #456e43; gap: 3px; }
+.account-profile-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; }
+.account-panel { min-width: 0; background: var(--account-paper); border: 1px solid #eeeade; border-radius: 21px; padding: 22px; }
+.account-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 25px; margin-bottom: 12px; }
+.account-profile-page h2 { font: 600 14px/1.3 Arial, sans-serif; letter-spacing: -.2px; color: var(--account-ink); }
+.account-profile-page .account-hint { font-size: 11px; line-height: 1.65; color: var(--account-muted); margin-bottom: 14px; }
+.account-profile-page .account-text-action { background: transparent; color: #4d7346; border: 0; padding: 4px; min-width: 44px; min-height: 44px; font-size: 11px; text-decoration: underline; text-underline-offset: 4px; }
+.account-scope { display: inline-flex; align-items: center; gap: 5px; color: #667f55; text-transform: uppercase; letter-spacing: 1.4px; font-size: 8px; white-space: nowrap; }
+.account-scope::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #82a567; }
+.account-facts dl { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; margin-top: 20px; }
+.account-facts dt { color: #6c8258; text-transform: uppercase; font-size: 9px; letter-spacing: 1px; margin-bottom: 7px; }
+.account-facts dd { color: #416a49; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.account-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.account-chips button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; min-width: 44px; padding: 9px 11px; background: #fbfcf7; color: #4b7040; border: 1px solid var(--account-line); border-radius: 11px; font-size: 11px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.account-chips button[aria-pressed='true'] { background: var(--account-sage); border-color: #c7dab3; color: #285b41; }
+.account-primary, .account-secondary, .account-green-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 15px; border-radius: 11px; text-decoration: none; font-size: 11px; }
+.account-primary { border: 1px solid #c5295c; background: #c5295c; color: white; }
+.account-secondary { border: 1px solid var(--account-line); color: #416e3a; background: #f2f7e8; }
+.account-add { margin-top: 12px; }
+.account-custom-interest { margin-top: 12px; }
+.account-custom-interest > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.account-custom-interest input { width: 100%; min-width: 0; flex: 1 1 140px; min-height: 44px; border: 1px solid var(--account-line); border-radius: 10px; background: #fff; padding: 10px; color: var(--account-ink); }
+.account-save-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 15px; }
+.account-save-row > span { flex-basis: 100%; color: var(--account-muted); font-size: 11px; }
+.account-usual-week, .account-inline-error { grid-column: 1 / -1; }
+.account-usual-week .friends-availability { border: 0; padding: 0; background: transparent; }
+.account-usual-week .friends-availability > header { display: flex; justify-content: flex-end; }
+.account-usual-week .friends-availability h3 { display: none; }
+.account-usual-week .friends-clear { min-width: 44px; min-height: 44px; border: 0; background: transparent; color: #456e43; text-decoration: underline; }
+.account-usual-week .friends-availability > p { font-size: 11px; color: var(--account-muted); margin-block: 8px; }
+.account-usual-week table { width: 100%; table-layout: fixed; border-spacing: 4px; }
+.account-usual-week col:first-child { width: 67px; }
+.account-usual-week th { font-size: 10px; text-align: center; font-weight: 400; padding-bottom: 5px; color: #516f43; }
+.account-usual-week th[scope='row'] { text-align: left; background: transparent; position: static; }
+.account-usual-week th small { display: block; margin-top: 3px; font-size: 9px; color: #62795b; }
+.account-usual-week td { padding: 0; }
+.account-usual-week td button { width: 100%; min-width: 44px; min-height: 44px; border-radius: 7px; border: 1px solid var(--account-line); background: transparent; color: #456e43; padding: 0; }
+.account-usual-week td button[aria-pressed='true'] { background: var(--account-sage); border-color: #9cbd7a; }
+.account-usual-week td button[aria-pressed='mixed'] { background: linear-gradient(135deg, #bdd4a3 50%, transparent 50%); color: #285b41; }
+.account-profile-page .account-caption { margin-top: 10px; color: var(--account-muted); font-size: 11px; line-height: 1.6; }
+.account-pixel { object-fit: contain; image-rendering: pixelated; }
+.account-community { margin-top: 17px; }
+.account-community-title { display: flex; align-items: center; gap: 10px; }
+.account-community-title > img { width: 38px; height: 38px; }
+.account-community-title p { font-size: 10px; color: var(--account-muted); margin-top: 5px; }
+.account-community-count { padding: 7px 12px; border-radius: 20px; background: #edf4e3; color: #567b45; font-size: 10px; white-space: nowrap; }
+.account-community-steps { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; margin-top: 20px; }
+.account-community-steps > div { background: #f1f6e7; color: #5c7550; border-radius: 12px; text-align: center; padding: 12px 4px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.account-community-steps strong { font-size: 11px; font-weight: 400; }
+.account-community-steps small { font-size: 10px; }
+.account-community-steps > div > span { font-size: 12px; color: #587b43; }
+.account-profile-page .account-community-copy { font-size: 11px; line-height: 1.7; color: var(--account-muted); margin-top: 16px; }
+.account-community-copy strong { display: block; color: #456e3a; font-size: 12px; }
+.account-green-action { background: #456e43; color: white; font-weight: 600; }
+.account-green-action:hover { background: #365c35; }
+.account-settings-row { width: 100%; display: flex; align-items: center; gap: 13px; padding: 18px 20px; margin-top: 12px; background: var(--account-paper); border: 1px solid #eeeade; border-radius: 17px; color: #366449; text-align: left; text-decoration: none; }
+.account-settings-icon { display: grid; place-items: center; background: #f0f4e6; color: #527644; border-radius: 11px; width: 37px; height: 37px; flex-shrink: 0; }
+.account-settings-row > span:nth-child(2) { flex: 1; }
+.account-settings-row strong { display: block; font-size: 13px; margin-bottom: 5px; }
+.account-settings-row small { display: block; font-size: 11px; color: var(--account-muted); }
+.account-inline-error, .account-feedback { padding: 12px; color: #9a2444; }
+@media (max-width: 700px) {
+  .pt-app .pt-main:has(.account-profile-page), .pt-app .pt-main:has(.account-settings-page) { padding: 14px 15px calc(var(--pt-navigation-clearance) + 28px); }
+  .account-profile-grid { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .account-identity { border-radius: 19px; }
+  .account-cover { height: 123px; }
+  .account-identity-body { padding: 46px 17px 19px; }
+  .account-portrait { top: -41px; left: 17px; width: 77px; height: 77px; border-width: 4px; }
+  .pt-app .account-profile-page .account-edit { top: 30px; right: 17px; font-size: 10px; padding: 9px 12px; }
+  .account-profile-page h1 { font-size: 26px; padding-right: 115px; }
+  .account-profile-page .account-age { font-size: 18px; margin-left: 10px; }
+  .account-profile-page .account-bio { font-size: 12px; }
+  .account-panel { padding: 18px; border-radius: 19px; }
+  .account-profile-page h2 { font-size: 13px; }
+  .account-usual-week { padding: 18px 6px; }
+  .account-usual-week > .account-panel-head, .account-usual-week > .account-hint, .account-usual-week > .account-caption { margin-inline: 12px; }
+  .account-community-title { gap: 7px; }
+  .account-community-title > img { width: 32px; height: 32px; }
+  .account-community-title h2 { font-size: 12px; }
+  .account-community-title p { font-size: 10px; line-height: 1.5; }
+  .account-community-count { font-size: 9px; padding: 6px 8px; }
+  .account-community-steps { gap: 5px; margin-top: 14px; }
+  .account-community-steps > div { padding: 10px 3px; border-radius: 10px; }
+  .account-community-steps strong, .account-community-steps small { font-size: 10px; }
+  .account-settings-row { padding: 15px 17px; gap: 11px; }
+}
+@media (max-width: 519px) {
+  .account-usual-week table { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 4px 0; }
+  .account-usual-week :is(thead,tbody,tr) { display: contents; }
+  .account-usual-week :is(colgroup,thead td) { display: none; }
+  .account-usual-week th[scope='row'] { grid-column: 1 / -1; display: flex; gap: 6px; padding: 4px 6px; }
+  .account-usual-week th small { margin: 0; }
+  .account-usual-week td button { min-width: 0; }
+  .account-usual-week .friends-availability > p { margin-inline: 12px; }
+}
+@media (max-width: 350px) {
+  .account-usual-week { margin-inline: -15px; padding-inline: 5px; border-radius: 0; }
+  .account-usual-week td button { min-width: 44px; }
+  .account-community .account-panel-head { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) { .account-profile-page *, .account-settings-page * { animation: none; transition: none; } }
+
+.pt-app .account-settings-page { width: 100%; max-width: 980px; gap: 0; }
+.account-settings-back { display: inline-flex; align-items: center; align-self: flex-start; gap: 6px; min-height: 44px; margin-bottom: 16px; color: #52754e; text-decoration: none; font-size: 12px; }
+.pt-app .account-settings-page .pt-settings-title { display: block; margin: 0 0 24px; }
+.pt-app .account-settings-page .pt-settings-title > span { width: auto; height: auto; display: inline-flex; padding: 0; background: transparent; border-radius: 0; }
+.pt-app .account-settings-page .pt-settings-title h1 { font: 600 28px/1.2 Arial, sans-serif; margin: 9px 0 10px; color: #285b41; }
+.pt-app .account-settings-page .pt-settings-title > p { font-size: 12px; line-height: 1.7; color: #62795b; }
+.account-settings-columns { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; }
+.account-settings-columns > div { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.pt-app .account-settings-page section { background: #fffef8; border: 1px solid #eeeade; border-radius: 21px; box-shadow: 0 3px 9px #5d593307; overflow: hidden; }
+.pt-app .account-settings-page .pt-settings-heading { padding: 18px 22px; background: #e9ddd0; border: 0; min-height: 71px; }
+.pt-app .account-settings-page .pt-settings-heading h2 { color: #285b41; font: 600 17px/1.3 Arial, sans-serif; }
+.pt-app .account-settings-page .pt-settings-heading p { font-size: 8px; text-transform: uppercase; letter-spacing: 1.2px; color: #6c7c60; margin-bottom: 5px; }
+.pt-app .account-settings-page .pt-settings-row, .pt-app .account-settings-page .pt-toggle-row { width: calc(100% - 44px); margin: 0 22px !important; min-height: 66px; padding: 15px 0; border-bottom: 1px solid #dbe3cd; color: #285b41; }
+.pt-app .account-settings-page .pt-settings-row:last-child, .pt-app .account-settings-page .pt-toggle-row:last-child { border-bottom: 0; }
+.pt-app .account-settings-page .pt-settings-row strong, .pt-app .account-settings-page .pt-toggle-row strong { font: 600 12px/1.5 Arial, sans-serif; margin-bottom: 4px; }
+.pt-app .account-settings-page .pt-settings-row small, .pt-app .account-settings-page .pt-toggle-row small { font: 11px/1.6 Arial, sans-serif; color: #62795b; }
+.pt-app .account-settings-page input[role='switch'] { flex-shrink: 0; min-width: 44px; width: 44px; height: 44px; min-height: 44px; border: 0; border-radius: 0; background: transparent; }
+.pt-app .account-settings-page input[role='switch']::after { content: ''; position: absolute; width: 37px; height: 23px; left: 4px; top: 10px; border-radius: 20px; background: #a8b5a3; }
+.pt-app .account-settings-page input[role='switch']::before { z-index: 1; width: 15px; height: 15px; left: 8px; top: 14px; border-radius: 50%; background: #fffef8; box-shadow: none; }
+.pt-app .account-settings-page input[role='switch']:checked::after { background: #508344; }
+.pt-app .account-settings-page input[role='switch']:checked::before { left: 21px; }
+.pt-app .account-settings-page .pt-settings-actions .pt-button { width: auto; padding: 8px 12px; color: #456e43; background: #f2f7e8; border: 1px solid #dbe3cd; border-radius: 11px; }
+.pt-app .account-settings-page .pt-downtime-status { padding-inline: 22px; font-size: 11px; color: #62795b; }
+.pt-app .account-settings-page .pt-downtime-switch { border: 0; background: transparent; padding: 4px; min-width: 44px; min-height: 44px; }
+.pt-app .account-settings-page .pt-downtime-switch > span { width: 37px; height: 23px; padding: 4px; background: #a8b5a3; }
+.pt-app .account-settings-page .pt-downtime-switch > span::before { width: 15px; height: 15px; }
+.pt-app .account-settings-page .pt-downtime-switch[aria-checked='true'] > span { background: #508344; }
+.pt-app .account-settings-page .pt-downtime-switch[aria-checked='true'] > span::before { margin-left: 14px; }
+@media (max-width: 800px) {
+  .account-settings-columns { grid-template-columns: minmax(0,1fr); gap: 16px; }
+  .pt-app .account-settings-page .pt-settings-title h1 { font-size: 25px; }
+  .pt-app .account-settings-page section { border-radius: 19px; }
+  .pt-app .account-settings-page .pt-settings-heading { padding: 15px 18px; min-height: 63px; }
+  .pt-app .account-settings-page .pt-settings-heading h2 { font-size: 15px; }
+  .pt-app .account-settings-page .pt-settings-row, .pt-app .account-settings-page .pt-toggle-row { width: calc(100% - 36px); margin: 0 18px !important; }
+  .pt-app .account-settings-page .pt-settings-actions .pt-settings-row { flex-wrap: nowrap; }
+  .pt-app .account-settings-page .pt-settings-actions .pt-settings-row > span { flex-basis: auto; }
+  .pt-app .account-settings-page .pt-downtime-status { padding-inline: 18px; }
+}
+
+/* Keep the existing inbox reachable without reserving a second account toolbar. */
+.pt-app:has(.account-profile-page) .pt-inbox-controls,
+.pt-app:has(.account-settings-page) .pt-inbox-controls { position: absolute; top: calc(var(--pt-header-height) + 8px); right: 12px; padding: 0; z-index: 25; }
+.account-usual-week table { scroll-margin-block: 12px calc(var(--pt-navigation-clearance) + 12px); }
+
+.account-week-tools { display: flex; align-items: center; gap: 12px; }
+.account-usual-week .friends-availability > header { display: none; }
+
+/* The handoff retains its side-by-side details through small tablet widths.
+   This is local content fitting; the host navigation still changes at 800px. */
+.account-usual-week .friends-availability > p:first-of-type { display: none; }
+
+/* Reference-sized headers with 44px hit areas extending into the panel padding,
+   rather than stretching every section's visible heading row. */
+.account-profile-page .account-panel-head { position: relative; min-height: 20px; }
+.account-profile-page .account-panel-head > .account-text-action,
+.account-profile-page .account-week-tools > .account-text-action { position: absolute; top: -12px; right: -8px; }
+.account-profile-page .account-facts .account-panel-head { padding-right: 44px; }
+.account-week-tools { padding-right: 44px; }
+.account-profile-page .account-hint { font-size: 10px; }
+.account-usual-week .friends-key { display: none; }
+.account-profile-page .account-usual-week .account-caption { font-size: 10px; }
+.account-chips { row-gap: 2px; }
+@media (min-width: 701px) {
+  .account-profile-page h2 { font-size: 15px; }
+}
+.account-profile-page { line-height: normal; }
+.account-identity-body { padding-bottom: 24px; }
+.account-profile-page .account-city { margin-bottom: 13px; }
+.account-usual-week td button { display: block; }
+/* Focused Profile facts dialog from the supplied handoff. */
+.pt-app .account-edit-dialog { width: min(560px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 40px); padding: 28px; margin: auto; border: 1px solid #eeeade; border-radius: 24px; background: #fffef8; color: #285b41; font: 12px/1.5 Arial, Helvetica, sans-serif; overflow: hidden; }
+.pt-app .account-edit-dialog[open] { display: flex; flex-direction: column; }
+.account-edit-dialog::backdrop { background: #20261bb3; backdrop-filter: blur(6px); }
+.pt-app .account-edit-dialog .account-edit-header { position: relative; flex: 0 0 auto; padding-right: 40px; margin-bottom: 16px; }
+.pt-app .account-edit-dialog .account-edit-header h2 { margin: 0; font: 400 32px/1.2 Georgia, serif; letter-spacing: -1px; color: #315e44; }
+.account-edit-header > button { position: absolute; right: -9px; top: -12px; display: grid; place-items: center; width: 44px; height: 44px; border: 0; background: transparent; color: #5b7750; isolation: isolate; }
+.account-edit-header > button::before { content: ''; position: absolute; inset: 8px; background: #e9efdf; border-radius: 50%; z-index: -1; }
+.account-edit-dialog form { display: flex; flex-direction: column; min-height: 0; }
+.account-edit-fields { min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 3px; margin: -3px; scroll-padding-block: 12px; }
+.pt-app .account-edit-dialog .account-edit-description { font: 12px/1.7 Arial, sans-serif; color: #62795b; margin: 0 0 20px; }
+.pt-app .account-edit-dialog label { display: grid; gap: 9px; margin: 0 0 18px; font: 400 12px/1.5 Arial, sans-serif; color: #4e6941; min-width: 0; }
+.pt-app .account-edit-dialog :is(input, textarea) { display: block; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; min-height: 44px; padding: 11px 12px; border: 1px solid #dfe4d4; border-radius: 10px; background: white; color: #3a6047; font: 12px/1.5 Arial, sans-serif; }
+.pt-app .account-edit-dialog textarea { min-height: 88px; resize: none; }
+.account-edit-fact-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
+.pt-app .account-edit-dialog .account-edit-note { margin: 0; font: 11px/1.6 Arial, sans-serif; color: #62795b; }
+.account-edit-actions { flex: 0 0 auto; display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+.pt-app .account-edit-dialog .account-edit-actions button { width: auto; min-width: 76px; min-height: 44px; border-radius: 11px; padding: 10px 15px; font: 600 12px/1.5 Arial, sans-serif; }
+.pt-app .account-edit-dialog .account-edit-actions .account-secondary { background: transparent; border: 1px solid #d9e3cb; color: #4a7244; font-weight: 400; }
+.pt-app .account-edit-dialog .account-edit-save { border: 1px solid #385740; background: #385740; color: white; }
+.account-edit-dialog button:disabled { cursor: not-allowed; opacity: .6; }
+.account-edit-dialog :is(button,input,textarea):focus-visible { outline: 3px solid var(--pt-focus); outline-offset: 2px; }
+.pt-app .account-edit-dialog [role='alert'] { color: #9a2444; font-size: 12px; margin-block: 12px; }
+.account-exact-times { margin-top: 10px; font-size: 11px; color: #456e43; }
+.account-exact-times summary { min-height: 44px; display: list-item; padding-block: 14px; cursor: pointer; }
+.account-exact-row { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)) auto; align-items: end; gap: 10px; margin-bottom: 12px; }
+.account-exact-row label { min-width: 0; display: grid; gap: 6px; font-size: 11px; }
+.account-exact-row :is(input,select) { min-width: 0; width: 100%; min-height: 44px; border: 1px solid #dbe3cd; border-radius: 10px; padding: 8px; background: white; color: #285b41; font: 12px Arial, sans-serif; }
+@media (max-width: 700px) { .account-exact-row { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 400px) {
+  .pt-app .account-edit-dialog { padding: 22px; max-height: calc(100dvh - 24px); }
+  .pt-app .account-edit-dialog .account-edit-header h2 { font-size: 29px; }
+  .account-edit-fact-row { grid-template-columns: minmax(0,1fr); gap: 0; }
+  .account-exact-row { grid-template-columns: minmax(0,1fr); }
+}

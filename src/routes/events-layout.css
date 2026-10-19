@@ -1,5 +1,5 @@
 .events-standalone-shell {
-  background: var(--pt-cream);
+  background: var(--pt-page-canvas);
   min-height: 100dvh;
 }
 .events-standalone-main {

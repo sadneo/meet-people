@@ -1,15 +1,21 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import App from '../src/App'
 import type { Message, Participant } from '../shared/messaging'
 
-const auth = vi.hoisted(() => ({ session: { user: { id: 'a0000000-0000-4000-8000-000000000001' } } as Session | null }))
+const auth = vi.hoisted(() => ({ session: { access_token: 'real-session', user: { id: 'a0000000-0000-4000-8000-000000000001' } } as Session | null }))
 vi.mock('../src/auth/useSession', () => ({ useSession: () => ({ session: auth.session, ready: true }) }))
 // Accounts and onboarding have their own tests; here the signed-in user is already set up.
-vi.mock('../src/auth/account', () => ({ AccountBoundary: ({ children }: { children: ReactNode }) => children }))
+vi.mock('../src/auth/useUnifiedAccount', () => ({ useUnifiedAccount: () => ({
+  loading: false, available: true, busy: false, error: '', save: vi.fn(), reload: vi.fn(),
+  account: {
+    profile: { username: 'synthetic-owner', display_name: 'Synthetic owner', bio: 'Synthetic bio', birthdate: '2000-01-01', location_city: 'Synthetic campus', avatar_url: null, interests: ['Art', 'Coffee', 'Music'], availability: [{ dow: 1, start_time: '12:00:00', end_time: '17:00:00' }] },
+    preferences: { intents: ['Activity partners'], usual: [], distance: 'Nearby', group: 'One-on-one' },
+    settings: { notifications: false, availability: false, discoverable: true, location: false }, completed: [0, 1, 2, 3],
+  },
+}) }))
 vi.mock('../src/supabase', () => ({ supabase: { auth: { getSession: async () => ({ data: { session: { access_token: 'real-session' } } }) } } }))
 const user = 'a0000000-0000-4000-8000-000000000001'
 const taylor = 'a0000000-0000-4000-8000-000000000002'
@@ -78,7 +84,7 @@ beforeEach(() => {
   saved = [first]; unread = { [a]: 1 }; taylorRead = 0; canSend = true; incoming = []; sent = []; rileyChat = false
   failSend = false; failHistory = false; empty = false; delaySend = false; resolveSend = null; delayHistory = false; holdHistory = null
   historyStatus = 200; sendStatus = 200; failSendNetwork = false; removedConversations = []; paginated = false
-  auth.session = { user: { id: user } } as Session
+  auth.session = { access_token: 'real-session', user: { id: user } } as Session
   vi.stubGlobal('fetch', fetchMock); fetchMock.mockClear()
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers() })
@@ -122,6 +128,7 @@ describe('persisted messaging UI with mocked API', () => {
   it('picks up new messages by polling after the newest one shown', async () => {
     open(`/messages/chat?conversation=${a}`)
     await history().findByText('Persisted hello')
+    await waitFor(() => expect(posts('/read').some(([, init]) => JSON.parse(String(init?.body)).seq === 1)).toBe(true))
     saved.push({ ...first, id: 'b0000000-0000-4000-8000-000000000002', seq: 2, body: 'Are you still coming?' })
     await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
     await history().findByText('Are you still coming?')
@@ -139,6 +146,7 @@ describe('persisted messaging UI with mocked API', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     open(`/messages/chat?conversation=${a}`)
     await history().findByText('Persisted hello')
+    await waitFor(() => expect(posts('/read').some(([, init]) => JSON.parse(String(init?.body)).seq === 1)).toBe(true))
     saved.push({ ...first, id: crypto.randomUUID(), seq: 2, body: 'Fresh incoming preview' })
     await act(() => vi.advanceTimersByTimeAsync(5000))
     await history().findByText('Fresh incoming preview')
@@ -157,6 +165,7 @@ describe('persisted messaging UI with mocked API', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     open(`/messages/chat?conversation=${a}`)
     await history().findByText('Persisted hello')
+    await waitFor(() => expect(posts('/read').some(([, init]) => JSON.parse(String(init?.body)).seq === 1)).toBe(true))
     saved.push({ ...first, id: crypto.randomUUID(), seq: 2, body: 'Older incoming message' })
     delayHistory = true
     await act(() => vi.advanceTimersByTimeAsync(5000))
@@ -307,8 +316,9 @@ describe('persisted messaging UI with mocked API', () => {
   })
   it('sends signed-out visitors to central sign-in without requesting messages', () => {
     auth.session = null; open(`/messages/chat?conversation=${a}`)
-    expect(screen.getByText('Sign in to open your saved conversations.')).toBeTruthy()
-    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Sign in' }).getAttribute('href')).toBe(`/login?returnTo=${encodeURIComponent(`/messages/chat?conversation=${a}`)}`)
+    expect(screen.getByRole('heading', { name: 'Welcome to Pebble', exact: true })).toBeTruthy()
+    expect(screen.getByLabelText('Current route').textContent).toBe(`/login?returnTo=${encodeURIComponent(`/messages/chat?conversation=${a}`)}`)
+    expect(screen.queryByRole('region', { name: 'Conversation inbox' })).toBeNull()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })

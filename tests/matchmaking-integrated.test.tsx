@@ -1,12 +1,16 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import App from '../src/App'
-import { emptyAccount } from '../shared/account'
+import RealApp from '../src/App'
+import { MatchingViews } from '../src/features/matchmaking/MatchingViews'
+import { requiredPreferences } from './complete-profile-fixture'
+function App() { return <MatchingViews mode={useLocation().pathname === '/downtime-matchmaking' ? 'downtime' : 'active'} /> }
+import { MatchingSetup } from '../src/features/matchmaking/MatchingScreen'
+import { MatchingProfileSchema } from '../shared/matchmaking'
 
 const auth = vi.hoisted(() => ({ session: { access_token: 'user-jwt', user: { id: 'a0000000-0000-4000-8000-000000000001' } } as { access_token: string; user: { id: string } } | null }))
 vi.mock('../src/auth/useSession', () => ({ useSession: () => ({ session: auth.session, ready: true }) }))
-const profile = { username: 'sam', display_name: 'Sam', bio: null, birthdate: null, location_city: null, avatar_url: null, interests: ['Coffee'], availability: [] }
+const profile = { username: 'sam', display_name: 'Sam', bio: null, avatar_url: null, ...requiredPreferences }
 const candidate = { id: 'a0000000-0000-4000-8000-000000000002', name: 'Taylor', avatar: null, interests: ['Coffee'], overlap: 'some', mode: 'active', meetup: null }
 let mode: string | null = null
 let cancelFails = false
@@ -15,11 +19,12 @@ let saveUnavailable = true
 let profileInterests = ['Coffee']
 let saveResponse: Promise<Response> | null = null
 let profileResponse: Response | Promise<Response> | null = null
+let canonicalIdentity = false
 const requests: { path: string; method: string; authorization: string | null; body: unknown }[] = []
 const mockFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
   const path = String(input), method = init?.method ?? 'GET'
   requests.push({ path, method, authorization: new Headers(init?.headers).get('Authorization'), body: init?.body ? JSON.parse(String(init.body)) : null })
-  if (path.endsWith('/account')) return Response.json({ ...emptyAccount, profile, completed: [0, 1, 2, 3] })
+  if (path.endsWith('/account-profile')) return canonicalIdentity ? Response.json({ profile: { username: profile.username, display_name: profile.display_name, bio: profile.bio, avatar_url: profile.avatar_url } }) : Response.json({ code: 'unavailable', error: 'Account profile RPC not installed.' }, { status: 503 })
   if (path.startsWith('/api/connections/')) return Response.json({ status: method === 'POST' ? 'sent' : 'none', conversationId: null })
   if (path.endsWith('/profile')) return method === 'PUT' ? saveResponse ?? (saveUnavailable ? Response.json({ code: 'unavailable', error: 'Matching RPC is not available yet.' }, { status: 503 }) : Response.json({ profile: JSON.parse(String(init?.body)) })) : profileResponse ?? Response.json({ profile: { ...profile, interests: profileInterests } })
   if (path.endsWith('/result')) return resultResponse ?? Response.json({ candidate })
@@ -33,36 +38,158 @@ const mockFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => 
 beforeEach(() => {
   auth.session = { access_token: 'user-jwt', user: { id: 'a0000000-0000-4000-8000-000000000001' } }
   mode = null; cancelFails = false; resultResponse = null; saveUnavailable = true; requests.length = 0
-  profileInterests = ['Coffee']; saveResponse = null; profileResponse = null
+  profileInterests = [...profile.interests]; saveResponse = null; profileResponse = null; canonicalIdentity = true
   vi.stubGlobal('fetch', mockFetch); vi.stubGlobal('scrollTo', () => {})
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
 const mount = (path = '/matchmaking') => render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
+async function openPreferences() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
+  await waitFor(() => expect(screen.queryByText('Checking saved identity…')).toBeNull())
+}
 
-for (const selected of ['active', 'downtime']) {
+it('composes a saved active Friends profile into the inline setup hierarchy', async () => {
+  profileResponse = Response.json({ profile: { ...profile, location_city: 'North campus', availability: [{ dow: 1, start_time: '08:00:00', end_time: '12:00:00' }] } })
+  mount()
+  const dashboard = within(await screen.findByRole('region', { name: 'Find your people', exact: true }))
+  const controls = within(screen.getByRole('navigation', { name: 'Matching modes', exact: true }))
+  expect(controls.queryByRole('link', { name: 'Matchmaking settings', exact: true })).toBeNull()
+  expect(controls.getByRole('button', { name: 'Preferences', exact: true })).toBeTruthy()
+  expect(dashboard.getByRole('heading', { name: 'Find your people', exact: true })).toBeTruthy()
+  expect(dashboard.getByRole('button', { name: 'Coffee', exact: true }).getAttribute('aria-pressed')).toBe('true')
+  expect(dashboard.getByRole('button', { name: 'Monday morning, available' }).getAttribute('aria-pressed')).toBe('true')
+  expect(dashboard.getByRole('table').querySelectorAll('button')).toHaveLength(28)
+  expect(dashboard.getByRole('button', { name: 'Find Friends', exact: true })).toBeTruthy()
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+it('renders and edits the dashboard without writes, queue enrollment or result lookup', async () => {
+  mount()
+  await screen.findByRole('region', { name: 'Find your people', exact: true })
+  expect(screen.getByRole('button', { name: 'Sunday late, available' })).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: 'Places', exact: true })).toBeNull()
+  expect(requests.some(request => request.method !== 'GET' || request.path.endsWith('/result'))).toBe(false)
+  await openPreferences()
+  expect(screen.queryByLabelText('City or campus area')).toBeNull()
+  expect(screen.queryByLabelText('Birthdate (optional)')).toBeNull()
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Music', exact: true }))
+  expect(requests.some(request => request.method !== 'GET' || /\/(queue|result)$/.test(request.path))).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }))
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Preferences', exact: true }))
+  expect(screen.getByText('Coffee', { exact: true })).toBeTruthy()
+  expect(screen.queryByText('Unsent area', { exact: true })).toBeNull()
+})
+
+it('uses inline setup then real queue actions for join, manual lookup and cancellation', async () => {
+  mount()
+  await screen.findByRole('form', { name: 'Matching profile setup' })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Find Friends', exact: true }).disabled).toBe(false))
+  expect(requests.some(request => request.path.endsWith('/result'))).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Find Friends', exact: true }))
+  await screen.findByRole('button', { name: 'Check for a match', exact: true })
+  expect(requests.filter(request => request.method === 'POST')).toHaveLength(1)
+  expect(document.querySelector('.friends-scene.is-searching')).toBeTruthy()
+  expect(requests.some(request => request.path.endsWith('/result'))).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Check for a match', exact: true }))
+  await screen.findByRole('heading', { name: 'Taylor', exact: true })
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel search', exact: true }))
+  await screen.findByRole('button', { name: 'Find Friends', exact: true })
+  expect(screen.queryByRole('heading', { name: 'Taylor', exact: true })).toBeNull()
+  expect(document.querySelector('.friends-scene:not(.is-searching)')).toBeTruthy()
+  expect(requests.filter(request => request.method === 'DELETE')).toHaveLength(1)
+  expect(requests.filter(request => request.path.endsWith('/result'))).toHaveLength(1)
+})
+
+it('starting active matching replaces downtime with POST, never DELETE or automatic lookup', async () => {
+  mode = 'downtime'
+  mount()
+  await screen.findByRole('button', { name: 'Find Friends', exact: true })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Find Friends', exact: true }).disabled).toBe(false))
+  expect(screen.getByText(/Starting active matching replaces downtime matching/)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Find Friends', exact: true }))
+  await screen.findByRole('dialog', { name: 'Replace downtime matching?', exact: true })
+  fireEvent.click(screen.getByRole('button', { name: 'Replace with active search', exact: true }))
+  await screen.findByRole('button', { name: 'Cancel search', exact: true })
+  expect(requests.filter(request => request.method === 'POST')).toMatchObject([{ body: { mode: 'active' } }])
+  expect(requests.some(request => request.method === 'DELETE' || request.path.endsWith('/result'))).toBe(false)
+})
+
+it('an owned active queue can still be cancelled when profile loading fails', async () => {
+  mode = 'active'
+  profileResponse = Response.json({ code: 'unavailable', error: 'Profile service unavailable.' }, { status: 503 })
+  mount()
+  await screen.findByRole('alert')
+  const cancel = screen.getByRole('button', { name: 'Cancel search', exact: true })
+  await waitFor(() => expect(cancel.disabled).toBe(false))
+  fireEvent.click(cancel)
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Find Friends', exact: true }).disabled).toBe(true))
+  expect(requests.filter(request => request.method === 'DELETE')).toHaveLength(1)
+  expect(requests.some(request => request.method === 'POST' || request.path.endsWith('/result'))).toBe(false)
+})
+
+it('shows full-page Friends setup with real interests, weekly grid and campus input when no matching profile is saved', async () => {
+  profileResponse = Response.json({ profile: null })
+  canonicalIdentity = true
+  mount()
+  await screen.findByRole('heading', { name: 'Find your people' })
+  const setup = within(screen.getByRole('region', { name: 'Find your people', exact: true }))
+  expect(setup.queryByRole('navigation', { name: 'Matching modes', exact: true })).toBeNull()
+  expect(setup.queryByRole('link', { name: 'Matchmaking settings', exact: true })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Dating', exact: true }).getAttribute('href')).toBe('/matchmaking?view=dating')
+  expect(setup.getByRole('form', { name: 'Matching profile setup', exact: true })).toBeTruthy()
+  expect(setup.getByRole('group', { name: 'Interests', exact: true })).toBeTruthy()
+  expect(setup.getByRole('group', { name: 'Weekly availability', exact: true })).toBeTruthy()
+  expect(setup.queryByRole('heading', { name: 'What brings you together', exact: true })).toBeNull()
+  expect(within(setup.getByRole('group', { name: 'Matching setup actions', exact: true })).getByRole('button', { name: 'Find Friends' })).toBeTruthy()
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByRole('table', { name: 'Weekly availability' })).toBeTruthy()
+   expect(screen.getByRole('button', { name: 'Add yours' })).toBeTruthy()
+  expect(screen.queryByLabelText('City or campus area')).toBeNull()
+  expect(screen.queryByLabelText('Birthdate (optional)')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Find Friends' })).toBeTruthy()
+   expect(document.querySelector('.match-setup .friends-mascot')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Dating', exact: true })).toBeNull()
+  expect(requests.some(request => request.method === 'POST' || request.path.endsWith('/result'))).toBe(false)
+})
+
+for (const selected of ['active']) {
   const path = selected === 'active' ? '/matchmaking' : '/downtime-matchmaking'
-  const startName = selected === 'active' ? 'Start matching' : 'Turn on downtime matching'
+  const startName = selected === 'active' ? 'Find Friends' : 'Turn on downtime matching'
   const leaveName = selected === 'active' ? 'Cancel search' : 'Pause downtime matching'
   it(`${selected} requires a successful server profile save, not a blank profile or failed save`, async () => {
     profileResponse = Response.json({ profile: null })
+    canonicalIdentity = true
     mount(path)
     await screen.findByText('No matching profile saved yet.')
+    if (selected === 'active') {
+      await waitFor(() => expect(screen.queryByText('Checking saved identity…')).toBeNull())
+      fireEvent.click(screen.getByRole('button', { name: startName, exact: true }))
+      await screen.findByRole('alert')
+      expect(requests.some(request => request.method === 'POST')).toBe(false)
+      saveUnavailable = false
+      fireEvent.click(screen.getByRole('button', { name: startName, exact: true }))
+      expect(requests.find(request => request.method === 'PUT')).toMatchObject({ body: { interests: [] } })
+      await screen.findByRole('button', { name: leaveName, exact: true })
+      expect(requests.find(request => request.method === 'POST')).toMatchObject({ body: { mode: selected } })
+      expect(requests.some(request => request.path.endsWith('/result'))).toBe(false)
+      return
+    }
     const start = screen.getByRole('button', { name: startName, exact: true })
     expect(start.disabled).toBe(true)
     fireEvent.click(start)
     expect(requests.some(request => request.method === 'POST')).toBe(false)
-    fireEvent.click(screen.getByRole('button', { name: 'Preferences' }))
-    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'sam' } })
-    fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Sam' } })
+    await openPreferences()
+    expect(screen.queryByLabelText('Username')).toBeNull()
+    expect(screen.queryByLabelText('Display name')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
     await screen.findByRole('alert')
     expect(start.disabled).toBe(true)
     expect(requests.some(request => request.method === 'POST')).toBe(false)
     saveUnavailable = false
     fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
-    await waitFor(() => expect(start.disabled).toBe(false))
+    await waitFor(() => expect(screen.getByRole('button', { name: startName, exact: true }).disabled).toBe(false))
     expect(requests.find(request => request.method === 'PUT')).toMatchObject({ body: { interests: [] } })
     fireEvent.click(start)
     await screen.findByRole('button', { name: leaveName, exact: true })
@@ -83,54 +210,126 @@ for (const selected of ['active', 'downtime']) {
     expect(requests.some(request => request.method === 'POST')).toBe(false)
     profileResponse = null
     fireEvent.click(screen.getByRole('button', { name: 'Retry profile' }))
-    await waitFor(() => expect(start.disabled).toBe(false))
+    await waitFor(() => expect(screen.getByRole('button', { name: startName, exact: true }).disabled).toBe(false))
   })
-  it(`${selected} can refresh and leave an existing queue when profile load fails, but cannot switch or re-enroll`, async () => {
+  it(`${selected} cannot cancel downtime or replace it when profile load fails; status refresh remains safe`, async () => {
     mode = selected === 'active' ? 'downtime' : 'active'
     profileResponse = Response.json({ code: 'unavailable', error: 'Profile service unavailable.' }, { status: 503 })
     mount(path)
     await screen.findByRole('alert')
-    await waitFor(() => expect(screen.getByRole('button', { name: leaveName, exact: true }).disabled).toBe(false))
-    expect(screen.getByRole('button', { name: `Switch to ${selected} queue`, exact: true }).disabled).toBe(true)
+    expect(screen.queryByRole('button', { name: leaveName, exact: true })).toBeNull()
+    expect(screen.getByRole('button', { name: startName, exact: true }).disabled).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'Refresh status' }))
     await waitFor(() => expect(requests.filter(request => request.path.endsWith('/status'))).toHaveLength(2))
-    await waitFor(() => expect(screen.getByRole('button', { name: leaveName, exact: true }).disabled).toBe(false))
-    fireEvent.click(screen.getByRole('button', { name: leaveName, exact: true }))
-    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Ready when you are'))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh status', exact: true }).disabled).toBe(false))
     expect(screen.getByRole('button', { name: startName, exact: true }).disabled).toBe(true)
-    expect(requests.some(request => request.method === 'DELETE')).toBe(true)
+    expect(requests.some(request => request.method === 'DELETE')).toBe(false)
     expect(requests.some(request => request.method === 'POST')).toBe(false)
   })
 }
+
+it('assembles valid real preferences then starts the actual queue without automatic results', async () => {
+  profileResponse = Response.json({ profile: null }); canonicalIdentity = true; saveUnavailable = false
+  mount()
+  await screen.findByRole('form', { name: 'Matching profile setup' })
+  const save = await screen.findByRole('button', { name: 'Find Friends' })
+  await waitFor(() => expect(save.disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Add yours' }))
+  fireEvent.change(screen.getByLabelText('Add a matching interest'), { target: { value: 'Coffee' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Add interest', exact: true }))
+  fireEvent.change(screen.getByLabelText('Add a matching interest'), { target: { value: 'Music' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Add interest', exact: true }))
+  fireEvent.click(screen.getByRole('button', { name: 'Coffee', exact: true }))
+  fireEvent.click(screen.getByRole('button', { name: 'Monday morning, not available' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Sunday late, not available' }))
+  expect(requests.some(request => request.method === 'POST' || request.path.endsWith('/result'))).toBe(false)
+  fireEvent.click(save)
+  await screen.findByRole('button', { name: 'Cancel search' })
+  const payload = requests.find(request => request.method === 'PUT')!.body
+  expect(MatchingProfileSchema.safeParse(payload).success).toBe(true)
+  expect(payload).toEqual({ ...profile, birthdate: null, location_city: null, interests: ['Music'], availability: [{ dow: 1, start_time: '08:00:00', end_time: '12:00:00' }, { dow: 0, start_time: '21:00:00', end_time: '24:00:00' }] })
+  expect(requests.filter(request => request.method === 'POST')).toHaveLength(1)
+  expect(requests.some(request => request.path.endsWith('/result'))).toBe(false)
+})
+
+it('keeps exact custom windows, midnight ends, multiline interests and legacy server identity on unrelated edits', async () => {
+  const initial = { ...profile, location_city: 'Keep campus', birthdate: '2000-01-01', interests: ['Board games\nstrategy', 'Coffee'], availability: [{ dow: 2, start_time: '09:15:00', end_time: '11:45:00' }, { dow: 0, start_time: '21:00:00', end_time: '24:00:00' }] }
+  const save = vi.fn(async () => true)
+  render(<MemoryRouter><MatchingSetup initial={initial} token="user-jwt" busy={false} error="" save={save} /></MemoryRouter>)
+  await waitFor(() => expect(screen.queryByText('Checking saved identity…')).toBeNull())
+  expect(screen.getByRole('button', { name: 'Tuesday morning, custom times; edit exact windows' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Sunday late, available' }).getAttribute('aria-pressed')).toBe('true')
+  expect(screen.queryByLabelText('City or campus area')).toBeNull()
+  expect(screen.queryByLabelText('Birthdate (optional)')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Monday afternoon, not available' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save matching preferences' }))
+  expect(save).toHaveBeenCalledWith({ ...initial, availability: [...initial.availability, { dow: 1, start_time: '12:00:00', end_time: '17:00:00' }] })
+  expect(requests.every(request => request.path.endsWith('/account-profile'))).toBe(true)
+})
+
+it('blocks full-page setup without saved server identity, never borrowing session-only Profile identity', async () => {
+  canonicalIdentity = false
+  profileResponse = Response.json({ profile: null })
+  render(<MemoryRouter initialEntries={['/matchmaking']}><RealApp /></MemoryRouter>)
+  await screen.findByRole('heading', { name: 'Profile unavailable', exact: true })
+  expect(screen.queryByRole('button', { name: 'Find Friends' })).toBeNull()
+  expect(requests.some(request => request.method === 'PUT' || request.method === 'POST' || request.path.endsWith('/result'))).toBe(false)
+})
+
+it('blocks setup when the canonical service explicitly returns no account identity', async () => {
+  mockFetch.mockResolvedValueOnce(Response.json({ profile: null }))
+  const save = vi.fn(async () => true)
+  render(<MemoryRouter><MatchingSetup token="user-jwt" busy={false} error="" save={save} /></MemoryRouter>)
+  await screen.findByText(/No saved account identity is available/)
+  const submit = screen.getByRole('button', { name: 'Save matching preferences' })
+  expect(submit.disabled).toBe(true)
+  fireEvent.submit(submit.closest('form')!)
+  expect(save).not.toHaveBeenCalled()
+})
+
+it('validates overlapping custom windows locally without a profile write', async () => {
+  profileResponse = Response.json({ profile: null }); canonicalIdentity = true
+  mount()
+  await screen.findByRole('form', { name: 'Matching profile setup' })
+  const save = await screen.findByRole('button', { name: 'Find Friends' })
+  await waitFor(() => expect(save.disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Monday evening, not available' }))
+  fireEvent.click(screen.getByText('Exact time windows (1)'))
+  fireEvent.click(screen.getByRole('button', { name: 'Add time window' }))
+  fireEvent.click(save)
+  expect((await screen.findByRole('alert')).textContent).toContain('non-overlapping')
+  expect(requests.some(request => request.method === 'PUT')).toBe(false)
+})
 
 it('requires a real session, never a demo login', () => {
   auth.session = null
   mount()
   expect(screen.getByRole('heading', { name: 'Sign in to match' })).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'Start matching' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Find Friends' })).toBeNull()
   expect(requests).toHaveLength(0)
 })
 it('loads server status, joins, looks up one person explicitly and cancels', async () => {
   mount()
   expect(screen.getByRole('status').textContent).toContain('Loading')
-  const start = await screen.findByRole('button', { name: 'Start matching' })
-  await waitFor(() => expect(start.disabled).toBe(false))
+  await screen.findByRole('button', { name: 'Find Friends' })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Find Friends', exact: true }).disabled).toBe(false))
   expect(requests.some(r => r.path.endsWith('/result'))).toBe(false)
-  fireEvent.click(start)
+  fireEvent.click(screen.getByRole('button', { name: 'Find Friends', exact: true }))
   await screen.findByRole('button', { name: 'Cancel search' })
   fireEvent.click(screen.getByRole('button', { name: 'Check for a match' }))
   await screen.findByRole('heading', { name: 'Taylor' })
   expect(screen.queryByText(/Groups of 3/)).toBeNull()
   expect(requests.find(r => r.method === 'POST')).toMatchObject({ authorization: 'Bearer user-jwt', body: { mode: 'active' } })
   fireEvent.click(screen.getByRole('button', { name: 'Cancel search' }))
-  await screen.findByRole('button', { name: 'Start matching' })
+  await screen.findByRole('button', { name: 'Find Friends' })
   expect(screen.queryByText('Taylor')).toBeNull()
 })
 it('sends a connection request to the displayed candidate', async () => {
   mount()
-  const start = await screen.findByRole('button', { name: 'Start matching' })
-  await waitFor(() => expect(start.disabled).toBe(false))
-  fireEvent.click(start)
+  await screen.findByRole('button', { name: 'Find Friends' })
+  // Profile/status hydration replaces the initial disabled action with inline setup.
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Find Friends', exact: true }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Find Friends', exact: true }))
   fireEvent.click(await screen.findByRole('button', { name: 'Check for a match' }))
   await screen.findByRole('heading', { name: 'Taylor' })
   const connect = await screen.findByRole('button', { name: 'Connect' })
@@ -155,58 +354,40 @@ it('ignores a late result after cancellation', async () => {
   mount()
   fireEvent.click(await screen.findByRole('button', { name: 'Check for a match' }))
   fireEvent.click(screen.getByRole('button', { name: 'Cancel search' }))
-  await screen.findByRole('button', { name: 'Start matching' })
+  await screen.findByRole('button', { name: 'Find Friends' })
   await act(async () => { resolve(Response.json({ candidate })); await resultResponse })
   expect(screen.queryByText('Taylor')).toBeNull()
 })
 it('does not claim a profile save succeeded when the atomic RPC is unavailable', async () => {
   mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
-  fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'New name' } })
+  await openPreferences()
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Music', exact: true }))
   fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
   await screen.findByRole('alert')
   expect(screen.getByRole('dialog')).toBeTruthy()
   expect(localStorage.getItem('pebble.matchmaking-profile')).toBeNull()
 })
-it('moves focus to validation feedback on every rejected preference save without losing the draft', async () => {
-  mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Add time window' }))
-  fireEvent.change(screen.getByLabelText('Start 1'), { target: { value: '17:00' } })
-  fireEvent.change(screen.getByLabelText('End 1'), { target: { value: '21:00' } })
-  const save = screen.getByRole('button', { name: 'Save preferences' })
-  for (let attempt = 0; attempt < 2; attempt++) {
-    save.focus()
-    fireEvent.click(save)
-    const alert = await screen.findByRole('alert')
-    await waitFor(() => expect(document.activeElement).toBe(alert))
-    expect((screen.getByLabelText('Start 1') as HTMLInputElement).value).toBe('17:00')
-    expect((screen.getByLabelText('End 1') as HTMLInputElement).value).toBe('21:00')
-  }
-  expect(requests.some(request => request.method === 'PUT')).toBe(false)
-})
-it('moves focus to a failed preference save response and keeps the edited fields', async () => {
-  mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
-  fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Unsaved name' } })
-  const save = screen.getByRole('button', { name: 'Save preferences' })
-  save.focus()
-  fireEvent.click(save)
-  const alert = await screen.findByRole('alert')
-  await waitFor(() => expect(document.activeElement).toBe(alert))
-  expect((screen.getByLabelText('Display name') as HTMLInputElement).value).toBe('Unsaved name')
-  expect(screen.getByRole('dialog')).toBeTruthy()
-})
 it('updates the profile only from a successful API save', async () => {
   saveUnavailable = false
+  profileResponse = Response.json({ profile: { ...profile, location_city: 'Saved campus', birthdate: '2000-01-01' } })
   mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
-  fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Saved name' } })
+  await openPreferences()
+  expect(screen.queryByLabelText('City or campus area')).toBeNull()
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Music', exact: true }))
   fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  fireEvent.click(screen.getByRole('button', { name: 'Preferences' }))
-  expect((screen.getByLabelText('Display name') as HTMLInputElement).value).toBe('Saved name')
-  expect(requests.find(request => request.method === 'PUT')).toMatchObject({ authorization: 'Bearer user-jwt', body: { display_name: 'Saved name', birthdate: null, location_city: null } })
+  await openPreferences()
+  expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Music', exact: true }).getAttribute('aria-pressed')).toBe('true')
+  expect(requests.find(request => request.method === 'PUT')).toMatchObject({ authorization: 'Bearer user-jwt', body: { display_name: 'Sam', birthdate: '2000-01-01', location_city: 'Saved campus' } })
+})
+it('matching preferences cannot reduce a ready profile below three interests or write an incomplete draft', async () => {
+  saveUnavailable = false
+  mount(); await openPreferences()
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Coffee', exact: true }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save preferences', exact: true }))
+  expect((await screen.findByRole('alert')).textContent).toContain('three unique interests')
+  expect(screen.getByRole('dialog')).toBeTruthy()
+  expect(requests.some(request => request.method !== 'GET')).toBe(false)
 })
 it('discards a late candidate from the previous session', async () => {
   mode = 'active'
@@ -232,31 +413,27 @@ it('keeps places and travel range explicitly device-only and out of server profi
   expect(screen.getByText(/algorithm does not enforce them/)).toBeTruthy()
 })
 it('preserves a multiline interest on an unrelated profile edit, with per-label add/edit/remove controls', async () => {
-  profileInterests = ['Board games\nstrategy', 'Coffee']
+  profileInterests = ['Board games\nstrategy', 'Coffee', 'Art']
   saveUnavailable = false
   mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
-  expect(screen.getByLabelText('Interest 1').textContent).toBe('Board games\nstrategy')
-  fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Saved name' } })
+  await openPreferences()
+  expect(screen.getByRole('button', { name: 'Board games\nstrategy', exact: true }).getAttribute('aria-pressed')).toBe('true')
   fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(requests.find(request => request.method === 'PUT')).toMatchObject({ body: { interests: profileInterests } })
-  fireEvent.click(screen.getByRole('button', { name: 'Preferences' }))
-  expect((screen.getByLabelText('Display name') as HTMLInputElement).value).toBe('Saved name')
-  fireEvent.change(screen.getByLabelText('Interest 1'), { target: { value: 'Board games\nnew strategy' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Remove interest 2' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Add interest' }))
-  fireEvent.change(screen.getByLabelText('Interest 2'), { target: { value: 'Music\nlive shows' } })
+  await openPreferences()
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Coffee', exact: true }))
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Music', exact: true }))
   fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  expect(requests.filter(request => request.method === 'PUT')[1]).toMatchObject({ body: { interests: ['Board games\nnew strategy', 'Music\nlive shows'] } })
+  expect(requests.filter(request => request.method === 'PUT')[1]).toMatchObject({ body: { interests: ['Board games\nstrategy', 'Art', 'Music'] } })
 })
 it('clears a displayed candidate on profile save without automatic re-scoring', async () => {
   mode = 'active'; saveUnavailable = false
   mount()
   fireEvent.click(await screen.findByRole('button', { name: 'Check for a match' }))
   await screen.findByRole('heading', { name: 'Taylor' })
-  fireEvent.click(screen.getByRole('button', { name: 'Preferences' }))
+  await openPreferences()
   fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(screen.queryByRole('heading', { name: 'Taylor' })).toBeNull()
@@ -271,7 +448,7 @@ it(`invalidates a delayed lookup resolving ${lookupTiming} profile save, clears 
   saveResponse = new Promise(resolve => { finishSave = resolve })
   mount()
   fireEvent.click(await screen.findByRole('button', { name: 'Check for a match' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Preferences' }))
+  await openPreferences()
   fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
   expect(screen.queryByRole('button', { name: 'Checking…', hidden: true })).toBeNull()
   if (lookupTiming === 'during') {

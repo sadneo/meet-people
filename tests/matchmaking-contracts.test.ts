@@ -4,6 +4,7 @@ import { createMatchmakingRouter, createUserContextTransport, type UserContextTr
 import { MatchingProfileSchema } from '../shared/matchmaking'
 import { parseApiEnv } from '../api/env'
 import { matchmakingClient } from '../src/features/matchmaking/client'
+import { accountFixture } from './complete-profile-fixture'
 
 const id = 'a0000000-0000-4000-8000-000000000001'
 const profile = { username: 'sam', display_name: 'Sam', bio: null, birthdate: null, location_city: null, avatar_url: null, interests: ['Coffee'], availability: [] }
@@ -22,6 +23,8 @@ const actor = {
   result: vi.fn(async () => ({ data: result, error: providerError })),
   profile: vi.fn(async () => ({ data: profile, error: providerError })),
   save: vi.fn(async (value: unknown) => ({ data: value, error: providerError })),
+  account: vi.fn(async () => ({ data: accountFixture(profile), error: providerError })),
+  saveAccount: vi.fn(async (value: unknown) => ({ data: value, error: providerError })),
   listingStatus: vi.fn(async (listingId: string) => { void listingId; return { data: listingStatus, error: providerError } }),
   listingInterest: vi.fn(async (listingId: string) => { void listingId; return { data: { ...listingStatus, isInterested: true }, error: providerError } }),
   listingWithdraw: vi.fn(async (listingId: string) => { void listingId; return { data: { ...listingStatus, isInterested: false }, error: providerError } }),
@@ -78,6 +81,25 @@ it('validates the real user via getUser and forwards that JWT and public apikey 
   expect(calls.slice(11).every(call => call.token === 'Bearer user-jwt' && call.key === 'sb_publishable_test')).toBe(true)
   expect(calls.slice(11, 14).map(call => call.body)).toEqual(Array(3).fill({ listing_id_in: id }))
   expect(calls[15].body).toEqual({ notification_id_in: notificationId })
+})
+it('rejects anonymous identities even with a valid user UUID', async () => {
+  const mockFetch = vi.fn(async () => Response.json({ id, is_anonymous: true }))
+  const transport = createUserContextTransport({ url: 'https://database.test', publicKey: 'sb_publishable_test', fetch: mockFetch })
+  expect(await transport.verify('synthetic-anonymous-jwt')).toBeNull()
+})
+it('binds demo runtime, Dating and photo RPCs to the verified actor token', async () => {
+  const calls: { name: string; body: unknown; authorization: string | null }[] = []
+  const transport = createUserContextTransport({ url: 'https://database.test', publicKey: 'sb_publishable_test', fetch: async (input,init) => {
+    calls.push({name:new URL(String(input)).pathname.split('/').pop()!,body:init?.body?JSON.parse(String(init.body)):null,authorization:new Headers(init?.headers).get('authorization')})
+    return Response.json(null)
+  } })
+  const client=transport.actor('synthetic-owner-jwt')
+  await client.friendsRuntime!();await client.datingRuntime!();await client.setDatingEnabled!({enabled:false});await client.datingCandidate!([notificationId]);await client.requestDatingConnection!(notificationId)
+  await client.profilePhotoState!();await client.profilePhotoReference!(notificationId);await client.readProfilePhoto!(notificationId,3);await client.saveProfilePhoto!({expectedRevision:3})
+  expect(calls.map(call=>call.name)).toEqual(['get_friends_runtime','get_dating_runtime','set_dating_enabled','find_dating_candidate','request_dating_connection','get_profile_photo_state','get_profile_photo_reference','read_profile_photo','save_profile_photo'])
+  expect(calls.every(call=>call.authorization==='Bearer synthetic-owner-jwt')).toBe(true)
+  expect(calls[3].body).toEqual({excluded_in:[notificationId]})
+  expect(calls[6].body).toEqual({owner_in:notificationId})
 })
 it('group enrollment/status/leave never calls scoring or imports old compatibility consent', async () => {
   expect(await request(`/events/${id}/group-queue`)).toEqual({ status: 200, data: { state: 'idle', proposal: null } })
@@ -201,10 +223,11 @@ it('distinguishes genuine empty, not queued, malformed, unavailable and provider
   providerError = { code: 'XX000' }
   expect((await request('/result')).status).toBe(503)
 })
-it('uses one atomic profile RPC, returns persisted data and rejects unknown or overlapping fields', async () => {
+it('compatibility preferences use one unified account writer, preserve private choices and reject unknown or overlapping fields', async () => {
   expect(await request('/profile')).toEqual({ status: 200, data: { profile } })
   expect(await request('/profile', 'PUT', profile)).toEqual({ status: 200, data: { profile } })
-  expect(actor.save).toHaveBeenCalledWith(profile)
+  expect(actor.saveAccount).toHaveBeenCalledWith(accountFixture(profile))
+  expect(actor.save).not.toHaveBeenCalled()
   expect((await request('/profile', 'PUT', { ...profile, age: 21 })).status).toBe(400)
   expect(MatchingProfileSchema.safeParse({ ...profile, availability: [{ dow: 6, start_time: '21:00:00', end_time: '24:00:00' }] }).success).toBe(true)
   expect(MatchingProfileSchema.safeParse({ ...profile, availability: [{ dow: 6, start_time: '21:00:00', end_time: '00:00:00' }] }).success).toBe(false)
@@ -223,4 +246,13 @@ it('malformed avatar strings never throw: invalid PUT is 400 and raw result is 5
     expect(await request('/result')).toMatchObject({ status: 502, data: { code: 'malformed' } })
   }
   expect(actor.save).not.toHaveBeenCalled()
+})
+
+it('keeps unresolved active filters and deferred downtime results honest', async () => {
+  providerError = { code: 'AQ409' }
+  expect(await request('/queue', 'POST', { mode: 'active' })).toMatchObject({ status: 409, data: { code: 'unavailable' } })
+  mode = 'matchmaking'
+  expect(await request('/result')).toMatchObject({ status: 409, data: { code: 'unavailable' } })
+  mode = 'downtime'; providerError = { code: 'AQ503' }
+  expect(await request('/result')).toMatchObject({ status: 503, data: { code: 'unavailable' } })
 })

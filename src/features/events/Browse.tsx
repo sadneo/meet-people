@@ -38,17 +38,17 @@ function EventsFeed({ guest }: { guest: boolean }) {
   const [retry, setRetry] = useState(0)
   const [origin, setOrigin] = useState<{ latitude: number; longitude: number } | null>(null)
   const [geoError, setGeoError] = useState('')
-  
+
   const query = useMemo(() => {
-    return new URLSearchParams({ 
-      page: String(page), 
-      ...(category !== 'All' ? { category } : {}), 
-      ...(origin ? { latitude: String(origin.latitude), longitude: String(origin.longitude) } : {}) 
+    return new URLSearchParams({
+      page: String(page),
+      ...(category !== 'All' ? { category } : {}),
+      ...(origin ? { latitude: String(origin.latitude), longitude: String(origin.longitude) } : {})
     }).toString()
   }, [page, category, origin])
 
   const result = loaded?.query === query ? loaded.data : null
-  
+
   useEffect(() => {
     const controller = new AbortController()
     void eventRequest(`?${query}`, EventsResponseSchema, { signal: controller.signal }).then(data => {
@@ -60,12 +60,12 @@ function EventsFeed({ guest }: { guest: boolean }) {
   // Keep responses tied to the requested filter rather than displaying stale cards.
   const visible = result?.page === page ? result.events : []
   const previewId = visible.find(event => event.id === selected)?.id ?? visible[0]?.id
-  
+
   function changeCategory(value: string) {
     setError('')
     setSearch(value === 'All' ? {} : { category: value })
   }
-  
+
   function goPage(next: number) {
     setError('')
     setSearch({ ...(category !== 'All' ? { category } : {}), page: String(next) })
@@ -115,7 +115,7 @@ function EventDetailContent({ id, preview, guest }: { id: string; preview: boole
   const [failedImage, setFailedImage] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
-  
+
   useEffect(() => {
     const controller = new AbortController()
     void eventRequest(`/${id}`, EventSchema, { signal: controller.signal }).then(data => {
@@ -125,7 +125,7 @@ function EventDetailContent({ id, preview, guest }: { id: string; preview: boole
     })
     return () => controller.abort()
   }, [id, retry])
-  
+
   const url = sourceLink(event?.source_url ?? null)
   const body = <>
     {!preview && <Link className="ev-text-button" to={guest ? publicEventsPath : eventsPath}><Icon name="back" />Back to events</Link>}

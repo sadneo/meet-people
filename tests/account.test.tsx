@@ -42,7 +42,8 @@ it('does not acknowledge a failed account save', async () => {
   expect(screen.getByText('blank:first')).toBeTruthy()
 })
 it('accepts optional photos and rejects forged fields or incomplete progression', () => {
-  const account = profileToAccount({ name: 'My Name', bio: 'My bio', photo: '', interests: ['Coffee'], intents: ['Meet people'], usual: ['Afternoons', 'Weekends'], distance: '5 miles', group: 'Either' }, emptyAccount, 'first')
+  const account = profileToAccount({ name: 'My Name', bio: 'My bio', photo: '', interests: ['Coffee', 'Art', 'Music'], intents: ['Meet people'], usual: ['Afternoons', 'Weekends'], distance: '5 miles', group: 'Either' }, emptyAccount, 'first')
+  account.profile = { ...account.profile!, birthdate: '2001-02-03', location_city: 'Explicit campus' }
   account.completed = [0, 1, 2, 3]
   expect(SaveAccountSchema.safeParse(account).success).toBe(true)
   expect(account.profile?.avatar_url).toBeNull()

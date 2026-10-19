@@ -1,17 +1,25 @@
+import { BlocklistPanel } from '../account/SafetyControls'
+import { LocationAccessDetails, SettingsDetails } from '../account/SettingsDetails'
 import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { usePrototype } from './context'
-import { activities, interests, people, planDate, planTime } from './model'
-import { Avatar, Avatars, Brand, Button, Chips, Empty, Header, Icon, Pebble } from './ui'
+import { activities, people, planDate, planTime } from './model'
+import { Avatar, Avatars, Button, Empty, Header, Icon, Pebble } from './ui'
+import { useSession } from '../../auth/useSession'
+import { useSharedUserProfile } from '../account/useSharedUserProfile'
+import { ProfileEditDialog } from '../account/ProfileEditDialog'
+import { SharedProfileEditor } from '../account/SharedProfileEditor'
+import { DowntimeOptIn } from '../matchmaking/DowntimeOptIn'
 import { jamieMessages, sampleConversations } from './messaging'
 import './messages.css'
 import './profile.css'
 import { useLogout } from '../../auth/useLogout'
+import { AccountCredentials } from '../../auth/AccountCredentials'
+import { OwnerProfile } from '../account/OwnerProfile'
 import { useAccount } from '../../auth/account-context'
-import { profileToAccount } from '../../auth/profile'
 import { safeReturnTo } from '../../auth/returnTo'
 
-function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+function Modal({ title, children, onClose, className = '' }: { title: string; children: ReactNode; onClose: () => void; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   useEffect(() => {
@@ -20,7 +28,7 @@ function Modal({ title, children, onClose }: { title: string; children: ReactNod
     dialog.showModal()
     return () => { dialog.close(); if (opener instanceof HTMLElement && opener.isConnected) opener.focus() }
   }, [])
-  return <dialog ref={ref} className="pt-dialog" aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose() }}><div className="pt-section-heading"><h2 id={titleId}>{title}</h2><button className="pt-icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></button></div>{children}</dialog>
+  return <dialog ref={ref} className={`pt-dialog ${className}`} aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose() }}><div className="pt-section-heading"><h2 id={titleId}>{title}</h2><button className="pt-icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></button></div>{children}</dialog>
 }
 export function Messages({ chatVisible }: { chatVisible: boolean }) {
   const { state, go, empty, setEmpty, chatPerson, setChatPerson } = usePrototype()
@@ -127,13 +135,14 @@ export function Connection() {
 }
 export function ProfileScreen({ other = false }: { other?: boolean }) {
   const { state, dispatch, go, personId } = usePrototype()
-  const account = useAccount()
   const location = useLocation()
   const navigate = useNavigate()
+  const auth = useSession()
+  const shared = useSharedUserProfile(!other ? auth.session?.access_token ?? null : null)
   const person = people.find(p => p.id === personId) ?? people[0]
-  const shown = other ? person : state.profile
+  const identity = shared.account ?? shared.profile
+  const shown = other ? person : { ...state.profile, name: identity?.display_name ?? 'Your profile', bio: identity?.bio ?? '', interests: shared.profile?.interests ?? [] }
   const [editing, setEditing] = useState(false)
-  const [profile, setProfile] = useState(state.profile)
   const [safety, setSafety] = useState<'block' | 'report' | null>(null)
   const [reported, setReported] = useState(false)
   const [reason, setReason] = useState('')
@@ -145,81 +154,49 @@ export function ProfileScreen({ other = false }: { other?: boolean }) {
   }
   return <>
     {other ? <><Header title="Profile" back={back} /><div className="pt-profile-layout"><section className="pt-profile-person"><Avatar person={shown} size="large" /><h1>{shown.name}</h1><p className="pt-profile-location"><Icon name="pin" size={17} />Around campus</p><p className="pt-profile-bio">{shown.bio}</p><div className="pt-static-chips">{shown.interests.map(interest => <span key={interest}>{interest}</span>)}</div><Button disabled={blocked} onClick={() => go('Connection')}>{blocked ? 'Blocked in this demo' : `Connect with ${person.first}`}<Icon name="arrow" size={18} /></Button></section><section className="pt-profile-details"><h2>Shared ground</h2><div className="pt-shared-ground"><div><Icon name="coffee" /><span><strong>{person.interests.filter(i => state.profile.interests.includes(i)).join(' · ') || 'Open to meeting new people'}</strong><small>Interests in common</small></span></div><div><Icon name="events" /><span><strong>{person.id === 'maya' ? 'A little fresh air' : 'Acoustic afternoon'}</strong><small>Shared event interest · sample</small></span></div><div><Icon name="time" /><span><strong>{person.time} today</strong><small>Mock availability overlap</small></span></div></div><div className="pt-safety-links"><button onClick={() => { setReported(false); setReason(''); setSafety('report') }}>Report user</button><button onClick={() => setSafety('block')}>{blocked ? 'Unblock user' : 'Block user'}</button></div></section></div></> : <>
-      <header className="pt-profile-mobile-header"><Link to="/" aria-label="Pebble home"><Brand /></Link><nav aria-label="Profile actions"><Link to="/settings" aria-label="Notification settings"><Icon name="bell" size={24} /></Link><Link to="/settings" aria-label="Settings"><Icon name="settings" size={26} /></Link></nav></header>
-      <section className="pt-profile-summary" aria-label="Your profile">
-        <img className="pt-profile-cover" src="/prototype/cafe-interior.jpg" alt="A welcoming campus café with leafy plants" />
-        <div className="pt-profile-identity">
-          <div className="pt-profile-portrait"><Avatar person={shown} size="large" />{!account?.session && <span aria-label="Sample presence indicator" />}</div>
-          <div className="pt-profile-copy"><h1 tabIndex={-1}>{shown.name}</h1><p className="pt-profile-location"><Icon name="pin" size={17} />{account?.session ? account.account.profile?.location_city || 'Location not set' : 'Around campus'}</p><p className="pt-profile-bio">{shown.bio}</p><div className="pt-static-chips">{shown.interests.map(interest => <span key={interest}>{interest}</span>)}</div></div>
-          <Button secondary className="pt-profile-edit" onClick={() => { setProfile(state.profile); setEditing(true) }}><Icon name="edit" size={20} />Edit profile</Button>
-        </div>
-      </section>
-      <div className="pt-profile-support">
-        <section className="pt-profile-plans" aria-labelledby="profile-plans-title">
-          <header><h2 id="profile-plans-title"><Icon name="events" size={34} />Upcoming plans</h2><Button secondary onClick={() => go('Events')}><Icon name="events" size={18} />View events</Button></header>
-          {state.plan ? <button className="pt-profile-plan" onClick={() => go('Confirmed')}><Icon name="events" /><span><strong>{activities.find(a => a.id === state.plan?.activity)?.name}</strong><span>{planDate(state.plan)} · {planTime(state.plan)}</span></span><Icon name="arrow" /></button> : <div className="pt-profile-no-plans"><ProfileGarden trail /><h3>No plans yet</h3><p>Find some free time in common with other students<br className="pt-profile-desktop-break" /> and make a plan to hang out.</p><Button onClick={() => go('Events')}>Explore events<Icon name="arrow" size={20} /></Button></div>}
-        </section>
-        <aside className="pt-profile-sidebar">
-          <section className="pt-profile-growth" aria-labelledby="profile-community-title">
-            <header><Pebble /><div><h2 id="profile-community-title">Your little community</h2><p>A small beginning, with room to grow.</p></div><span className="pt-profile-chapters">{state.completed.length}/4 chapters</span></header>
-            <div className="pt-profile-progress" aria-hidden="true">{[0, 1, 2, 3].map(chapter => <span key={chapter} className={chapter <= state.completed.length ? 'is-current' : ''} />)}</div>
-            <div className="pt-profile-milestones">{(account?.session ? ['Basic profile', 'Interests', 'Social intent', 'Availability'] : ['Find friends', 'Attend an event', 'Have a conversation', 'Make a plan']).map((label, chapter) => <div key={label} className={state.completed.includes(chapter) ? 'is-complete' : ''}><span className="pt-profile-milestone-pebbles"><Pebble />{chapter === 1 && <Pebble />}</span><span className="pt-profile-milestone-icon"><Icon name={['matchmaking', 'events', 'messages', 'plan'][chapter]} size={24} /></span><p>{label}</p><small>{state.completed.includes(chapter) ? 1 : 0}/1</small></div>)}</div>
-            <footer><div><h3>Good things take time</h3><p>Every conversation, event, and plan helps you build your Pebbles community. You’re on your way!</p></div><ProfileGarden /></footer>
-          </section>
-          <button className="pt-profile-settings" onClick={() => go('Settings')}><Icon name="settings" size={30} /><span><strong>Settings & privacy</strong><small>Manage your account, notifications, and privacy preferences.</small></span><Icon name="back" size={20} /></button>
-        </aside>
-      </div>
+      <OwnerProfile key={auth.session?.access_token ?? 'guest'} data={shared} inactive={editing} ready={auth.ready} signedIn={!!auth.session} edit={() => setEditing(true)} />
     </>}
-    {editing && <Modal title="Edit your profile" onClose={() => { if (!account?.busy) setEditing(false) }}><form onSubmit={async e => {
-      e.preventDefault()
-      if (!profile.name.trim() || !profile.bio.trim() || account?.busy) return
-      if (account?.session) { if (!await account.save(profileToAccount(profile, account.account, account.session.user.id))) return }
-      else dispatch({ type: 'profile', profile: { ...profile, name: profile.name.trim(), bio: profile.bio.trim() } })
-      setEditing(false)
-    }}><p className="pt-hint">{account?.session ? 'Changes are saved to your account.' : 'Local preview edits. Sign in to save your profile.'}</p><fieldset disabled={account?.busy}>
-      <label>Display name<input value={profile.name} required maxLength={120} onChange={e => setProfile({ ...profile, name: e.target.value })} /></label>
-      <label>Bio<textarea value={profile.bio} required maxLength={1000} onChange={e => setProfile({ ...profile, bio: e.target.value })} /></label>
-      <label>Photo URL (HTTPS, optional)<input type="url" pattern="https://.*" maxLength={2048} value={profile.photo === 'you.jpg' ? '' : profile.photo} onChange={e => setProfile({ ...profile, photo: e.target.value })} /></label>
-      <fieldset><legend>Interests</legend><Chips label="Edit interests" options={[...new Set([...interests, ...state.profile.interests])]} values={profile.interests} multi onChange={values => setProfile({ ...profile, interests: values })} /></fieldset>
-      {account?.error && <p role="alert">{account.error}</p>}
-      <Button secondary type="submit" className="pt-wide" disabled={!profile.name.trim() || !profile.bio.trim() || account?.busy}>{account?.busy ? 'Saving…' : 'Save profile'}</Button>
-    </fieldset></form></Modal>}
+    {editing && (shared.account && shared.profile ? <ProfileEditDialog data={shared} close={() => setEditing(false)} /> : <Modal title="Edit your profile" className="pt-profile-editor" onClose={() => setEditing(false)}>
+      <SharedProfileEditor key={auth.session?.access_token ?? 'guest'} data={shared} token={auth.session?.access_token ?? null} close={() => setEditing(false)} />
+    </Modal>)}
     {safety && <Modal title={safety === 'report' ? `Report ${person.first}` : `${blocked ? 'Unblock' : 'Block'} ${person.first}?`} onClose={() => setSafety(null)}>{safety === 'block' ? <><p>{blocked ? 'They will appear in sample results again.' : 'They will be hidden from sample results. Messaging them will be disabled in this demo.'}</p><p className="pt-hint">Prototype control only. No real account is affected.</p><Button className="pt-wide" onClick={() => { dispatch({ type: blocked ? 'unblock' : 'block', id: person.id }); setSafety(null) }}>{blocked ? 'Unblock in demo' : 'Block in demo'}</Button></> : reported ? <div role="status"><p>Demo report recorded locally.</p><p className="pt-hint">This has not been sent to a moderation team. No real report was filed.</p><Button className="pt-wide" onClick={() => setSafety(null)}>Done</Button></div> : <form onSubmit={e => { e.preventDefault(); if (reason) setReported(true) }}><label>Reason<select required value={reason} onChange={e => setReason(e.target.value)}><option value="">Choose a reason</option><option>Harassment</option><option>Inappropriate content</option><option>Impersonation</option><option>Other concern</option></select></label><label>Additional context (optional)<textarea maxLength={400} placeholder="Use fictional details for this demo." /></label><p className="pt-hint">Prototype only. Nothing is submitted to a moderation team.</p><Button type="submit" className="pt-wide" disabled={!reason}>Submit demo report</Button></form>}</Modal>}
   </>
 }
 
-function ProfileGarden({ trail = false }: { trail?: boolean }) {
-  return <div className={`pt-profile-garden ${trail ? 'has-trail' : ''}`} aria-hidden="true"><svg viewBox="0 0 320 100"><path d="M8 88Q-7 58 18 71L31 86Q22 10 43 48L58 83Q66 17 79 61L82 85Q109 47 107 86Z" fill="var(--pt-pale)" /><path d="M245 91Q246 76 260 82Q272 57 276 84Q299 63 288 89L306 93Z" fill="var(--pt-pale)" />{trail ? <><path d="M164 54q35-13 23 12t-1-18c25-20 38 35 75 13l35-25" stroke="var(--pt-muted)" strokeWidth="2" strokeDasharray="6 7" fill="none" /><path d="M294 47q-9-30 0-20t4 16q21-21 24-10t-28 14" fill="var(--pt-green)" /></> : <path d="m102 27-5-5m13-5-3-6m107 15 5-5m-13-6 3-6" stroke="var(--pt-coral)" strokeWidth="2" strokeLinecap="round" />}</svg><Pebble /></div>
-}
 export function Settings() {
-  const { state, dispatch, go } = usePrototype()
+  const { state, dispatch } = usePrototype()
   const auth = useLogout()
   const savedAccount = useAccount()
-  const updatePreferences = (patch: Partial<typeof state.profile>) => dispatch({ type: 'profile', profile: { ...state.profile, ...patch } })
-  const [account, setAccount] = useState(false)
   const [safety, setSafety] = useState(false)
-  const heading = (icon: string, title: string, description?: string) => <header className="pt-settings-heading"><Icon name={icon} size={24} /><div><h2>{title}</h2>{description && <p>{description}</p>}</div></header>
+  const [credentialsOpen, setCredentialsOpen] = useState(false)
+  const heading = (_icon: string, title: string, description?: string) => <header className="pt-settings-heading"><div>{description && <p>{description}</p>}<h2>{title}</h2></div></header>
   const toggle = (key: string, title: string, description: string) => <label className="pt-toggle-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" role="switch" aria-label={title} checked={state.settings[key]} disabled={savedAccount?.busy} onChange={e => dispatch({ type: 'setting', key, value: e.target.checked })} /></label>
   return <>
-    <div className="pt-settings-landscape" aria-hidden="true" />
-    <div className="pt-settings">
-      <header className="pt-settings-title"><span><Icon name="gear" size={28} /></span><div><h1 tabIndex={-1}>Settings</h1><p>Manage your account and preferences.</p></div></header>
+    <div className="pt-settings account-settings-page">
+      <Link className="account-settings-back" to="/profile"><Icon name="back" size={17} />Back to profile</Link>
+      <header className="pt-settings-title"><span className="account-scope">Account-wide controls</span><h1 tabIndex={-1}>A little peace of mind.</h1><p>Choose what you share, what you hear, and who can find you.</p></header>
+      <div className="account-settings-columns">
+        <div>
+          <section>{heading('bell', 'Notifications', 'Stay in the loop')}{toggle('notifications', 'Plan & message notifications', 'Get notified about new messages and activity in your conversations.')}</section>
+          <section>{heading('shield', 'Privacy', 'Your boundaries')}{toggle('discoverable', 'Show me in discovery', 'Let other people find your profile.')}{toggle('availability', 'Share my availability', 'Show your free-time windows to connections.')}</section>
+          <SettingsDetails notificationsEnabled={state.settings.notifications} discoveryEnabled={state.settings.discoverable} />
+        </div>
+        <div>
+          <section>{heading('pin', 'Location', 'Where you meet')}<Link className="pt-settings-row" to="/profile"><span><strong>Home city / campus</strong><small>{savedAccount?.account.profile?.location_city || 'Not added yet'} · edit on your shared profile</small></span><Icon name="chevron" size={16} /></Link>{toggle('location', 'Nearby suggestions', 'Save your preference for local suggestions. This does not request device location or change your home city.')}<LocationAccessDetails /></section>
+          <section className="pt-settings-actions" aria-label="Account actions">
+            {heading('shield', 'Safety & account', 'Keep it comfortable')}
+            <button className="pt-settings-row" onClick={() => setSafety(true)}><span><strong>Blocked users</strong><small>View and manage blocked accounts. Service connection is pending.</small></span><Icon name="chevron" size={16} /></button>
+            <div className="pt-settings-row"><span><strong>Email &amp; password</strong><small>{!auth.ready ? 'Loading account…' : auth.session ? 'Manage your sign-in email and password.' : 'Sign in to manage your email and password.'}</small></span><button type="button" className="pt-button pt-secondary" disabled={!auth.ready} aria-haspopup="dialog" onClick={() => setCredentialsOpen(true)}>Manage</button></div>
+            <div className="pt-settings-row"><span><strong>{auth.session ? 'Log out' : 'Sign in to Pebble'}</strong><small>{auth.session ? 'Sign out of Pebble on this browser.' : 'Sign in to access your account.'}</small></span>{!auth.ready ? <Button secondary disabled>Loading account…</Button> : auth.session ? <Button secondary disabled={auth.busy} onClick={() => void auth.logout()}>{auth.busy ? 'Logging out…' : 'Log out'}</Button> : <Link className="pt-button pt-secondary" to="/login">Sign in</Link>}</div>
+            {auth.error && <p role="alert">{auth.error}</p>}
+          </section>
+          <section aria-label="Matchmaking">{heading('matchmaking', 'Downtime matchmaking', 'Matching, on your terms')}<DowntimeOptIn /><p className="account-feature-note">Active matching turns downtime off. It will not restart automatically. Interests and your weekly schedule stay shared.</p><Link className="pt-settings-row" to="/matchmaking"><span>Review Friends preferences</span><Icon name="chevron" size={16} /></Link></section>
+        </div>
+      </div>
       {savedAccount?.busy && <p role="status">Saving settings…</p>}
-      <section>{heading('profile', 'Account', 'Manage your account and profile information.')}<button className="pt-settings-row" onClick={() => setAccount(true)}><span><strong>Account details</strong><small>View and update your profile information.</small></span><Icon name="chevron" size={16} /></button></section>
-      <section>{heading('bell', 'Notifications', 'Choose what notifications you receive.')}{toggle('notifications', 'Plan & message notifications', 'Get notified about new messages and activity in your conversations.')}</section>
-      <section>{heading('shield', 'Privacy', 'Control who can find and see you on Pebble.')}{toggle('discoverable', 'Show me in discovery', 'Let other people find your profile.')}{toggle('availability', 'Share my availability', 'Show your free-time windows to connections.')}</section>
-      <section>{heading('pin', 'Discovery & Availability', 'Settings that help people find you in the right place.')}{toggle('location', 'Nearby suggestions', 'Show people and events near your current location.')}</section>
-      {auth.session && <section>{heading('matchmaking', 'Social preferences', 'Your saved onboarding preferences.')}<fieldset disabled={savedAccount?.busy}>
-        <label>Comfortable distance<select value={state.profile.distance} onChange={event => updatePreferences({ distance: event.target.value })}><option>Nearby</option><option>5 miles</option><option>10 miles</option></select></label>
-        <label>Group preference<select value={state.profile.group} onChange={event => updatePreferences({ group: event.target.value })}><option>One-on-one</option><option>Small groups</option><option>Either</option></select></label>
-        <fieldset><legend>Usual free time</legend><Chips label="Usual free time" options={['Mornings', 'Afternoons', 'Evenings', 'Weekends']} values={state.profile.usual} multi onChange={usual => { if (usual.length) updatePreferences({ usual }) }} /></fieldset>
-        <p className="pt-hint">Changing time presets replaces your weekly matching windows. Fine-tune windows in matchmaking preferences. Distance and group choices are saved preferences.</p>
-      </fieldset></section>}
-      <section>{heading('map', 'Location', 'Manage your location settings.')}<div className="pt-settings-row"><span><strong>Campus location (demo)</strong><small>Campus is the fixed demo location for this prototype. Location access is not required.</small></span></div></section>
-      <section>{heading('matchmaking', 'Safety', 'Manage your interactions and blocked users.')}<button className="pt-settings-row" onClick={() => setSafety(true)}><span><strong>Blocked users</strong><small>Block or report someone from their profile. These controls are mock UI for review.</small></span><Icon name="chevron" size={16} /></button>{state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>)}</section>
-      <section className="pt-settings-actions" aria-label="Account actions">{heading('logout', 'Account actions')}<div className="pt-settings-row"><span><strong>{auth.session ? 'Supabase session' : 'Sign in to Pebble'}</strong><small>{auth.session ? 'Log out of your account. Local preview purchases stay on this device.' : 'No active Supabase session. Local preview purchases stay on this device.'}</small></span>{!auth.ready ? <Button secondary disabled>Loading account…</Button> : auth.session ? <Button secondary disabled={auth.busy} onClick={() => void auth.logout()}>{auth.busy ? 'Logging out…' : 'Log out'}</Button> : <Link className="pt-button pt-secondary" to="/login">Sign in</Link>}</div>{auth.error && <p role="alert">{auth.error}</p>}</section>
+      {savedAccount?.error && <div className="account-feedback"><p role="alert">{savedAccount.error}</p><Button secondary disabled={savedAccount.busy} onClick={() => void savedAccount.reload()}>Reload account settings</Button></div>}
     </div>
-    {account && <Modal title={auth.session ? 'Your account' : 'Demo account'} onClose={() => setAccount(false)}><p><strong>{state.profile.name}</strong></p><p>{auth.session?.user.email ?? 'Guest preview'}</p><p className="pt-hint">{auth.session ? 'Your profile and settings are saved to your account.' : 'Sign in to save your profile and settings.'}</p><Button secondary onClick={() => { setAccount(false); go('Profile') }}>Go to profile</Button></Modal>}
-    {safety && <Modal title="Blocked users" onClose={() => setSafety(false)}>{state.blocked.length ? state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>) : <p>No blocked users in this session.</p>}<p className="pt-hint">Block or report someone from their profile. These controls are mock UI for review.</p></Modal>}
+    {credentialsOpen && <Modal title="Email & password" className="pt-credentials-dialog" onClose={() => setCredentialsOpen(false)}><AccountCredentials session={auth.session} ready={auth.ready} /></Modal>}
+    {safety && <Modal title="Blocked users" onClose={() => setSafety(false)}><BlocklistPanel /></Modal>}
   </>
 }

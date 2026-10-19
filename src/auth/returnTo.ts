@@ -13,9 +13,9 @@ export function safeReturnTo(value: string | null | undefined): string | null {
     }
     if (unsafe(decoded)) return null
     const decodedUrl = new URL(decoded, 'https://pebble.invalid')
-    if (decodedUrl.origin !== 'https://pebble.invalid' || ['/login', '/register', '/onboarding', '/auth/callback', '/forgot-password', '/reset-password'].includes(decodedUrl.pathname.replace(/\/$/, ''))) return null
+    if (decodedUrl.origin !== 'https://pebble.invalid' || decodedUrl.pathname.toLowerCase().startsWith('/auth/') || ['/login', '/register', '/complete-profile', '/onboarding', '/forgot-password', '/reset-password'].includes(decodedUrl.pathname.toLowerCase().replace(/\/+$/, ''))) return null
     const url = new URL(value, 'https://pebble.invalid')
-    if (url.origin !== 'https://pebble.invalid' || ['/login', '/register', '/onboarding', '/auth/callback', '/forgot-password', '/reset-password'].includes(url.pathname.replace(/\/$/, ''))) return null
+    if (url.origin !== 'https://pebble.invalid' || url.pathname.toLowerCase().startsWith('/auth/') || ['/login', '/register', '/complete-profile', '/onboarding', '/forgot-password', '/reset-password'].includes(url.pathname.toLowerCase().replace(/\/+$/, ''))) return null
     return `${url.pathname}${url.search}${url.hash}`
   } catch { return null }
 }

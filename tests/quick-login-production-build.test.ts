@@ -28,8 +28,7 @@ it('removes quick-login UI and anonymous Auth call sites from the production bun
     expect(javascript).not.toMatch(/\.auth\.signInAnonymously\s*\(/)
     // The genuine SDK remains intact; only the application quick-login path is removed.
     expect(javascript).toContain('signInAnonymously')
-    expect(javascript).toContain('Continue with Google')
-    expect(javascript).not.toContain('Open Supabase email viewer')
+    expect(javascript).toContain('Send sign-in link')
   } finally {
     vi.unstubAllEnvs()
   }

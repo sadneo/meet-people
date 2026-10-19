@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MatchingMode, MatchingProfile, MatchResult } from '../../../shared/matchmaking'
 import { matchmakingClient, MatchmakingClientError } from './client'
+import { withAccountIdentity } from '../../../shared/account-profile'
+import { MatchingProfileSchema } from '../../../shared/matchmaking'
 
 export const matchingErrorText = (error: unknown) => error instanceof MatchmakingClientError ? error.message : 'Matching service is unavailable. Please try again.'
 
@@ -12,6 +14,11 @@ export function useMatchmaking(token: string) {
   const resultVersion = useRef(0)
   const profileVersion = useRef(0)
   const savePending = useRef(false)
+  const searchPending = useRef(false)
+  const lifecycle = useRef(0)
+  const pendingDraft = useRef<MatchingProfile | undefined>(undefined)
+  const [confirmReplacement, setConfirmReplacement] = useState(false)
+  const [searchStage, setSearchStage] = useState<'saving' | 'searching' | null>(null)
   const [mode, setMode] = useState<MatchingMode | null>(null)
   const [known, setKnown] = useState(false)
   const [busy, setBusy] = useState(true)
@@ -25,6 +32,7 @@ export function useMatchmaking(token: string) {
   const [saving, setSaving] = useState(false)
   const canJoin = profileReady && !profileLoading && profile !== null && !saving
   useEffect(() => {
+    const epoch = ++lifecycle.current
     live.current = true
     const statusId = ++statusVersion.current, profileId = ++profileVersion.current
     void client.status().then(data => {
@@ -34,10 +42,11 @@ export function useMatchmaking(token: string) {
     void client.profile().then(data => { if (live.current && profileId === profileVersion.current) { setProfile(data.profile); setProfileReady(true) } })
       .catch(error => { if (live.current && profileId === profileVersion.current) setProfileError(matchingErrorText(error)) })
       .finally(() => { if (live.current && profileId === profileVersion.current) setProfileLoading(false) })
-    return () => { live.current = false }
+    return () => { live.current = false; lifecycle.current = epoch + 1 }
   }, [client])
 
   async function queue(action: 'refresh' | 'join' | 'leave', selected?: MatchingMode) {
+    if (searchPending.current) return
     if (action === 'join' && (!canJoin || savePending.current)) {
       setError('Load and save a matching profile before joining a queue.')
       return
@@ -60,7 +69,7 @@ export function useMatchmaking(token: string) {
     } finally { if (live.current && version === statusVersion.current) setBusy(false) }
   }
   async function check() {
-    if (savePending.current) return
+    if (savePending.current || searchPending.current) return
     const version = ++resultVersion.current
     setChecking(true); setError(''); setResult(null)
     try {
@@ -70,7 +79,7 @@ export function useMatchmaking(token: string) {
     finally { if (live.current && version === resultVersion.current) setChecking(false) }
   }
   async function save(next: MatchingProfile) {
-    if (savePending.current) return false
+    if (savePending.current || searchPending.current) return false
     savePending.current = true
     const version = ++profileVersion.current
     ++resultVersion.current
@@ -87,6 +96,7 @@ export function useMatchmaking(token: string) {
     return false
   }
   async function reloadProfile() {
+    if (searchPending.current || savePending.current) return
     const version = ++profileVersion.current
     setProfileReady(false); setProfileLoading(true); setProfileError('')
     try {
@@ -95,5 +105,66 @@ export function useMatchmaking(token: string) {
     } catch (error) { if (live.current && version === profileVersion.current) setProfileError(matchingErrorText(error)) }
     finally { if (live.current && version === profileVersion.current) setProfileLoading(false) }
   }
-  return { mode, known, busy, error, result, checking, profile, profileReady, profileLoading, profileError, saving, canJoin, queue, check, save, reloadProfile }
+  async function findFriends(next?: MatchingProfile, consented = false) {
+    if (!live.current || searchPending.current || savePending.current || busy || profileLoading || !profileReady || (!next && !canJoin)) return false
+    searchPending.current = true
+    const epoch = lifecycle.current
+    const current = () => live.current && epoch === lifecycle.current
+    let joinAttempted = false
+    setConfirmReplacement(false); setError(''); setProfileError(''); setSearchStage(next ? 'saving' : 'searching')
+    ++resultVersion.current; setResult(null); setChecking(false)
+    try {
+      const status = await client.status()
+      if (!current()) return false
+      setMode(status.mode); setKnown(true)
+      if (status.mode === 'downtime' && !consented) {
+        pendingDraft.current = next
+        setConfirmReplacement(true)
+        return false
+      }
+      const { profile: identity } = await client.accountProfile()
+      if (!current()) return false
+      if (!identity) throw new MatchmakingClientError('unavailable', 503, 'A saved server identity is required before finding friends. Open Profile to check your identity.')
+      let confirmed = profile
+      if (next) {
+        setSaving(true)
+        ++profileVersion.current
+        const response = await client.save(MatchingProfileSchema.parse(withAccountIdentity(next, identity)))
+        if (!current()) return false
+        confirmed = response.profile
+        setProfile(confirmed); setProfileReady(true); setSaving(false)
+      }
+      if (!confirmed) return false
+      // Use the validated persisted response above, not canJoin from the old render.
+      setSearchStage('searching')
+      const latest = await client.status()
+      if (!current()) return false
+      setMode(latest.mode); setKnown(true)
+      if (latest.mode === 'downtime' && !consented) {
+        pendingDraft.current = undefined // Any setup save above is already confirmed.
+        setConfirmReplacement(true)
+        return false
+      }
+      if (latest.mode === 'active') return true
+      joinAttempted = true
+      ++statusVersion.current
+      const joined = await client.join('active')
+      if (!current()) return false
+      setMode(joined.mode); setKnown(true)
+      if (joined.mode !== 'active') throw new Error('Active queue was not confirmed')
+      pendingDraft.current = undefined
+      return true
+    } catch (failure) {
+      if (!current()) return false
+      setError(matchingErrorText(failure))
+      if (joinAttempted) {
+        try { const status = await client.status(); if (current()) { setMode(status.mode); setKnown(true) } } catch { /* Retain last confirmed status. */ }
+      }
+      return false
+    } finally {
+      if (current()) { searchPending.current = false; setSearchStage(null); setSaving(false) }
+    }
+  }
+  const cancelReplacement = () => { pendingDraft.current = undefined; setConfirmReplacement(false) }
+  return { mode, known, busy, error, result, checking, profile, profileReady, profileLoading, profileError, saving, canJoin, queue, check, save, reloadProfile, findFriends, searchStage, confirmReplacement, cancelReplacement, confirmSearch: () => findFriends(pendingDraft.current, true) }
 }
