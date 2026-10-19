@@ -10,6 +10,14 @@ return path/query/hash is preserved and validated. `/complete-profile` is a lega
 redirect. Native links and `/reset-password` use the same scrub-and-verify callback,
 not a second AuthScreen or automatic grant exchange. Google is not activated.
 
+`/` and `/home` remain private product routes. Only `/welcome` and the separate
+legal routes are public marketing/legal pages; they never mount the private shell.
+The incoming public-root preview and email-existence/service-role lookup flow are
+not adopted. The existing verified email/password/link flow remains routed; incoming
+`AuthScreen` is not an alternate entry point. Any incoming API lookup source outside
+the nine-file resolution scope still requires parent security review/removal before
+this merge can be considered safe to run. No provider or schema activation is claimed.
+
 Four sequential saved chapters:
 
 1. Explicit username and display name; bio/photo are optional, avatar starts null.
@@ -41,7 +49,8 @@ parallel unsynchronized identity stores. Browser direct writes/internal primitiv
 execution remain denied. No historical migrations, data or projector are removed.
 Profile alone edits display name/bio/location/birthdate; Profile and matching share
 interests/windows. Required minima survive editing. Settings owns downtime opt-in
-and explicit active-queue replacement consent. Dating remains disabled. Distance
+and explicit active-queue replacement consent. Live Dating remains disabled; its
+recommendation UI is local-only with no persistence or backend actions. Distance
 and group are stored preferences, not new matching/geolocation enforcement.
 
 Owner/token changes unmount old state and fence retained callbacks. Uncertain saves

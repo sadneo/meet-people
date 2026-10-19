@@ -2,7 +2,7 @@
   isolation: isolate;
 }
 .pt-scene-settings .pt-main { padding-top: 32px; padding-bottom: calc(var(--pt-navigation-clearance) + 32px); animation: none; }
-.pt-scene-settings .pt-app-header { background: var(--pt-surface); border-color: var(--pt-line); }
+.pt-scene-settings .pt-app-header { border-color: var(--pt-line); }
 .pt-settings { position: relative; width: min(100%, 636px); margin: auto; display: flex; flex-direction: column; gap: 24px; }
 .pt-settings-title { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
 .pt-settings-title > span { display: grid; place-items: center; width: 48px; height: 48px; flex-shrink: 0; border-radius: 14px; background: var(--pt-pale); }

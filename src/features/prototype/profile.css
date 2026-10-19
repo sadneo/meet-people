@@ -91,7 +91,7 @@
 .pt-profile-settings small { color: var(--pt-muted); line-height: 1.5; }
 .pt-profile-settings > svg:last-child { transform: rotate(180deg); }
 @media (width > 800px) {
-  .pt-scene-profile .pt-app-header { background: var(--pt-cream); border-color: var(--pt-line); }
+  .pt-scene-profile .pt-app-header { border-color: var(--pt-line); }
   .pt-profile-identity { width: calc(100% - 64px); padding-bottom: 26px; }
 }
 @media (max-width: 800px) {

@@ -11,6 +11,13 @@ full-screen world on Home and permanently labelled navigation directions.
 
 ## Product structure
 
+Signed-out `/` is the public marketing page; signed-in `/` remains Home.
+Explore events links to the existing app Events route without changing its shell.
+Terms, Privacy and Cookie drafts stay reachable without account/onboarding gates.
+Public pages reuse the palette, typography and 800px breakpoint below, with
+marketing compositions rather than the signed-in icon navigation. See
+`PUBLIC-FRONTEND.md` for the route boundary, design and integration notes.
+
 Five primary destinations remain Home, Matchmaking, Events, Messages, and
 Profile. Community is a supporting route (`/community`) entered from Home;
 Home remains active in primary navigation. Settings, free-time planning, and
@@ -35,7 +42,8 @@ provides semantic aliases and focal sizing. Avoid another theme layer.
 
 | Token | Value | Role |
 | --- | --- | --- |
-| `--pt-cream` | `#DDCABC` | Continuous warm tan page and navigation |
+| `--pt-page-canvas` | `#ffffff` | Default page canvas and standard desktop/mobile navigation, including above/below Friends |
+| `--pt-cream` | `#DDCABC` | Existing cream surfaces, not the page canvas or standard navigation |
 | `--pt-surface` / `--pt-soft` | `#fffef9` / `#f4f9e8` | Neutral and light green surfaces |
 | `--pt-ink` | `#1f5a3c` | Forest text and active icons |
 | `--pt-muted` | `#425b49` | Muted forest text/icons (4.69:1 on tan) |
@@ -54,6 +62,13 @@ provides semantic aliases and focal sizing. Avoid another theme layer.
 Events and matching reference these tokens; Messages, Profile and Settings
 inherit them. Keep stronger color for social CTAs, selections and nature details.
 Messages bubbles stay soft green/mint. Do not restore per-screen color themes.
+The white canvas supersedes earlier continuous warm-tan canvas guidance. Friends
+matching is the explicit exception: preserve `friends.css`'s dark-forest gradient,
+foregrounds, original mascot scene and card treatments exactly. Dating keeps its
+photo cards on the white canvas and its exact local-only disclosure. Profile and
+Settings retain off-white cards/dialogs; green/berry controls and inputs are not
+recolored. Existing `--color-page` aliases used inside controls remain unchanged;
+full-page backgrounds use `--pt-page-canvas` instead.
 White on raspberry has 4.53:1 contrast; do not substitute off-white button text.
 Leaf green is artwork/indicator color; filled green controls use the darker
 `--pt-green` to preserve contrast for small white labels.
@@ -71,11 +86,15 @@ use its own controlled natural palette.
 The active shell is `src/features/prototype/AppShell.tsx`, wrapped by
 `src/routes/PebbleApp.tsx`. The older design-system shell is not routed.
 
-- Expanded (>800px): tan header, wordmark, centered icon navigation,
-  account avatar at the right. No white strip or divider.
+- Expanded (>800px): white header, wordmark, centered icon navigation, account
+  avatar at the right. Compact bottom navigation is white too, including on Friends;
+  only Friends page content retains the dark-forest exception. Public header/footer
+  remain on the white public canvas. Forest icons/text, pale-green selected tabs,
+  active dots, focus treatment, geometry and target sizes are unchanged.
 - Compact (<=800px): five-item bottom navigation with accessible names and
   native hover tooltips. Labels are visually hidden. Active tabs use a soft
-  background plus a small dot; focus remains visible.
+  background plus a small dot; focus remains visible. A raspberry dot at the
+  Messages icon's top right marks unread messages or connection requests.
 - Navigation graphics are 25px inside approximately 48px targets; secondary
   icon controls use 24px graphics and 44–48px targets. Home Community and Community
   Build use `clamp(32px, 2.5vw, 36px)` graphics in 56px targets. Home currency
@@ -205,7 +224,10 @@ and reducer persist everything; no backend/database schema change.
 Minimal state structure: central visual or candidate, concise status, one
 primary action, quiet supporting controls. Candidate portraits/avatars and up
 to four shared interests are prominent. The current API returns suggestions;
-do not invent acceptance, invitations, or conversations.
+do not invent acceptance, invitations, or conversations. **Connect** on a
+candidate is the real exception: it sends a connection request, and acceptance
+opens a direct chat (`docs/MESSAGING-M3.md`). While a candidate is shown,
+Connect is the one primary action.
 
 Checking for a match remains manual. The queue does not acquire new polling or
 matching logic as part of visual work. Preferences retains all server fields;

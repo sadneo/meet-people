@@ -4,6 +4,7 @@ const port = Number(process.env.E2E_PORT ?? 3194)
 if (port !== 3194) throw new Error('This isolated suite is restricted to E2E_PORT 3194.')
 export default defineConfig({
   testDir: './e2e',
+  outputDir: '/home/Danuu/.cache/pebble-reconcile-browser/test-results',
   workers: 2,
   use: {
     baseURL: `http://127.0.0.1:${port}`,

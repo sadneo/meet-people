@@ -8,18 +8,28 @@ conversations, and profile preferences. Home and Community fixtures are document
 in source and developer controls without demo labels in their minimal product UI.
 Active/downtime matching uses the backend slice in `docs/matchmaking-backend.md`.
 Email/password sign-in, onboarding, profile and settings use the
-persistent account flow in `docs/accounts.md`. Chat/planning remain prototypes.
+persistent account flow in `docs/accounts.md`. Messages uses the saved messaging
+source in `docs/MESSAGING-M3.md`; backend installation and provider readiness are
+not established by this source-only reconciliation. Planning remains a prototype.
 Imported event detail/preview use a server-backed group queue and persistent
 in-app proposal inbox; see `docs/event-group-queue.md` for the proposed parent SQL
 contracts and disabled worker. No Company/compatibility consent is reused.
-`docs/DESIGN.md` is the product-design authority. The #DDCABC page/navigation token,
-light surfaces and forest foregrounds are shared without changing route layouts.
+`docs/DESIGN.md` is the product-design authority. `--pt-page-canvas` is white
+(#ffffff) on auth, Home, Dating, Profile, Settings, Events, Messages, public/legal
+and supporting pages. Friends matching retains its exact dark-forest exception.
+Standard desktop header and compact bottom navigation are white too, including
+above/below Friends. Forest icons/text, pale-green selected tabs, active dots,
+focus and target sizes stay unchanged. The #DDCABC cream token stays on existing
+surfaces; off-white cards/dialogs/inputs and green/berry controls are preserved.
+This supersedes warm-tan page-canvas/navigation guidance without changing layouts.
 
 ## Information Architecture
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Minimal Pebble focal composition and discovery entry |
+| `/`, `/home` | Signed-in Home; persisted onboarding required, no guest preview |
+| `/welcome` | Separate public marketing page; never replaces private Home |
+| `/terms`, `/privacy`, `/cookies` | Public legal drafts |
 | `/community` | Village and weekly activity, balance/upgrades, local drag placement |
 | `/matchmaking` | Authenticated active queue, single-person result and profile preferences |
 | `/downtime-matchmaking` | Authenticated Friends compatibility destination to Settings; inactive Dating view remains available |
@@ -74,6 +84,21 @@ preserves same-owner keyboard focus, while logout replaces history with the safe
 captured original destination. Incoming Home/Community landscape/purchase/history
 features remain authenticated prototypes, not server-backed community progression.
 
+The private-route table and required access boundary here supersede incoming
+public-root/preview wording in `DESIGN.md` and `PUBLIC-FRONTEND.md`. Public marketing
+and legal links into product destinations still pass through the same private gate.
+Incoming email-existence lookup, Google activation, public app-preview layouts and
+provider/deployment instructions are not adopted by this route reconciliation.
+
+Friends keeps the checkpointed `FriendsPresentation.tsx` / `friends.css`, supplied
+local artwork and host navbar: saved preferences → Find Friends → actual queue →
+manual Check for a match → at most one real candidate. Candidate Connect uses the
+incoming connection source behind the same account gate; it does not change queue
+results or introduce groups, ready/lobby states, rewards or realtime.
+`MatchingViews.tsx`, `dating-views.css` and `dating-prototype-fixtures.ts` remain
+local-only and display exactly “Local prototype recommendations — not live Dating matches.”
+No Dating API, queue/result, mutation, persistence or provider work is introduced.
+
 ## Responsive Layout
 
 Use one app-wide width breakpoint:
@@ -108,7 +133,7 @@ are independent of the single width breakpoint.
 
 ## Implementation Shape
 
-- `src/App.tsx`: routes and shared messaging workspace.
+- `src/App.tsx`: routes. `src/features/messaging/`: the saved Messages workspace.
 - `src/routes/PebbleApp.tsx`: prototype state, scene wrapper, CSS imports,
   development controls, and immersive layout.
 - `src/features/prototype/AppShell.tsx`: desktop and compact icon navigation.

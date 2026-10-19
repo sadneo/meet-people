@@ -33,7 +33,7 @@ for (const [width, height] of [[320, 568], [390, 844], [800, 900], [801, 900], [
       expect(box.width).toBeGreaterThanOrEqual(44); expect(box.height).toBeGreaterThanOrEqual(44)
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
-    await page.screenshot({ path: `worktree/active-settings-optin/selector-friends-${width}x${height}.png`, fullPage: true, animations: 'disabled' })
+    await page.screenshot({ path: `/home/Danuu/.cache/pebble-reconcile-browser/active-settings-optin/selector-friends-${width}x${height}.png`, fullPage: true, animations: 'disabled' })
     await page.waitForLoadState('networkidle')
     datingPhase = true
     await dating.focus(); await page.keyboard.press('Enter')
@@ -83,7 +83,7 @@ for (const [width, height] of [[320, 568], [390, 844], [800, 900], [801, 900], [
     expect(await dating.evaluate(element => getComputedStyle(element).color)).not.toBe(await friends.evaluate(element => getComputedStyle(element).color))
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
     await action.scrollIntoViewIfNeeded(); await expect(action).toBeInViewport()
-    await page.screenshot({ path: `worktree/dating-prototype/selector-downtime-deck-${width}x${height}.png`, fullPage: true, animations: 'disabled' })
+    await page.screenshot({ path: `/home/Danuu/.cache/pebble-reconcile-browser/dating-prototype/selector-downtime-deck-${width}x${height}.png`, fullPage: true, animations: 'disabled' })
     datingPhase = false
     await page.goBack(); await expect(friends).toHaveAttribute('aria-current', 'page')
     await page.waitForLoadState('networkidle')

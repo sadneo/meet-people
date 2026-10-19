@@ -1,7 +1,7 @@
-/* User-supplied brown Profile/Settings handoff; scoped to account surfaces.
+/* Profile/Settings handoff surfaces on the shared white page canvas.
    The host shell and navigation retain their existing colors and geometry. */
 .pt-app .pt-main:has(.account-profile-page), .pt-app .pt-main:has(.account-settings-page) {
-  background: #dfcbbd; padding: 22px max(25px, calc((100% - 980px) / 2)) calc(var(--pt-navigation-clearance) + 28px);
+  background: var(--pt-page-canvas); padding: 22px max(25px, calc((100% - 980px) / 2)) calc(var(--pt-navigation-clearance) + 28px);
 }
 .account-profile-page, .account-settings-page {
   --account-paper: #fffef8; --account-ink: #285b41; --account-muted: #62795b;

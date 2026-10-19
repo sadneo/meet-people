@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { browserAccount, browserProfile, mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
 
-const evidence = 'worktree/friends-exact-reconciliation'
+const evidence = '/home/Danuu/.cache/pebble-reconcile-browser/friends-exact-reconciliation'
 const sizes = [{ width: 320, height: 568 }, { width: 375, height: 812 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 800, height: 900 }, { width: 1440, height: 900 }]
 for (const size of [{ width: 390, height: 844 }, { width: 800, height: 900 }, { width: 1440, height: 900 }, { width: 320, height: 568 }, { width: 390, height: 420 }]) test(`Friends setup reference scale ${size.width}x${size.height}`, async ({ page }) => {
   await page.setViewportSize(size)
@@ -41,7 +41,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 800, height: 900 }, { 
     const grid = (await table.boundingBox())!, navbar = (await page.locator('.pt-bottom-nav').boundingBox())!
     expect(grid.y).toBeGreaterThanOrEqual(0)
     expect(grid.y + grid.height).toBeLessThanOrEqual(navbar.y)
-    await page.screenshot({ path: `worktree/friends-exact-reconciliation/availability-${size.width}x${size.height}.png` })
+    await page.screenshot({ path: `${evidence}/availability-${size.width}x${size.height}.png` })
   }
   expect(mascot.y - hero.y).toBeGreaterThan(12)
   expect(hero.y + hero.height - mascot.y - mascot.height).toBeGreaterThan(12)
@@ -49,8 +49,8 @@ for (const size of [{ width: 390, height: 844 }, { width: 800, height: 900 }, { 
   expect(mutations).toEqual([])
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(size.width)
   await page.evaluate(() => window.scrollTo(0, 0))
-  await page.screenshot({ path: `worktree/friends-exact-reconciliation/setup-${size.width}x${size.height}.png`, animations: 'disabled' })
-  await page.screenshot({ path: `worktree/friends-exact-reconciliation/setup-full-${size.width}x${size.height}.png`, fullPage: true, animations: 'disabled' })
+  await page.screenshot({ path: `${evidence}/setup-${size.width}x${size.height}.png`, animations: 'disabled' })
+  await page.screenshot({ path: `${evidence}/setup-full-${size.width}x${size.height}.png`, fullPage: true, animations: 'disabled' })
 })
 for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) test(`Friends clean mascot reference reconciliation ${size.width}`, async ({ page }) => {
   await page.setViewportSize(size)
@@ -68,8 +68,8 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
   await expect(page.locator('.friends-reward')).toHaveText('A little time. New connections.')
   await expect(mascot).toHaveCSS('image-rendering', 'pixelated')
   await expect(mascot).toHaveCSS('animation-name', 'none')
-  await page.screenshot({ path: `worktree/friends-exact-reconciliation/setup-${size.width}.png`, fullPage: true })
-  await page.locator('.friends-scene').screenshot({ path: `worktree/friends-exact-reconciliation/scene-${size.width}.png` })
+  await page.screenshot({ path: `${evidence}/setup-${size.width}.png`, fullPage: true })
+  await page.locator('.friends-scene').screenshot({ path: `${evidence}/scene-${size.width}.png` })
 })
 for (const size of sizes) test(`Friends visual states ${size.width}x${size.height}`, async ({ page }) => {
   await page.setViewportSize(size)

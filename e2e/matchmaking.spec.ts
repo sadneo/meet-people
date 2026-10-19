@@ -49,10 +49,10 @@ for (const width of [320, 801, 1440]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
     expect(await summary.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
     expect(queueRequests).toEqual([])
-    await page.screenshot({ path: `worktree/matchmaking-dashboard/dashboard-${width}.png`, fullPage: true, animations: 'disabled' })
+    await page.screenshot({ path: `/home/Danuu/.cache/pebble-reconcile-browser/matchmaking-dashboard/dashboard-${width}.png`, fullPage: true, animations: 'disabled' })
     if (width === 320) {
       await summary.evaluate(element => element.scrollIntoView({ block: 'center' }))
-      await page.screenshot({ path: 'worktree/matchmaking-dashboard/dashboard-320-summary.png', animations: 'disabled' })
+      await page.screenshot({ path: '/home/Danuu/.cache/pebble-reconcile-browser/matchmaking-dashboard/dashboard-320-summary.png', animations: 'disabled' })
     }
     await preferences.focus()
     await page.keyboard.press('Enter')
@@ -71,7 +71,7 @@ for (const width of [320, 801, 1440]) {
       const box = element.getBoundingClientRect()
       return element.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))
     }), 'matching action is not covered by fixed navigation').toBe(true)
-    if (width === 320) await page.screenshot({ path: 'worktree/matchmaking-dashboard/dashboard-320-actions.png', animations: 'disabled' })
+    if (width === 320) await page.screenshot({ path: '/home/Danuu/.cache/pebble-reconcile-browser/matchmaking-dashboard/dashboard-320-actions.png', animations: 'disabled' })
     await start.focus()
     await page.keyboard.press('Enter')
     await expect(actions.getByRole('button', { name: 'Check for a match', exact: true })).toBeEnabled()
@@ -189,7 +189,7 @@ for (const width of [320, 390, 801, 1440]) {
     for (const inset of composition.headingInsets) expect(Math.abs(inset - 17)).toBeLessThanOrEqual(1)
     expect(composition.footerBelowCard).toBe(true)
     console.log(`Setup dashboard composition ${width}: ${JSON.stringify(composition)}`)
-    await page.screenshot({ path: `worktree/matchmaking-setup/setup-${width}.png`, fullPage: true, animations: 'disabled' })
+    await page.screenshot({ path: `/home/Danuu/.cache/pebble-reconcile-browser/matchmaking-setup/setup-${width}.png`, fullPage: true, animations: 'disabled' })
     await save.evaluate(element => element.scrollIntoView({ block: 'center' }))
     await expect(save).toBeInViewport()
     expect(await save.evaluate(element => {
@@ -249,7 +249,7 @@ for (const width of [320, 390, 1440]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
     expect(await setup.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
     console.log(`Unavailable setup ${width} minimum target: ${JSON.stringify({ width: Math.min(...dimensions.map(box => box.width)), height: Math.min(...dimensions.map(box => box.height)) })}`)
-    await page.screenshot({ path: `worktree/matchmaking-setup/setup-unavailable-${width}.png`, fullPage: true, animations: 'disabled' })
+    await page.screenshot({ path: `/home/Danuu/.cache/pebble-reconcile-browser/matchmaking-setup/setup-unavailable-${width}.png`, fullPage: true, animations: 'disabled' })
     await expect(setup.getByLabel('City or campus area')).toHaveCount(0)
     const retry = setup.getByRole('button', { name: 'Retry account', exact: true })
     await retry.evaluate(element => element.scrollIntoView({ block: 'center' }))
@@ -260,7 +260,7 @@ for (const width of [320, 390, 1440]) {
     })).toBe(true)
     await retry.click()
     await expect(setup.getByRole('alert')).toContainText('Your saved account could not be read')
-    await page.screenshot({ path: `worktree/matchmaking-setup/setup-unavailable-actions-${width}.png`, animations: 'disabled' })
+    await page.screenshot({ path: `/home/Danuu/.cache/pebble-reconcile-browser/matchmaking-setup/setup-unavailable-actions-${width}.png`, animations: 'disabled' })
     expect(forbidden).toEqual([])
     expect(unexpected).toEqual([])
   })
@@ -287,7 +287,7 @@ for (const origin of ['shell', 'settings']) {
     await page.waitForLoadState('networkidle')
     const beforeSignOut = [...requests]
     expect(beforeSignOut.length).toBeGreaterThan(0)
-    expect(beforeSignOut.every(request => request.method === 'GET' && /^\/api\/matchmaking\/(account|account-profile|profile|status|notifications)$/.test(request.path))).toBe(true)
+    expect(beforeSignOut.every(request => request.method === 'GET' && (/^\/api\/matchmaking\/(account|account-profile|profile|status|notifications)$/.test(request.path) || request.path === '/api/conversations/activity'))).toBe(true)
     await controls.getByRole('button', { name: 'Log out', exact: true }).click()
     const login = `/login?${new URLSearchParams({ returnTo: path })}`
     await expect(page).toHaveURL(login)

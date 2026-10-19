@@ -4,8 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../src/App'
 import { requiredPreferences, accountFixture } from './complete-profile-fixture'
 vi.mock('../src/supabase', () => ({ supabase: null }))
-vi.mock('../src/auth/useSession', () => ({ useSession: () => ({ ready: true, session: { access_token: 'route-fixture', user: { id: 'route-fixture' } } }) }))
+const auth = vi.hoisted(() => ({ ready: true, session: { access_token: 'route-fixture', user: { id: 'route-fixture' } } as { access_token: string; user: { id: string } } | null }))
+vi.mock('../src/auth/useSession', () => ({ useSession: () => auth }))
 beforeEach(() => {
+  auth.ready = true
+  auth.session = { access_token: 'route-fixture', user: { id: 'route-fixture' } }
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
   vi.stubGlobal('scrollTo', () => {})
   vi.stubGlobal('fetch', vi.fn(async input => Response.json(String(input).endsWith('/account') ? accountFixture({ username: 'route-fixture', display_name: 'Route fixture', bio: null, avatar_url: null, ...requiredPreferences }) : String(input).endsWith('/account-profile') ? { profile: { username: 'route-fixture', display_name: 'Route fixture', bio: null, avatar_url: null } } : String(input).endsWith('/notifications') ? { notifications: [], unreadCount: 0 } : String(input).endsWith('/profile') ? { profile: { username: 'route-fixture', display_name: 'Route fixture', bio: null, avatar_url: null, ...requiredPreferences } } : { mode: null })))
@@ -19,6 +22,40 @@ function CurrentPath() {
 }
 
 describe('routes', () => {
+  it('keeps marketing separate from the private Home and prototype shell', () => {
+    auth.session = null
+    render(<MemoryRouter initialEntries={['/welcome']}><App /></MemoryRouter>)
+    expect(screen.getByRole('heading', { name: 'Find a little time in common.' })).toBeTruthy()
+    expect(screen.queryByRole('navigation', { name: 'Primary navigation' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Developer controls' })).toBeNull()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it.each(['/', '/home', '/messages', '/profile', '/matchmaking?view=dating'])('keeps %s private without mounting shell or data hooks', async path => {
+    auth.session = null
+    render(<MemoryRouter initialEntries={[path]}><App /><CurrentPath /></MemoryRouter>)
+    await waitFor(() => expect(screen.getByLabelText('Current path').textContent).toBe('/login'))
+    expect(screen.queryByRole('navigation', { name: 'Primary navigation' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Find a little time in common.' })).toBeNull()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it.each(['/terms', '/privacy', '/cookies'])('keeps %s public without private data hooks', path => {
+    auth.session = null
+    render(<MemoryRouter initialEntries={[path]}><App /><CurrentPath /></MemoryRouter>)
+    expect(screen.getByLabelText('Current path').textContent).toBe(path)
+    expect(screen.getByRole('navigation', { name: 'Public navigation' })).toBeTruthy()
+    expect(screen.queryByRole('navigation', { name: 'Primary navigation' })).toBeNull()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('keeps the home alias inside the authenticated product shell', async () => {
+    render(<MemoryRouter initialEntries={['/home']}><App /></MemoryRouter>)
+    await appReady()
+    expect(screen.getByRole('heading', { name: 'Who’s around?' })).toBeTruthy()
+    expect(screen.getAllByRole('navigation', { name: 'Primary navigation' })).toHaveLength(2)
+  })
+
   it('renders the home route', async () => {
     render(
       <MemoryRouter initialEntries={['/']}><App /></MemoryRouter>,

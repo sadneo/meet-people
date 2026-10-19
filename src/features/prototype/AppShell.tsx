@@ -6,6 +6,7 @@ import { Avatar, Brand, Icon } from './ui'
 import { useLogout } from '../../auth/useLogout'
 import { MatchingInbox } from '../matchmaking/MatchingInbox'
 import { isDatingView } from '../matchmaking/views'
+import { useMessagesActivity } from '../messaging/useMessagesActivity'
 
 const primaryTabs: { label: Scene; icon: string }[] = [
   { label: 'Home', icon: 'home' },
@@ -14,14 +15,16 @@ const primaryTabs: { label: Scene; icon: string }[] = [
   { label: 'Messages', icon: 'messages' },
 ]
 
-function Tab({ label, icon, active }: { label: Scene; icon: string; active: boolean }) {
-  return <Link to={scenePaths[label]} className={active ? 'is-active' : ''} aria-label={label} title={label} aria-current={active ? 'page' : undefined}><Icon name={icon} size={25} /><span>{label}</span></Link>
+function Tab({ label, icon, active, activity = false }: { label: Scene; icon: string; active: boolean; activity?: boolean }) {
+  return <Link to={scenePaths[label]} className={active ? 'is-active' : ''} aria-label={label} title={activity ? `${label} · new activity` : label} aria-current={active ? 'page' : undefined}><Icon name={icon} size={25} /><span>{label}</span>{activity && <i className="pt-nav-activity" aria-hidden="true" />}</Link>
 }
 
 export function AppShell() {
   const { scene, state } = usePrototype()
   const { pathname, search } = useLocation()
   const auth = useLogout()
+  const dating = isDatingView(pathname, search)
+  const messagesActivity = useMessagesActivity(!dating)
   const main = useRef<HTMLElement>(null)
   const account = useRef<HTMLDetailsElement>(null)
   const activeTab: Scene = scene === 'Community' ? 'Home' : scene === 'Event Detail' ? 'Events' : scene === 'Downtime Matchmaking' ? 'Matchmaking' : ['Free Time Match', 'Activities', 'Planning', 'Review', 'Confirmed', 'Connection'].includes(scene) ? 'Free Time' : scene === 'Chat' ? 'Messages' : ['Other User Profile', 'Settings'].includes(scene) ? 'Profile' : scene
@@ -52,21 +55,21 @@ export function AppShell() {
   return <>
     <header className="pt-app-header">
       <Link className="pt-logo-link" to="/" aria-label="Pebble home"><Brand /></Link>
-      <nav className="pt-desktop-nav" aria-label="Primary navigation">{primaryTabs.map(tab => <Tab key={tab.label} {...tab} active={activeTab === tab.label} />)}</nav>
+      <nav className="pt-desktop-nav" aria-label="Primary navigation">{primaryTabs.map(tab => <Tab key={tab.label} {...tab} active={activeTab === tab.label} activity={tab.label === 'Messages' && messagesActivity} />)}</nav>
       <nav className="pt-account-nav" aria-label="Account navigation">
-        <details ref={account} className="pt-account-dropdown" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }}>
+        {auth.ready && !auth.session ? <Link className="pt-button" to={scenePaths.Login}>Sign in</Link> : <details ref={account} className="pt-account-dropdown" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }}>
           <summary role="button" aria-label="Account menu"><Avatar person={state.profile} /></summary>
           <div className="pt-account-options" onClick={() => { if (account.current) account.current.open = false }}>
             <Tab label="Profile" icon="profile" active={activeTab === 'Profile' && scene !== 'Settings'} />
             <Tab label="Settings" icon="settings" active={scene === 'Settings'} />
             {!auth.ready ? <button type="button" disabled>Loading account…</button> : auth.session ? <button type="button" disabled={auth.busy} onClick={() => void auth.logout()}>{auth.busy ? 'Logging out…' : 'Log out'}</button> : <Link to={scenePaths.Login}>Sign in</Link>}
           </div>
-        </details>
+        </details>}
       </nav>
     </header>
     {auth.error && <p className="pt-logout-error" role="alert">{auth.error}</p>}
-    {!isDatingView(pathname, search) && <MatchingInbox />}
+    {!dating && <MatchingInbox />}
     <main ref={main} className="pt-main"><Outlet /></main>
-    <nav className="pt-bottom-nav" aria-label="Primary navigation">{[...primaryTabs, { label: 'Profile' as Scene, icon: 'profile' }].map(tab => <Tab key={tab.label} {...tab} active={activeTab === tab.label} />)}</nav>
+    <nav className="pt-bottom-nav" aria-label="Primary navigation">{[...primaryTabs, { label: 'Profile' as Scene, icon: 'profile' }].map(tab => <Tab key={tab.label} {...tab} active={activeTab === tab.label} activity={tab.label === 'Messages' && messagesActivity} />)}</nav>
   </>
 }

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { emptyAccount, type Account } from '../shared/account'
 import { chooseDistanceAndGroup, saveInterestChapter, saveSocialChapter } from './onboarding-fixture'
+import { mockMatchingSession } from './matchmaking-fixture'
 
 // Isolated source browser coverage only: no env files, admin client, account
 // creation, provider requests or database cleanup. The SDK module is intercepted.
@@ -101,3 +102,38 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     expect(accounts.second).toEqual(emptyAccount); expect(external).toEqual([])
   })
 }
+
+test('private Home cannot become a guest preview while marketing and legal stay public', async ({ page }) => {
+  await mockMatchingSession(page, false)
+  const apiRequests: string[] = []
+  await page.route('**/api/**', route => { apiRequests.push(route.request().url()); return route.abort() })
+  for (const path of ['/', '/home', '/matchmaking', '/messages', '/profile']) {
+    await page.goto(path)
+    await expect(page).toHaveURL(`/login?returnTo=${encodeURIComponent(path)}`)
+    await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toHaveCount(0)
+  }
+  await page.goto('/welcome')
+  await expect(page.getByRole('heading', { name: 'Find a little time in common.' })).toBeVisible()
+  for (const path of ['/terms', '/privacy', '/cookies']) {
+    await page.goto(path)
+    await expect(page).toHaveURL(path)
+    await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toHaveCount(0)
+  }
+  expect(apiRequests).toEqual([])
+})
+
+test('verified password entry remains usable across shell breakpoints and short screens', async ({ page }) => {
+  await mockMatchingSession(page, false)
+  await page.route('**/api/**', route => route.abort())
+  for (const viewport of [{ width: 320, height: 568 }, { width: 799, height: 600 }, { width: 800, height: 600 }, { width: 801, height: 600 }, { width: 1440, height: 900 }]) {
+    await page.setViewportSize(viewport)
+    await page.goto('/login')
+    await page.getByRole('button', { name: 'Use password', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Sign in with password', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Continue with Google' })).toHaveCount(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.getByLabel('Email', { exact: true }).focus()
+    await page.keyboard.press('Tab')
+    await expect(page.getByLabel('Password', { exact: true })).toBeFocused()
+  }
+})

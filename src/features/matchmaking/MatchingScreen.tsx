@@ -12,6 +12,7 @@ import { ProfileInterests } from '../prototype/ProfileInterests'
 import { useSavedIdentity } from '../account/useSavedIdentity'
 import { ReadyPreferencesSchema, readinessMessage } from '../../../shared/profile-readiness'
 import { useAccount } from '../../auth/account-context'
+import { ConnectButton } from '../connections/ConnectButton'
 import { FriendsAvailability, FriendsInterests, FriendsPartyPreference, FriendsScene } from './FriendsPresentation'
 import './friends.css'
 
@@ -125,6 +126,8 @@ function ProfileEditor({ initial, busy, error, save, close, token }: { initial: 
     </div><footer><button type="button" className="match-button match-button-secondary" disabled={busy} onClick={dismiss}>Cancel</button><button type="submit" className="match-button match-button-secondary" disabled={blocked}>{busy ? 'Saving…' : 'Save preferences'}</button></footer></form></dialog>
 }
 
+const connectClasses = { primary: 'match-button match-button-primary', secondary: 'match-button match-button-secondary' }
+
 function MatchingProfileSummary({ profile }: { profile: MatchingProfile }) {
   const clock = (time: string) => time.endsWith(':00') ? time.slice(0, 5) : time
   return <section className="match-dashboard-summary" aria-labelledby="matching-summary-title">
@@ -185,7 +188,7 @@ function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode
     <h2>{candidate.name}</h2><div className="match-person-interests">{candidate.interests.slice(0, 4).map(interest => <span key={interest}>{interest}</span>)}</div>
     <p>Weekly overlap: {candidate.overlap === 'none' ? 'None' : candidate.overlap === 'some' ? 'Under two hours' : 'Two hours or more'}</p>
     {candidate.meetup && <section><h3>{candidate.meetup.title ?? 'Suggested meetup'}</h3>{candidate.meetup.location && <p>{candidate.meetup.location}</p>}{candidate.meetup.startsAt && <time dateTime={candidate.meetup.startsAt}>{new Date(candidate.meetup.startsAt).toLocaleString()}</time>}</section>}
-    <small>Suggested match</small>
+    <ConnectButton key={candidate.id} userId={candidate.id} name={candidate.name} classes={connectClasses} /><small>Suggested match</small>
   </article> : mode === 'active' ? <FriendsScene searching={!!state.mode || state.busy} /> : <div className="pt-mascot-scene match-mascot" aria-hidden="true">{state.known && <PixelPebble thinking={Boolean(state.mode) || (dashboard && (state.busy || state.checking || state.saving))} />}</div>
   const status = <p className="match-focus-status" role="status" aria-live="polite">{searching ? state.searchStage === 'saving' ? 'Saving shared preferences…' : 'Searching…' : state.busy ? 'Loading…' : !state.known ? 'Matching unavailable' : state.mode ? <>{replacing ? 'Downtime matching is on.' : candidate ? 'Someone to meet' : state.result ? 'No candidate yet' : 'Finding people…'}<span className="pt-sr-only"> You are in the {state.mode} queue.</span></> : 'Ready when you are.'}</p>
   return <>
@@ -199,7 +202,7 @@ function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode
       {dashboard && state.profile && <details className="friends-saved-summary"><summary>Saved preferences</summary><MatchingProfileSummary profile={canonical ? withAccountIdentity(state.profile, canonical) : state.profile} /></details>}
       <div className={`match-focus-actions ${dashboard ? 'match-dashboard-actions' : ''}`} role={dashboard ? 'region' : undefined} aria-label={dashboard ? 'Matching actions' : undefined}>
         {replacing && <p id="match-replacement-warning">Starting active matching replaces downtime matching.</p>}
-        {queuedHere && <button className="match-button match-button-primary" disabled={state.busy || state.checking || state.saving || searching} onClick={() => void state.check()}>{state.checking ? 'Checking…' : 'Check for a match'}</button>}
+        {queuedHere && <button className={`match-button match-button-${candidate ? 'secondary' : 'primary'}`} disabled={state.busy || state.checking || state.saving || searching} onClick={() => void state.check()}>{state.checking ? 'Checking…' : 'Check for a match'}</button>}
         <button type="button" className={`match-button match-button-${queuedHere ? 'secondary' : 'primary'}`} aria-describedby={[joinExplanation ? 'match-join-explanation' : '', replacing ? 'match-replacement-warning' : ''].filter(Boolean).join(' ') || undefined} disabled={state.busy || searching || state.confirmReplacement || !state.known || (!queuedHere && (!state.canJoin || identity.loading || !canonical))} onClick={() => queuedHere ? void state.queue('leave', mode) : mode === 'active' ? void state.findFriends() : void state.queue('join', mode)}>{searching ? state.searchStage === 'saving' ? 'Saving…' : 'Searching…' : queuedHere ? mode === 'downtime' ? 'Pause downtime matching' : 'Cancel search' : mode === 'downtime' ? 'Turn on downtime matching' : 'Find Friends'}</button>
       </div>
       {joinExplanation && <p id="match-join-explanation" className="match-action-explanation">{joinExplanation}</p>}

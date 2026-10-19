@@ -1,39 +1,34 @@
-import { useSyncExternalStore } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
-import { usePrototype } from './features/prototype/context'
 import NotFound from './routes/NotFound'
 import Community from './routes/Community'
 import PebbleApp, { ImmersiveLayout, IntroScreen } from './routes/PebbleApp'
 import { AppShell } from './features/prototype/AppShell'
 import { Auth } from './features/prototype/Onboarding'
 import NativeBridge from './platform/NativeBridge'
+import MessagesWorkspace from './features/messaging/Feature'
 import { EventDetail, EventsScreen } from './features/events/Browse'
 import { eventDetailRoute, eventsPath } from './features/events/routes'
 import { ActivityPaths, ConfirmedPlan, FreeTime, Matches, Planning, ReviewPlan } from './features/prototype/Planning'
-import { Chat, ChatDetails, Connection, Messages, ProfileScreen, Settings } from './features/prototype/Social'
+import { Connection, ProfileScreen, Settings } from './features/prototype/Social'
 import { Home } from './features/prototype/Home'
 import { PebbleGarden } from './features/prototype/PebbleGarden'
 import MatchmakingHome from './features/prototype/MatchmakingHome'
 import DowntimeMatchmaking from './features/prototype/DowntimeMatchmaking'
 import { AuthCallback, ForgotPassword } from './auth/CredentialRoutes'
 import { PublicAuthLayout, SessionRequired } from './auth/AppAccess'
-
-function subscribeToCompactLayout(callback: () => void) {
-  const query = window.matchMedia('(max-width: 800px)')
-  query.addEventListener('change', callback)
-  return () => query.removeEventListener('change', callback)
-}
-
-function MessagesWorkspace() {
-  const { scene } = usePrototype()
-  const compact = useSyncExternalStore(subscribeToCompactLayout, () => window.matchMedia('(max-width: 800px)').matches)
-  const chatVisible = !compact || scene === 'Chat'
-  return <div className="pt-messages-workspace"><section className="pt-inbox-pane" aria-label="Conversation inbox"><Messages chatVisible={chatVisible} /></section><section className="pt-conversation-pane" aria-label="Selected conversation"><Chat visible={chatVisible} /></section><aside className="pt-chat-details" aria-label="Conversation details"><ChatDetails /></aside></div>
-}
+import { PublicLayout } from './features/public/PublicLayout'
+import { MarketingPage } from './features/public/MarketingPage'
+import { LegalPage } from './features/public/LegalPage'
 
 function App() {
   return (
     <><NativeBridge /><Routes>
+      <Route element={<PublicLayout />}>
+        <Route path="welcome" element={<MarketingPage />} />
+        <Route path="terms" element={<LegalPage document="terms" />} />
+        <Route path="privacy" element={<LegalPage document="privacy" />} />
+        <Route path="cookies" element={<LegalPage document="cookies" />} />
+      </Route>
       <Route element={<PublicAuthLayout />}>
         <Route path="login" element={<Auth />} />
         <Route path="register" element={<Auth register />} />
@@ -48,6 +43,7 @@ function App() {
       <Route element={<PebbleApp />}>
         <Route element={<AppShell />}>
           <Route index element={<Home />} />
+          <Route path="home" element={<Home />} />
           <Route path="community" element={<PebbleGarden />} />
           <Route path="matchmaking" element={<MatchmakingHome />} />
           <Route path="downtime-matchmaking" element={<DowntimeMatchmaking />} />

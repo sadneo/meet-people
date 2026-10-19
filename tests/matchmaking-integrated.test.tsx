@@ -25,6 +25,7 @@ const mockFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => 
   const path = String(input), method = init?.method ?? 'GET'
   requests.push({ path, method, authorization: new Headers(init?.headers).get('Authorization'), body: init?.body ? JSON.parse(String(init.body)) : null })
   if (path.endsWith('/account-profile')) return canonicalIdentity ? Response.json({ profile: { username: profile.username, display_name: profile.display_name, bio: profile.bio, avatar_url: profile.avatar_url } }) : Response.json({ code: 'unavailable', error: 'Account profile RPC not installed.' }, { status: 503 })
+  if (path.startsWith('/api/connections/')) return Response.json({ status: method === 'POST' ? 'sent' : 'none', conversationId: null })
   if (path.endsWith('/profile')) return method === 'PUT' ? saveResponse ?? (saveUnavailable ? Response.json({ code: 'unavailable', error: 'Matching RPC is not available yet.' }, { status: 503 }) : Response.json({ profile: JSON.parse(String(init?.body)) })) : profileResponse ?? Response.json({ profile: { ...profile, interests: profileInterests } })
   if (path.endsWith('/result')) return resultResponse ?? Response.json({ candidate })
   if (method === 'POST') mode = JSON.parse(String(init?.body)).mode
@@ -322,6 +323,21 @@ it('loads server status, joins, looks up one person explicitly and cancels', asy
   fireEvent.click(screen.getByRole('button', { name: 'Cancel search' }))
   await screen.findByRole('button', { name: 'Find Friends' })
   expect(screen.queryByText('Taylor')).toBeNull()
+})
+it('sends a connection request to the displayed candidate', async () => {
+  mount()
+  await screen.findByRole('button', { name: 'Find Friends' })
+  // Profile/status hydration replaces the initial disabled action with inline setup.
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Find Friends', exact: true }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Find Friends', exact: true }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Check for a match' }))
+  await screen.findByRole('heading', { name: 'Taylor' })
+  const connect = await screen.findByRole('button', { name: 'Connect' })
+  await waitFor(() => expect(connect.hasAttribute('disabled')).toBe(false))
+  fireEvent.click(connect)
+  await screen.findByText('Request sent')
+  expect(requests.filter(r => r.path.startsWith('/api/connections/') && r.method === 'POST')).toEqual([expect.objectContaining({ path: `/api/connections/${candidate.id}`, body: {} })])
+  expect(screen.getByRole('button', { name: 'Cancel request' })).toBeTruthy()
 })
 it('retains server queue status when cancellation fails', async () => {
   mode = 'active'; cancelFails = true

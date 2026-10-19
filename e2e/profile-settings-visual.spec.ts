@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { sharedProfileFixture } from './shared-profile-fixture'
 
-const evidence = 'worktree/profile-comparison-correction'
+const evidence = '/home/Danuu/.cache/pebble-reconcile-browser/profile-comparison-correction'
 for (const [width, height] of [[320, 568], [375, 812], [390, 844], [390, 420], [430, 932], [700, 900], [701, 900], [760, 1440], [800, 900], [801, 900], [1440, 900]]) {
   test(`Profile handoff ${width}x${height}: real account, navigation and responsive viewports`, async ({ page }) => {
     await page.setViewportSize({ width, height })
@@ -156,13 +156,16 @@ for (const size of [{ width: 390, height: 844 }, { width: 760, height: 1440 }, {
   const fixture = await sharedProfileFixture(page, { interests: ['Coffee', 'Art', 'Music'] })
   const identity = { ...fixture.account()!, display_name: 'Ari', bio: 'Art walks, coffee stops, and taking the scenic route home.', avatar_url: 'https://profile-fixture.invalid/reference-portrait.jpg' }
   const profile = { ...fixture.profile()!, ...identity, birthdate: '2002-02-03', location_city: 'Brooklyn, NY', availability: [{ dow: 1, start_time: '12:00:00', end_time: '17:00:00' }, { dow: 3, start_time: '17:00:00', end_time: '21:00:00' }, { dow: 5, start_time: '17:00:00', end_time: '21:00:00' }] }
-  await page.route('https://profile-fixture.invalid/reference-portrait.jpg', route => route.fulfill({ path: 'worktree/profile-settings-reference/profile-settings-handoff/assets/portrait.jpg' }))
+  await page.route('https://profile-fixture.invalid/reference-portrait.jpg', route => route.fulfill({ path: 'public/prototype/dating/ari.jpg', contentType: 'image/jpeg' }))
   await page.route('**/api/matchmaking/account', route => route.fulfill({ json: { ...fixture.unified(), profile } }))
   await page.route('**/api/matchmaking/account-profile', route => route.fulfill({ json: { profile: identity } }))
   await page.route('**/api/matchmaking/profile', route => route.fulfill({ json: { profile } }))
   await page.goto('/profile')
   await expect(page.getByRole('heading', { name: 'Ari', exact: true })).toBeVisible()
   for (const image of await page.locator('.account-profile-page img').all()) await image.evaluate(element => (element as HTMLImageElement).decode())
+  const portrait = page.locator('.account-profile-page img[src="https://profile-fixture.invalid/reference-portrait.jpg"]')
+  await expect(portrait).toBeVisible()
+  expect(await portrait.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
   console.log(`Profile comparison ${size.width}: ${JSON.stringify(await page.locator('.account-identity, .account-facts, .account-usual-interests, .account-usual-week, .account-plans, .account-community, .account-spotlight').evaluateAll(elements => elements.map(element => ({ section: element.className, y: element.getBoundingClientRect().y, height: element.getBoundingClientRect().height }))))}`)
   await page.screenshot({ path: `${evidence}/comparison-${size.width}x${size.height}.png` })
   await page.screenshot({ path: `${evidence}/comparison-full-${size.width}x${size.height}.png`, fullPage: true })

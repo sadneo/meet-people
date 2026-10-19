@@ -51,7 +51,7 @@ async function assertDatingComposition(page: Page, width: number, capture: strin
     const nav = (await page.locator('.pt-bottom-nav').boundingBox())!, button = (await action.boundingBox())!
     expect(button.y + button.height).toBeLessThanOrEqual(nav.y - 4)
   }
-  await page.screenshot({ path: `worktree/reference-card-port/${capture}-${width}.png`, fullPage: true, animations: 'disabled' })
+  await page.screenshot({ path: `/home/Danuu/.cache/pebble-reconcile-browser/reference-card-port/${capture}-${width}.png`, fullPage: true, animations: 'disabled' })
 }
 
 const path = '/downtime-matchmaking'
@@ -61,7 +61,7 @@ const path = '/downtime-matchmaking'
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await mockMatchingSession(page)
       const requests: { path: string; method: string }[] = []
-      await page.route('**/api/matchmaking/**', route => {
+       await page.route('**/api/**', route => {
         const request = route.request(), endpoint = new URL(request.url()).pathname
         requests.push({ path: endpoint, method: request.method() })
         if (endpoint.endsWith('/account') && request.method() === 'GET') return route.fulfill({ json: browserAccount() })
@@ -89,7 +89,7 @@ const path = '/downtime-matchmaking'
       await expect(page.getByRole('link', { name: 'Open matchmaking settings', exact: true })).toBeVisible()
       await expect(friends).toHaveAttribute('aria-current', 'page')
       await expect(page.locator('.pt-main')).toHaveCSS('opacity', '1')
-      await page.screenshot({ path: `worktree/dating-refinement/downtime-friends-${width}.png`, fullPage: true, animations: 'disabled' })
+       await page.screenshot({ path: `/home/Danuu/.cache/pebble-reconcile-browser/dating-refinement/downtime-friends-${width}.png`, fullPage: true, animations: 'disabled' })
       const dating = page.getByRole('link', { name: 'Dating', exact: true })
       await friends.focus()
       await page.keyboard.press('Tab')
@@ -110,7 +110,8 @@ for (const width of [320, 390, 800, 801, 1440]) {
     await mockMatchingApi(page)
     const requests: { path: string; method: string }[] = []
     page.on('request', request => { if (request.url().includes('/api/')) requests.push({ path: new URL(request.url()).pathname, method: request.method() }) })
-    for (const query of ['', '?view=dating&source=home']) {
+     for (const query of ['', '?view=dating&source=home']) {
+       const before = requests.length
       await page.goto(`/matchmaking${query}`)
       await expect(page.getByRole('navigation', { name: 'Matching views', exact: true })).toHaveCount(1)
       await expect(page.getByRole('link', { name: 'Dating', exact: true })).toBeVisible()
@@ -120,18 +121,19 @@ for (const width of [320, 390, 800, 801, 1440]) {
         await expect(page.locator('.friends-mascot')).toHaveAttribute('src', '/prototype/friends/pebble-mascot.png')
         await expect(page.getByRole('link', { name: 'Friends', exact: true })).toHaveAttribute('aria-current', 'page')
         await expect(page.locator('.pt-main')).toHaveCSS('opacity', '1')
-        await page.screenshot({ path: `worktree/dating-refinement/active-friends-${width}.png`, fullPage: true, animations: 'disabled' })
+        await page.screenshot({ path: `/home/Danuu/.cache/pebble-reconcile-browser/dating-refinement/active-friends-${width}.png`, fullPage: true, animations: 'disabled' })
       } else {
         await expect(page.getByRole('heading', { name: 'Dating in your downtime', exact: true })).toBeVisible()
         await expect(page.getByRole('button', { name: 'Like recommendation', exact: true })).toBeEnabled()
         await assertDatingComposition(page, width, 'active-dating')
+        expect(requests.slice(before).every(request => request.method === 'GET' && request.path === '/api/matchmaking/account')).toBe(true)
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
     }
     await page.reload()
     await expect(page.getByRole('heading', { name: 'Ari, 24', exact: true })).toBeVisible()
     expect(requests.every(request => request.method === 'GET' && !request.path.includes('dating') && !request.path.endsWith('/result') && !request.path.endsWith('/queue'))).toBe(true)
-    await page.screenshot({ path: `worktree/downtime-layout/active-friends-only-${width}.png`, fullPage: true })
+    await page.screenshot({ path: `/home/Danuu/.cache/pebble-reconcile-browser/downtime-layout/active-friends-only-${width}.png`, fullPage: true })
   })
 }
 test('downtime Dating preserves an enrolled Friends queue across switching and reload without background requests', async ({ page }) => {
@@ -194,10 +196,10 @@ test('Profile identity writes stay separate from authoritative matching saves an
   await expect(page).toHaveURL('/profile')
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click()
   await page.getByLabel('Display name', { exact: true }).fill('New Sam')
-  await page.getByRole('button', { name: 'Save identity', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Edit your profile', exact: true }).getByRole('button', { name: 'Save profile', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'New Sam', exact: true })).toBeVisible()
   expect(accountWrites).toEqual([{ username: 'sam', display_name: 'New Sam', bio: null, avatar_url: null }])
-  await page.screenshot({ path: 'worktree/profile-unification/session-profile.png', fullPage: true })
+  await page.screenshot({ path: '/home/Danuu/.cache/pebble-reconcile-browser/profile-unification/session-profile.png', fullPage: true })
   await page.getByRole('link', { name: 'Matchmaking', exact: true }).click()
   await expect(page).toHaveURL('/matchmaking')
   const preferences = page.getByRole('button', { name: 'Preferences', exact: true })
@@ -207,7 +209,7 @@ test('Profile identity writes stay separate from authoritative matching saves an
   await expect(page.getByLabel('Username', { exact: true })).toHaveCount(0)
   await expect(dialog.getByLabel('City or campus area', { exact: true })).toHaveCount(0)
   await dialog.getByRole('button', { name: 'Music', exact: true }).click()
-  await page.screenshot({ path: 'worktree/profile-unification/matching-preferences.png', fullPage: true })
+  await page.screenshot({ path: '/home/Danuu/.cache/pebble-reconcile-browser/profile-unification/matching-preferences.png', fullPage: true })
   await dialog.getByRole('button', { name: 'Save preferences', exact: true }).click()
   await expect(dialog.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled()
   await expect(dialog.getByRole('button', { name: 'Close preferences', exact: true })).toBeDisabled()
@@ -236,7 +238,7 @@ test('account browser unavailable blocks private legacy views and never claims c
   await expect(page.getByRole('heading', { name: 'Profile unavailable', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Preferences', exact: true })).toHaveCount(0)
   await expect(page.getByLabel('Username', { exact: true })).toHaveCount(0)
-  await page.screenshot({ path: 'worktree/profile-unification/matching-legacy-compatibility.png', fullPage: true })
+  await page.screenshot({ path: '/home/Danuu/.cache/pebble-reconcile-browser/profile-unification/matching-legacy-compatibility.png', fullPage: true })
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.getByText('Account profile saved.')).toHaveCount(0)
 })
@@ -325,7 +327,7 @@ for (const width of [320, 390, 800, 1440]) for (const route of ['/matchmaking', 
     await expect(page.getByText('No likes were sent. Nothing was saved.', { exact: true })).toBeVisible()
     const restart = page.getByRole('button', { name: 'Restart prototype', exact: true })
     await expect(restart).toBeFocused()
-    await page.screenshot({ path: `worktree/dating-photo-prototype/${route === '/matchmaking' ? 'active' : 'downtime'}-complete-${width}.png`, fullPage: true, animations: 'disabled' })
+    await page.screenshot({ path: `/home/Danuu/.cache/pebble-reconcile-browser/dating-photo-prototype/${route === '/matchmaking' ? 'active' : 'downtime'}-complete-${width}.png`, fullPage: true, animations: 'disabled' })
     await restart.click()
     await expect(first).toHaveAttribute('data-front', 'true'); await expect(skip).toBeFocused()
     expect(requests).toEqual(before)
@@ -367,25 +369,21 @@ test('local Dating reduced-motion decisions reveal the next fixture immediately 
 })
 
 for (const [width, height] of [[320, 568], [375, 812], [390, 844], [430, 932], [800, 900], [1440, 900]]) {
-  test(`reference port matrix ${width}x${height}: host nav, dialogs, local input and visual comparison`, async ({ page }) => {
-    const folder = `worktree/reference-card-port/${width}x${height}`
+  test(`local portrait matrix ${width}x${height}: host nav, dialogs, local input and visual evidence`, async ({ page }) => {
+    const folder = `/home/Danuu/.cache/pebble-reconcile-browser/reference-card-port/${width}x${height}`
     const reference = await page.context().newPage()
     await reference.setViewportSize({ width, height }); await reference.emulateMedia({ reducedMotion: 'reduce' })
     await reference.route('**/*', route => {
       const url = new URL(route.request().url())
       return url.origin === 'http://127.0.0.1:3194' && !url.pathname.startsWith('/api/') ? route.continue() : route.abort()
     })
-    await reference.goto('/worktree/profile-card-handoff-reference/index.html')
-    await reference.locator('.photo').evaluate(async element => {
-      const src = getComputedStyle(element).backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1]
-      if (!src) throw new Error('Reference photo missing')
-      const image = new Image(); image.src = src; await image.decode()
-    })
-    await reference.screenshot({ path: `${folder}/reference-initial.png`, fullPage: true, animations: 'disabled' })
-    await reference.locator('.details').click()
-    await reference.screenshot({ path: `${folder}/reference-details.png`, fullPage: true, animations: 'disabled' })
-    await reference.keyboard.press('Escape'); await reference.locator('.filter').click()
-    await reference.screenshot({ path: `${folder}/reference-filter.png`, fullPage: true, animations: 'disabled' })
+    // The external handoff HTML is not part of this checkout. Keep a real local
+    // portrait baseline; product details/filter screenshots and assertions follow.
+    await reference.goto('/prototype/dating/ari.jpg')
+    const portrait = reference.locator('img')
+    await portrait.evaluate(element => (element as HTMLImageElement).decode())
+    expect(await portrait.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+    await reference.screenshot({ path: `${folder}/local-portrait.png`, fullPage: true, animations: 'disabled' })
     await reference.close()
 
     await page.setViewportSize({ width, height }); await page.emulateMedia({ reducedMotion: 'reduce' })

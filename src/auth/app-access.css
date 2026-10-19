@@ -7,9 +7,9 @@
 .pt-access-card button { min-height: 48px; }
 .pt-access-account { display: grid; gap: 12px; margin-top: 20px; }
 .pt-access-card :focus-visible { outline: 3px solid var(--pt-focus); outline-offset: 3px; }
-body:has(.pt-access-root) { display: block; background: var(--pt-cream); }
+body:has(.pt-access-root) { display: block; background: var(--pt-page-canvas); }
 body:has(.pt-access-root) #root { width: 100%; }
-.pt-access-root { min-height: 100dvh; color: var(--pt-ink); background: var(--pt-cream); font: 16px/1.5 'Trebuchet MS', 'Segoe UI', sans-serif; animation: none; }
+.pt-access-root { min-height: 100dvh; color: var(--pt-ink); background: var(--pt-page-canvas); font: 16px/1.5 'Trebuchet MS', 'Segoe UI', sans-serif; animation: none; }
 .pt-access-root h1 { font-size: clamp(25px, 3vw, 30px); line-height: 1.2; }
 .pt-access-root *, .pt-access-root *::before, .pt-access-root *::after { box-sizing: border-box; }
 .pt-access-root button, .pt-access-root input, .pt-access-root textarea { font: inherit; }

@@ -8,7 +8,7 @@
   overflow: hidden;
   border: 0;
   padding: 0;
-  background: #f6efdf;
+  background: var(--pt-page-canvas, #ffffff);
   color: #46573b;
   cursor: pointer;
   touch-action: manipulation;
