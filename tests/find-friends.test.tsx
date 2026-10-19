@@ -47,6 +47,34 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
 const mount = () => render(<MemoryRouter initialEntries={['/matchmaking']}><App /></MemoryRouter>)
 const button = (name: string) => screen.getByRole('button', { name, exact: true }) as HTMLButtonElement
 const writes = () => calls.filter(call => call.method !== 'GET')
+it('ports saved Friends setup inline with the forest full-page boundary, not the Dating deck', async () => {
+  profile = structuredClone(saved); mount(); await ready()
+  expect(document.querySelector('.friends-page')).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Find your people' })).toBeTruthy()
+  expect(screen.getByRole('table').querySelectorAll('button')).toHaveLength(28)
+  expect(screen.getByRole('button', { name: 'Music', exact: true }).getAttribute('aria-pressed')).toBe('true')
+  expect(screen.getByRole('link', { name: 'Dating' }).getAttribute('href')).toBe('/matchmaking?view=dating')
+  expect(document.querySelector('.dating-view')).toBeNull()
+  expect(writes()).toEqual([])
+})
+it('saved Friends edits use the existing save path, retaining inline draft on failure and synchronising an explicit preferences save', async () => {
+  profile = { ...structuredClone(saved), interests: ['Coffee', 'Music', 'Art'], birthdate: '2000-01-01', location_city: 'Fixture campus' }
+  mount(); await ready()
+  fireEvent.click(button('Outdoors')); saveFails = true
+  fireEvent.click(button('Find Friends')); await screen.findByText('Save unavailable.')
+  expect(button('Outdoors').getAttribute('aria-pressed')).toBe('true')
+  expect(writes().map(call => call.method)).toEqual(['PUT'])
+  saveFails = false
+  fireEvent.click(button('Preferences'))
+  const dialog = within(screen.getByRole('dialog'))
+  await waitFor(() => expect((dialog.getByRole('button', { name: 'Save preferences', exact: true }) as HTMLButtonElement).disabled).toBe(false))
+  fireEvent.click(dialog.getByRole('button', { name: 'Gaming', exact: true }))
+  fireEvent.click(dialog.getByRole('button', { name: 'Save preferences', exact: true }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(button('Gaming').getAttribute('aria-pressed')).toBe('true')
+  expect(button('Outdoors').getAttribute('aria-pressed')).toBe('false')
+  expect(writes().map(call => call.method)).toEqual(['PUT', 'PUT'])
+})
 async function ready() { await screen.findByRole('button', { name: 'Find Friends', exact: true }); await waitFor(() => expect(button('Find Friends').disabled).toBe(false)) }
 
 it('Find Friends saves validated setup before joining active from the confirmed response, with duplicate-click guard', async () => {

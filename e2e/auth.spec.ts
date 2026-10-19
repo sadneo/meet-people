@@ -78,7 +78,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     await page.goto('/profile'); await page.getByRole('button', { name: 'Edit profile', exact: true }).click()
     const editor = page.getByRole('dialog', { name: 'Edit your profile', exact: true })
     await editor.getByLabel('Bio', { exact: true }).fill('Persisted personal bio')
-    await editor.getByRole('button', { name: 'Save identity', exact: true }).click(); await expect(editor).toHaveCount(0)
+    await editor.getByRole('button', { name: 'Save profile', exact: true }).click(); await expect(editor).toHaveCount(0)
     await page.goto('/settings')
     const notifications = page.getByRole('switch', { name: 'Plan & message notifications', exact: true })
     await notifications.click(); await expect(notifications).not.toBeChecked(); await expect(notifications).toBeEnabled()

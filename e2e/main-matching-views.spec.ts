@@ -50,7 +50,8 @@ async function checkContrast(link: Locator) {
       return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722
     }
     const style = getComputedStyle(element)
-    const background = style.backgroundColor === 'rgba(0, 0, 0, 0)' ? getComputedStyle(element.parentElement!).backgroundColor : style.backgroundColor
+    const selection = getComputedStyle(element.parentElement!, '::before')
+    const background = element.hasAttribute('aria-current') && selection.content !== 'none' ? selection.backgroundColor : style.backgroundColor === 'rgba(0, 0, 0, 0)' ? getComputedStyle(element.parentElement!).backgroundColor : style.backgroundColor
     const a = luminance(style.color), b = luminance(background)
     return (Math.max(a, b) + .05) / (Math.min(a, b) + .05)
   })
@@ -94,8 +95,8 @@ for (const width of [320, 1440]) {
         const links = element.querySelectorAll('a')
         return { track: style.backgroundColor, surface: resolve('--pt-surface'), pale: resolve('--pt-pale'), friends: getComputedStyle(links[0]).backgroundColor, dating: getComputedStyle(links[1]).backgroundColor }
       })
-      expect(colors.track).toBe(colors.surface)
-      expect(colors.friends).toBe(colors.pale)
+      expect(colors.track).toBe('rgba(25, 31, 30, 0.36)')
+      expect(colors.friends).toBe('rgb(250, 249, 245)')
       expect(colors.dating).toBe('rgba(0, 0, 0, 0)')
       await expect(selector.getByRole('link', { name: 'Friends', exact: true })).toHaveAttribute('aria-current', 'page')
       await expect(selector.getByRole('link', { name: 'Friends', exact: true })).toHaveAttribute('href', '/matchmaking')
@@ -127,27 +128,43 @@ for (const width of [320, 1440]) {
       await mockMatchingSession(page)
       await mockMatchingApi(page)
       const requests: { path: string; method: string }[] = []
-      page.on('request', request => { if (request.url().includes('/api/matchmaking/')) requests.push({ path: new URL(request.url()).pathname, method: request.method() }) })
+      page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/')) requests.push({ path: new URL(request.url()).pathname, method: request.method() }) })
       const url = `${path}?source=correction&view=dating`
       await page.goto(url)
       const dating = page.getByRole('link', { name: 'Dating', exact: true }), friends = page.getByRole('link', { name: 'Friends', exact: true })
       const heading = page.getByRole('heading', { name: 'Dating in your downtime', exact: true })
       await expect(heading).toBeVisible()
       console.log(`Main selector Dating ${width}: ${(await checkContrast(dating)).toFixed(2)}:1; Friends ${(await checkContrast(friends)).toFixed(2)}:1`)
-      await expect(page.getByText('Free time in common, room for a little spark.', { exact: true })).toBeVisible()
-      await expect(page.getByText('Your Friends queue stays as it is.', { exact: true })).toBeVisible()
-      const action = page.getByRole('button', { name: 'Find a date in your downtime', exact: true })
-      await expect(action).toBeDisabled(); await expect(action).toHaveAccessibleDescription('Dating backend not connected')
-      await expect(page.getByRole('region', { name: 'Dating in your downtime' }).getByRole('button')).toHaveCount(1)
-      await expect(page.locator('.dating-mascot .pt-pixel-pebble[data-expression="happy"] image')).toHaveCount(1)
-      await expect(page.locator('.dating-heart-thought')).toHaveAttribute('aria-hidden', 'true')
+      const disclosure = 'Local prototype recommendations — not live Dating matches.'
+      const region = page.getByRole('region', { name: 'Dating in your downtime', exact: true })
+      await expect(region.getByText(disclosure, { exact: true })).toBeVisible()
+      await expect(region.getByText('Same Pebble account. Your Friends queue stays as it is.', { exact: true })).toBeVisible()
+      await expect(region.locator('[data-dating-card]')).toHaveCount(3)
+      const front = region.getByRole('article', { name: 'Ari, 24, prototype recommendation', exact: true })
+      await expect(region.getByRole('article')).toHaveCount(1)
+      await expect(front).toHaveAttribute('data-front', 'true')
+      await expect(front.getByRole('heading', { name: 'Ari, 24', exact: true })).toBeVisible()
+      const info = front.locator('.dating-card-info')
+      await expect(info).toHaveText('Art walks · coffee stops')
+      expect(await info.evaluate(element => element.scrollWidth <= element.clientWidth && element.getBoundingClientRect().height <= Number.parseFloat(getComputedStyle(element).lineHeight) + 1)).toBe(true)
+      await expect(front.getByRole('list', { name: 'Prototype interests', exact: true }).getByRole('listitem')).toHaveCount(3)
+      const action = region.getByRole('button', { name: 'Like recommendation', exact: true })
+      const skip = region.getByRole('button', { name: 'Skip recommendation', exact: true })
+      await expect(region.getByRole('button')).toHaveCount(6)
+      for (const control of [skip, action]) {
+        await expect(control).toBeEnabled(); await expect(control).toHaveAccessibleDescription(disclosure)
+        const box = (await control.boundingBox())!
+        expect(box.width).toBeGreaterThanOrEqual(44); expect(box.height).toBeGreaterThanOrEqual(44)
+      }
+      await expect(skip.locator('svg')).toHaveAttribute('data-icon', 'x')
+      await expect(action.locator('svg')).toHaveAttribute('data-icon', 'heart')
       expect(requests.length).toBeGreaterThan(0)
       expect(requests.every(request => request.method === 'GET' && request.path === '/api/matchmaking/account')).toBe(true)
       await page.reload(); await expect(dating).toHaveAttribute('aria-current', 'page')
       expect(requests.every(request => request.method === 'GET' && request.path === '/api/matchmaking/account')).toBe(true)
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
       await action.scrollIntoViewIfNeeded(); await expect(action).toBeInViewport()
-      if (path === '/matchmaking') await page.screenshot({ path: `worktree/interest-selection-review/selector-dating-${width}.png`, fullPage: true, animations: 'disabled' })
+      if (path === '/matchmaking') await page.screenshot({ path: `worktree/dating-prototype/selector-main-deck-${width}.png`, fullPage: true, animations: 'disabled' })
       await friends.focus(); await page.keyboard.press('Enter')
       await expect(page).toHaveURL(`${path}?source=correction`)
       if (path === '/matchmaking') await expect(page.getByRole('button', { name: 'Find Friends', exact: true })).toBeEnabled()

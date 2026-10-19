@@ -88,7 +88,7 @@ it('real signout notifications preserve the captured safe path/query/hash and re
 
 it('Settings opens a single-title credential dialog without Cancel and preserves close/cancel-event focus return', async () => {
   render(<MemoryRouter initialEntries={['/settings']}><App /></MemoryRouter>)
-  await screen.findByRole('heading', { name: 'Settings', exact: true })
+  await screen.findByRole('heading', { name: 'A little peace of mind.', exact: true })
   const settings = within(document.querySelector('.pt-settings')!)
   expect(settings.queryByRole('heading', { name: 'Profile', exact: true })).toBeNull()
   expect(settings.queryByRole('link', { name: 'Profile', exact: true })).toBeNull()

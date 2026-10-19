@@ -74,16 +74,12 @@ it('a held matching save restores focus to the current same-owner opener after a
 it('Profile saves all shared fields using canonical identity, preserving more than five labels and exact custom windows', async () => {
   mount(); await edit()
   expect(screen.getByLabelText('Display name')).toHaveProperty('value', identity.display_name)
-  expect(screen.getByRole('button', { name: 'Hiking', exact: true }).getAttribute('aria-pressed')).toBe('true')
-  expect(screen.getByRole('button', { name: 'Tuesday morning, custom times; edit exact windows' })).toHaveProperty('disabled', true)
-  fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Unsubmitted identity draft' } })
-  fireEvent.change(screen.getByLabelText('Bio'), { target: { value: 'Unsubmitted bio draft' } })
+  expect(screen.queryByRole('table', { name: 'Weekly availability' })).toBeNull()
   fireEvent.change(screen.getByLabelText('City or campus area'), { target: { value: 'North campus' } })
   fireEvent.change(screen.getByLabelText('Birthdate'), { target: { value: '2001-02-03' } })
-  fireEvent.click(button('Monday morning, not available'))
-  fireEvent.click(button('Save shared preferences'))
+  fireEvent.click(button('Save profile'))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  expect(calls.filter(call => call.method === 'PUT')).toEqual([{ path: '/api/matchmaking/profile', method: 'PUT', body: { ...original, ...identity, location_city: 'North campus', birthdate: '2001-02-03', availability: [...original.availability, { dow: 1, start_time: '08:00:00', end_time: '12:00:00' }] } }])
+  expect(calls.filter(call => call.method === 'PUT')).toEqual([{ path: '/api/matchmaking/profile', method: 'PUT', body: { ...original, ...identity, location_city: 'North campus', birthdate: '2001-02-03', availability: original.availability } }])
   expect(calls.at(-1)).toMatchObject({ path: '/api/matchmaking/profile', method: 'GET' })
   expect(screen.getByRole('region', { name: 'Your profile' }).textContent).toContain('Canonical name')
   expect(calls.some(call => /\/(queue|result)$/.test(call.path))).toBe(false)
@@ -93,7 +89,7 @@ it('Profile identity saves use only account-profile, never matching profile writ
   mount(); await edit()
   fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Updated name' } })
   fireEvent.change(screen.getByLabelText('Bio'), { target: { value: 'Updated bio' } })
-  fireEvent.click(button('Save identity'))
+  fireEvent.click(button('Save profile'))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(calls.filter(call => call.method === 'PUT')).toEqual([{ path: '/api/matchmaking/account-profile', method: 'PUT', body: { ...identity, display_name: 'Updated name', bio: 'Updated bio' } }])
   expect(calls.at(-1)).toMatchObject({ path: '/api/matchmaking/account-profile', method: 'GET' })
@@ -109,7 +105,7 @@ it('unavailable canonical identity disables shared writes even when a legacy mat
 it('does not report completion or dismiss the editor when authoritative shared readback fails', async () => {
   mount(); await edit(); readbackFails = true
   fireEvent.change(screen.getByLabelText('City or campus area'), { target: { value: 'Unconfirmed area' } })
-  fireEvent.click(button('Save shared preferences'))
+  fireEvent.click(button('Save profile'))
   await within(screen.getByRole('dialog')).findByRole('alert')
   expect(screen.getByRole('dialog')).toBeTruthy()
 })
@@ -140,6 +136,7 @@ it('matching edits are read back on Profile without sharing identity edit contro
   await edit()
   expect(screen.getByLabelText('City or campus area')).toHaveProperty('value', 'Campus')
   expect(screen.getByLabelText('Birthdate')).toHaveProperty('value', '2000-01-01')
+  fireEvent.click(button('Cancel'))
   expect(screen.getByRole('button', { name: 'Hiking', exact: true }).getAttribute('aria-pressed')).toBe('true')
   expect(screen.getByRole('button', { name: 'Coffee', exact: true }).getAttribute('aria-pressed')).toBe('false')
 })
@@ -153,10 +150,11 @@ it('delayed route reads preselect authoritative interests instead of exposing em
     if (delay && String(input).endsWith('/profile')) await pending
     return originalFetch(input, init)
   })
-  mount(); await edit()
+  mount(); await screen.findByRole('heading', { name: 'Canonical name', exact: true })
+  await waitFor(() => expect(button('Music').disabled).toBe(false))
   fireEvent.click(button('Music'))
   fireEvent.click(button('Sports'))
-  fireEvent.click(button('Save shared preferences'))
+  fireEvent.click(button('Save usual interests'))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   delay = true
   fireEvent.click(screen.getAllByRole('link', { name: 'Matchmaking', exact: true })[0])
@@ -189,7 +187,7 @@ it('a session change discards a pending prior actor read before hydrating the ne
   profile = { ...profile, interests: ['Sports', 'coffee', 'Board games\nstrategy'] }
   auth.session = { access_token: 'second-fixture', user: { id: 'second-actor' } }
   view.rerender(<MemoryRouter initialEntries={['/profile']}><App /></MemoryRouter>)
-  await edit()
+  await screen.findByRole('heading', { name: 'Canonical name', exact: true })
   await act(async () => { finish(); await pending })
   expect(button('Sports').getAttribute('aria-pressed')).toBe('true')
   expect(button('coffee').getAttribute('aria-pressed')).toBe('true')
@@ -265,7 +263,8 @@ it('an open Profile editor waits for a new session snapshot before initializing 
   await edit()
   const editor = within(screen.getByRole('dialog'))
   await waitFor(() => expect(editor.getByLabelText('Display name')).toHaveProperty('value', 'Second identity'))
-  expect(editor.getByRole('button', { name: 'Sports', exact: true }).getAttribute('aria-pressed')).toBe('true')
+  fireEvent.click(editor.getByRole('button', { name: 'Cancel', exact: true }))
+  expect(button('Sports').getAttribute('aria-pressed')).toBe('true')
   expect(calls.some(call => call.method !== 'GET')).toBe(false)
 })
 

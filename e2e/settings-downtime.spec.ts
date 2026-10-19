@@ -57,7 +57,7 @@ for (const width of [320, 390, 1440]) {
     mode = 'downtime'
     await page.getByRole('link', { name: 'Matchmaking', exact: true }).first().click()
     const start = page.getByRole('button', { name: 'Find Friends', exact: true })
-    await expect(start).toBeEnabled(); await expect(page.getByText('Starting active matching replaces downtime matching.', { exact: true })).toBeVisible()
+    await expect(start).toBeEnabled(); await expect(page.getByText('Downtime matching is on. Starting active matching replaces downtime matching.', { exact: true })).toBeVisible()
     await start.click()
     await page.getByRole('dialog', { name: 'Replace downtime matching?', exact: true }).getByRole('button', { name: 'Replace with active search', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Cancel search', exact: true })).toBeEnabled()

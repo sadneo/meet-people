@@ -1,0 +1,274 @@
+/* Friends only: computed-appearance port of the approved handoff, not its shell.
+   The host owns header/navigation, gutters and safe-area clearance. */
+.friends-page {
+  position: relative; margin: -18px calc(-1 * var(--pt-gutter)) -42px;
+  width: calc(100% + var(--pt-gutter) * 2);
+  min-height: calc(100dvh - var(--pt-header-height) - var(--pt-navigation-clearance));
+  padding: 20px clamp(12px, 3vw, 38px) 20px;
+  background: radial-gradient(ellipse at 50% 10%, #46554144, transparent 55%), linear-gradient(155deg, #303b2e, #172219 80%);
+  color: #f3f0e6; font-family: Trebuchet MS, Segoe UI, sans-serif;
+  --color-ink: #f3f0e6; --color-muted: #c0cbb4; --color-line: #ffffff29;
+  --color-surface: #263323; --color-focus: #f2c5d2;
+}
+.friends-page *, .friends-page *::before, .friends-page *::after { box-sizing: border-box; }
+.friends-page .match-view-segments { width: min(240px, calc(100% - 70px)); min-height: 54px; margin: 0 auto 18px; padding: 4px; border: 1px solid #ffffff45; border-radius: 16px; background: #191f1e5c; box-shadow: inset 0 1px 0 #ffffff12; backdrop-filter: blur(22px) saturate(130%); gap: 0; }
+.friends-page .match-view-segments a { min-width: 0; min-height: 44px; border-radius: 12px; color: #ffffffe0; font: 500 12px/1 Arial, sans-serif; }
+.friends-page .match-view-segments a[aria-current] { color: #25342d; background: #faf9f5; box-shadow: 0 2px 6px #0002; }
+.friends-page .match-home.match-calm { color: #f3f0e6; --color-ink: #f3f0e6; --color-muted: #c0cbb4; --color-line: #ffffff29; --color-surface: #263323; --color-focus: #f2c5d2; }
+.friends-page .friends-preferences { position: absolute; right: clamp(12px, 3vw, 38px); top: 24px; width: 44px; }
+.friends-page .friends-preferences button { width: 44px; height: 44px; min-height: 44px; padding: 0; border: 1px solid #ffffff45; border-radius: 15px; background: #191f1e5c; color: white; }
+.friends-page :is(button, a, input, select, summary):focus-visible { outline: 3px solid #f2c5d2; outline-offset: 2px; }
+.friends-page :is(button, a, input, select, summary) { scroll-margin-block: 12px calc(var(--pt-navigation-clearance) + 12px); }
+.friends-page button { cursor: pointer; font-family: inherit; }
+.friends-page button:disabled { cursor: not-allowed; opacity: .6; }
+.friends-page .friends-setup { max-width: 1040px; margin: 0 auto; gap: 10px; }
+.friends-page .match-dashboard-heading { width: 100%; text-align: center; }
+.friends-page .match-dashboard-heading > p { color: #b5c1a7; font-size: 10px; letter-spacing: 2px; margin: 0 0 8px; }
+.friends-page .match-dashboard-heading h2 { color: #f7f1e7; font: 400 clamp(30px, 4vw, 48px)/1.12 Georgia, serif; letter-spacing: -1.3px; margin: 0; }
+.friends-page .friends-setup .match-setup-scene { padding: 0; display: block; }
+.friends-page .friends-scene { width: 100%; height: clamp(110px, calc(100dvh - 650px), 270px); min-height: 110px; margin: 0 auto; position: relative; display: flex; justify-content: center; align-items: center; isolation: isolate; border: 1px solid #d9c5b6; border-radius: 20px; background: #dfcbbd; }
+/* The supplied PNG includes a thin rectangular edge. Match the handoff's
+   display-only edge mask; keep its original bytes, sizing and motion unchanged. */
+.friends-page .friends-mascot { display: block; width: auto; height: auto; max-width: 68%; max-height: calc(100% - 44px); object-fit: contain; clip-path: inset(1.5%); image-rendering: pixelated; transform-origin: 50% 80%; animation: friends-idle 6s ease-in-out infinite; }
+.friends-page .friends-companion { position: absolute; display: block; pointer-events: none; width: clamp(30px, 8vw, 70px); aspect-ratio: 1; animation: friends-drift 7s ease-in-out infinite; --dx: 8px; --dy: 8px; --tilt: -7deg; }
+.friends-page .friends-companion img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.friends-page .friends-companion-1 { left: 9%; top: 24%; animation-delay: -1s; }
+.friends-page .friends-companion-2 { right: 12%; top: 14%; width: clamp(26px, 7vw, 57px); --dx: -8px; --dy: 10px; --tilt: 8deg; animation-duration: 8s; animation-delay: -4s; }
+.friends-page .friends-companion-3 { right: 7%; bottom: 23%; width: clamp(22px, 6vw, 44px); --dx: -5px; --dy: -8px; --tilt: -5deg; animation-duration: 6s; animation-delay: -2s; }
+.friends-page .friends-scene.is-searching .friends-companion { animation-duration: 4s; }
+.friends-page .friends-twinkle { position: absolute; left: 21%; top: 12%; color: #6f7c52; animation: friends-twinkle 4s steps(2, end) infinite; }
+.friends-page .friends-reward { position: absolute; bottom: 7px; padding: 4px 10px; border-radius: 20px; background: #fbfaf2ef; border: 1px solid #ffffffaa; color: #536743; font-size: 10px; white-space: nowrap; }
+.friends-page .friends-setup form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 14px; }
+.friends-page .friends-box { min-width: 0; border: 1px solid #ffffff26; border-radius: 18px; background: #ffffff09; padding: 16px; }
+.friends-page .friends-box header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.friends-page .friends-box h3 { color: #f1f0e4; font-size: 14px; margin: 0; }
+.friends-page .friends-box h3 small { color: #bdcbaa; font-size: 10px; margin-right: 6px; }
+.friends-page .friends-box header > span, .friends-page .friends-box p { color: #c0cbb4; font-size: 11px; }
+.friends-page .friends-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.friends-page .friends-chips button { max-width: 100%; min-width: 44px; min-height: 44px; border: 1px solid #ffffff2c; border-radius: 11px; padding: 7px 10px; background: #ffffff08; color: #dce2d2; font-size: 12px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.friends-page .friends-chips button[aria-pressed='true'] { background: #cfddbb; border-color: #cfddbb; color: #344a29; }
+.friends-page .friends-chips .friends-add { border-style: dashed; }
+.friends-page .friends-custom > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.friends-page .friends-custom input { flex: 1 1 120px; min-width: 0; width: 100%; }
+.friends-page .friends-custom button { border: 1px solid #ffffff45; background: #cfddbb; color: #344a29; padding: 10px; border-radius: 10px; min-height: 44px; }
+.friends-page .friends-availability { padding-top: 6px; }
+.friends-page .friends-clear { min-width: 44px; min-height: 44px; padding: 0 6px; background: transparent; border: 0; color: #c7d6b4; }
+.friends-page .friends-availability table { min-width: 0; width: 100%; border-spacing: 3px 4px; table-layout: fixed; scroll-margin-block: 12px calc(var(--pt-navigation-clearance) + 12px); }
+.friends-page .friends-time-column { width: 67px; }
+.friends-page .friends-availability th { color: #becbad; font-size: 10px; font-weight: 500; padding: 0; background: transparent; position: static; }
+.friends-page .friends-availability th[scope='row'] { text-align: left; color: #e2e8d7; }
+.friends-page .friends-availability th small { display: block; color: #b8c6a8; font-size: 10px; }
+.friends-page .friends-availability td { padding: 0; }
+.friends-page .friends-availability td button { display: block; width: 100%; min-width: 0; min-height: 44px; padding: 0; border: 1px solid #ffffff29; border-radius: 8px; background: #ffffff05; color: #344f25; }
+.friends-page .friends-availability td button[aria-pressed='true'] { background: #c4d6ad; border-color: #c4d6ad; }
+.friends-page .friends-availability td button[aria-pressed='mixed'] { background: linear-gradient(135deg, #9ab780 50%, #ffffff05 50%); color: #fff; }
+.friends-page .friends-key { margin-bottom: 0; }
+.friends-page .friends-time-editor { min-width: 0; }
+.friends-page .match-setup-exact { font-size: 12px; color: #c0cbb4; }
+.friends-page .match-setup-exact summary { min-height: 44px; }
+.friends-page .match-setup-exact[open] { background: #263323; padding: 12px; border-radius: 14px; }
+.friends-page .match-setup-footer { grid-column: 1 / -1; padding: 12px 16px; border-color: #ffffff26; background: #ffffff08; border-radius: 18px; display: grid; gap: 8px; }
+.friends-page .match-setup-footer p { color: #c0cbb4; font-size: 12px; margin: 0; }
+.friends-page .match-setup-footer a { color: #dce2d2; min-height: 44px; }
+.friends-page .friends-party { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+.friends-page .friends-party > div { display: flex; gap: 5px; }
+.friends-page .friends-party button { min-width: 44px; min-height: 44px; border-radius: 10px; border: 1px solid #ffffff36; background: transparent; color: #e3e9db; }
+.friends-page .friends-party button[aria-pressed='true'] { background: #cfddbb; color: #344a29; }
+.friends-page .friends-party small { flex-basis: 100%; color: #c0cbb4; font-size: 11px; }
+.pt-app .friends-page .match-button-primary { color: #663a43; background: #efd9d7; border-color: #efd9d7; box-shadow: none; }
+.pt-app .friends-page .match-button-primary:not(:disabled):is(:hover, :active) { background: #f5e5e3; border-color: #f5e5e3; }
+.friends-page .match-focus { width: min(100%, 1040px); margin: auto; min-height: 0; padding: 0; gap: 20px; text-align: center; }
+.friends-page .match-dashboard-scene { padding: 0; width: 100%; }
+.friends-page .match-focus .friends-scene { height: clamp(180px, 35dvh, 360px); }
+.friends-page .match-focus .match-focus-status, .friends-page .friends-setup .match-focus-status:not(.pt-sr-only) { position: static; color: #e2e8d7; font-size: 16px; margin: 10px 0; background: transparent; border: 0; padding: 0; }
+.friends-page .match-person { color: #f3f0e6; margin: auto; }
+.friends-page .match-person h2 { color: #f7f1e7; font: 32px Georgia, serif; }
+.friends-page .match-person-interests span { color: #344a29; background: #cfddbb; }
+.friends-page .match-dashboard-actions { order: 1; }
+.friends-page .friends-saved-summary { order: 2; width: 100%; font-size: 12px; }
+.friends-page .friends-saved-summary summary { min-height: 44px; padding: 12px; cursor: pointer; }
+.friends-page .match-dashboard-summary { background: #ffffff09; border-color: #ffffff26; color: #e2e8d7; text-align: left; }
+.friends-page .match-dashboard-summary :is(h2, h3, small) { color: #e2e8d7; }
+.friends-page .match-dashboard-interests > span { color: #344a29; }
+.friends-page .match-calm .match-dashboard .match-dashboard-actions { background: transparent; border: 0; padding: 0; }
+.friends-page .match-focus-actions .match-button-secondary { color: #e2e8d7; border-color: #ffffff45; background: #ffffff09; }
+.friends-page .match-device-disclosure { margin: 12px auto 0; }
+.friends-page .match-device-disclosure summary, .friends-page .friends-downtime, .friends-page .match-action-explanation { color: #c0cbb4; font-size: 12px; text-align: center; }
+.friends-page .pt-focus-secondary button { color: #e2e8d7; }
+.friends-page [role='alert'] { color: #f6d8d9; }
+@keyframes friends-idle { 0%, 100% { transform: translateY(0) rotate(-1.7deg); } 50% { transform: translateY(-5px) rotate(1.7deg); } }
+@keyframes friends-drift { 0%, 100% { transform: none; } 35% { transform: translate(var(--dx), var(--dy)) rotate(var(--tilt)); } 70% { transform: translate(2px, -5px) rotate(3deg); } }
+@keyframes friends-twinkle { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+/* Explicit specificity boundary against the later-loaded legacy matching CSS. */
+.pt-app .friends-page .friends-setup form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.pt-app .friends-page .match-view-segments a:last-child { color: #ffffffe0; }
+.pt-app .friends-page .friends-availability th[scope='row'], .pt-app .friends-page .friends-availability thead td { background: transparent; position: static; }
+.pt-app .friends-page .friends-setup .match-focus-status.pt-sr-only { position: absolute; padding: 0; border: 0; background: transparent; margin: 0; }
+.pt-app .friends-page .match-calm .match-dashboard .match-focus-status { position: static; margin: 10px 0; padding: 0; background: transparent; border: 0; font-size: 16px; color: #e2e8d7; }
+.pt-app .friends-page .match-calm .match-dashboard .match-dashboard-actions { background: transparent; border: 0; padding: 0; }
+.pt-app .friends-page .match-calm .match-dashboard .match-button-secondary { color: #e2e8d7; background: #ffffff09; border-color: #ffffff45; }
+.pt-app .friends-page .match-person p { color: #dce2d2; }
+.pt-app .friends-page .match-person-portrait { color: #344a29; }
+.pt-app .friends-page .pt-focus-secondary { order: 3; }
+.pt-app .friends-page .match-live-dialog :is(h2, h3, legend, p) { color: #e2e8d7; }
+.pt-app .friends-page .match-live-dialog .match-button-secondary { background: #ffffff09; color: #e2e8d7; border-color: #ffffff45; }
+.pt-app .friends-page .match-live-dialog :is(input, select, textarea, .pt-chips button) { color: #344a29; background: #faf9f5; }
+.pt-app .friends-page .match-live-dialog .pt-chips button[aria-pressed='true'] { color: #344a29; background: #cfddbb; border-color: #93b47b; }
+.pt-app .friends-page .match-live-dialog .match-close-button { color: #344a29; background: #efd9d7; }
+.pt-scene-matchmaking:has(.friends-page) .pt-inbox-controls { position: absolute; top: calc(var(--pt-header-height) + 12px); left: 12px; padding: 0; z-index: 25; }
+@media (max-width: 800px) {
+  .friends-page { margin-top: -20px; margin-bottom: calc(-1 * (var(--pt-navigation-clearance) + 24px)); padding-top: 12px; padding-bottom: calc(var(--pt-navigation-clearance) + 20px); min-height: calc(100dvh - var(--pt-header-height)); }
+  .friends-page .friends-preferences { top: 17px; }
+  .pt-app .friends-page .friends-setup form { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .friends-page .friends-box { padding: 10px; border-radius: 15px; }
+  .friends-page .friends-availability { padding-top: 0; }
+  .friends-page .friends-box h3 { font-size: 12px; }
+  .friends-page .friends-setup { gap: 8px; }
+  .friends-page .friends-scene { height: clamp(110px, calc(100dvh - 740px), 210px); border-radius: 16px; }
+  .friends-page .friends-chips { gap: 5px; }
+  .friends-page .friends-chips button { padding: 6px 8px; font-size: 11px; }
+  .friends-page .match-view-segments { margin-bottom: 12px; }
+  .friends-page .match-setup-footer { padding: 10px; }
+  .pt-app .friends-page .match-view-segments { width: calc(100% - 90px); max-width: 240px; transform: translateX(-10px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .friends-page :is(.friends-mascot, .friends-companion, .friends-twinkle) { animation: none; }
+}
+@media (max-height: 650px) {
+  .friends-page .match-focus { gap: 12px; }
+  .friends-page .match-focus .friends-scene { height: 110px; }
+}
+/* Normal-height setup gives the supplied pixel scene its reference prominence.
+   The existing <=650px composition and queue presentation remain unchanged. */
+@media (min-height: 651px) {
+  .friends-page .friends-setup .friends-scene { height: clamp(260px, 36dvh, 400px); }
+  /* Scale the existing raster-edge mask too, without changing the image bytes. */
+  .friends-page .friends-setup .friends-mascot { max-width: 78%; clip-path: inset(1.5%); }
+  .friends-page .friends-setup .friends-companion-1 { width: clamp(54px, 14vw, 90px); }
+  .friends-page .friends-setup .friends-companion-2 { width: clamp(46px, 12vw, 76px); }
+  .friends-page .friends-setup .friends-companion-3 { width: clamp(36px, 9vw, 58px); }
+}
+/* On narrow phones, put the period label above its seven cells. This retains
+   the entire 4 x 7 week and real 44px targets without a horizontal scroller. */
+@media (max-width: 430px) {
+  .pt-app .friends-page .friends-time-editor { margin-inline: -12px; }
+  .pt-app .friends-page .friends-availability { padding: 6px 4px; }
+  .pt-app .friends-page .friends-availability header,
+  .pt-app .friends-page .friends-availability > p { margin-inline: 8px; }
+  .pt-app .friends-page .friends-availability table { display: grid; grid-template-columns: repeat(7, minmax(44px, 1fr)); gap: 3px 0; }
+  .pt-app .friends-page .friends-availability :is(thead, tbody, tr) { display: contents; }
+  .pt-app .friends-page .friends-availability :is(colgroup, thead td) { display: none; }
+  .pt-app .friends-page .friends-availability th[scope='row'] { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 6px; padding: 3px 8px; font-size: 11px; }
+  .pt-app .friends-page .friends-availability td button { min-width: 44px; }
+}
+
+/* Setup reconciliation: one scene followed by open, unboxed preferences. */
+.pt-app .friends-page .friends-setup { gap: 24px; }
+.pt-app .friends-page .friends-setup form { gap: 32px 40px; }
+.pt-app .friends-page .friends-setup .friends-box {
+  border: 0; border-radius: 0; background: transparent; padding: 0;
+}
+.pt-app .friends-page .friends-box header { min-height: 44px; margin-bottom: 12px; }
+.pt-app .friends-page .friends-box h3 { font-size: 16px; font-weight: 500; }
+.pt-app .friends-page .friends-box header > span { font-size: 12px; }
+.pt-app .friends-page .friends-chips { gap: 8px; }
+.pt-app .friends-page .friends-chips button {
+  border-radius: 14px; padding: 8px 12px; font-size: 13px;
+}
+.pt-app .friends-page .friends-chips .friends-add { border-style: solid; background: transparent; }
+.pt-app .friends-page .friends-clear { font-size: 13px; }
+.pt-app .friends-page .friends-setup .match-setup-footer {
+  border: 0; border-top: 1px solid #ffffff26; border-radius: 0;
+  background: transparent; padding: 24px 0 0; gap: 16px;
+}
+.pt-app .friends-page .friends-setup .match-setup-footer > p { margin: 0; }
+.pt-app .friends-page .friends-party { font-size: 14px; }
+.pt-app .friends-page .friends-party button { border-radius: 14px; }
+.pt-app .friends-page .friends-setup .friends-scene { border: 0; }
+@media (max-width: 800px) {
+  .pt-app .friends-page .friends-setup { gap: 22px; }
+  .pt-app .friends-page .friends-setup form { gap: 28px; }
+}
+@media (max-width: 430px) {
+  .pt-app .friends-page .friends-time-editor { margin-inline: 0; }
+  .pt-app .friends-page .friends-availability header,
+  .pt-app .friends-page .friends-availability > p { margin-inline: 0; }
+}
+@media (max-height: 650px) {
+  .pt-app .friends-page .friends-setup .friends-scene { height: 180px; }
+  .pt-app .friends-page .friends-setup .friends-mascot { max-width: 78%; }
+}
+
+/* Seven 44px cells need the full content width on the smallest phones. */
+@media (max-width: 350px) {
+  .pt-app .friends-page .friends-time-editor { margin-inline: -12px; }
+  .pt-app .friends-page .friends-availability header,
+  .pt-app .friends-page .friends-availability > p { margin-inline: 12px; }
+}
+
+/* Reference proportions, fitted around the host shell and real form controls. */
+.pt-app .friends-page .friends-setup { max-width: 964px; gap: 19px; }
+.pt-app .friends-page .match-view-segments svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.pt-app .friends-page .match-view-segments a { gap: 7px; }
+.pt-app .friends-page .match-view-segments a[aria-current] { font-weight: 600; }
+.pt-app .friends-page .match-dashboard-heading h2 { font-size: clamp(31px, 4vw, 52px); letter-spacing: -1.8px; }
+.pt-app .friends-page .match-dashboard-heading > p { font-size: 9px; letter-spacing: 2px; }
+.pt-app .friends-page .match-dashboard-heading > p::before { content: ''; display: inline-block; width: 5px; height: 5px; margin: 0 7px 2px 0; border-radius: 50%; background: #b5c99c; }
+.pt-app .friends-page .friends-setup form { gap: 18px; }
+.pt-app .friends-page .friends-setup .friends-box {
+  padding: 22px; border: 1px solid #ffffff20; border-radius: 21px;
+  background: #ffffff06;
+}
+.pt-app .friends-page .friends-box header { margin-bottom: 6px; min-height: 44px; }
+.pt-app .friends-page .friends-box h3 { font-size: 14px; font-weight: 600; letter-spacing: -.3px; }
+.pt-app .friends-page .friends-box header > span { font-size: 10px; }
+.pt-app .friends-page .friends-section-hint { margin: 0 0 17px; font-size: 11px; }
+.pt-app .friends-page .friends-chips { gap: 7px; }
+.pt-app .friends-page .friends-chips button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-radius: 11px; font-size: 12px; padding: 8px 11px; }
+.pt-app .friends-page .friends-interest-icon { flex: 0 0 14px; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; opacity: .75; }
+.pt-app .friends-page .friends-interest-check { font-size: 10px; }
+.pt-app .friends-page .friends-clear { font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+.pt-app .friends-page .friends-setup .match-setup-footer {
+  padding: 19px 22px; border: 1px solid #ffffff20; border-radius: 20px;
+  background: #ffffff06; grid-template-columns: minmax(0, 1fr) minmax(206px, .6fr); gap: 12px 24px;
+}
+.pt-app .friends-page .friends-party { font-size: 12px; justify-content: flex-start; gap: 10px 18px; }
+.pt-app .friends-page .friends-party > span { flex-basis: 100%; }
+.pt-app .friends-page .friends-party button { min-width: 60px; font-size: 11px; padding: 7px 10px; border-radius: 8px; }
+.pt-app .friends-page .friends-party small { font-size: 11px; }
+.pt-app .friends-page .friends-setup .match-setup-footer > .match-button-primary { grid-column: 2; grid-row: 1; align-self: center; border-radius: 12px; }
+.pt-app .friends-page .friends-setup .match-setup-footer > p { grid-column: 1 / -1; }
+.pt-app .friends-page .friends-setup .friends-scene { height: 260px; border-radius: 24px; }
+.pt-app .friends-page .friends-setup .friends-companion-1 { width: 63px; }
+.pt-app .friends-page .friends-setup .friends-companion-2 { width: 53px; }
+.pt-app .friends-page .friends-setup .friends-companion-3 { width: 42px; }
+.pt-app .friends-page .friends-setup .friends-reward { bottom: 13px; font-size: 9px; padding: 6px 12px; }
+@media (max-width: 800px) {
+  .pt-app .friends-page .friends-setup { gap: 12px; }
+  .pt-app .friends-page .friends-setup form { gap: 12px; }
+  .pt-app .friends-page .friends-setup .friends-box { padding: 12px; border-radius: 17px; }
+  .pt-app .friends-page .friends-box h3 { font-size: 13px; }
+  .pt-app .friends-page .friends-section-hint { display: none; }
+  .pt-app .friends-page .friends-chips button { font-size: 11px; padding-inline: 9px; }
+  .pt-app .friends-page .friends-setup .friends-scene { border-radius: 16px; }
+  .pt-app .friends-page .friends-setup .friends-companion-1 { width: 54px; }
+  .pt-app .friends-page .friends-setup .friends-companion-2 { width: 46px; }
+  .pt-app .friends-page .friends-setup .friends-companion-3 { width: 36px; }
+  .pt-app .friends-page .friends-setup .match-setup-footer { grid-template-columns: minmax(0, 1fr); padding: 12px; border-radius: 17px; }
+  .pt-app .friends-page .friends-setup .match-setup-footer > .match-button-primary { grid-column: 1; grid-row: auto; }
+  .pt-app .friends-page .friends-party { justify-content: space-between; gap: 8px; }
+  .pt-app .friends-page .friends-party > span { flex-basis: auto; }
+}
+@media (max-width: 430px) {
+  .pt-app .friends-page .friends-setup .friends-availability { padding-inline: 0; border: 0; background: transparent; }
+}
+@media (max-height: 650px) {
+  .pt-app .friends-page .friends-setup .friends-scene { height: 180px; }
+  .pt-app .friends-page .friends-setup .friends-companion-1 { width: 30px; }
+  .pt-app .friends-page .friends-setup .friends-companion-2 { width: 26px; }
+  .pt-app .friends-page .friends-setup .friends-companion-3 { width: 22px; }
+}
+
+.pt-app .friends-page .match-view-segments a { display: flex; flex-direction: row; align-items: center; justify-content: center; }
+.pt-app .friends-page .friends-intro-copy { margin-top: 14px; color: #b5c1a7; font-size: 12px; line-height: 1.7; }
+@media (max-width: 800px) { .pt-app .friends-page .friends-intro-copy { display: none; } }

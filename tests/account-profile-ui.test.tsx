@@ -63,7 +63,7 @@ it('old account route replaces history with the shared Profile without automatic
 
 it('Profile navigation reaches the canonical identity editor and writes identity only through account-profile', async () => {
   mount('/settings')
-  await screen.findByRole('heading', { name: 'Settings', exact: true })
+  await screen.findByRole('heading', { name: 'A little peace of mind.', exact: true })
   expect(within(document.querySelector('.pt-settings')!).queryByRole('link', { name: 'Profile', exact: true })).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
   const row = within(screen.getByRole('navigation', { name: 'Account navigation' })).getByRole('link', { name: 'Profile', exact: true })
@@ -72,7 +72,7 @@ it('Profile navigation reaches the canonical identity editor and writes identity
   await screen.findByRole('heading', { name: account.display_name, exact: true })
   fireEvent.click(screen.getByRole('button', { name: 'Edit profile', exact: true }))
   fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Session Alex' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Save identity', exact: true }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save profile', exact: true }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(writes).toEqual([{ path: '/api/matchmaking/account-profile', body: { ...account, display_name: 'Session Alex' } }])
   expect(screen.queryByText('Account profile saved.')).toBeNull()

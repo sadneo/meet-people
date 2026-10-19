@@ -28,7 +28,12 @@ for (const mode of ['active', 'downtime'] as const) {
     expect(view.container.querySelector('.pt-pixel-pebble')).toBeNull()
     finish(Response.json({ mode }))
     await screen.findByRole('button', { name: 'Check for a match' })
-    await waitFor(() => expect(view.container.querySelector('.pt-pixel-pebble')?.getAttribute('data-expression')).toBe('thinking'))
-    expect(view.container.querySelectorAll('.pt-pixel-pebble image')).toHaveLength(1)
+    if (mode === 'active') {
+      await waitFor(() => expect(view.container.querySelector('.friends-scene.is-searching')).toBeTruthy())
+      expect(view.container.querySelectorAll('.friends-mascot')).toHaveLength(1)
+    } else {
+      await waitFor(() => expect(view.container.querySelector('.pt-pixel-pebble')?.getAttribute('data-expression')).toBe('thinking'))
+      expect(view.container.querySelectorAll('.pt-pixel-pebble image')).toHaveLength(1)
+    }
   })
 }

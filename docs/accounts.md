@@ -76,3 +76,36 @@ coverage uses explicit mocked SDK/network fixtures, with no env/admin access or
 real account creation. `pnpm test:auth` and local Auth provisioning scripts perform
 real operations and are not source-only checks. API authorization/RLS remains
 server-owned; SPA gating does not protect static bundle downloads.
+
+### Local Auth acceptance script
+
+`scripts/test-local-auth.mjs` is a separately authorized **live local acceptance
+check**, not a unit test. It obtains local status through the existing wrapper,
+requires a plain HTTP `127.0.0.1` origin, and creates only two disposable users via
+signup, out-of-band local email confirmation and password login. Passwords and
+addresses are generated per run; credentials/tokens/provider diagnostics are not
+printed or embedded. It does not provision the dedicated development account.
+
+The first user saves four sequential chapters through `save_account`: identity;
+three unique interests; social intent; then birthdate, synthetic campus area, an
+actual availability window, distance and group. Each save (including a later
+profile/settings edit) is followed by independent `get_account` readback. Exact
+labels/window tuples are compared independent of SQL ordering, with no missing
+fields accepted. The script also checks own-settings readback, the second user's
+empty account and private-row isolation, denied direct settings writes, rejected
+skipped onboarding with unchanged state, anonymous denial, logout/password login,
+and recovery/password-change/password login with account preservation.
+
+The `finally` block attempts deletion only for IDs returned by this run's signup
+calls. It attempts all recorded deletions even if one fails; cleanup failures are
+reported generically and suppress the success message. A server/network failure
+can still prevent deletion, so success is never claimed in that case. There is no
+user enumeration, bulk cleanup, schema change, environment/config rewrite or reset.
+
+`tests/local-auth-script.test.ts` executes the script with mocked status/client
+boundaries, SQL-sorted synthetic readbacks and injected failures. These tests need
+no local services, credentials or real users. They do **not** establish live Auth,
+RPC/RLS installation, recovery delivery or optional-embedding/provider readiness.
+Real execution requires a separately approved local stack with the reconciled
+account contract and approved interest-trigger/provider behavior; no provider or
+trigger bypass is introduced by the script repair.

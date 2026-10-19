@@ -29,7 +29,7 @@ for (const signedIn of [true, false]) {
       await expect(actions.getByRole('textbox')).toHaveCount(0)
       await expect(page.getByRole('dialog')).toHaveCount(0)
       await expect(actions).toContainText(signedIn ? 'Manage your sign-in email and password.' : 'Sign in to manage your email and password.')
-      const standardText = settings.getByText('Campus location (demo)', { exact: true })
+      const standardText = settings.getByText('Home city / campus', { exact: true })
       const standardStart = await standardText.evaluate(element => element.getBoundingClientRect().left)
       for (const label of ['Email & password', signedIn ? 'Log out' : 'Sign in to Pebble']) {
         const textStart = await actions.locator('strong').filter({ hasText: label }).evaluate(element => element.getBoundingClientRect().left)

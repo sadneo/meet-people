@@ -170,9 +170,8 @@ it('owner/token swap during final save fences late callbacks and keeps the new o
 it('ordinary Profile editing cannot clear readiness once onboarding is complete', async () => {
   stored = accountFixture(complete); mount('/profile')
   const edit = await screen.findByRole('button', { name: 'Edit profile', exact: true })
-  await waitFor(() => expect((edit as HTMLButtonElement).disabled).toBe(false)); fireEvent.click(edit)
-  await waitFor(() => expect(button('Save shared preferences').disabled).toBe(false))
-  fireEvent.click(button('Coffee')); fireEvent.submit(button('Save shared preferences').closest('form')!)
+  await waitFor(() => expect((edit as HTMLButtonElement).disabled).toBe(false))
+  fireEvent.click(button('Coffee')); fireEvent.click(button('Save usual interests'))
   expect(screen.getByRole('alert').textContent).toContain('three'); expect(calls.some(call => call.method === 'PUT')).toBe(false)
   expect(completedAccountChapters(stored)).toEqual([0, 1, 2, 3])
 })

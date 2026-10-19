@@ -3,7 +3,8 @@ import { browserAccount, browserProfile, mockMatchingApi, mockMatchingSession } 
 import type { Account } from '../shared/account'
 
 for (const width of [320, 801, 1440]) {
-  test(`saved Friends dashboard at ${width}: real summary, PixelPebble, keyboard preferences and manual actions`, async ({ page }) => {
+  test(`saved Friends setup at ${width}: inline preferences, original mascot, keyboard preferences and manual actions`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     const external: string[] = [], queueRequests: string[] = []
     await page.route('**/*', route => {
       if (new URL(route.request().url()).origin !== 'http://127.0.0.1:3194') { external.push(route.request().url()); return route.abort() }
@@ -21,27 +22,25 @@ for (const width of [320, 801, 1440]) {
     page.on('request', request => { if (/\/(queue|result)$/.test(request.url())) queueRequests.push(request.method()) })
     await page.setViewportSize({ width, height: width === 320 ? 568 : 900 })
     await page.goto('/matchmaking')
-    const dashboard = page.getByRole('region', { name: 'Friends matching dashboard', exact: true })
+    const dashboard = page.getByRole('region', { name: 'Find your people', exact: true })
     await expect(dashboard).toBeVisible()
     await expect(page.getByRole('dialog')).toHaveCount(0)
-    await expect(dashboard.locator('.pt-pixel-pebble[data-expression="happy"] image')).toHaveCount(1)
-    const summary = dashboard.getByRole('region', { name: 'What brings you together', exact: true })
-    await expect(summary.getByText('Sam', { exact: true })).toBeVisible()
-    await expect(summary.getByText('Coffee', { exact: true })).toBeVisible()
-    await expect(summary.getByText('Monday · 08:00–12:00', { exact: true })).toBeVisible()
-    await expect(summary.getByText('Sunday · 21:00–24:00', { exact: true })).toBeVisible()
-    await expect(summary.getByText('North campus', { exact: true })).toBeVisible()
+    await expect(dashboard.locator('.friends-mascot')).toHaveCount(1)
+    const summary = dashboard.getByRole('table', { name: 'Weekly availability', exact: true })
+    await expect(dashboard.getByRole('button', { name: 'Coffee', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(summary.getByRole('button', { name: 'Monday morning, available' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(summary.getByRole('button', { name: 'Sunday late, available' })).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByRole('link', { name: 'Dating', exact: true })).toHaveAttribute('href', '/matchmaking?view=dating')
     await expect(page.getByRole('button', { name: 'Dating', exact: true })).toHaveCount(0)
     await expect(summary.getByRole('heading', { name: 'Places', exact: true })).toHaveCount(0)
-    const controls = dashboard.getByRole('navigation', { name: 'Matching modes', exact: true })
+    const controls = page.getByRole('navigation', { name: 'Matching modes', exact: true })
     await expect(page.locator('.match-home a[href="/settings"]')).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Downtime matchmaking', exact: true })).toHaveCount(0)
     const preferences = controls.getByRole('button', { name: 'Preferences', exact: true })
-    const actions = dashboard.getByRole('region', { name: 'Matching actions', exact: true })
-    const start = actions.getByRole('button', { name: 'Find Friends', exact: true })
+    const actions = page.locator('.match-focus-actions')
+    const start = page.getByRole('button', { name: 'Find Friends', exact: true })
     await expect(start).toBeEnabled()
-    for (const control of [preferences, page.getByRole('link', { name: 'Dating', exact: true }), start, dashboard.getByRole('button', { name: 'Refresh status', exact: true })]) {
+    for (const control of [preferences, page.getByRole('link', { name: 'Dating', exact: true }), start, page.getByRole('button', { name: 'Refresh status', exact: true })]) {
       const box = (await control.boundingBox())!
       const name = await control.getAttribute('aria-label') ?? await control.innerText()
       console.log(`Dashboard target ${width} ${name}: ${JSON.stringify(box)}`)
@@ -65,7 +64,7 @@ for (const width of [320, 801, 1440]) {
     expect(queueRequests).toEqual([])
     await page.keyboard.press('Escape')
     await expect(preferences).toBeFocused()
-    await expect(summary).toContainText('North campus')
+    await expect(summary.getByRole('button', { name: 'Monday morning, available' })).toHaveAttribute('aria-pressed', 'true')
     await start.scrollIntoViewIfNeeded()
     await expect(start).toBeInViewport()
     expect(await start.evaluate(element => {
@@ -76,14 +75,14 @@ for (const width of [320, 801, 1440]) {
     await start.focus()
     await page.keyboard.press('Enter')
     await expect(actions.getByRole('button', { name: 'Check for a match', exact: true })).toBeEnabled()
-    await expect(dashboard.locator('.pt-pixel-pebble[data-expression="thinking"]')).toHaveCount(1)
+    await expect(page.locator('.friends-scene.is-searching')).toHaveCount(1)
     expect(checks).toBe(0)
     await actions.getByRole('button', { name: 'Check for a match', exact: true }).click()
-    await expect(dashboard.getByRole('heading', { name: 'Taylor', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Taylor', exact: true })).toBeVisible()
     expect(checks).toBe(1)
     await actions.getByRole('button', { name: 'Cancel search', exact: true }).click()
     await expect(start).toBeEnabled()
-    await expect(dashboard.locator('.pt-pixel-pebble[data-expression="happy"]')).toHaveCount(1)
+    await expect(dashboard.locator('.friends-scene:not(.is-searching)')).toHaveCount(1)
     expect(queueRequests).toEqual(['POST', 'GET', 'DELETE'])
     expect(external).toEqual([])
   })
