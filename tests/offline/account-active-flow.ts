@@ -4,13 +4,13 @@ import type { Request,Response } from 'express'
 import { createMatchmakingRouter,type UserContextTransport } from '../../api/matchmaking.js'
 import { disposable } from './disposable.js'
 import { emptyAccount, type Account } from '../../shared/account.js'
-const {checked,sql,literal,rpc}=disposable('pebble-sprint-review-20261019')
+const {checked,sql,literal,rpc}=disposable(process.argv.includes('--fresh-demo')?'pebble-demo-final-20261019':'pebble-sprint-review-20261019')
 const a='b1000000-0000-4000-8000-000000000001',b='b1000000-0000-4000-8000-000000000002',place='b1100000-0000-4000-8000-000000000001'
 const rows=(owner:string,name:string)=>Promise.resolve(sql(`begin;set local role authenticated;set local request.jwt.claim.sub=${literal(owner)};select coalesce(jsonb_agg(to_jsonb(r)),'[]') from public.${name}() r;commit;`))
 const transport={verify:async(token:string)=>[a,b].includes(token)?{id:token}:null,actor:(owner:string)=>({
  account:()=>rpc(owner,'get_account'),saveAccount:(value:unknown)=>rpc(owner,'save_account',[JSON.stringify(value)]),
  profile:()=>rpc(owner,'get_matchmaking_profile'),status:()=>rows(owner,'get_queue_status'),result:()=>rows(owner,'get_queue_match'),join:(kind:string)=>rpc(owner,'join_queue',[kind]),leave:()=>rpc(owner,'leave_queue'),
- friendsSearchPreferences:()=>rpc(owner,'get_friends_search_preferences'),saveFriendsSearchPreferences:(value:unknown)=>rpc(owner,'save_friends_search_preferences',[JSON.stringify(value)]),
+ friendsRuntime:()=>rpc(owner,'get_friends_runtime'),friendsSearchPreferences:()=>rpc(owner,'get_friends_search_preferences'),saveFriendsSearchPreferences:(value:unknown)=>rpc(owner,'save_friends_search_preferences',[JSON.stringify(value)]),
  resolveSearchArea:(value:unknown)=>rpc(owner,'resolve_search_area',[JSON.stringify(value)]),
 })} as unknown as UserContextTransport
 function request(owner:string,method:string,path:string,body?:unknown){return new Promise<{status:number;data:any}>((resolve,reject)=>{
@@ -48,6 +48,7 @@ try{
  assert.deepEqual((await ok(b,'PUT','/profile',changed)).profile,changed)
  assert.deepEqual((await ok(b,'GET','/account')).profile,changed)
  result=await ok(a,'GET','/result');assert.equal(result.candidate.overlap,'extended');assert.deepEqual(result.candidate.interests,['Custom pottery'])
+ assert.deepEqual(await ok(a,'GET','/friends-search-preferences/runtime'),{available:true,policy:'nearby-first-v1',canJoin:true})
  const filter=await ok(b,'GET','/friends-search-preferences');assert.equal(filter.revision,1)
  assert.equal(checked(`select to_jsonb(count(*)) from public.user_interests where profile_id in('${a}','${b}') and embedding is not null`),0)
  console.log('PASS: actual API -> canonical four-chapter onboarding/readback -> trusted location -> real active result -> shared interest/week edit through canonical writer -> changed result; invalid edit rollback and filter isolation. No provider calls; synthetic Auth only.')

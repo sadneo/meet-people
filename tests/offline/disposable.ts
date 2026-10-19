@@ -3,7 +3,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import assert from 'node:assert/strict'
 export const database='pebble_safety_owner_disposable'
 export function disposable(container:string){
- assert.match(container,/^(?:pebble-safety-review-20261019(?:-fresh|-final)?|pebble-sprint-review-20261019)$/)
+ assert.match(container,/^(?:pebble-safety-review-20261019(?:-fresh|-final)?|pebble-sprint-review-20261019|pebble-demo-final-20261019)$/)
  const inspect=JSON.parse(execFileSync('docker',['inspect','--format','{"network":{{json .HostConfig.NetworkMode}},"ports":{{json .NetworkSettings.Ports}}}',container],{encoding:'utf8'}))
  assert.equal(inspect.network,'none');assert.deepEqual(inspect.ports,{})
  const sql=(source:string)=>{

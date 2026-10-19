@@ -3,9 +3,9 @@ import { completedAccountChapters, emptyAccount, type Account } from '../shared/
 import { SaveFriendsSearchPreferencesSchema, type FriendsSearchPreferences } from '../shared/friends-search-preferences'
 
 // Browser-only module interception; never a production session bypass.
-export async function mockMatchingSession(page: Page, signedIn = true, signOutFailures = 0) {
+export async function mockMatchingSession(page: Page, signedIn = true, signOutFailures = 0, principal = { id: 'a0000000-0000-4000-8000-000000000001', token: 'browser-user-jwt' }) {
   await page.route('**/src/supabase.ts', route => route.fulfill({ contentType: 'application/javascript', body: `
-    let session = ${signedIn ? JSON.stringify({ access_token: 'browser-user-jwt', user: { id: 'a0000000-0000-4000-8000-000000000001' } }) : 'null'};
+    let session = ${signedIn ? JSON.stringify({ access_token: principal.token, user: { id: principal.id } }) : 'null'};
     let failures = ${signOutFailures};
     const listeners = new Set();
     export const supabase = { auth: {
@@ -21,14 +21,14 @@ export async function mockMatchingSession(page: Page, signedIn = true, signOutFa
       getUser: async () => ({ data: { user: session ? { ...session.user, email: 'browser@example.test', email_confirmed_at: '2026-10-01', is_anonymous: false } : null }, error: null }),
       signInWithOtp: async () => ({ error: null }),
       setSession: async ({ access_token, refresh_token }) => {
-        if (access_token !== 'browser-user-jwt' || refresh_token !== 'browser-refresh-fixture') return { data: { session: null }, error: new Error('Fixture SDK rejected session') };
-        session = { access_token, user: { id: 'a0000000-0000-4000-8000-000000000001' } };
+        if (access_token !== ${JSON.stringify(principal.token)} || refresh_token !== 'browser-refresh-fixture') return { data: { session: null }, error: new Error('Fixture SDK rejected session') };
+        session = { access_token, user: { id: ${JSON.stringify(principal.id)} } };
         for (const callback of listeners) callback('SIGNED_IN', session);
         return { data: { session }, error: null };
       },
       signInWithPassword: async ({ email, password }) => {
         if (email !== 'development-fixture@example.test' || password !== 'Synthetic-fixture-password-1!') return { data: { session: null }, error: new Error('Fixture credentials rejected') };
-        session = { access_token: 'browser-user-jwt', user: { id: 'a0000000-0000-4000-8000-000000000001' } };
+        session = { access_token: ${JSON.stringify(principal.token)}, user: { id: ${JSON.stringify(principal.id)} } };
         for (const callback of listeners) callback('SIGNED_IN', session);
         return { data: { session }, error: null };
       }

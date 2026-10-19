@@ -1,3 +1,4 @@
+import { ProfilePhotoImage } from '../account/ProfilePhotoImage'
 import { calculatedAge, todayDate } from '../account/profile-rules'
 import { SafetyActions } from '../account/SafetyControls'
 import { FriendsPreferences } from './FriendsPreferences'
@@ -154,7 +155,7 @@ function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode
 
   </>
   const visual = candidate ? <article className="match-person">
-    <div className="match-person-portrait">{candidate.avatar ? <img src={candidate.avatar} alt="" referrerPolicy="no-referrer" /> : <Icon name="profile" size={80} />}</div>
+    <div className="match-person-portrait"><ProfilePhotoImage owner={candidate.id} legacy={candidate.avatar} alt={`${candidate.name}'s profile photo`} fallback={<Icon name="profile" size={80} />} /></div>
     <h2>{candidate.name}</h2><div className="match-person-interests">{candidate.interests.slice(0, 4).map(interest => <span key={interest}>{interest}</span>)}</div>
     <p>Weekly overlap: {candidate.overlap === 'none' ? 'None' : candidate.overlap === 'some' ? 'Under two hours' : 'Two hours or more'}</p>
     {candidate.meetup && <section><h3>{candidate.meetup.title ?? 'Suggested meetup'}</h3>{candidate.meetup.location && <p>{candidate.meetup.location}</p>}{candidate.meetup.startsAt && <time dateTime={candidate.meetup.startsAt}>{new Date(candidate.meetup.startsAt).toLocaleString()}</time>}</section>}

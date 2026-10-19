@@ -66,6 +66,6 @@ lock/deadlock failures stay unavailable, never a claimed completed result.
   The first flow assertion expected input interest order; canonical readback sorts
   interests. Corrected that fixture expectation and reran successfully.
 
-Remaining gates: full frontend/API/SQL flow; broader Events/group/worker/notification safety; secure picture lifecycle;
+Offline full frontend/API/SQL flow and secure picture lifecycle now have bounded acceptance; see `demo-matchmaking-readiness.md`. Remaining gates: live Auth/PostgREST and broader Events/group/worker/notification safety;
 real reviewed place catalogue and coordinate retention policy; explicit app schema
 activation and live Auth/PostgREST acceptance. Downtime lifecycle remains deferred.

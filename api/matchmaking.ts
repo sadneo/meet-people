@@ -1,3 +1,7 @@
+import { createDatingLiveRouter } from './dating-live.js'
+import type { DatingEnable } from '../shared/dating-live.js'
+import { createProfilePhotoRouter } from './profile-photo.js'
+import type { ProfilePhotoWrite } from '../shared/profile-photo.js'
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
@@ -35,12 +39,21 @@ export interface UserContextTransport {
     saveAccount?(account: Account): PromiseLike<RpcResponse>
     profileDetails?(): PromiseLike<RpcResponse>
     saveProfileDetails?(details: SaveProfileDetails): PromiseLike<RpcResponse>
+    friendsRuntime?(): PromiseLike<RpcResponse>
     friendsSearchPreferences?(): PromiseLike<RpcResponse>
     saveFriendsSearchPreferences?(preferences: SaveFriendsSearchPreferences): PromiseLike<RpcResponse>
     detailedSettings?(): PromiseLike<RpcResponse>
     saveDetailedSettings?(settings: SaveDetailedSettings): PromiseLike<RpcResponse>
+    datingRuntime?(): PromiseLike<RpcResponse>
+    setDatingEnabled?(value: DatingEnable): PromiseLike<RpcResponse>
+    datingCandidate?(excludedIds: string[]): PromiseLike<RpcResponse>
+    requestDatingConnection?(target: string): PromiseLike<RpcResponse>
     datingAggregate?(): PromiseLike<RpcResponse>
     saveDatingAggregate?(aggregate: SaveDatingAggregate): PromiseLike<RpcResponse>
+    profilePhotoReference?(owner: string): PromiseLike<RpcResponse>
+    profilePhotoState?(): PromiseLike<RpcResponse>
+    saveProfilePhoto?(value: ProfilePhotoWrite): PromiseLike<RpcResponse>
+    readProfilePhoto?(owner: string, revision: number): PromiseLike<RpcResponse>
     searchPlaces?(query: string): PromiseLike<RpcResponse>
     resolveSearchArea?(request: ResolveSearchArea): PromiseLike<RpcResponse>
     browserSearchLocation?(request: BrowserSearchLocation): PromiseLike<RpcResponse>
@@ -79,7 +92,7 @@ export function createUserContextTransport(config: { url: string; publicKey: str
     async verify(token) {
       const { data, error } = await verifier.auth.getUser(token)
       if (error && (!error.status || error.status >= 500)) throw new Error('Verification unavailable')
-      return !error && data.user && z.uuid().safeParse(data.user.id).success ? { id: data.user.id } : null
+      return !error && data.user && data.user.is_anonymous !== true && z.uuid().safeParse(data.user.id).success ? { id: data.user.id } : null
     },
     actor(token) {
       const client = createClient(config.url, config.publicKey, { ...options, global: { fetch: config.fetch, headers: { Authorization: `Bearer ${token}` } } })
@@ -111,6 +124,10 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         unblockOwnerTarget: target => client.rpc('unblock_owner_target', { target_in: target }),
         submitSafetyReport: report => client.rpc('submit_safety_report', { report_in: report }),
         ownerSafetyReport: requestId => client.rpc('get_owner_safety_report', { request_id_in: requestId }),
+        friendsRuntime: () => client.rpc('get_friends_runtime'),
+        datingRuntime: () => client.rpc('get_dating_runtime'), setDatingEnabled: value => client.rpc('set_dating_enabled', { change_in: value }), datingCandidate: excludedIds => client.rpc('find_dating_candidate', { excluded_in: excludedIds }), requestDatingConnection: target => client.rpc('request_dating_connection', { target_in: target }),
+        profilePhotoReference: owner => client.rpc('get_profile_photo_reference', { owner_in: owner }),
+        profilePhotoState: () => client.rpc('get_profile_photo_state'), saveProfilePhoto: value => client.rpc('save_profile_photo', { photo_in: value }), readProfilePhoto: (owner, revision) => client.rpc('read_profile_photo', { owner_in: owner, revision_in: revision }),
         join: qtype => client.rpc('join_queue', { qtype }), leave: () => client.rpc('leave_queue'), status: () => client.rpc('get_queue_status'), result: () => client.rpc('get_queue_match'), profile: () => client.rpc('get_matchmaking_profile'), save: profile => client.rpc('save_matchmaking_profile', { profile_in: profile }),
         listingStatus: listingId => client.rpc('get_listing_matchmaking_status', { listing_id_in: listingId }),
         listingInterest: listingId => client.rpc('express_listing_matchmaking_interest', { listing_id_in: listingId }),
@@ -168,8 +185,10 @@ export function createMatchmakingRouter(transport: UserContextTransport | null) 
   router.use('/friends-search-preferences', createFriendsSearchPreferencesRouter())
   router.use('/detailed-settings', createDetailedSettingsRouter())
   router.use('/dating-preferences', createDatingRouter())
+  router.use('/dating', createDatingLiveRouter())
   router.use('/safety', createSafetyRouter())
   router.use('/search-locations', createSearchLocationsRouter())
+  router.use('/profile-photo', createProfilePhotoRouter())
   const readAccount = async (response: Response) => {
     const read = actor(response).account
     if (!read) throw new MatchingFailure(503, 'unavailable', 'Unified account RPC is not available yet.')

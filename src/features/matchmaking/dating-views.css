@@ -124,3 +124,42 @@
 }
 
 .dating-view .dating-eligibility:not(.pt-sr-only) { position: relative; z-index: 3; padding: 12px; margin: 0; background: var(--pt-soft); color: var(--pt-ink); font-size: 13px; line-height: 1.6; }
+
+/* Real Dating uses the existing card language with scrollable content/actions. */
+.dating-live-view .dating-deck-focus { display: flex; flex-direction: column; overflow: auto; border: 1px solid var(--pt-green-line); border-radius: 30px; background: var(--pt-surface); }
+.dating-live-view .dating-overlay-header { position: relative; flex: 0 0 82px; background: #e9eddf; }
+.dating-live-view .dating-overlay-header .match-view-segments { border-color: #d8e2cd; background: #e9eddf; box-shadow: none; backdrop-filter: none; }
+.dating-live-view .dating-overlay-header .match-view-segments a { color: #416535; }
+.dating-live-view .dating-overlay-header .match-view-segments a[aria-current] { color: #34583E; }
+.dating-live-view .dating-filter { color: var(--pt-green); background: white; border-color: var(--pt-green-line); }
+.dating-live-empty { display: flex; flex: 1; flex-direction: column; justify-content: center; align-items: center; gap: 16px; padding: 28px 24px; color: var(--pt-ink); text-align: center; }
+.dating-live-empty h2,.dating-live-empty h1 { margin: 0; font: 400 clamp(30px,5vw,48px)/1.15 Georgia,serif; color: var(--pt-ink); }
+.dating-live-empty p { max-width: 52ch; margin: 0; font-size: 15px; line-height: 1.6; }
+.dating-live-view .dating-live-card { position: relative; flex: 1 0 auto; min-height: 520px; border-radius: 0; box-shadow: none; overflow: hidden; }
+.dating-live-view .dating-portrait { inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; transform: none; }
+.dating-live-view .dating-card-copy { position: relative; left: auto; right: auto; bottom: auto; margin: 180px 0 0; max-width: none; padding: 70px 26px 24px; overflow-wrap: anywhere; }
+.dating-live-view .dating-photo-scrim { position: absolute; inset: 0; background: linear-gradient(0deg,#10180ff5 0%,#10180fbd 65%,#10180f20 100%); }
+.dating-live-view .dating-live-no-photo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding-bottom: 180px; color: #f9faf5; background: #50664d; }
+.dating-live-controls { padding: 18px 20px; display: grid; gap: 12px; color: var(--pt-ink); background: #FAFBF7; }
+.dating-live-controls p { margin: 0; line-height: 1.5; font-size: 14px; }
+.dating-live-controls [role='alert'] { color: #8a283b; }
+.dating-live-toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
+.dating-live-toolbar button { display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1 1 150px; min-height: 48px; padding: 10px 14px; white-space: normal; }
+.dating-live-view a { color: var(--pt-green); }
+.dating-live-toolbar .account-primary { color: #fffdf7; background: #33553f; border-color: #33553f; }
+.dating-live-toolbar .account-primary[data-dating-request] { color: #773b48; background: #efd9d7; border-color: #d4aaa8; }
+.dating-live-toolbar .account-primary:hover:enabled { background: #294734; }
+.dating-live-toolbar .account-primary[data-dating-request]:hover:enabled { background: #f5e5e3; }
+.dating-live-view .dating-name-row h2 { min-width: 0; align-items: baseline; }
+.dating-live-view .dating-name { min-width: 0; flex: 0 1 auto; }
+.dating-live-view .dating-age { flex: 0 0 auto; white-space: nowrap; }
+
+.dating-live-view .dating-live-bio,.dating-live-view .dating-live-intentions { color: #fff; font-size: 14px; line-height: 1.5; }
+.dating-live-view :is(button,a):focus-visible { outline: 3px solid var(--pt-focus); outline-offset: 3px; }
+@media(max-width:700px){
+ .dating-live-view .dating-live-card { flex-basis: auto; min-height: 480px; }
+ .dating-live-view .dating-card-copy { padding: 60px 20px 20px; margin-top: 150px; }
+ .dating-live-controls { padding: 16px; }
+ .dating-live-toolbar { gap: 8px; }
+ .dating-live-toolbar button { flex-basis: 125px; }
+}

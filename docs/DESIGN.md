@@ -1,5 +1,16 @@
 # Pebble Design System
 
+## Real matchmaking demo scope (2026-10-19)
+
+Daniel explicitly authorized real signed-in Dating and one shared uploaded profile
+photo for the demo. Capability-gated real Dating, current Friends filter consumption
+and confirmed private photo storage supersede older prototype-only/preview-only
+statements below **only when their installed backend capability is confirmed**.
+Otherwise retain honest unavailable/prototype states and the exact local disclosure.
+See [demo-matchmaking-readiness.md](demo-matchmaking-readiness.md) for behavior,
+actual bounded verification, privacy limits and pending activation. This document
+change does not claim app installation or live Auth/PostgREST acceptance.
+
 ## Direction
 
 Pebble is a friends-first college social app: find people, make a plan, meet in

@@ -7,6 +7,7 @@ export function friendsPreferencesFixture() {
     calls: [] as { method: string; token: string | null; body: SaveFriendsSearchPreferences | null }[] }
   function commit(value: SaveFriendsSearchPreferences) { state.stored = { revision: value.expectedRevision + 1, preferences: structuredClone(value.preferences) } }
   const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input) === '/api/matchmaking/friends-search-preferences/runtime') return Response.json({ error: 'Active matcher unavailable in this fixture.' }, { status: 503 })
     if (String(input).startsWith('/api/matchmaking/search-locations/')) return Response.json({ error: 'No location resolution in this fixture.' }, { status: 404 })
     if (String(input) !== '/api/matchmaking/friends-search-preferences') throw new Error('Unexpected request in isolated Friends preference test')
     const method = init?.method ?? 'GET', body = init?.body ? SaveFriendsSearchPreferencesSchema.parse(JSON.parse(String(init.body))) : null

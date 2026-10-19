@@ -24,12 +24,12 @@ export function normalizeFilters(value: MatchFilters): MatchFilters {
   return { distance: integer(value.distance, 15, 1, 100), lower, upper: Math.max(lower, integer(value.upper, 99, 18, 99)) }
 }
 
-export function MatchFilterSheet({ mode, value, close, save, datingValue = emptyDatingPreferences, saveDating, searchValue, home = null, previewSearch, canonicalDating, canonicalFriends }: {
+export function MatchFilterSheet({ nearbyPolicyVerified = false, liveDating = false, mode, value, close, save, datingValue = emptyDatingPreferences, saveDating, searchValue, home = null, previewSearch, canonicalDating, canonicalFriends }: {
   canonicalDating?: ReturnType<typeof useDatingPreferences>
   canonicalFriends?: ReturnType<typeof useFriendsPreferences> & { homeReferenceInvalidated?: boolean }
   searchValue?: SearchOptions; home?: string | null
   previewSearch?: (filters: MatchFilters, options: SearchOptions) => Promise<void>
-  mode: 'Friends' | 'Dating'; value: MatchFilters; close: () => void
+  nearbyPolicyVerified?: boolean; liveDating?: boolean; mode: 'Friends' | 'Dating'; value: MatchFilters; close: () => void
   save?: (value: MatchFilters) => Promise<void>
   datingValue?: DatingPreferenceDraft
   saveDating?: (filters: MatchFilters, profile: DatingPreferenceDraft, options?: SearchOptions) => Promise<void>
@@ -128,7 +128,7 @@ export function MatchFilterSheet({ mode, value, close, save, datingValue = empty
     <div className="mfs-grabber" aria-hidden="true" />
     <header className="mfs-header"><div><span>{mode} preferences</span><h2 id={`${id}-heading`}>Your kind of connection.</h2></div><button data-close type="button" className="mfs-close" aria-label="Close filters" disabled={busy} onClick={dismiss}>×</button></header>
     </div>
-    <p className="mfs-scope" id={`${id}-scope`}>{canonicalFriends ? 'Save your preferred ages, distance, goals and search area. Saved filters are not applied to the current queue.' : 'Choose how far to look and the ages you’d like to meet.'}</p>
+    <p className="mfs-scope" id={`${id}-scope`}>{canonicalFriends ? nearbyPolicyVerified ? 'Save your preferred ages, distance, goals and search area for active Friends matching.' : 'Save your preferred ages, distance, goals and search area. Saved filters are not applied to the current queue.' : 'Choose how far to look and the ages you’d like to meet.'}</p>
     <form onSubmit={async event => {
       event.preventDefault()
       if (!canSave || pending.current) return
@@ -177,7 +177,7 @@ export function MatchFilterSheet({ mode, value, close, save, datingValue = empty
       </>}
       {mode === 'Dating' && <DatingPreferenceFields value={profileDraft} existingTargets={baseline?.profile.clarifiedTargets ?? datingValue.clarifiedTargets} change={value => { setProfileDraft(value); setError('') }} disabled={fieldsLocked} />}
       {canonicalDating && <>
-        {enabledReadOnly && <p className="mfs-note">This saved Dating profile has enabled consent. Details and search are read-only here to avoid changing it. No activation or consent-change control is available.</p>}
+        {enabledReadOnly && <p className="mfs-note">{liveDating ? 'Pause Dating discovery on the Dating page before editing these preferences.' : 'This saved Dating profile has enabled consent. Details and search are read-only here to avoid changing it. No activation or consent-change control is available.'}</p>}
         {!baseline?.search && <p className="mfs-note">No search preferences saved. These suggested bounds are an unsaved draft.</p>}
         <p className="mfs-note">Eligibility receipt as of {canonicalDating.snapshot?.eligibility.asOf}: {canonicalDating.snapshot?.eligibility.adult ? 'adult age recorded' : 'adult age not established'}. Disabled drafts do not require adult eligibility or a resolved location.</p>
         {baseline && (baseline.profile.gender !== '' || baseline.profile.sexuality !== '') && (baseline.profile.gender !== profileDraft.gender || baseline.profile.sexuality !== profileDraft.sexuality) && <p className="mfs-note">Your saved identity changed. Clear matching clarification and save the disabled identity draft first; reopen to confirm new targets.</p>}
@@ -197,7 +197,7 @@ export function MatchFilterSheet({ mode, value, close, save, datingValue = empty
         {canonicalFriends && <button type="button" className="mfs-reset" disabled={busy || reloading || canonicalFriends.loading} onClick={() => void reload()}>Reload saved Friends filters</button>}
         <button type="submit" className="mfs-save" disabled={busy || !canSave} aria-describedby={`${id}-note`}>{busy ? previewSearch ? 'Applying…' : 'Saving…' : canonicalFriends ? 'Save Friends filters' : canonicalDating ? 'Save disabled Dating draft' : mode === 'Friends' && previewSearch ? 'Apply filter preview' : 'Save preferences'}</button>
       </div>
-      <p className="mfs-note" id={`${id}-note`}>{canonicalFriends ? 'Preference storage only: the production matcher does not consume these revisions yet. Saving does not change current search constraints or enable nearby matching. Interests and your weekly schedule remain shared with Profile through Find Friends, not this form. Reset changes age/distance only.' : canonicalDating ? 'Saves disabled details and search together; existing enabled consent is read-only and preserved. No live activation is available here. Visibility does not activate Dating. Local prototype recommendations — not live Dating matches.' : mode === 'Friends' && previewSearch ? 'Preview for this visit. Age, distance, goals and temporary area do not affect the current search yet. Interests and your weekly schedule stay shared with Profile.' : mode === 'Friends' ? 'Search filters are not connected yet. Saving is unavailable; your queue and profile stay the same.' : 'Local preview only: filters, search area and details reset on leaving. Dating is for adults 18 and over. Your account and Friends stay unchanged. Reset changes distance and age only.'}</p>
+      <p className="mfs-note" id={`${id}-note`}>{canonicalFriends ? nearbyPolicyVerified ? 'Active Friends uses saved ages, distance and current search areas. Interests and your week stay shared with Profile and are softer ranking signals. Goals are saved preferences. Reset changes age/distance only.' : 'Preference storage only: the production matcher does not consume these revisions yet. Saving does not change current search constraints or enable nearby matching. Interests and your weekly schedule remain shared with Profile through Find Friends, not this form. Reset changes age/distance only.' : canonicalDating ? liveDating ? 'Saves Dating details and search together without starting discovery. Pause discovery before editing; start it separately on the Dating page. Visibility controls govern the fields shown on real Dating profiles.' : 'Saves disabled details and search together; existing enabled consent is read-only and preserved. No live activation is available here. Visibility does not activate Dating. Local prototype recommendations — not live Dating matches.' : mode === 'Friends' && previewSearch ? 'Preview for this visit. Age, distance, goals and temporary area do not affect the current search yet. Interests and your weekly schedule stay shared with Profile.' : mode === 'Friends' ? 'Search filters are not connected yet. Saving is unavailable; your queue and profile stay the same.' : 'Local preview only: filters, search area and details reset on leaving. Dating is for adults 18 and over. Your account and Friends stay unchanged. Reset changes distance and age only.'}</p>
     </form>
   </dialog>, document.body)
 }

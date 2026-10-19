@@ -1,3 +1,4 @@
+import { FriendsRuntimeSchema } from '../shared/friends-runtime.js'
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod'
 import { FriendsSearchPreferencesSchema, SaveFriendsSearchPreferencesSchema, sameFriendsPreferences } from '../shared/friends-search-preferences.js'
@@ -29,6 +30,16 @@ export function createFriendsSearchPreferencesRouter() {
     if (!z.uuid().length(36).safeParse(response.locals.actorId).success || !response.locals.actor) return next(new PreferencesFailure(401, 'auth', 'Sign in to access Friends preferences.'))
     if (Object.keys(request.query ?? {}).length) return next(new PreferencesFailure(400, 'invalid', 'Unexpected Friends preference request fields.'))
     next()
+  })
+  router.get('/runtime', async (request, response) => {
+    if (request.body !== undefined && !z.object({}).strict().safeParse(request.body).success) throw new PreferencesFailure(400, 'invalid', 'Unexpected Friends runtime fields.')
+    const call = (response.locals.actor as Actor).friendsRuntime
+    if (!call) throw new PreferencesFailure(503, 'unavailable', 'Active Friends integration is not available yet.')
+    const result = await call()
+    if (result.error) throw new PreferencesFailure(result.error.code === '28000' ? 401 : 503, result.error.code === '28000' ? 'auth' : 'unavailable', 'Active Friends integration could not be confirmed.')
+    const parsed = FriendsRuntimeSchema.safeParse(result.data)
+    if (!parsed.success) throw new PreferencesFailure(502, 'malformed', 'Active Friends integration could not be confirmed.')
+    response.json(parsed.data)
   })
   router.get('/', async (request, response) => {
     if (request.body !== undefined && !z.object({}).strict().safeParse(request.body).success) throw new PreferencesFailure(400, 'invalid', 'Unexpected Friends preference request fields.')

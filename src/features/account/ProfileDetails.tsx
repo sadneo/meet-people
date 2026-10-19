@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AccountDialog } from './AccountDialog'
-import { previewNote, useAccountUiPreview } from './account-ui-preview-context'
+import { ProfilePhotoEditor } from './ProfilePhotoEditor'
 import { validateFacts } from './profile-rules'
 import { useAccount } from '../../auth/account-context'
 import { profileLanguageKey, type ProfileDetails as Details } from '../../../shared/profile-details'
@@ -23,9 +23,9 @@ function ProfileDetailsResource({ name, bio, city, age, picture, owner, token }:
     {facts && <dl className="account-extra-facts">{(['education', 'occupation', 'languages'] as const).map(field => <div key={field}><dt>{field[0].toUpperCase() + field.slice(1)}</dt><dd>{field === 'languages' ? facts.languages.join(', ') || 'Not added yet' : facts[field] || 'Not added yet'}</dd><small>Visibility preference: {facts.visibility[field] ? 'shown' : 'hidden'}</small></div>)}</dl>}
     {editor !== 'facts' && <><FactsFeedback resource={resource} />{notice && <p role="status">{notice}</p>}<button type="button" className="account-secondary" disabled={!token || resource.loading || resource.busy} onClick={() => { setNotice(''); void resource.reload() }}>Reload saved details</button></>}
     <div className="account-feature-actions"><button type="button" className="account-secondary" onClick={() => setEditor('picture')}>Profile picture</button><button type="button" className="account-secondary" onClick={() => setEditor('viewer')}>Preview public profile</button></div>
-    <p className="account-feature-note">Facts require server confirmation. Picture changes are a preview for this visit only. Saved visibility preferences do not verify public sharing.</p>
+    <p className="account-feature-note">Facts and photo changes require server confirmation. Your uploaded photo is shared with Dating. Saved visibility preferences do not verify public sharing.</p>
     {editor === 'facts' && resource.details && <FactsEditor resource={resource} initial={resource.details} close={() => setEditor(null)} saved={() => { setEditor(null); setNotice('Profile details saved and reloaded.') }} />}
-    {editor === 'picture' && <PictureEditor current={picture} close={() => setEditor(null)} />}
+    {editor === 'picture' && <ProfilePhotoEditor close={() => setEditor(null)} />}
     {editor === 'viewer' && <AccountDialog title="Public profile preview" close={() => setEditor(null)}><div className="account-viewer-preview">{picture ? <img src={picture} alt={`${name}'s profile picture preview`} /> : <span className="account-photo-empty">No picture added</span>}<h3>{name}{age !== null ? `, ${age}` : ''}</h3>{city && <p>{city}</p>}{bio && <p>{bio}</p>}<dl>{(['education', 'occupation', 'languages'] as const).map(field => {
       const visible = facts?.visibility[field]
       const value = field === 'languages' ? facts?.languages.join(', ') : facts?.[field]
@@ -73,27 +73,4 @@ function FactsEditor({ close, saved, initial, resource }: { close: () => void; s
     }}>Reload saved details</button>
     <div className="account-feature-actions"><button type="button" className="account-secondary" disabled={resource.busy} onClick={close}>Cancel</button><button type="submit" className="account-green-action" disabled={!resource.canWrite || resource.busy || reloading}>Save details</button></div>
   </form></AccountDialog>
-}
-function PictureEditor({ current, close }: { current: string | null; close: () => void }) {
-  const { setPicture } = useAccountUiPreview()
-  const [image, setImage] = useState<string | null>(current), [error, setError] = useState(''), [loading, setLoading] = useState(false)
-  const reader = useRef<FileReader | null>(null), version = useRef(0)
-  useEffect(() => () => { version.current++; reader.current?.abort() }, [])
-  return <AccountDialog title="Your profile picture" close={close}><div className="account-feature-form"><p>Choose one picture for your shared profile. Preview only; nothing is uploaded.</p>{image ? <img className="account-picture-preview" src={image} alt="Selected profile picture preview" /> : <div className="account-photo-empty">No picture selected</div>}<label className="account-feature-field">Choose a picture<input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => {
-    const file = event.target.files?.[0]; event.target.value = ''
-    if (!file) return
-    const nextVersion = ++version.current; reader.current?.abort(); setLoading(false)
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024 || file.size === 0) { setError('Choose a JPG, PNG or WebP picture up to 5 MB.'); return }
-    setLoading(true); setError('')
-    const next = new FileReader(); reader.current = next
-    next.onerror = () => { if (version.current === nextVersion) { setError('This picture could not be read. Choose another.'); setLoading(false) } }
-    next.onload = () => {
-      if (version.current !== nextVersion) return
-      const url = String(next.result), decoded = new Image()
-      decoded.onload = () => { if (version.current === nextVersion) { setImage(url); setLoading(false) } }
-      decoded.onerror = () => { if (version.current === nextVersion) { setError('This file is not a readable picture. Choose another.'); setLoading(false) } }
-      decoded.src = url
-    }
-    next.readAsDataURL(file)
-  }} /></label>{loading && <p role="status">Reading picture…</p>}{error && <p role="alert">{error}</p>}<button type="button" className="account-secondary" disabled={!image || loading} onClick={() => { version.current++; setImage(null); setError('') }}>Remove picture from preview</button><div className="account-feature-actions"><button type="button" className="account-secondary" onClick={close}>Cancel</button><button type="button" className="account-green-action" disabled={loading || !!error} onClick={() => { setPicture(image); close() }}>Apply picture preview</button></div><p className="account-feature-note">{previewNote}</p></div></AccountDialog>
 }

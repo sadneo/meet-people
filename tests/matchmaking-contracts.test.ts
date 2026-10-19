@@ -82,6 +82,25 @@ it('validates the real user via getUser and forwards that JWT and public apikey 
   expect(calls.slice(11, 14).map(call => call.body)).toEqual(Array(3).fill({ listing_id_in: id }))
   expect(calls[15].body).toEqual({ notification_id_in: notificationId })
 })
+it('rejects anonymous identities even with a valid user UUID', async () => {
+  const mockFetch = vi.fn(async () => Response.json({ id, is_anonymous: true }))
+  const transport = createUserContextTransport({ url: 'https://database.test', publicKey: 'sb_publishable_test', fetch: mockFetch })
+  expect(await transport.verify('synthetic-anonymous-jwt')).toBeNull()
+})
+it('binds demo runtime, Dating and photo RPCs to the verified actor token', async () => {
+  const calls: { name: string; body: unknown; authorization: string | null }[] = []
+  const transport = createUserContextTransport({ url: 'https://database.test', publicKey: 'sb_publishable_test', fetch: async (input,init) => {
+    calls.push({name:new URL(String(input)).pathname.split('/').pop()!,body:init?.body?JSON.parse(String(init.body)):null,authorization:new Headers(init?.headers).get('authorization')})
+    return Response.json(null)
+  } })
+  const client=transport.actor('synthetic-owner-jwt')
+  await client.friendsRuntime!();await client.datingRuntime!();await client.setDatingEnabled!({enabled:false});await client.datingCandidate!([notificationId]);await client.requestDatingConnection!(notificationId)
+  await client.profilePhotoState!();await client.profilePhotoReference!(notificationId);await client.readProfilePhoto!(notificationId,3);await client.saveProfilePhoto!({expectedRevision:3})
+  expect(calls.map(call=>call.name)).toEqual(['get_friends_runtime','get_dating_runtime','set_dating_enabled','find_dating_candidate','request_dating_connection','get_profile_photo_state','get_profile_photo_reference','read_profile_photo','save_profile_photo'])
+  expect(calls.every(call=>call.authorization==='Bearer synthetic-owner-jwt')).toBe(true)
+  expect(calls[3].body).toEqual({excluded_in:[notificationId]})
+  expect(calls[6].body).toEqual({owner_in:notificationId})
+})
 it('group enrollment/status/leave never calls scoring or imports old compatibility consent', async () => {
   expect(await request(`/events/${id}/group-queue`)).toEqual({ status: 200, data: { state: 'idle', proposal: null } })
   expect(await request(`/events/${id}/group-queue`, 'POST', {})).toEqual({ status: 200, data: { state: 'waiting', proposal: null } })

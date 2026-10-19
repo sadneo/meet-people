@@ -1,6 +1,6 @@
 import { globalInterestChoices, interestAdditionProblem } from './global-interests'
 import { ProfileDetails } from './ProfileDetails'
-import { useAccountUiPreview } from './account-ui-preview-context'
+import { useProfilePhoto } from './useProfilePhoto'
 import { calculatedAge } from './profile-rules'
 import { useId, useState } from 'react'
 import { Link } from 'react-router'
@@ -73,8 +73,8 @@ type Plan = { title: string; when: string; open: () => void } | null
 export function OwnerProfile({ data, ready, signedIn, edit, plan, inactive = false }: { inactive?: boolean; data: ReturnType<typeof useSharedUserProfile>; ready: boolean; signedIn: boolean; edit: () => void; plan: Plan }) {
   const identity = data.account ?? data.profile
   const age = calculatedAge(data.profile?.birthdate)
-  const preview = useAccountUiPreview()
-  const picture = preview.picture === undefined ? identity?.avatar_url ?? null : preview.picture
+  const photo = useProfilePhoto()
+  const picture = photo.url ?? (photo.snapshot?.revision === 0 ? identity?.avatar_url ?? null : null)
   const completion = [
     { label: 'Basic profile', done: !!identity?.display_name.trim() },
     { label: 'Interests', done: (data.profile?.interests.length ?? 0) >= 3 },
