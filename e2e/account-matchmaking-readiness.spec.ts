@@ -79,12 +79,12 @@ for (const width of [320, 390, 1440]) {
     await page.getByRole('button', { name: 'Preferences', exact: true }).click()
     const sheet = page.getByRole('dialog', { name: 'Your kind of connection.' })
     await sheet.getByRole('radio', { name: 'Temporary search area', exact: true }).check()
-    await sheet.getByRole('button', { name: 'Apply filter preview' }).click()
-    await expect(sheet.getByRole('alert')).toContainText('temporary city')
+    await sheet.getByRole('button', { name: 'Save Friends filters' }).click()
+    await expect(sheet.getByRole('alert')).toContainText('temporary area needs a nonblank label')
     await sheet.getByLabel('Temporary city or campus', { exact: true }).fill('Port Jefferson')
     await sheet.getByRole('button', { name: 'Study buddies', exact: true }).click()
     await page.screenshot({ path: testInfo.outputPath('friends-filters.png') })
-    await sheet.getByRole('button', { name: 'Apply filter preview' }).click()
+    await sheet.getByRole('button', { name: 'Save Friends filters' }).click()
     await page.getByRole('button', { name: 'Preferences', exact: true }).click()
     await expect(sheet.getByLabel('Temporary city or campus', { exact: true })).toHaveValue('Port Jefferson')
     await expect(sheet.getByRole('button', { name: 'Study buddies', exact: true })).toHaveAttribute('aria-pressed', 'true')
@@ -125,6 +125,7 @@ for (const width of [320, 390, 1440]) {
     await page.keyboard.press('Escape')
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
     expect(fixture.calls.filter(call => call.method !== 'GET')).toEqual([
+      { path: '/api/matchmaking/friends-search-preferences', method: 'PUT', body: { expectedRevision: 0, preferences: { ageMin: 18, ageMax: 35, radiusMiles: 15, goals: ['Study buddies'], searchArea: { source: 'temporary', areaLabel: 'Port Jefferson', resolvedLocationRef: null } } } },
       { path: '/api/matchmaking/dating-preferences', method: 'PUT', body: { expectedProfileRevision: 0, expectedSearchRevision: 0, profile: { gender: 'Man', sexuality: 'Questioning', intent: '', style: '', heightInches: 72, visibility: { gender: false, sexuality: false, height: false }, clarifiedTargets: ['Nonbinary'], enabled: false }, search: { ageMin: 18, ageMax: 99, radiusMiles: 15, searchArea: { source: 'home', resolvedLocationRef: null } } } },
       { path: '/api/matchmaking/detailed-settings', method: 'PUT', body: { expectedRevision: 0, settings: { messages: false, plans: false, matches: false, friendsDiscovery: false, datingDiscovery: true } } },
     ])
@@ -191,7 +192,8 @@ test('new dialogs fit a short mobile viewport and keep actions reachable', async
   await page.goto('/matchmaking')
   await page.getByRole('button', { name: 'Preferences', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Your kind of connection.' })
-  await sheet.getByRole('button', { name: 'Apply filter preview' }).scrollIntoViewIfNeeded()
+  await sheet.getByRole('button', { name: 'Save Friends filters' }).scrollIntoViewIfNeeded()
+  await expect(sheet.getByRole('button', { name: 'Save Friends filters' })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('friends-short.png') })
   await page.keyboard.press('Escape')
   await page.getByRole('link', { name: 'Dating', exact: true }).click()

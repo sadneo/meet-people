@@ -26,6 +26,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input), method = init?.method ?? 'GET', body = init?.body ? JSON.parse(String(init.body)) : null
     calls.push({ path, method, body })
+    if (path.endsWith('/friends-search-preferences')) return Response.json({ revision: 0, preferences: null })
     if (path.endsWith('/account')) return identityUnavailable || profileUnavailable ? Response.json({ code: 'unavailable', error: 'Shared account unavailable.' }, { status: 503 }) : Response.json(accountFixture({ ...profile, ...account }))
     if (path.endsWith('/account-profile')) {
       if (identityUnavailable) return Response.json({ code: 'unavailable', error: 'Identity unavailable.' }, { status: 503 })

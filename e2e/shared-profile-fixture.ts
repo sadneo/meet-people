@@ -6,8 +6,9 @@ import { emptyAccount, type Account } from '../shared/account'
 import { SaveProfileDetailsSchema, type ProfileDetails } from '../shared/profile-details'
 import { emptyDetailedSettings, effectiveDetailedSettings, mastersFromLegacySettings, SaveDetailedSettingsSchema } from '../shared/detailed-settings'
 import { emptyDatingProfile, adultOn, SaveDatingAggregateSchema, validDatingTransition, type DatingAggregate } from '../shared/dating'
+import { SaveFriendsSearchPreferencesSchema, type FriendsSearchPreferences } from '../shared/friends-search-preferences'
 
-export async function sharedProfileFixture(page: Page, options: { identity?: 'available' | 'missing' | 'unavailable'; details?: 'unavailable'; detailedSettings?: 'unavailable'; dating?: 'unavailable' | 'legacy'; missingProfile?: boolean; interests?: string[]; queue?: boolean } = {}) {
+export async function sharedProfileFixture(page: Page, options: { identity?: 'available' | 'missing' | 'unavailable'; details?: 'unavailable'; detailedSettings?: 'unavailable'; dating?: 'unavailable' | 'legacy'; friends?: 'unavailable' | 'custom'; missingProfile?: boolean; interests?: string[]; queue?: boolean } = {}) {
   const initial = { username: 'canonical-sam', display_name: 'Canonical Sam', bio: 'Canonical bio', avatar_url: null }
   let account: AccountProfile | null = options.identity === 'missing' ? null : initial
   let profile: MatchingProfile | null = options.missingProfile ? null : { ...initial, display_name: 'Legacy Sam', bio: 'Legacy bio', interests: options.interests ?? ['Coffee', 'Music', 'Books', 'Art', 'Games', 'Hiking'], availability: [{ dow: 2, start_time: '09:15:00', end_time: '11:45:00' }, { dow: 0, start_time: '21:00:00', end_time: '24:00:00' }], location_city: 'Campus', birthdate: '2000-01-01' }
@@ -16,6 +17,7 @@ export async function sharedProfileFixture(page: Page, options: { identity?: 'av
   // Synthetic owner facts service, separate from the fixture's account document.
   let details: ProfileDetails = { revision: 0, facts: { education: '', occupation: '', languages: [], visibility: { education: false, occupation: false, languages: false } } }
   let detailed = { revision: 0, settings: emptyDetailedSettings() }
+  let friends: FriendsSearchPreferences = options.friends === 'custom' ? { revision: 1, preferences: { ageMin: 21, ageMax: 40, radiusMiles: 10, goals: [' Exact custom goal 🪨 '], searchArea: { source: 'home', resolvedLocationRef: null } } } : { revision: 0, preferences: null }
   let dating: DatingAggregate = { profileRevision: options.dating === 'legacy' ? 1 : 0, searchRevision: options.dating === 'legacy' ? 1 : 0, profile: options.dating === 'legacy' ? { ...emptyDatingProfile(), gender: 'Legacy identity', sexuality: 'Queer', heightInches: 60, clarifiedTargets: ['Man'] } : emptyDatingProfile(), search: null, eligibility: { asOf: '2026-10-19', adult: adultOn(unified.profile?.birthdate, '2026-10-19'), locationResolved: false }, effectiveEnabled: false }
   const calls: { path: string; method: string; body: unknown }[] = [], external: string[] = []
   await page.route('**/*', route => {
@@ -23,6 +25,16 @@ export async function sharedProfileFixture(page: Page, options: { identity?: 'av
     if (url.origin !== 'http://127.0.0.1:3194') { external.push(url.origin); return route.abort() }
     if (!url.pathname.startsWith('/api/')) return route.continue()
     calls.push({ path: url.pathname, method: request.method(), body: request.method() === 'PUT' ? request.postDataJSON() : null })
+    if (url.pathname.endsWith('/friends-search-preferences')) {
+      if (options.friends === 'unavailable') return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Friends filters unavailable.' } })
+      if (request.method() === 'PUT') {
+        const write = SaveFriendsSearchPreferencesSchema.parse(request.postDataJSON())
+        if (write.expectedRevision !== friends.revision) return route.fulfill({ status: 409, json: { code: 'conflict', error: 'Friends filters changed.' } })
+        if (write.preferences.searchArea.resolvedLocationRef !== null) return route.fulfill({ status: 400, json: { code: 'invalid', error: 'No trusted resolver in this fixture.' } })
+        friends = { revision: friends.revision + 1, preferences: write.preferences }
+      }
+      return route.fulfill({ json: friends })
+    }
     if (url.pathname.endsWith('/dating-preferences')) {
       if (options.dating === 'unavailable') return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Dating preferences unavailable.' } })
       if (request.method() === 'PUT') {

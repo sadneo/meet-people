@@ -3,6 +3,7 @@ import { MemoryRouter, useLocation, useNavigate, useNavigationType } from 'react
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from '../src/App'
 import { requiredPreferences, accountFixture } from './complete-profile-fixture'
+import { SaveFriendsSearchPreferencesSchema, type FriendsSearchPreferences } from '../shared/friends-search-preferences'
 
 vi.mock('../src/supabase', () => ({ supabase: null }))
 const auth = vi.hoisted(() => ({ session: { access_token: 'test-jwt', user: { id: 'a0000000-0000-4000-8000-000000000001' } } as { access_token: string; user: { id: string } } | null }))
@@ -14,8 +15,10 @@ let accountRead: Promise<Response> | null = null
 let profileSave: Promise<Response> | null = null
 const writes: { path: string; body: unknown }[] = []
 const reads: string[] = []
+let friends: FriendsSearchPreferences
 beforeEach(() => {
   available = true; missingAccount = false; missingLegacy = false; accountRead = null; profileSave = null; writes.length = 0; reads.length = 0
+  friends = { revision: 0, preferences: null }
   auth.session = { access_token: 'test-jwt', user: { id: 'a0000000-0000-4000-8000-000000000001' } }
   vi.stubGlobal('scrollTo', () => {})
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
@@ -24,6 +27,14 @@ beforeEach(() => {
     const path = String(input)
     if (init?.method === 'PUT' || init?.method === 'POST') writes.push({ path, body: JSON.parse(String(init.body)) })
     else reads.push(path)
+    if (path.endsWith('/friends-search-preferences')) {
+      if (init?.method === 'PUT') {
+        const value = SaveFriendsSearchPreferencesSchema.parse(JSON.parse(String(init.body)))
+        if (value.expectedRevision !== friends.revision) return Response.json({ code: 'conflict', error: 'Changed' }, { status: 409 })
+        friends = { revision: friends.revision + 1, preferences: value.preferences }
+      }
+      return Response.json(friends)
+    }
     if (path.endsWith('/account')) return available ? Response.json(accountFixture(missingAccount ? null : missingLegacy ? { ...account, interests: [], availability: [], birthdate: null, location_city: null } : { ...legacy, ...account })) : Response.json({ code: 'unavailable', error: 'Account unavailable.' }, { status: 503 })
     if (path.endsWith('/account-profile')) {
       if (accountRead) return (await accountRead).clone()
@@ -38,7 +49,7 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
 const mount = (path = '/profile') => render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
-const save = () => screen.getByRole('button', { name: 'Apply filter preview' }) as HTMLButtonElement
+const save = () => screen.getByRole('button', { name: 'Save Friends filters' }) as HTMLButtonElement
 async function preferences() {
   fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
   await waitFor(() => expect(screen.queryByText('Checking saved identity…')).toBeNull())
@@ -97,14 +108,16 @@ for (const canonical of ['available', 'missing', 'unavailable']) {
       return
     }
     await preferences()
-    await screen.findByText(/Preview for this visit/)
+    await screen.findByLabelText('Maximum distance in miles')
+    await waitFor(() => expect(save().disabled).toBe(false))
+    expect(screen.getByText(/Saved filters are not applied to the current queue/)).toBeTruthy()
     for (const label of ['Username', 'Display name', 'Bio', 'Avatar URL (HTTPS, optional)']) expect(screen.queryByLabelText(label)).toBeNull()
     expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'Edit your home area on Profile', exact: true }).getAttribute('href')).toBe('/profile')
     expect(screen.queryByLabelText('City or campus area')).toBeNull()
     expect(screen.queryByLabelText('Birthdate (optional)')).toBeNull()
     fireEvent.click(save())
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    expect(writes).toEqual([])
+    expect(writes).toEqual([{ path: '/api/matchmaking/friends-search-preferences', body: { expectedRevision: 0, preferences: { ageMin: 18, ageMax: 35, radiusMiles: 15, goals: [], searchArea: { source: 'home', resolvedLocationRef: null } } } }])
   })
 }
 

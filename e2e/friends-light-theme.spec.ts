@@ -1,15 +1,35 @@
 import { expect, test } from '@playwright/test'
 import { browserProfile, browserAccount, mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
+import { DatingAggregateSchema, emptyDatingProfile, adultOn } from '../shared/dating'
 
 const palette = { canvas: 'rgb(250, 251, 247)', panel: 'rgb(255, 255, 255)', line: 'rgb(228, 233, 220)', heading: 'rgb(52, 88, 62)' }
 for (const width of [320, 390, 800, 801, 1440]) {
   test(`Friends light palette and interaction states at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
-    await page.route('**/*', route => new URL(route.request().url()).origin === 'http://127.0.0.1:3194' ? route.continue() : route.abort())
+    const external: string[] = [], mutations: string[] = []
+    await page.route('**/*', route => {
+      const url = new URL(route.request().url())
+      if (url.origin !== 'http://127.0.0.1:3194') { external.push(url.origin); return route.abort() }
+      return route.continue()
+    })
+    page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/') && request.method() !== 'GET') mutations.push(`${request.method()} ${new URL(request.url()).pathname}`) })
     await mockMatchingSession(page); await mockMatchingApi(page)
     const profile = { ...browserProfile, availability: [{ dow: 1, start_time: '09:15:00', end_time: '10:30:00' }] }
     await page.route('**/api/matchmaking/profile', route => route.fulfill({ json: { profile } }))
     await page.route('**/api/matchmaking/account', route => route.fulfill({ json: browserAccount(profile) }))
+    // Explicit synthetic persisted Dating choices, independent of Friends. The
+    // generic queue fixture's {mode} is not a Dating capability response, and
+    // revision-zero/null search must not manufacture a saved minimum age of 23.
+    const dating = DatingAggregateSchema.parse({ profileRevision: 1, searchRevision: 1,
+      profile: emptyDatingProfile(), search: { ageMin: 23, ageMax: 30, radiusMiles: 15, searchArea: { source: 'home', resolvedLocationRef: null } },
+      eligibility: { asOf: '2026-10-19', adult: adultOn(profile.birthdate, '2026-10-19'), locationResolved: false }, effectiveEnabled: false })
+    let datingReads = 0
+    await page.route('**/api/matchmaking/dating-preferences', route => {
+      expect(route.request().method()).toBe('GET')
+      expect(route.request().headers().authorization).toBe('Bearer browser-user-jwt')
+      datingReads++
+      return route.fulfill({ json: dating })
+    })
     await page.goto('/matchmaking')
     const start = page.getByRole('button', { name: 'Find Friends', exact: true })
     await expect(start).toBeEnabled()
@@ -84,6 +104,11 @@ for (const width of [320, 390, 800, 801, 1440]) {
     await expect(unselected).toHaveCSS('border-style', 'dashed')
     await expect(unselected).toHaveCSS('cursor', 'not-allowed')
     await unselected.evaluate((element: HTMLButtonElement) => { element.disabled = false })
+    await filters.click()
+    const friendsSheet = page.getByRole('dialog')
+    await expect(friendsSheet.getByRole('slider', { name: 'Minimum age', exact: true })).toHaveValue('18')
+    await expect(friendsSheet.getByRole('slider', { name: 'Maximum age', exact: true })).toHaveValue('35')
+    await page.keyboard.press('Escape')
     await page.getByRole('link', { name: 'Dating', exact: true }).click()
     await expect(page.locator('.friends-page')).toHaveCount(0)
     await expect(page.locator('.pt-app')).toHaveCSS('background-color', palette.panel)
@@ -92,7 +117,16 @@ for (const width of [320, 390, 800, 801, 1440]) {
     await page.getByRole('button', { name: 'Prototype preferences', exact: true }).click()
     await expect(page.getByRole('dialog')).toHaveCSS('background-color', 'rgb(250, 248, 240)')
     await expect(page.getByRole('slider', { name: 'Minimum age', exact: true })).toHaveValue('23')
+    await expect(page.getByRole('slider', { name: 'Maximum age', exact: true })).toHaveValue('30')
+    expect(datingReads).toBeGreaterThan(0)
     await page.keyboard.press('Escape')
+    await page.getByRole('link', { name: 'Friends', exact: true }).click()
+    await page.getByRole('button', { name: 'Preferences', exact: true }).click()
+    await expect(page.getByRole('slider', { name: 'Minimum age', exact: true })).toHaveValue('18')
+    await expect(page.getByRole('slider', { name: 'Maximum age', exact: true })).toHaveValue('35')
+    await page.keyboard.press('Escape')
+    expect(mutations).toEqual([])
+    expect(external).toEqual([])
   })
 }
 
@@ -149,7 +183,7 @@ test('Friends mobile filters dismiss on long pull and preserve drafts on short p
     await expect(sheet).toHaveAttribute('data-dragging', 'true'); await page.mouse.up()
   }
   await pull(60); await expect(sheet).toBeVisible(); await expect(distance).toHaveValue('100')
-  await expect(sheet.getByRole('button', { name: 'Apply filter preview' })).toBeEnabled()
+  await expect(sheet.getByRole('button', { name: 'Save Friends filters' })).toBeEnabled()
   await pull(120); await expect(sheet).toHaveCount(0); await expect(opener).toBeFocused()
   await opener.click(); await expect(distance).toHaveValue('15')
   await expect(sheet.getByRole('combobox')).toHaveCount(0)

@@ -7,6 +7,8 @@ import { DatingPreferenceFields } from './DatingPreferenceFields'
 import { emptyDatingPreferences, validateDatingPreferences, type DatingPreferenceDraft } from './dating-preferences'
 import type { useDatingPreferences } from './useDatingPreferences'
 import { datingAggregateDraft, datingDraftWrite } from './dating-aggregate-draft'
+import type { useFriendsPreferences } from './useFriendsPreferences'
+import { friendsPreferenceDraft, friendsDraftWrite } from './friends-preferences-draft'
 
 export type MatchFilters = { distance: number; lower: number; upper: number }
 // Preview defaults only: the host has no canonical numeric-distance/age filters.
@@ -20,8 +22,9 @@ export function normalizeFilters(value: MatchFilters): MatchFilters {
   return { distance: integer(value.distance, 15, 1, 100), lower, upper: Math.max(lower, integer(value.upper, 99, 18, 99)) }
 }
 
-export function MatchFilterSheet({ mode, value, close, save, datingValue = emptyDatingPreferences, saveDating, searchValue, home = null, previewSearch, canonicalDating }: {
+export function MatchFilterSheet({ mode, value, close, save, datingValue = emptyDatingPreferences, saveDating, searchValue, home = null, previewSearch, canonicalDating, canonicalFriends }: {
   canonicalDating?: ReturnType<typeof useDatingPreferences>
+  canonicalFriends?: ReturnType<typeof useFriendsPreferences> & { homeReferenceInvalidated?: boolean }
   searchValue?: SearchOptions; home?: string | null
   previewSearch?: (filters: MatchFilters, options: SearchOptions) => Promise<void>
   mode: 'Friends' | 'Dating'; value: MatchFilters; close: () => void
@@ -33,12 +36,15 @@ export function MatchFilterSheet({ mode, value, close, save, datingValue = empty
   const [searchDraft, setSearchDraft] = useState(() => ({ ...(searchValue ?? emptySearchOptions), goals: [...(searchValue?.goals ?? [])] }))
   const [profileDraft, setProfileDraft] = useState(() => ({ ...datingValue }))
   const [baseline, setBaseline] = useState(canonicalDating?.snapshot ?? null), [baselineHome, setBaselineHome] = useState(home)
+  const [friendsBaseline, setFriendsBaseline] = useState(canonicalFriends?.snapshot ?? null)
+  const [friendsAreaChanged, setFriendsAreaChanged] = useState(false), [friendsFieldsEpoch, setFriendsFieldsEpoch] = useState(0)
   const [reloading, setReloading] = useState(false)
   const changed = !!(baseline && canonicalDating?.snapshot && (baseline.profileRevision !== canonicalDating.snapshot.profileRevision || baseline.searchRevision !== canonicalDating.snapshot.searchRevision))
+  const friendsChanged = !!(friendsBaseline && canonicalFriends?.snapshot && friendsBaseline.revision !== canonicalFriends.snapshot.revision)
   const enabledReadOnly = !!canonicalDating && (!!canonicalDating.snapshot?.profile.enabled || !!baseline?.profile.enabled)
-  const canSave = canonicalDating ? canonicalDating.canWrite && !enabledReadOnly && !changed && !reloading : !!previewSearch || (mode === 'Dating' ? !!saveDating || !!save : !!save)
+  const canSave = canonicalFriends ? canonicalFriends.canWrite && !friendsChanged && !reloading : canonicalDating ? canonicalDating.canWrite && !enabledReadOnly && !changed && !reloading : !!previewSearch || (mode === 'Dating' ? !!saveDating || !!save : !!save)
   const [busy, setBusy] = useState(false), [error, setError] = useState('')
-  const fieldsLocked = busy || reloading || !!canonicalDating?.accountBusy || enabledReadOnly
+  const fieldsLocked = busy || reloading || !!canonicalDating?.accountBusy || !!canonicalFriends?.accountBusy || enabledReadOnly
   const dialog = useRef<HTMLDialogElement>(null), pending = useRef(false), reloadPending = useRef(false), mounted = useRef(false)
   useLayoutEffect(() => () => { mounted.current = false }, [])
   const [dragOffset, setDragOffset] = useState(0)
@@ -77,12 +83,23 @@ export function MatchFilterSheet({ mode, value, close, save, datingValue = empty
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true })
     }
   }, [])
-  const dismiss = () => { if (!pending.current && !canonicalDating?.busy) close() }
+  const dismiss = () => { if (!pending.current && !canonicalDating?.busy && !canonicalFriends?.busy) close() }
   const reload = async () => {
-    if (!canonicalDating || reloadPending.current || pending.current || canonicalDating.busy) return
+    if ((!canonicalDating && !canonicalFriends) || reloadPending.current || pending.current || canonicalDating?.busy || canonicalFriends?.busy) return
     reloadPending.current = true
     setReloading(true); setError('')
-    const snapshot = await canonicalDating.reload()
+    if (canonicalFriends) {
+      const snapshot = await canonicalFriends.reload()
+      reloadPending.current = false
+      if (!mounted.current) return
+      setReloading(false)
+      if (snapshot) {
+        const loaded = friendsPreferenceDraft(snapshot)
+        setFriendsBaseline(snapshot); setBaselineHome(home); setDraft(loaded.filters); setSearchDraft(loaded.options); setFriendsAreaChanged(false); setFriendsFieldsEpoch(epoch => epoch + 1)
+      }
+      return
+    }
+    const snapshot = await canonicalDating!.reload()
     reloadPending.current = false
     if (!mounted.current) return
     setReloading(false)
@@ -94,20 +111,25 @@ export function MatchFilterSheet({ mode, value, close, save, datingValue = empty
   const updateAge = (bound: 'lower' | 'upper', value: number) => setDraft(previous => ({ ...previous,
     [bound]: bound === 'lower' ? Math.max(18, Math.min(previous.upper, value)) : Math.min(99, Math.max(previous.lower, value)),
   }))
-  return createPortal(<dialog ref={dialog} className="match-filter-sheet" style={{ transform: dragOffset ? `translateY(${dragOffset}px)` : undefined }} data-dragging={dragOffset > 0 || undefined} data-mode={mode.toLowerCase()} data-canonical={canonicalDating ? 'true' : undefined} aria-labelledby={`${id}-heading`} aria-describedby={`${id}-scope ${id}-note`} onCancel={event => { event.preventDefault(); dismiss() }}>
+  return createPortal(<dialog ref={dialog} className="match-filter-sheet" style={{ transform: dragOffset ? `translateY(${dragOffset}px)` : undefined }} data-dragging={dragOffset > 0 || undefined} data-mode={mode.toLowerCase()} data-canonical={canonicalDating || canonicalFriends ? 'true' : undefined} aria-labelledby={`${id}-heading`} aria-describedby={`${id}-scope ${id}-note`} onCancel={event => { event.preventDefault(); dismiss() }}>
     <div className="mfs-drag-region" onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={event => endDrag(event)} onPointerCancel={event => endDrag(event, true)} onLostPointerCapture={event => endDrag(event, true)}>
     <div className="mfs-grabber" aria-hidden="true" />
     <header className="mfs-header"><div><span>{mode} preferences</span><h2 id={`${id}-heading`}>Your kind of connection.</h2></div><button data-close type="button" className="mfs-close" aria-label="Close filters" disabled={busy} onClick={dismiss}>×</button></header>
     </div>
-    <p className="mfs-scope" id={`${id}-scope`}>Choose how far to look and the ages you’d like to meet.</p>
+    <p className="mfs-scope" id={`${id}-scope`}>{canonicalFriends ? 'Save your preferred ages, distance, goals and search area. Saved filters are not applied to the current queue.' : 'Choose how far to look and the ages you’d like to meet.'}</p>
     <form onSubmit={async event => {
       event.preventDefault()
       if (!canSave || pending.current) return
-      if (searchValue && !canonicalDating) { const issue = validateSearchOptions(searchDraft); if (issue) { setError(issue); return } }
+      if (searchValue && !canonicalDating && !canonicalFriends) { const issue = validateSearchOptions(searchDraft); if (issue) { setError(issue); return } }
       if (mode === 'Dating') { const issue = validateDatingPreferences(profileDraft, datingValue); if (issue) { setError(issue); return } }
       pending.current = true; setBusy(true); setError('')
       try {
-        if (canonicalDating) {
+        if (canonicalFriends) {
+          const invalidateHome = searchDraft.source === 'home' && (baselineHome !== home || !!canonicalFriends.homeReferenceInvalidated)
+          const write = friendsDraftWrite(friendsBaseline!, normalizeFilters(draft), searchDraft, friendsAreaChanged || invalidateHome)
+          const confirmed = await canonicalFriends.save(write)
+          if (confirmed && mounted.current) close()
+        } else if (canonicalDating) {
           const source = { ...baseline!, eligibility: canonicalDating.snapshot!.eligibility }
           const write = datingDraftWrite(source, normalizeFilters(draft), profileDraft, searchDraft, baselineHome !== home)
           const confirmed = await canonicalDating.save(write)
@@ -117,10 +139,10 @@ export function MatchFilterSheet({ mode, value, close, save, datingValue = empty
           if (mounted.current) close()
         }
       }
-      catch (failure) { if (mounted.current) setError(canonicalDating ? failure instanceof Error && failure.message.startsWith('Clear matching') ? failure.message : 'Check the Dating draft, height and search area. Reload saved preferences if a save could not be confirmed.' : 'Preferences could not be saved. Your previous filters are unchanged. Try again.') }
+      catch (failure) { if (mounted.current) setError(canonicalFriends ? 'Check Friends bounds, exact goals and temporary area. A temporary area needs a nonblank label; no geography is inferred.' : canonicalDating ? failure instanceof Error && failure.message.startsWith('Clear matching') ? failure.message : 'Check the Dating draft, height and search area. Reload saved preferences if a save could not be confirmed.' : 'Preferences could not be saved. Your previous filters are unchanged. Try again.') }
       finally { pending.current = false; if (mounted.current) setBusy(false) }
     }}>
-      {(!canonicalDating || canonicalDating.snapshot) && <>
+      {(!canonicalDating && !canonicalFriends || canonicalDating?.snapshot || canonicalFriends?.snapshot) && <>
       <fieldset disabled={fieldsLocked} className="mfs-section"><div className="mfs-label"><label htmlFor={`${id}-distance`}>Maximum distance</label><output htmlFor={`${id}-distance`}>{draft.distance} {draft.distance === 1 ? 'mile' : 'miles'}</output></div>
         <input id={`${id}-distance`} className="mfs-distance" type="range" min={1} max={100} step={1} value={draft.distance} aria-label="Maximum distance in miles" onChange={event => setDraft(previous => ({ ...previous, distance: Number(event.target.value) }))} style={{ '--distance': `${(draft.distance - 1) / 99 * 100}%` } as CSSProperties} />
         <div className="mfs-endpoints" aria-hidden="true"><span>1 mile</span><span>100 miles</span></div>
@@ -132,7 +154,15 @@ export function MatchFilterSheet({ mode, value, close, save, datingValue = empty
         </div>
         <div className="mfs-endpoints" aria-hidden="true"><span>18</span><span>99</span></div>
       </fieldset>
-      {searchValue && <SearchPreferenceFields mode={mode} value={searchDraft} change={value => { setSearchDraft(value); setError('') }} home={home} disabled={fieldsLocked} canonical={!!canonicalDating} />}
+      {searchValue && <SearchPreferenceFields key={canonicalFriends ? `friends-${friendsFieldsEpoch}` : 'dating-or-preview'} mode={mode} value={searchDraft} existingGoals={friendsBaseline?.preferences?.goals} change={value => {
+        if (canonicalFriends && (value.source !== searchDraft.source || value.area !== searchDraft.area)) setFriendsAreaChanged(true)
+        setSearchDraft(value); setError('')
+      }} home={home} disabled={fieldsLocked} canonical={!!canonicalDating || !!canonicalFriends} />}
+      {canonicalFriends && <>
+        {!friendsBaseline?.preferences && <p className="mfs-note">No Friends filter choices stored. These are unsaved draft defaults, not saved constraints.</p>}
+        {friendsBaseline?.preferences?.searchArea.resolvedLocationRef && <button type="button" className="mfs-reset" disabled={fieldsLocked} onClick={() => setFriendsAreaChanged(true)}>Clear stored location reference</button>}
+        {(friendsAreaChanged || searchDraft.source === 'home' && (baselineHome !== home || canonicalFriends.homeReferenceInvalidated)) && <p className="mfs-note">This draft clears the location reference. The area remains unresolved; no nearby matching is enabled.</p>}
+      </>}
       {mode === 'Dating' && <DatingPreferenceFields value={profileDraft} existingTargets={baseline?.profile.clarifiedTargets ?? datingValue.clarifiedTargets} change={value => { setProfileDraft(value); setError('') }} disabled={fieldsLocked} />}
       {canonicalDating && <>
         {enabledReadOnly && <p className="mfs-note">This saved Dating profile has enabled consent. Details and search are read-only here to avoid changing it. No activation or consent-change control is available.</p>}
@@ -143,15 +173,19 @@ export function MatchFilterSheet({ mode, value, close, save, datingValue = empty
       </>}
       </>}
       {canonicalDating?.loading && <p role="status">Loading saved Dating preferences…</p>}
+      {canonicalFriends?.loading && <p role="status">Loading saved Friends filters…</p>}
       {changed && <p role="status">Saved Dating preferences changed. Reload the whole aggregate to replace this draft.</p>}
-      {(error || canonicalDating?.error) && <p className="mfs-error" role="alert">{error || canonicalDating?.error}</p>}
+      {friendsChanged && <p role="status">Saved Friends filters changed. Reload saved filters to replace this draft.</p>}
+      {(error || canonicalDating?.error || canonicalFriends?.error) && <p className="mfs-error" role="alert">{error || canonicalDating?.error || canonicalFriends?.error}</p>}
       {canonicalDating && <p className="mfs-note">Reload replaces both drafts with canonical values; it never retries a save.</p>}
+      {canonicalFriends && <p className="mfs-note">Reload replaces this filter draft with canonical values; it never retries a save. Closing discards unsaved edits.</p>}
       <div className="mfs-actions">
-        {(!canonicalDating || canonicalDating.snapshot) && <button type="button" className="mfs-reset" title="Reset distance and age only" disabled={fieldsLocked} onClick={() => { setDraft({ ...filterDefaults[mode] }); setError('') }}>Reset</button>}
+        {(!canonicalDating && !canonicalFriends || canonicalDating?.snapshot || canonicalFriends?.snapshot) && <button type="button" className="mfs-reset" title="Reset distance and age only" disabled={fieldsLocked} onClick={() => { setDraft({ ...filterDefaults[mode] }); setError('') }}>Reset</button>}
         {canonicalDating && <button type="button" className="mfs-reset" disabled={busy || reloading || canonicalDating.loading} onClick={() => void reload()}>Reload saved Dating preferences</button>}
-        <button type="submit" className="mfs-save" disabled={busy || !canSave} aria-describedby={`${id}-note`}>{busy ? previewSearch ? 'Applying…' : 'Saving…' : canonicalDating ? 'Save disabled Dating draft' : mode === 'Friends' && previewSearch ? 'Apply filter preview' : 'Save preferences'}</button>
+        {canonicalFriends && <button type="button" className="mfs-reset" disabled={busy || reloading || canonicalFriends.loading} onClick={() => void reload()}>Reload saved Friends filters</button>}
+        <button type="submit" className="mfs-save" disabled={busy || !canSave} aria-describedby={`${id}-note`}>{busy ? previewSearch ? 'Applying…' : 'Saving…' : canonicalFriends ? 'Save Friends filters' : canonicalDating ? 'Save disabled Dating draft' : mode === 'Friends' && previewSearch ? 'Apply filter preview' : 'Save preferences'}</button>
       </div>
-      <p className="mfs-note" id={`${id}-note`}>{canonicalDating ? 'Saves disabled details and search together; existing enabled consent is read-only and preserved. No live activation is available here. Visibility does not activate Dating. Local prototype recommendations — not live Dating matches.' : mode === 'Friends' && previewSearch ? 'Preview for this visit. Age, distance, goals and temporary area do not affect the current search yet. Interests and your weekly schedule stay shared with Profile.' : mode === 'Friends' ? 'Search filters are not connected yet. Saving is unavailable; your queue and profile stay the same.' : 'Local preview only: filters, search area and details reset on leaving. Dating is for adults 18 and over. Your account and Friends stay unchanged. Reset changes distance and age only.'}</p>
+      <p className="mfs-note" id={`${id}-note`}>{canonicalFriends ? 'Preference storage only: the production matcher does not consume these revisions yet. Saving does not change current search constraints or enable nearby matching. Interests and your weekly schedule remain shared with Profile through Find Friends, not this form. Reset changes age/distance only.' : canonicalDating ? 'Saves disabled details and search together; existing enabled consent is read-only and preserved. No live activation is available here. Visibility does not activate Dating. Local prototype recommendations — not live Dating matches.' : mode === 'Friends' && previewSearch ? 'Preview for this visit. Age, distance, goals and temporary area do not affect the current search yet. Interests and your weekly schedule stay shared with Profile.' : mode === 'Friends' ? 'Search filters are not connected yet. Saving is unavailable; your queue and profile stay the same.' : 'Local preview only: filters, search area and details reset on leaving. Dating is for adults 18 and over. Your account and Friends stay unchanged. Reset changes distance and age only.'}</p>
     </form>
   </dialog>, document.body)
 }

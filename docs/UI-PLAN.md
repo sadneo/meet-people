@@ -187,7 +187,9 @@ Detailed Settings choices now use their versioned owner resource after authentic
 capability/readback; saved preferences do not prove delivery or live discovery.
 Dating preference details/search now use the owner aggregate after capability GET,
 with an explicit disabled-draft save; recommendations remain the local prototype.
-Friends numeric filters and picture upload remain React-memory previews. Numeric mode filters and temporary
+Friends numeric filters/goals/search areas now use their separate owner resource
+after capability GET; saved revisions are not applied to the production queue yet.
+Picture upload remains a React-memory preview. Numeric mode filters and temporary
 search areas are independent from home/profile data. One cream/sage preferences
 sheet supports mobile drag dismissal, native dropdowns and independent age thumbs.
 Do not add API/storage writes to preview fields without their own contracts.

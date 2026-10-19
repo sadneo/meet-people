@@ -1,6 +1,6 @@
 import { calculatedAge, todayDate } from '../account/profile-rules'
 import { SafetyActions } from '../account/SafetyControls'
-import { emptySearchOptions, type SearchOptions } from './search-preferences'
+import { FriendsPreferences } from './FriendsPreferences'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useSession } from '../../auth/useSession'
@@ -18,7 +18,6 @@ import { useAccount } from '../../auth/account-context'
 import { ConnectButton } from '../connections/ConnectButton'
 import { FriendsAvailability, FriendsInterests, FriendsPartyPreference, FriendsScene } from './FriendsPresentation'
 import './friends.css'
-import { MatchFilterSheet, filterDefaults } from './MatchFilterSheet'
 
 const blankProfile: MatchingProfile = { username: '', display_name: '', bio: null, birthdate: null, location_city: null, avatar_url: null, interests: [], availability: [] }
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -122,8 +121,6 @@ function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode
   const searching = state.searchStage !== null
   const replacement = state.confirmReplacement && <SearchReplacement cancel={state.cancelReplacement} confirm={() => void state.confirmSearch()} />
   const [preferences, setPreferences] = useState(false)
-  const [filterPreview, setFilterPreview] = useState(filterDefaults.Friends)
-  const [searchPreview, setSearchPreview] = useState<SearchOptions>(() => ({ ...emptySearchOptions, goals: [...(account?.account.preferences.intents ?? [])] }))
   const preferencesButton = useRef<HTMLButtonElement>(null)
   const candidate = state.result?.candidate
   const queuedHere = state.mode === mode
@@ -136,7 +133,7 @@ function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode
   }, [account, dashboard, state.profileLoading, identity.loading])
   const closePreferences = () => { setPreferences(false); preferencesButton.current?.focus() }
   const preferencesControl = <nav className="match-dashboard-controls friends-preferences" aria-label="Matching modes"><button type="button" ref={preferencesButton} className="match-button match-button-secondary" aria-label="Preferences" aria-haspopup="dialog" title={state.mode ? "Leave your queue before changing filters" : "Preferences"} disabled={!state.known || !!state.mode || state.busy || state.profileLoading || searching || state.confirmReplacement} onClick={() => setPreferences(true)}><Icon name="settings" size={20} /><span className="pt-sr-only">Preferences</span></button></nav>
-  const editor = preferences && <MatchFilterSheet mode="Friends" value={filterPreview} searchValue={searchPreview} home={state.profile?.location_city ?? null} previewSearch={async (filters, options) => { setFilterPreview(filters); setSearchPreview(options) }} close={closePreferences} />
+  const editor = <FriendsPreferences open={preferences} close={closePreferences} home={account?.loaded ? account.account.profile?.location_city ?? null : state.profile?.location_city ?? null} blocked={!state.known || !!state.mode || state.busy || state.saving || searching || state.confirmReplacement} />
   const joinExplanation = !queuedHere && !state.canJoin
     ? state.profileLoading ? 'Loading matching preferences before joining Friends.'
       : state.profileError ? 'Matching preferences are unavailable. Retry loading them before joining Friends.'
@@ -144,6 +141,7 @@ function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode
           : 'Save matching preferences before joining Friends.'
     : ''
   if (mode === 'active' && state.known && state.mode !== 'active' && state.profileReady && !state.profileLoading) return <>
+    {editor}
     {preferencesControl}
     <div className="friends-setup-container"><MatchingSetup friends savedIdentity={identity} initial={state.profile} token={token} busy={state.saving || searching || state.busy} searching={state.searchStage === 'searching'} error={state.profileError || state.error} save={state.save} findFriends={draft => {
       const previous = state.profile && (canonical ? withAccountIdentity(state.profile, canonical) : state.profile)
@@ -151,7 +149,6 @@ function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode
       return state.findFriends(unchanged ? undefined : draft)
     }} minimumRequired={!!account || (!!state.profile && ReadyPreferencesSchema.safeParse(state.profile).success)} writesAvailable={!state.confirmReplacement} navigation={navigation} /></div>
     {state.mode === 'downtime' && <p className="friends-downtime">Downtime matching is on. Starting active matching replaces downtime matching.</p>}
-    {editor}
     {replacement}
     {(state.error || state.profileError || !state.known) && <button type="button" className="match-button match-button-secondary" disabled={state.busy || searching} onClick={() => void state.queue('refresh')}>Retry status</button>}
 
@@ -165,6 +162,7 @@ function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode
   </article> : mode === 'active' ? <FriendsScene searching={!!state.mode || state.busy} /> : <div className="pt-mascot-scene match-mascot" aria-hidden="true">{state.known && <PixelPebble thinking={Boolean(state.mode) || (dashboard && (state.busy || state.checking || state.saving))} />}</div>
   const status = <p className="match-focus-status" role="status" aria-live="polite">{searching ? state.searchStage === 'saving' ? 'Saving shared preferences…' : 'Searching…' : state.busy ? 'Loading…' : !state.known ? 'Matching unavailable' : state.mode ? <>{replacing ? 'Downtime matching is on.' : candidate ? 'Someone to meet' : state.result ? 'No candidate yet' : 'Finding people…'}<span className="pt-sr-only"> You are in the {state.mode} queue.</span></> : 'Ready when you are.'}</p>
   return <>
+    {editor}
     {navigation && !dashboard && <MatchingNavigation mode={mode} />}
     <section className={`match-focus ${dashboard ? 'match-dashboard' : ''} ${state.mode ? 'is-searching' : ''}`} aria-label={dashboard ? 'Friends matching dashboard' : undefined}>
       {mode === 'active' && <>{!state.profileLoading && preferencesControl}<header className="match-dashboard-heading"><p>Active matchmaking</p><h2>Find your people.</h2></header></>}
@@ -189,7 +187,6 @@ function AuthenticatedMatching({ mode, token, navigation }: { mode: MatchingMode
       {mode === 'active' && (state.error || state.profileError || !state.known) && <button type="button" className="match-button match-button-secondary" disabled={state.busy || searching} onClick={() => void state.queue('refresh')}>Retry status</button>}
     </section>
     {mode !== 'active' && <details className="match-device-disclosure"><summary>On this device</summary><DeviceDisplayPreferences /></details>}
-    {editor}
     {replacement}
   </>
 }

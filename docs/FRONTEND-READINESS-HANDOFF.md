@@ -29,6 +29,16 @@ the exact prototype disclosure and do not consume saved preferences. See
 Existing enabled-consent snapshots are read-only in this draft editor: ordinary
 editing cannot implicitly disable them, and no consent-change control is introduced.
 
+**Subsequent Friends preference integration:** numeric bounds, goals and home/
+temporary search selections now use the separate versioned Friends owner resource
+after capability GET. Revision zero/null stays unknown; defaults are explicitly
+unsaved until the user edits/saves. Global interests/week remain separate and Find
+Friends still saves those shared selections legitimately. Saved filters are **not
+applied to the current queue**: no revision consumer, nearby activation or resolver
+is introduced. See `friends-search-preferences-backend.md` for current frontend
+scope, source coverage and execution limits. Earlier preview inventory rows below
+are historical, not current canonical-preference behavior.
+
 ## Product rules confirmed by the owner
 
 - One global interest catalogue/selection and one global weekly schedule. Explicit Profile and Friends saves update the shared source in both directions. They are not separate temporary-search copies.

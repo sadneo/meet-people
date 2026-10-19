@@ -4,6 +4,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { MatchingViews } from '../src/features/matchmaking/MatchingViews'
 function App() { return <MatchingViews mode="active" /> }
 import { MatchingSetup } from '../src/features/matchmaking/MatchingScreen'
+import type { Session } from '@supabase/supabase-js'
+import { AccountContext } from '../src/auth/account-context'
+import { accountFixture } from './complete-profile-fixture'
 
 vi.mock('../src/supabase', () => ({ supabase: null }))
 const auth = vi.hoisted(() => ({ ready: true, session: { access_token: 'first', user: { id: 'first' } } }))
@@ -25,6 +28,11 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input), method = init?.method ?? 'GET', body = init?.body ? JSON.parse(String(init.body)) : null
     calls.push({ path, method, body })
+    if (path.endsWith('/friends-search-preferences')) {
+      expect(method).toBe('GET')
+      expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer first')
+      return Response.json({ revision: 0, preferences: null })
+    }
     if (path.endsWith('/notifications')) return Response.json({ notifications: [], unreadCount: 0 })
     if (path.endsWith('/account-profile')) return identityFails ? Response.json({ code: 'unavailable', error: 'Matching RPC is not available yet.' }, { status: 503 }) : Response.json({ profile: identity })
     if (path.endsWith('/profile')) {
@@ -45,6 +53,9 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
 const mount = () => render(<MemoryRouter initialEntries={['/matchmaking']}><App /></MemoryRouter>)
+// A canonical account fixture is opt-in: other component-only cases intentionally
+// test that a session alone cannot grant the separate preference capability.
+const mountCanonical = () => render(<AccountContext.Provider value={{ session: auth.session as Session, account: accountFixture(profile), loaded: true, busy: false, error: '', save: vi.fn(async () => false), reload() {} }}><MemoryRouter initialEntries={['/matchmaking']}><App /></MemoryRouter></AccountContext.Provider>)
 const button = (name: string) => screen.getByRole('button', { name, exact: true }) as HTMLButtonElement
 const writes = () => calls.filter(call => call.method !== 'GET')
 it('ports saved Friends setup inline with the forest full-page boundary, not the Dating deck', async () => {
@@ -67,8 +78,10 @@ it('inline Friends drafts survive failed saves and the filter sheet cannot write
   saveFails = false
   fireEvent.click(button('Preferences'))
   const dialog = within(screen.getByRole('dialog'))
-  expect((dialog.getByRole('button', { name: 'Apply filter preview', exact: true }) as HTMLButtonElement).disabled).toBe(false)
-  expect(dialog.getAllByRole('slider')).toHaveLength(3)
+  // This component-only harness has no loaded canonical AccountContext.
+  // Never substitute an editable local filter preview for missing authority.
+  expect((dialog.getByRole('button', { name: 'Save Friends filters', exact: true }) as HTMLButtonElement).disabled).toBe(true)
+  expect(dialog.queryByRole('slider')).toBeNull()
   expect(dialog.queryByRole('table')).toBeNull()
   expect(dialog.queryByRole('button', { name: 'Gaming', exact: true })).toBeNull()
   fireEvent.click(dialog.getByRole('button', { name: 'Close filters' }))
@@ -145,17 +158,59 @@ it('delayed saved-profile reads preselect real labels/windows, not a confirmed e
   profile = structuredClone(saved)
   let finish!: () => void
   holdProfile = new Promise(resolve => { finish = resolve })
-  mount(); await screen.findByText('Loading profile…')
+  mountCanonical(); await screen.findByText('Loading profile…')
   expect(screen.queryByText('No matching profile saved yet.')).toBeNull()
   expect(screen.queryByText('0/30 selected')).toBeNull()
   await act(async () => { finish(); await holdProfile })
   await ready(); fireEvent.click(button('Preferences'))
   const editor = within(screen.getByRole('dialog'))
+  await editor.findByRole('slider', { name: 'Maximum distance in miles' })
   expect(editor.getAllByRole('slider')).toHaveLength(3)
   fireEvent.click(editor.getByRole('button', { name: 'Close filters' }))
   expect(button('Music').getAttribute('aria-pressed')).toBe('true')
+  const custom = screen.getByRole('button', { name: /^Board games\s+strategy$/ })
+  expect(custom.getAttribute('aria-label')).toBe('Board games\nstrategy')
+  expect(custom.getAttribute('aria-pressed')).toBe('true')
+  expect(button('Sunday late, available').getAttribute('aria-pressed')).toBe('true')
+  expect(profile?.availability).toEqual(saved.availability)
   expect(screen.getByRole('table')).toBeTruthy()
+  expect(calls.filter(call => call.path.endsWith('/friends-search-preferences')).map(call => call.method)).toEqual(['GET'])
+  expect(calls.some(call => /\/(queue|result)$/.test(call.path))).toBe(false)
   expect(writes()).toEqual([])
+})
+
+it('keeps filter reconciliation across explicit join/cancel queue branch transitions without resaving the shared profile', async () => {
+  profile = { ...structuredClone(saved), interests: ['Coffee', 'Music', 'Art'], birthdate: '2000-01-01', location_city: 'Fixture campus' }
+  const originalProfile = structuredClone(profile), originalFetch = vi.mocked(fetch).getMockImplementation()!
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (String(input).endsWith('/friends-search-preferences') && init?.method === 'PUT') {
+      calls.push({ path: String(input), method: 'PUT', body: JSON.parse(String(init.body)) })
+      return Response.json({ code: 'provider', error: 'Synthetic uncertain preference write.' }, { status: 503 })
+    }
+    return originalFetch(input, init)
+  })
+  mountCanonical(); await ready()
+  fireEvent.click(button('Preferences'))
+  let editor = within(screen.getByRole('dialog'))
+  await editor.findByRole('slider', { name: 'Maximum distance in miles' })
+  fireEvent.click(editor.getByRole('button', { name: 'Save Friends filters' }))
+  await editor.findByText(/Friends save could not be confirmed/)
+  fireEvent.click(editor.getByRole('button', { name: 'Close filters' }))
+  // These are separate explicit queue actions, not effects of saving filters.
+  fireEvent.click(button('Find Friends'))
+  await screen.findByRole('button', { name: 'Cancel search', exact: true })
+  expect(button('Preferences').disabled).toBe(true)
+  fireEvent.click(button('Cancel search')); await ready()
+  fireEvent.click(button('Preferences')); editor = within(screen.getByRole('dialog'))
+  expect((editor.getByRole('button', { name: 'Save Friends filters' }) as HTMLButtonElement).disabled).toBe(true)
+  expect(calls.filter(call => call.path.endsWith('/friends-search-preferences') && call.method === 'GET')).toHaveLength(1)
+  fireEvent.click(editor.getByRole('button', { name: 'Reload saved Friends filters' }))
+  await waitFor(() => expect((editor.getByRole('button', { name: 'Save Friends filters' }) as HTMLButtonElement).disabled).toBe(false))
+  expect(calls.filter(call => call.path.endsWith('/friends-search-preferences') && call.method === 'GET')).toHaveLength(2)
+  expect(writes().map(call => [call.method, call.path])).toEqual([
+    ['PUT', '/api/matchmaking/friends-search-preferences'], ['POST', '/api/matchmaking/queue'], ['DELETE', '/api/matchmaking/queue'],
+  ])
+  expect(profile).toEqual(originalProfile)
 })
 
 it('a profile read failure remains unavailable, never a confirmed-empty editable setup', async () => {

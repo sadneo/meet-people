@@ -123,7 +123,7 @@ for (const size of sizes) test(`Friends visual states ${size.width}x${size.heigh
   await expect(page.getByRole('dialog', { name: 'Your kind of connection.', exact: true })).toBeVisible()
   const preferencesDialog = page.getByRole('dialog', { name: 'Your kind of connection.', exact: true })
   await expect(preferencesDialog.getByRole('slider')).toHaveCount(3)
-  await expect(preferencesDialog.getByRole('button', { name: 'Apply filter preview', exact: true })).toBeEnabled()
+  await expect(preferencesDialog.getByRole('button', { name: 'Save Friends filters', exact: true })).toBeEnabled()
   await page.screenshot({ path: `${evidence}/preferences-${size.width}.png`, animations: 'disabled' })
   await page.keyboard.press('Escape')
   await expect(page.getByRole('button', { name: 'Preferences', exact: true })).toBeFocused()

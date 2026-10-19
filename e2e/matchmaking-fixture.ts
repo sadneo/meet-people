@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { completedAccountChapters, emptyAccount, type Account } from '../shared/account'
+import { SaveFriendsSearchPreferencesSchema, type FriendsSearchPreferences } from '../shared/friends-search-preferences'
 
 // Browser-only module interception; never a production session bypass.
 export async function mockMatchingSession(page: Page, signedIn = true, signOutFailures = 0) {
@@ -44,6 +45,7 @@ export async function mockMatchingApi(page: Page) {
   let mode: string | null = null
   let profile = browserProfile
   let account = browserAccount(profile)
+  let friends: FriendsSearchPreferences = { revision: 0, preferences: null }
   // Signed-in shell and candidate card: the Messages dot and per-person connection state.
   const connections = new Map<string, string>()
   await page.route('**/api/conversations/activity', route => route.fulfill({ json: { unreadConversations: 0, incomingRequests: 0 } }))
@@ -57,6 +59,15 @@ export async function mockMatchingApi(page: Page) {
   await page.route('**/api/matchmaking/**', route => {
     const request = route.request()
     const path = new URL(request.url()).pathname
+    if (path.endsWith('/friends-search-preferences')) {
+      if (request.method() === 'PUT') {
+        const write = SaveFriendsSearchPreferencesSchema.parse(request.postDataJSON())
+        if (write.expectedRevision !== friends.revision) return route.fulfill({ status: 409, json: { code: 'conflict', error: 'Friends filters changed.' } })
+        if (write.preferences.searchArea.resolvedLocationRef !== null) return route.fulfill({ status: 400, json: { code: 'invalid', error: 'No trusted resolver in this fixture.' } })
+        friends = { revision: friends.revision + 1, preferences: write.preferences }
+      }
+      return route.fulfill({ json: friends })
+    }
     if (path.endsWith('/notifications')) return route.fulfill({ json: { notifications: [], unreadCount: 0 } })
     if (path.endsWith('/account')) {
       if (request.method() === 'PUT') { account = request.postDataJSON(); profile = account.profile as typeof browserProfile }

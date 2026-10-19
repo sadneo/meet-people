@@ -104,6 +104,7 @@
 .match-filter-sheet .mfs-friendship-goals [role=group] { display: flex; flex-wrap: wrap; gap: 8px; }
 .match-filter-sheet .mfs-friendship-goals button { min-height: 44px; padding: 10px; border: 1px solid #e0e7d6; border-radius: 11px; background: #fafcf6; color: #416535; font-size: 12px; }
 .match-filter-sheet .mfs-friendship-goals button[aria-pressed=true] { background: #e4efd5; border-color: #c9dab4; }
+.match-filter-sheet[data-canonical] .mfs-friendship-goals button { max-width: 100%; overflow-wrap: anywhere; white-space: pre-wrap; }
 .match-filter-sheet .dpf-clarification { margin: 16px 0 0; padding: 14px; background: #eff4e5; border: 1px solid #d8e1cb; border-radius: 12px; }
 .match-filter-sheet .dpf-clarification h4 { font-size: 12px; margin: 0; }
 .match-filter-sheet .dpf-clarification p, .match-filter-sheet .dpf-compatibility { color: #586c4d; font-size: 11px; line-height: 1.7; }
