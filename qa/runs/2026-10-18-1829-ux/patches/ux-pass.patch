@@ -1,0 +1,370 @@
+diff --git a/src/auth/AuthScreen.tsx b/src/auth/AuthScreen.tsx
+index 023267b..3537636 100644
+--- a/src/auth/AuthScreen.tsx
++++ b/src/auth/AuthScreen.tsx
+@@ -194,7 +194,6 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
+         </fieldset></form>
+         {confirmEmail && <Button secondary disabled={busy} onClick={resend}>{pending === 'resend' ? 'Sending…' : 'Resend confirmation'}</Button>}
+         {authMode && google}
+-        {emailStep && <p className="pt-auth-account">New to Pebble? <Link to={link('/register')} state={{ email }}>Create an account</Link></p>}
+         {registerStep && <Button secondary disabled={busy} onClick={() => go('password')}>Back to sign in</Button>}
+         {mode === 'forgot' && <Link to={link('/login')} state={{ email, authStep: email ? 'password' : 'email' }}>Back to sign in</Link>}
+       </>}
+diff --git a/src/auth/account.css b/src/auth/account.css
+index 27f9fa3..f5c36e4 100644
+--- a/src/auth/account.css
++++ b/src/auth/account.css
+@@ -1,5 +1,7 @@
+ .pt-auth-form { display: grid; gap: 16px; }
+ .pt-auth-form > p { margin: 0; }
++.pt-auth :where(a:not(.pt-button)) { color: var(--pt-ink); text-underline-offset: 3px; }
++.pt-auth :where(a:not(.pt-button)):hover { color: var(--pt-green); text-decoration-thickness: 2px; }
+ .pt-auth-form fieldset, .pt-chapter-form > fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+ .pt-auth-form fieldset { display: grid; gap: 16px; }
+ .pt-password-field { display: grid; gap: 8px; }
+diff --git a/src/features/events/EventGroupQueue.tsx b/src/features/events/EventGroupQueue.tsx
+index ffa74a2..4edb559 100644
+--- a/src/features/events/EventGroupQueue.tsx
++++ b/src/features/events/EventGroupQueue.tsx
+@@ -72,19 +72,23 @@ function SignedInQueue({ listingId, token, actorId }: { listingId: string; token
+   }
+   const queued = snapshot?.state === 'waiting' || snapshot?.state === 'proposal'
+   return <>
+-    <p role="status">{!snapshot ? 'Queue status unavailable or loading.' : snapshot.state === 'idle' ? 'Not in this event queue.' : snapshot.state === 'waiting' ? 'You are in this event queue.' : 'A group proposal is available to review.'}</p>
++    <p role="status" className="ev-queue-status">{!snapshot ? 'Queue status unavailable or loading.' : snapshot.state === 'idle' ? 'Not in this event queue.' : snapshot.state === 'waiting' ? 'You are in this event queue.' : 'A group proposal is available to review.'}</p>
+     {(error || profileError) && <p role="alert">{error || profileError} Last confirmed queue state is shown.</p>}
+     {!profileReady && <p>Load and save your <Link to="/matchmaking">matching profile</Link> before joining.</p>}
+-    <Button disabled={busy || reading || !snapshot || (!queued && !profileReady)} onClick={() => void act(Boolean(queued))}>{queued ? 'Leave queue' : 'Find a group to go with'}</Button>
+-    <Button secondary disabled={busy || reading} onClick={() => void refresh()}>Refresh queue</Button>
+-    <p>Your queue is saved on the server. Background processing is not enabled by this page; joining does not mean a group has been found. No email or push delivery.</p>
++    <div className="ev-queue-actions">
++      <Button disabled={busy || reading || !snapshot || (!queued && !profileReady)} onClick={() => void act(Boolean(queued))}>{queued ? 'Leave queue' : 'Find a group to go with'}</Button>
++      <Button secondary disabled={busy || reading} onClick={() => void refresh()}>Refresh queue</Button>
++    </div>
+     {snapshot?.proposal && <><Button secondary onClick={() => setReview(value => !value)}>Review proposal</Button>{review && <div><h3>Suggested group · {snapshot.proposal.members.length} people</h3><ul>{snapshot.proposal.members.map(member => <li key={member.id}>{member.avatar && <img src={member.avatar} width={48} height={48} alt="" referrerPolicy="no-referrer" />}<strong>{member.name}</strong></li>)}</ul><p>A suggestion, not a confirmed group, invitation, RSVP or chat.</p></div>}</>}
++    <p className="ev-small-note">Your queue is saved on the server. Background processing is not enabled by this page; joining does not mean a group has been found. No email or push delivery.</p>
+   </>
+ }
+ export function EventGroupQueue({ listingId }: { listingId: string }) {
+   const { session, ready } = useSession()
+   const navigate = useNavigate()
+-  return <section aria-label="Event group queue"><h2>Go together</h2><p>Join this event’s separate group queue for a suggestion of 2–4 people. Old Company interest and compatibility opt-in do not enroll you.</p>
+-    {!ready ? <p role="status">Loading session…</p> : !session ? <Button onClick={() => navigate(centralSignInPath(eventDetailPath(listingId)))}>Find a group to go with</Button> : <SignedInQueue key={`${listingId}:${session.user.id}:${session.access_token}`} listingId={listingId} token={session.access_token} actorId={session.user.id} />}
++  // Purpose and status lead; actions share one wrapping row; service limits stay quiet below.
++  return <section aria-label="Event group queue" className="ev-group-queue"><h2>Go together</h2><p>Join this event’s separate group queue for a suggestion of 2–4 people.</p>
++    {!ready ? <p role="status" className="ev-queue-status">Loading session…</p> : !session ? <div className="ev-queue-actions"><Button onClick={() => navigate(centralSignInPath(eventDetailPath(listingId)))}>Find a group to go with</Button></div> : <SignedInQueue key={`${listingId}:${session.user.id}:${session.access_token}`} listingId={listingId} token={session.access_token} actorId={session.user.id} />}
++    <p className="ev-small-note">Old Company interest and compatibility opt-in do not enroll you.</p>
+   </section>
+ }
+diff --git a/src/features/events/events.css b/src/features/events/events.css
+index 5055d90..200dc0b 100644
+--- a/src/features/events/events.css
++++ b/src/features/events/events.css
+@@ -36,7 +36,8 @@
+ .ev-feature.ev-feature .ev-text-button { background: none; border: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--ev-green) !important; font-weight: 700 !important; padding: 10px 0; min-height: 44px; text-decoration: underline; text-decoration-color: var(--pt-green-line); text-underline-offset: 4px; }
+ .ev-feature.ev-feature .ev-text-button:hover { color: var(--pt-ink) !important; }
+ .ev-feature.ev-feature .ev-name-link { text-align: left; border: none; background: none; padding: 3px 0; font-weight: 700 !important; font-size: 19px !important; }
+-.ev-feature.ev-feature .ev-name-link:hover { text-decoration: underline; }
++.ev-feature.ev-feature .ev-name-link:is(:link, :visited) { color: var(--ev-ink); text-decoration: none; }
++.ev-feature.ev-feature .ev-name-link:is(:hover, :focus-visible) { text-decoration: underline; text-decoration-color: var(--pt-green-line); text-underline-offset: 4px; }
+ .ev-feature.ev-feature .ev-hint, .ev-feature.ev-feature .ev-small-note { font-size: 13px; color: var(--ev-muted); line-height: 1.5; }
+ .ev-feature.ev-feature .ev-hint { margin: 10px 0 !important; }
+ .ev-feature.ev-feature .ev-eyebrow { font-size: 12px; letter-spacing: 1px; font-weight: 700; text-transform: uppercase; color: var(--ev-green); }
+@@ -70,6 +71,12 @@
+ .ev-feature.ev-feature .ev-interested-person > span { flex: 1; display: grid; gap: 4px; }
+ .ev-feature.ev-feature .ev-interested-person small { font-size: 12px; color: var(--ev-muted); }
+ .ev-feature.ev-feature .ev-detail-body section > .ev-button { margin-top: 20px; }
++.ev-feature.ev-feature .ev-group-queue > h2 + p { margin-top: 6px; }
++.ev-feature.ev-feature .ev-group-queue .ev-queue-status { margin-top: 14px; color: var(--ev-ink); font-weight: 700; }
++.ev-feature.ev-feature .ev-group-queue .ev-queue-status ~ p:not(.ev-small-note) { margin-top: 6px; }
++.ev-feature.ev-feature .ev-queue-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
++.ev-feature.ev-feature .ev-group-queue .ev-small-note { margin-top: 18px; }
++.ev-feature.ev-feature .ev-group-queue .ev-small-note + .ev-small-note { margin-top: 4px; }
+ .ev-feature.ev-feature .ev-event-match-result { border: 1px solid var(--pt-line); border-radius: 16px; background: var(--pt-soft); padding: 20px; }
+ .ev-feature.ev-feature .ev-event-match-result h2 { margin: 12px 0 7px; font-family: Georgia, 'Times New Roman', serif; font-size: 25px; font-weight: 500; }
+ .ev-feature.ev-feature .ev-event-match-result > p { color: var(--ev-muted); font-size: 14px; line-height: 1.5; }
+diff --git a/src/features/messaging/messaging.css b/src/features/messaging/messaging.css
+index d814da6..0904a78 100644
+--- a/src/features/messaging/messaging.css
++++ b/src/features/messaging/messaging.css
+@@ -7,6 +7,7 @@
+ .pt-inbox-pane .pt-conversation strong { padding-right: 0; }
+ .pt-inbox-pane .pt-conversation > span:nth-child(2) { padding-top: 0; }
+ .pt-inbox-pane .pt-page-heading { flex-wrap: wrap; }
++.pt-inbox-pane .pt-page-heading > div { flex: 1 0 max-content; max-width: 100%; }
+ .pt-messaging-mobile-plan { display: none; }
+ @media (max-width: 800px) {
+   .pt-messaging-mobile-plan { display: block; }
+diff --git a/src/features/prototype/calm.css b/src/features/prototype/calm.css
+index b1f63ec..cdd4547 100644
+--- a/src/features/prototype/calm.css
++++ b/src/features/prototype/calm.css
+@@ -106,9 +106,11 @@
+   .pt-home-center { gap: 14px; padding-block: 12px; }
+ }
+ 
+-/* Home's existing proposal inbox joins the quiet corner controls. */
++/* Notifications join the existing corner controls without another toolbar row. */
+ .pt-scene-home .pt-inbox-controls { position: absolute; top: calc(var(--pt-header-height) + 8px); left: calc(var(--pt-gutter) + 64px); padding: 0; z-index: 25; }
+-@media (max-width: 800px) { .pt-scene-home .pt-inbox-controls { top: 32px; } }
++.pt-scene-community { position: relative; }
++.pt-scene-community .pt-inbox-controls { position: absolute; top: calc(var(--pt-header-height) + 18px); left: calc(var(--pt-gutter) + 56px); padding: 0; z-index: 25; }
++@media (max-width: 800px) { .pt-scene-home .pt-inbox-controls, .pt-scene-community .pt-inbox-controls { top: 32px; } }
+ .pt-diorama .pebble-stone-bob, .pt-diorama .pebble-stone-wander { animation: none; }
+ 
+ /* Prominent top controls use the existing row; margins preserve its 48px height. */
+diff --git a/src/features/prototype/home-preview.css b/src/features/prototype/home-preview.css
+index f994740..1491ce3 100644
+--- a/src/features/prototype/home-preview.css
++++ b/src/features/prototype/home-preview.css
+@@ -19,6 +19,10 @@
+   max-width: 100%;
+   flex-shrink: 0;
+ }
++@media (width > 800px) {
++  .pt-app.pt-scene-home { --pt-focus-size: clamp(220px, min(38vw, 37dvh), 580px); }
++  .pt-app.pt-scene-home .pt-discovery-action { width: min(100%, 300px); }
++}
+ .pt-app .pt-pebble-refresh {
+   position: absolute; bottom: 0; left: 50%; translate: -50% 0;
+   display: grid; place-items: center; width: var(--pt-focus-size); height: var(--pt-focus-size);
+diff --git a/src/features/prototype/matchmaking.css b/src/features/prototype/matchmaking.css
+index 63db4e6..9d0f9ff 100644
+--- a/src/features/prototype/matchmaking.css
++++ b/src/features/prototype/matchmaking.css
+@@ -227,6 +227,26 @@
+   .match-live-dialog > form { height: min(calc(92dvh - var(--pt-navigation-clearance)), 48rem); }
+   .match-live-dialog .match-form-row { grid-template-columns: 1fr; }
+ }
++/* Preferences editor: compact sans heading, stacked fields and one-line actions. */
++.match-preferences.match-live-dialog h2 { margin: 0; font-family: inherit; font-size: 1.375rem; font-weight: 700; line-height: 1.25; letter-spacing: -.01em; }
++.match-preferences.match-live-dialog > form { gap: 0; }
++.match-preferences.match-live-dialog > form > header { border-bottom: 1px solid var(--color-line); }
++.match-preferences.match-live-dialog > form > footer { border-top: 1px solid var(--color-line); }
++.match-preferences.match-live-dialog .match-preferences-body { gap: 14px; padding-block: 16px 20px; }
++.match-preferences.match-live-dialog label { display: grid; align-items: initial; gap: 6px; min-height: auto; margin: 0; }
++.match-preferences.match-live-dialog .match-preferences-body p { font-size: .8125rem; line-height: 1.45; }
++.match-preferences.match-live-dialog fieldset { display: grid; gap: 12px; }
++.match-preferences.match-live-dialog legend { margin-bottom: 4px; padding: 0; }
++.match-preferences.match-live-dialog fieldset > div:not(.match-form-row) { display: grid; justify-items: start; gap: 8px; }
++.match-preferences.match-live-dialog fieldset > div > label { width: 100%; }
++.match-preferences.match-live-dialog .match-form-row { margin-bottom: 0; }
++.match-preferences.match-live-dialog :is(fieldset, .match-form-row) > .match-button { justify-self: start; align-self: end; }
++.match-preferences.match-live-dialog footer { flex-wrap: wrap; }
++.match-preferences.match-live-dialog footer .match-button { white-space: nowrap; }
++@media (max-width: 800px) {
++  .match-preferences.match-live-dialog footer { gap: 8px; padding-inline: 16px; }
++  .match-preferences.match-live-dialog footer .match-button { padding-inline: 14px; }
++}
+ 
+ /* Focus presentation; queue and profile contracts remain in useMatchmaking. */
+ .match-home.match-calm { max-width: none; width: 100%; gap: 0; color: var(--pt-ink); --color-pine: var(--pt-green); --color-coral: var(--pt-coral); --color-coral-pressed: var(--pt-berry-hover); }
+diff --git a/src/features/prototype/profile.css b/src/features/prototype/profile.css
+index 5be24b8..3450396 100644
+--- a/src/features/prototype/profile.css
++++ b/src/features/prototype/profile.css
+@@ -7,7 +7,7 @@
+ .pt-profile-identity { display: grid; grid-template-columns: 204px minmax(0, 1fr) auto; align-items: start; gap: 40px; max-width: 1210px; margin: 0 auto; padding: 26px 0 22px; }
+ .pt-profile-portrait { position: relative; margin-top: -83px; }
+ .pt-profile-portrait .pt-avatar { display: block; width: 204px; height: 204px; border: 6px solid var(--pt-surface); }
+-.pt-profile-portrait > span { position: absolute; right: 16px; bottom: 18px; width: 28px; height: 28px; border: 5px solid var(--pt-surface); border-radius: 50%; background: var(--pt-leaf); }
++.pt-profile-portrait > span:not(.pt-avatar) { position: absolute; right: 16px; bottom: 18px; width: 28px; height: 28px; border: 5px solid var(--pt-surface); border-radius: 50%; background: var(--pt-leaf); }
+ .pt-profile-copy h1 { font-size: 38px; line-height: 1.1; letter-spacing: -1px; }
+ .pt-profile-copy .pt-profile-location { justify-content: start; margin: 6px 0 8px !important; font-size: 15px; }
+ .pt-profile-copy .pt-profile-bio { margin: 0 0 13px !important; font-size: 17px; }
+@@ -74,7 +74,7 @@
+   .pt-profile-identity { grid-template-columns: 132px minmax(0, 1fr); gap: 4px 8px; padding: 0 12px 14px; }
+   .pt-profile-portrait { grid-column: 1; grid-row: 1; margin-top: -62px; }
+   .pt-profile-portrait .pt-avatar { width: 132px; height: 132px; border-width: 5px; }
+-  .pt-profile-portrait > span { right: 9px; bottom: 8px; width: 24px; height: 24px; border-width: 4px; }
++  .pt-profile-portrait > span:not(.pt-avatar) { right: 9px; bottom: 8px; width: 24px; height: 24px; border-width: 4px; }
+   .pt-profile-copy { grid-column: 1 / -1; }
+   .pt-profile-copy h1 { font-size: 28px; }
+   .pt-profile-copy .pt-profile-location { margin: 4px 0 6px !important; }
+diff --git a/src/features/prototype/settings.css b/src/features/prototype/settings.css
+index 36dae87..f5dd018 100644
+--- a/src/features/prototype/settings.css
++++ b/src/features/prototype/settings.css
+@@ -9,6 +9,7 @@
+ .pt-settings-title h1 { font-size: 24px; line-height: 29px; }
+ .pt-settings-title p { font-size: 14px; line-height: 19px; }
+ .pt-settings section { border: 1px solid var(--pt-line); border-radius: 13px; background: var(--pt-surface); overflow: hidden; box-shadow: 0 2px 4px color-mix(in srgb, var(--pt-ink) 3%, transparent); }
++.pt-settings > section > fieldset { margin: 0; padding: 20px 24px; }
+ .pt-settings-heading { display: flex; align-items: center; gap: 18px; min-height: 47px; padding: 10px 20px; border-bottom: 1px solid var(--pt-line); background: color-mix(in srgb, var(--pt-cream) 75%, var(--pt-surface)); }
+ .pt-settings-heading > svg { color: var(--pt-ink); }
+ .pt-settings-heading h2 { font-size: 16px; line-height: 20px; letter-spacing: -.2px; }
+@@ -38,6 +39,7 @@
+   .pt-settings-title h1 { font-size: 26px; }
+   .pt-settings-heading { gap: 14px; padding: 10px 16px; }
+   .pt-settings-row, .pt-settings .pt-toggle-row { width: calc(100% - 32px); margin-inline: 16px !important; padding-block: 12px; }
++  .pt-settings > section > fieldset { padding: 16px; }
+   .pt-settings-actions .pt-settings-row { padding-left: 0; flex-wrap: wrap; }
+   .pt-settings-actions .pt-settings-row > span { flex-basis: 100%; }
+   .pt-settings-actions .pt-button { width: 100%; }
+--- a/src/features/events/client.ts
++++ b/src/features/events/client.ts
+@@ -40,6 +40,12 @@
+   if (!start) return 'Date to be announced'
+   const date = new Date(start)
+   if (Number.isNaN(date.getTime())) return 'Date to be announced'
+-  const when = date.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })
+-  return end ? `${when} – ${new Date(end).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}` : when
++  const finish = end ? new Date(end) : null
++  const until = finish && !Number.isNaN(finish.getTime()) ? finish : null
++  const day: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric', year: until && until.getFullYear() !== date.getFullYear() ? 'numeric' : undefined }
++  const time: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }
++  const when = date.toLocaleString(undefined, { ...day, ...time })
++  if (!until) return when
++  // Same-day ranges stay compact; multi-day ranges name the ending date.
++  return `${when} – ${until.toLocaleString(undefined, until.toDateString() === date.toDateString() ? time : { ...day, ...time })}`
+ }
+--- /dev/null
++++ b/e2e/community-toolbar.spec.ts
+@@ -0,0 +1,35 @@
++import { expect, test } from '@playwright/test'
++import { mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
++
++for (const [width, height] of [[320, 568], [390, 844], [800, 900], [801, 900]]) {
++  test(`signed-in Community keeps its toolbar and week controls clear at ${width}px`, async ({ page }) => {
++    await page.setViewportSize({ width, height })
++    await page.emulateMedia({ reducedMotion: 'reduce' })
++    await mockMatchingSession(page)
++    await mockMatchingApi(page)
++    await page.goto('/community')
++    const bell = page.getByRole('button', { name: /Matching notifications,/ })
++    await expect(bell).toBeVisible()
++    const controls = [page.getByRole('link', { name: 'Back to Home', exact: true }), bell, page.getByLabel('Pebble balance', { exact: true }), page.getByRole('button', { name: 'Build your community', exact: true })]
++    const boxes = await Promise.all(controls.map(control => control.boundingBox()))
++    expect(Math.abs(boxes[0]!.y - boxes[1]!.y), 'bell shares the existing Community toolbar').toBeLessThanOrEqual(4)
++    for (let index = 0; index < boxes.length; index++) {
++      const box = boxes[index]!
++      expect(box.x).toBeGreaterThanOrEqual(0)
++      expect(box.x + box.width).toBeLessThanOrEqual(width)
++      for (const other of boxes.slice(index + 1)) {
++        const overlap = box.x < other!.x + other!.width && box.x + box.width > other!.x && box.y < other!.y + other!.height && box.y + box.height > other!.y
++        expect(overlap, 'toolbar controls do not overlap').toBe(false)
++      }
++    }
++    const dates = (await page.locator('.pt-history-dates').boundingBox())!
++    const navigation = await page.locator('.pt-bottom-nav').boundingBox()
++    expect(dates.y + dates.height, 'week controls clear compact navigation').toBeLessThanOrEqual(navigation?.y ?? height)
++    await bell.click()
++    await expect(page.getByRole('dialog', { name: 'Matching notifications', exact: true })).toBeVisible()
++    await page.keyboard.press('Escape')
++    await expect(bell).toBeFocused()
++    await page.getByRole('button', { name: 'Build your community', exact: true }).click()
++    await expect(page.getByRole('dialog', { name: 'Build your community', exact: true })).toBeVisible()
++  })
++}
+--- /dev/null
++++ b/e2e/forms-formatting.spec.ts
+@@ -0,0 +1,49 @@
++import { expect, test } from '@playwright/test'
++import { mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
++import { directConversation, mockMessagingApi } from './messaging-fixture'
++
++for (const [width, height] of [[320, 568], [390, 844], [800, 844], [801, 844], [1280, 720], [1920, 1080]]) {
++  test(`an unset profile photo remains fully visible across the cover at ${width}px`, async ({ page }) => {
++    await page.setViewportSize({ width, height })
++    await mockMatchingSession(page)
++    await mockMatchingApi(page)
++    await page.goto('/profile')
++    // Expanded layouts repeat the same avatar name in the account menu.
++    const region = page.getByRole('region', { name: 'Your profile' })
++    const avatar = region.getByRole('img', { name: 'Sam profile picture not set' })
++    await expect(avatar).toBeVisible()
++    const portrait = (await avatar.boundingBox())!
++    const summary = (await region.boundingBox())!
++    const cover = (await page.locator('.pt-profile-cover').boundingBox())!
++    expect(portrait.y, 'the card must not clip the top of the silhouette').toBeGreaterThanOrEqual(summary.y)
++    expect(portrait.x).toBeGreaterThanOrEqual(summary.x)
++    expect(portrait.x + portrait.width).toBeLessThanOrEqual(summary.x + summary.width)
++    expect(portrait.y).toBeLessThan(cover.y + cover.height)
++    expect(portrait.y + portrait.height, 'the portrait spans the cover/body boundary').toBeGreaterThan(cover.y + cover.height)
++  })
++}
++
++for (const width of [801, 1024, 1280]) {
++  test(`Messages and Refresh remain separately readable in the expanded inbox at ${width}px`, async ({ page }) => {
++    await page.setViewportSize({ width, height: 720 })
++    await mockMatchingSession(page)
++    await mockMatchingApi(page)
++    await mockMessagingApi(page)
++    for (const path of ['/messages', `/messages/chat?conversation=${directConversation}`]) {
++      await page.goto(path)
++      // The signed-in inbox replaces a loading heading that has no Refresh action.
++      const inbox = page.getByRole('region', { name: 'Conversation inbox' })
++      const refresh = inbox.getByRole('button', { name: 'Refresh', exact: true })
++      await expect(refresh).toBeEnabled()
++      const button = (await refresh.boundingBox())!
++      const title = await inbox.getByRole('heading', { name: 'Messages', exact: true }).evaluate(element => {
++        const range = document.createRange()
++        range.selectNodeContents(element)
++        return range.getBoundingClientRect().toJSON() as { left: number; right: number; top: number; bottom: number }
++      })
++      const overlap = Math.max(0, Math.min(title.right, button.x + button.width) - Math.max(title.left, button.x))
++        * Math.max(0, Math.min(title.bottom, button.y + button.height) - Math.max(title.top, button.y))
++      expect(overlap, `${path}: Refresh must not cover heading text`).toBe(0)
++    }
++  })
++}
+--- /dev/null
++++ b/e2e/matchmaking-preferences-layout.spec.ts
+@@ -0,0 +1,25 @@
++import { expect, test } from '@playwright/test'
++import { mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
++
++for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }]) {
++  test(`matching preferences keep useful fields visible and actions compact at ${viewport.width}px`, async ({ page }) => {
++    await page.setViewportSize(viewport)
++    await mockMatchingSession(page)
++    await mockMatchingApi(page)
++    await page.goto('/matchmaking')
++    await page.getByRole('button', { name: 'Preferences', exact: true }).click()
++    const dialog = page.getByRole('dialog')
++    const heading = await dialog.getByRole('heading', { name: 'Your preferences' }).boundingBox()
++    const save = await dialog.getByRole('button', { name: 'Save preferences' }).boundingBox()
++    expect(heading!.height).toBeLessThan(40)
++    expect(save!.height).toBeLessThanOrEqual(52)
++    const fieldsFit = await dialog.evaluate(element => {
++      const body = element.querySelector('.match-preferences-body')!.getBoundingClientRect()
++      const fields = [...element.querySelectorAll('input')].slice(0, 2).map(input => input.getBoundingClientRect())
++      return fields.every(field => field.top >= body.top && field.bottom <= body.bottom)
++    })
++    expect(fieldsFit).toBe(true)
++    await page.keyboard.press('Escape')
++    await expect(page.getByRole('button', { name: 'Preferences', exact: true })).toBeFocused()
++  })
++}
+--- /dev/null
++++ b/tests/events-dates.test.ts
+@@ -0,0 +1,29 @@
++import { expect, it, vi } from 'vitest'
++import { eventDate } from '../src/features/events/client'
++
++vi.mock('../src/supabase', () => ({ supabase: null }))
++
++it('shows both calendar dates for an event spanning multiple days', () => {
++  const start = new Date(2026, 9, 24, 18), end = new Date(2026, 9, 26, 14)
++  const formatted = eventDate(start.toISOString(), end.toISOString())
++  expect(formatted).toContain(start.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }))
++  expect(formatted).toContain(end.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }))
++})
++
++it('keeps a same-day range compact with the ending time', () => {
++  const start = new Date(2026, 9, 24, 18), end = new Date(2026, 9, 24, 20)
++  const formatted = eventDate(start.toISOString(), end.toISOString())
++  const day = start.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
++  expect(formatted.split(day)).toHaveLength(2)
++  expect(formatted).toContain(end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }))
++})
++
++it('includes the years when an event continues into the next calendar year', () => {
++  expect(eventDate(new Date(2026, 11, 31, 18).toISOString(), new Date(2027, 0, 1, 2).toISOString())).toMatch(/2026.*2027/)
++})
++
++it('keeps a known start date when the ending date is missing or invalid', () => {
++  const start = new Date(2026, 9, 24, 18).toISOString()
++  expect(eventDate(start, 'invalid')).toBe(eventDate(start, null))
++  expect(eventDate(null, null)).toBe('Date to be announced')
++})

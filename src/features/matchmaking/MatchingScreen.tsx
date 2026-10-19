@@ -16,16 +16,18 @@ const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 
 function ProfileEditor({ initial, busy, error, save, close }: { initial: MatchingProfile | null; busy: boolean; error: string; save: (profile: MatchingProfile) => Promise<boolean>; close: () => void }) {
   const [draft, setDraft] = useState(initial ?? blankProfile)
-  const [validation, setValidation] = useState('')
+  const [validation, setValidation] = useState<{ message: string } | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
+  const feedback = useRef<HTMLParagraphElement>(null)
   useEffect(() => { dialog.current?.showModal() }, [])
+  useEffect(() => { if (validation || error) feedback.current?.focus() }, [validation, error])
   const update = (patch: Partial<MatchingProfile>) => setDraft(current => ({ ...current, ...patch }))
   const dismiss = () => { dialog.current?.close(); close() }
   return <dialog ref={dialog} className="match-preferences match-live-dialog" aria-labelledby="preferences-title" onCancel={event => { event.preventDefault(); if (!busy) dismiss() }}><form onSubmit={async event => {
     event.preventDefault()
     const parsed = MatchingProfileSchema.safeParse(draft)
-    if (!parsed.success) { setValidation('Check your profile fields and non-overlapping same-day time windows.'); return }
-    setValidation('')
+    if (!parsed.success) { setValidation({ message: 'Check your profile fields and non-overlapping same-day time windows.' }); return }
+    setValidation(null)
     if (await save(parsed.data)) dismiss()
   }}><header><h2 id="preferences-title">Your preferences</h2><button type="button" className="match-close-button" aria-label="Close preferences" onClick={dismiss} disabled={busy}>×</button></header><div className="match-preferences-body">
     <label>Username<input required maxLength={80} value={draft.username} onChange={event => update({ username: event.target.value })} /></label>
@@ -41,7 +43,7 @@ function ProfileEditor({ initial, busy, error, save, close }: { initial: Matchin
       {(['start_time', 'end_time'] as const).map(field => <label key={field}>{field === 'start_time' ? 'Start' : 'End'}<input aria-label={`${field === 'start_time' ? 'Start' : 'End'} ${index + 1}`} placeholder="HH:MM:SS" value={window[field]} onChange={event => update({ availability: draft.availability.map((item, i) => i === index ? { ...item, [field]: event.target.value } : item) })} /></label>)}
       <button type="button" className="match-button match-button-secondary" onClick={() => update({ availability: draft.availability.filter((_, i) => i !== index) })}>Remove window {index + 1}</button>
     </div>)}<button type="button" className="match-button match-button-secondary" disabled={draft.availability.length >= 56} onClick={() => update({ availability: [...draft.availability, { dow: 1, start_time: '17:00:00', end_time: '21:00:00' }] })}>Add time window</button></fieldset>
-    {(error || validation) && <p role="alert">{validation || error}</p>}
+    {(error || validation) && <p ref={feedback} role="alert" tabIndex={-1}>{validation?.message || error}</p>}
     </div><footer><button type="button" className="match-button match-button-secondary" disabled={busy} onClick={dismiss}>Cancel</button><button type="submit" className="match-button match-button-secondary" disabled={busy}>{busy ? 'Saving…' : 'Save preferences'}</button></footer></form></dialog>
 }
 

@@ -1,0 +1,404 @@
+[
+  {
+    "label": "320x568",
+    "page": "profile",
+    "data": {
+      "avatar": {
+        "x": 16,
+        "y": 69,
+        "width": 132,
+        "height": 132,
+        "position": "absolute",
+        "background": "rgb(79, 138, 76)"
+      },
+      "portrait": {
+        "x": 25,
+        "y": 209,
+        "width": 132,
+        "height": 0,
+        "position": "relative",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "summary": {
+        "x": 12,
+        "y": 136,
+        "width": 296,
+        "height": 412.296875,
+        "position": "static",
+        "background": "rgb(255, 254, 249)"
+      }
+    }
+  },
+  {
+    "label": "320x568",
+    "page": "settings",
+    "data": {
+      "cardLeft": 20,
+      "controlLeft": 21,
+      "inset": 1,
+      "fieldsetPadding": "0px",
+      "fieldsetMargin": "15px 0px"
+    }
+  },
+  {
+    "label": "320x568",
+    "page": "login",
+    "data": [
+      {
+        "text": "Create an account",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      },
+      {
+        "text": "Back to home",
+        "color": "rgb(66, 91, 73)",
+        "underline": "underline"
+      },
+      {
+        "text": "Open Supabase email viewer",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      }
+    ]
+  },
+  {
+    "label": "320x568",
+    "page": "messages",
+    "rows": 2
+  },
+  {
+    "label": "390x844",
+    "page": "profile",
+    "data": {
+      "avatar": {
+        "x": 16,
+        "y": 69,
+        "width": 132,
+        "height": 132,
+        "position": "absolute",
+        "background": "rgb(79, 138, 76)"
+      },
+      "portrait": {
+        "x": 25,
+        "y": 209,
+        "width": 132,
+        "height": 0,
+        "position": "relative",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "summary": {
+        "x": 12,
+        "y": 136,
+        "width": 366,
+        "height": 345.796875,
+        "position": "static",
+        "background": "rgb(255, 254, 249)"
+      }
+    }
+  },
+  {
+    "label": "390x844",
+    "page": "settings",
+    "data": {
+      "cardLeft": 20,
+      "controlLeft": 21,
+      "inset": 1,
+      "fieldsetPadding": "0px",
+      "fieldsetMargin": "15px 0px"
+    }
+  },
+  {
+    "label": "390x844",
+    "page": "login",
+    "data": [
+      {
+        "text": "Create an account",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      },
+      {
+        "text": "Back to home",
+        "color": "rgb(66, 91, 73)",
+        "underline": "underline"
+      },
+      {
+        "text": "Open Supabase email viewer",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      }
+    ]
+  },
+  {
+    "label": "390x844",
+    "page": "messages",
+    "rows": 2
+  },
+  {
+    "label": "800x844",
+    "page": "profile",
+    "data": {
+      "avatar": {
+        "x": 16,
+        "y": 69,
+        "width": 132,
+        "height": 132,
+        "position": "absolute",
+        "background": "rgb(79, 138, 76)"
+      },
+      "portrait": {
+        "x": 25,
+        "y": 209,
+        "width": 132,
+        "height": 0,
+        "position": "relative",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "summary": {
+        "x": 12,
+        "y": 136,
+        "width": 776,
+        "height": 345.796875,
+        "position": "static",
+        "background": "rgb(255, 254, 249)"
+      }
+    }
+  },
+  {
+    "label": "800x844",
+    "page": "settings",
+    "data": {
+      "cardLeft": 82,
+      "controlLeft": 83,
+      "inset": 1,
+      "fieldsetPadding": "0px",
+      "fieldsetMargin": "15px 0px"
+    }
+  },
+  {
+    "label": "800x844",
+    "page": "login",
+    "data": [
+      {
+        "text": "Create an account",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      },
+      {
+        "text": "Back to home",
+        "color": "rgb(66, 91, 73)",
+        "underline": "underline"
+      },
+      {
+        "text": "Open Supabase email viewer",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      }
+    ]
+  },
+  {
+    "label": "800x844",
+    "page": "messages",
+    "rows": 2
+  },
+  {
+    "label": "801x844",
+    "page": "profile",
+    "data": {
+      "avatar": {
+        "x": 49.03125,
+        "y": 22,
+        "width": 204,
+        "height": 204,
+        "position": "absolute",
+        "background": "rgb(79, 138, 76)"
+      },
+      "portrait": {
+        "x": 65.03125,
+        "y": 244,
+        "width": 204,
+        "height": 0,
+        "position": "relative",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "summary": {
+        "x": 32.03125,
+        "y": 166,
+        "width": 736.9375,
+        "height": 408.296875,
+        "position": "static",
+        "background": "rgb(255, 254, 249)"
+      }
+    }
+  },
+  {
+    "label": "801x844",
+    "page": "settings",
+    "data": {
+      "cardLeft": 82.5,
+      "controlLeft": 83.5,
+      "inset": 1,
+      "fieldsetPadding": "0px",
+      "fieldsetMargin": "15px 0px"
+    }
+  },
+  {
+    "label": "801x844",
+    "page": "login",
+    "data": [
+      {
+        "text": "Create an account",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      },
+      {
+        "text": "Back to home",
+        "color": "rgb(66, 91, 73)",
+        "underline": "underline"
+      },
+      {
+        "text": "Open Supabase email viewer",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      }
+    ]
+  },
+  {
+    "label": "801x844",
+    "page": "messages",
+    "rows": 2
+  },
+  {
+    "label": "1280x720",
+    "page": "profile",
+    "data": {
+      "avatar": {
+        "x": 68.1875,
+        "y": 22,
+        "width": 204,
+        "height": 204,
+        "position": "absolute",
+        "background": "rgb(79, 138, 76)"
+      },
+      "portrait": {
+        "x": 84.1875,
+        "y": 244,
+        "width": 204,
+        "height": 0,
+        "position": "relative",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "summary": {
+        "x": 51.1875,
+        "y": 166,
+        "width": 1177.625,
+        "height": 338.796875,
+        "position": "static",
+        "background": "rgb(255, 254, 249)"
+      }
+    }
+  },
+  {
+    "label": "1280x720",
+    "page": "settings",
+    "data": {
+      "cardLeft": 322,
+      "controlLeft": 323,
+      "inset": 1,
+      "fieldsetPadding": "0px",
+      "fieldsetMargin": "15px 0px"
+    }
+  },
+  {
+    "label": "1280x720",
+    "page": "login",
+    "data": [
+      {
+        "text": "Create an account",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      },
+      {
+        "text": "Back to home",
+        "color": "rgb(66, 91, 73)",
+        "underline": "underline"
+      },
+      {
+        "text": "Open Supabase email viewer",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      }
+    ]
+  },
+  {
+    "label": "1280x720",
+    "page": "messages",
+    "rows": 2
+  },
+  {
+    "label": "1920x1080",
+    "page": "profile",
+    "data": {
+      "avatar": {
+        "x": 339,
+        "y": 22,
+        "width": 204,
+        "height": 204,
+        "position": "absolute",
+        "background": "rgb(79, 138, 76)"
+      },
+      "portrait": {
+        "x": 355,
+        "y": 244,
+        "width": 204,
+        "height": 0,
+        "position": "relative",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "summary": {
+        "x": 76.796875,
+        "y": 166,
+        "width": 1766.40625,
+        "height": 338.796875,
+        "position": "static",
+        "background": "rgb(255, 254, 249)"
+      }
+    }
+  },
+  {
+    "label": "1920x1080",
+    "page": "settings",
+    "data": {
+      "cardLeft": 642,
+      "controlLeft": 643,
+      "inset": 1,
+      "fieldsetPadding": "0px",
+      "fieldsetMargin": "15px 0px"
+    }
+  },
+  {
+    "label": "1920x1080",
+    "page": "login",
+    "data": [
+      {
+        "text": "Create an account",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      },
+      {
+        "text": "Back to home",
+        "color": "rgb(66, 91, 73)",
+        "underline": "underline"
+      },
+      {
+        "text": "Open Supabase email viewer",
+        "color": "rgb(0, 0, 238)",
+        "underline": "underline"
+      }
+    ]
+  },
+  {
+    "label": "1920x1080",
+    "page": "messages",
+    "rows": 2
+  }
+]

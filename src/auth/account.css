@@ -1,5 +1,7 @@
 .pt-auth-form { display: grid; gap: 16px; }
 .pt-auth-form > p { margin: 0; }
+.pt-auth :where(a:not(.pt-button)) { color: var(--pt-ink); text-underline-offset: 3px; }
+.pt-auth :where(a:not(.pt-button)):hover { color: var(--pt-green); text-decoration-thickness: 2px; }
 .pt-auth-form fieldset, .pt-chapter-form > fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .pt-auth-form fieldset { display: grid; gap: 16px; }
 .pt-password-field { display: grid; gap: 8px; }

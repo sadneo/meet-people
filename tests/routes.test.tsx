@@ -92,6 +92,28 @@ describe('routes', () => {
     expect(screen.getAllByRole('link', { name: 'Home', exact: true }).every(link => link.getAttribute('aria-current') === 'page')).toBe(true)
   })
 
+  it('returns to Home after opening a person from a thought bubble', () => {
+    render(<MemoryRouter initialEntries={['/home']}><App /><CurrentPath /></MemoryRouter>)
+    fireEvent.click(screen.getByRole('button', { name: "View Aaron Patel's profile" }))
+    expect(screen.getByRole('heading', { name: 'Aaron Patel' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Back', exact: true }))
+    expect(screen.getByLabelText('Current path').textContent).toBe('/home')
+    expect(screen.getByRole('heading', { name: 'Who’s around?' })).toBeTruthy()
+  })
+
+  it('preserves the free-time return path for a person opened from planning', () => {
+    render(<MemoryRouter initialEntries={['/free-time/matches']}><App /><CurrentPath /></MemoryRouter>)
+    fireEvent.click(screen.getByRole('button', { name: "View Aaron's profile" }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back', exact: true }))
+    expect(screen.getByLabelText('Current path').textContent).toBe('/free-time/matches')
+  })
+
+  it('retains a useful fallback for a person profile opened directly', () => {
+    render(<MemoryRouter initialEntries={['/profile/person']}><App /><CurrentPath /></MemoryRouter>)
+    fireEvent.click(screen.getByRole('button', { name: 'Back', exact: true }))
+    expect(screen.getByLabelText('Current path').textContent).toBe('/free-time/matches')
+  })
+
   it('renders the not-found route', () => {
     render(<MemoryRouter initialEntries={['/missing']}><App /></MemoryRouter>)
 

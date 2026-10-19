@@ -168,6 +168,35 @@ it('does not claim a profile save succeeded when the atomic RPC is unavailable',
   expect(screen.getByRole('dialog')).toBeTruthy()
   expect(localStorage.getItem('pebble.matchmaking-profile')).toBeNull()
 })
+it('moves focus to validation feedback on every rejected preference save without losing the draft', async () => {
+  mount()
+  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Add time window' }))
+  fireEvent.change(screen.getByLabelText('Start 1'), { target: { value: '17:00' } })
+  fireEvent.change(screen.getByLabelText('End 1'), { target: { value: '21:00' } })
+  const save = screen.getByRole('button', { name: 'Save preferences' })
+  for (let attempt = 0; attempt < 2; attempt++) {
+    save.focus()
+    fireEvent.click(save)
+    const alert = await screen.findByRole('alert')
+    await waitFor(() => expect(document.activeElement).toBe(alert))
+    expect((screen.getByLabelText('Start 1') as HTMLInputElement).value).toBe('17:00')
+    expect((screen.getByLabelText('End 1') as HTMLInputElement).value).toBe('21:00')
+  }
+  expect(requests.some(request => request.method === 'PUT')).toBe(false)
+})
+it('moves focus to a failed preference save response and keeps the edited fields', async () => {
+  mount()
+  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
+  fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Unsaved name' } })
+  const save = screen.getByRole('button', { name: 'Save preferences' })
+  save.focus()
+  fireEvent.click(save)
+  const alert = await screen.findByRole('alert')
+  await waitFor(() => expect(document.activeElement).toBe(alert))
+  expect((screen.getByLabelText('Display name') as HTMLInputElement).value).toBe('Unsaved name')
+  expect(screen.getByRole('dialog')).toBeTruthy()
+})
 it('updates the profile only from a successful API save', async () => {
   saveUnavailable = false
   mount()

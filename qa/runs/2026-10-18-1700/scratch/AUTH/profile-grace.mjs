@@ -1,0 +1,16 @@
+import { openAs } from '/home/xqiu/Projects/meet-people/.claude/skills/qa/scripts/qa-browser.mjs'
+const R = '/home/xqiu/Projects/meet-people/qa/runs/2026-10-18-1700/screenshots'
+const { page, problems, close } = await openAs('grace', { width: 1280, height: 860 })
+const log = (...a) => console.log(...a)
+await page.goto('/profile'); await page.waitForTimeout(2000)
+log('profile chips:', await page.locator('.pt-profile-copy .pt-static-chips span').allInnerTexts())
+await page.getByRole('button', { name: 'Edit profile' }).click(); await page.waitForTimeout(500)
+const dlg = page.getByRole('dialog')
+log('edit chips options:', await dlg.locator('.pt-chips button').allInnerTexts())
+log('edit chips pressed:', await dlg.locator('[aria-pressed=true]').allInnerTexts())
+await page.screenshot({ path: `${R}/AUTH-grace-edit-profile-1280.png` })
+await dlg.getByRole('button', { name: 'Close dialog' }).click()
+await page.goto('/matchmaking'); await page.waitForTimeout(2500)
+log('matchmaking interests inputs:', await page.locator('input, textarea').evaluateAll(els => els.filter(e => /Interest/.test(e.labels?.[0]?.innerText ?? '')).map(e => e.value)))
+log(problems.join('\n'))
+await close()

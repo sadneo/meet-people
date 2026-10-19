@@ -5,15 +5,16 @@ export const messagingUser = 'a0000000-0000-4000-8000-000000000001'
 const taylor = 'a0000000-0000-4000-8000-000000000002'
 const jordan = 'a0000000-0000-4000-8000-000000000003'
 export const riley = 'a0000000-0000-4000-8000-000000000004'
+const casey = 'a0000000-0000-4000-8000-000000000005'
 export const directConversation = 'c0000000-0000-4000-8000-000000000001'
 export const groupConversation = 'c0000000-0000-4000-8000-000000000002'
 const rileyConversation = 'c0000000-0000-4000-8000-000000000003'
-const names: Record<string, string> = { [taylor]: 'Taylor', [jordan]: 'Jordan', [riley]: 'Riley' }
+const names: Record<string, string> = { [taylor]: 'Taylor', [jordan]: 'Jordan', [riley]: 'Riley', [casey]: 'Casey' }
 
 export async function mockMessagingApi(page: Page, { incomingFromRiley = false } = {}) {
-  const conversations = [
+  const conversations: { id: string; kind: string; other: string; also?: string[] }[] = [
     { id: directConversation, kind: 'direct', other: taylor },
-    { id: groupConversation, kind: 'event_group', other: jordan },
+    { id: groupConversation, kind: 'event_group', other: jordan, also: [casey] },
   ]
   const rows = [{ id: 'b0000000-0000-4000-8000-000000000001', conversation_id: directConversation, seq: 1, sender_id: taylor, body: 'Previous saved message', created_at: '2026-10-08T12:00:00Z' }]
   const lastRead: Record<string, number> = {}
@@ -21,7 +22,7 @@ export async function mockMessagingApi(page: Page, { incomingFromRiley = false }
   let incoming = incomingFromRiley ? [{ id: riley, display_name: 'Riley', avatar_url: null, requested_at: rows[0].created_at }] : []
   const participants = (id: string) => [
     { id: messagingUser, display_name: 'Sam', avatar_url: null, last_read_seq: lastRead[id] ?? 0 },
-    ...conversations.filter(item => item.id === id).map(item => ({ id: item.other, display_name: names[item.other], avatar_url: null, last_read_seq: 0 })),
+    ...conversations.filter(item => item.id === id).flatMap(item => [item.other, ...item.also ?? []]).map(other => ({ id: other, display_name: names[other], avatar_url: null, last_read_seq: 0 })),
   ]
   const unread = (id: string) => rows.filter(row => row.conversation_id === id && row.seq > (lastRead[id] ?? 0) && row.sender_id !== messagingUser).length
   await page.route('**/api/connections**', route => {

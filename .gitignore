@@ -15,3 +15,7 @@ worktree/
 firebase-debug*.log
 gha-creds-*.json
 hosting/supabase/.temp/
+# QA browser helper caches local sign-in tokens here.
+qa/.sessions/
+# QA screenshots stay local; reports reference them by path.
+qa/**/*.png

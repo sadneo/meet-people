@@ -1,0 +1,205 @@
+diff --git a/e2e/matchmaking.spec.ts b/e2e/matchmaking.spec.ts
+index c60b16a..3be68e2 100644
+--- a/e2e/matchmaking.spec.ts
++++ b/e2e/matchmaking.spec.ts
+@@ -1,6 +1,36 @@
+ import { expect, test } from '@playwright/test'
+ import { browserProfile, mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
+ 
++for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 860 }]) {
++  test(`invalid matching preferences reveal their feedback at ${viewport.width}px`, async ({ page }) => {
++    await page.setViewportSize(viewport)
++    await mockMatchingSession(page)
++    await mockMatchingApi(page)
++    let saves = 0
++    await page.route('**/api/matchmaking/profile', route => {
++      if (route.request().method() === 'PUT') saves++
++      return route.fallback()
++    })
++    await page.goto('/matchmaking')
++    await page.getByRole('button', { name: 'Preferences', exact: true }).click()
++    await page.getByRole('button', { name: 'Add time window' }).click()
++    await page.getByLabel('Start 1', { exact: true }).fill('17:00')
++    await page.getByLabel('End 1', { exact: true }).fill('21:00')
++    for (let attempt = 0; attempt < 2; attempt++) {
++      await page.getByRole('button', { name: 'Save preferences' }).click()
++      const alert = page.getByRole('dialog').getByRole('alert')
++      await expect(alert).toBeFocused()
++      await expect.poll(() => alert.evaluate(element => {
++        const body = element.closest('.match-preferences-body')!.getBoundingClientRect()
++        const bounds = element.getBoundingClientRect()
++        return bounds.top >= body.top && bounds.bottom <= body.bottom
++      })).toBe(true)
++      await expect(page.getByLabel('Start 1', { exact: true })).toHaveValue('17:00')
++    }
++    expect(saves).toBe(0)
++  })
++}
++
+ for (const origin of ['shell', 'settings']) {
+   test(`mocked ${origin} logout failure stays signed in; retry signs out through auth notifications`, async ({ page }) => {
+     await mockMatchingSession(page, true, 1)
+diff --git a/src/features/events/client.ts b/src/features/events/client.ts
+index 9dc2691..9be8f37 100644
+--- a/src/features/events/client.ts
++++ b/src/features/events/client.ts
+@@ -3,15 +3,24 @@ import type { ZodType } from 'zod'
+ import { apiUrl } from '../../platform/native'
+ 
+ export async function eventRequest<T>(path: string, schema: ZodType<T>, options: { body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
+-  const session = supabase ? (await supabase.auth.getSession()).data.session : null
+-  const response = await fetch(apiUrl(`/api/events${path}`), {
+-    method: options.body ? 'POST' : 'GET', signal: options.signal,
+-    headers: { ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}), ...(options.body ? { 'Content-Type': 'application/json' } : {}) },
+-    body: options.body ? JSON.stringify(options.body) : undefined,
+-  })
+-  const data = await response.json()
+-  if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : 'Events are unavailable. Try again.')
+-  return schema.parse(data)
++  const unavailable = 'Events are unavailable. Try again.'
++  let response: Response, data: unknown
++  try {
++    const session = supabase ? (await supabase.auth.getSession()).data.session : null
++    response = await fetch(apiUrl(`/api/events${path}`), {
++      method: options.body ? 'POST' : 'GET', signal: options.signal,
++      headers: { ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}), ...(options.body ? { 'Content-Type': 'application/json' } : {}) },
++      body: options.body ? JSON.stringify(options.body) : undefined,
++    })
++    data = await response.json()
++  } catch (failure) {
++    if (options.signal?.aborted) throw failure
++    throw new Error(unavailable, { cause: failure })
++  }
++  if (!response.ok) throw new Error(data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : unavailable)
++  const parsed = schema.safeParse(data)
++  if (!parsed.success) throw new Error(unavailable)
++  return parsed.data
+ }
+ 
+ export const eventImagePlaceholder = '/images/event-placeholder.svg'
+diff --git a/src/features/matchmaking/MatchingScreen.tsx b/src/features/matchmaking/MatchingScreen.tsx
+index 98a7e0a..d54d700 100644
+--- a/src/features/matchmaking/MatchingScreen.tsx
++++ b/src/features/matchmaking/MatchingScreen.tsx
+@@ -16,16 +16,18 @@ const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
+ 
+ function ProfileEditor({ initial, busy, error, save, close }: { initial: MatchingProfile | null; busy: boolean; error: string; save: (profile: MatchingProfile) => Promise<boolean>; close: () => void }) {
+   const [draft, setDraft] = useState(initial ?? blankProfile)
+-  const [validation, setValidation] = useState('')
++  const [validation, setValidation] = useState<{ message: string } | null>(null)
+   const dialog = useRef<HTMLDialogElement>(null)
++  const feedback = useRef<HTMLParagraphElement>(null)
+   useEffect(() => { dialog.current?.showModal() }, [])
++  useEffect(() => { if (validation || error) feedback.current?.focus() }, [validation, error])
+   const update = (patch: Partial<MatchingProfile>) => setDraft(current => ({ ...current, ...patch }))
+   const dismiss = () => { dialog.current?.close(); close() }
+   return <dialog ref={dialog} className="match-preferences match-live-dialog" aria-labelledby="preferences-title" onCancel={event => { event.preventDefault(); if (!busy) dismiss() }}><form onSubmit={async event => {
+     event.preventDefault()
+     const parsed = MatchingProfileSchema.safeParse(draft)
+-    if (!parsed.success) { setValidation('Check your profile fields and non-overlapping same-day time windows.'); return }
+-    setValidation('')
++    if (!parsed.success) { setValidation({ message: 'Check your profile fields and non-overlapping same-day time windows.' }); return }
++    setValidation(null)
+     if (await save(parsed.data)) dismiss()
+   }}><header><h2 id="preferences-title">Your preferences</h2><button type="button" className="match-close-button" aria-label="Close preferences" onClick={dismiss} disabled={busy}>×</button></header><div className="match-preferences-body">
+     <label>Username<input required maxLength={80} value={draft.username} onChange={event => update({ username: event.target.value })} /></label>
+@@ -41,7 +43,7 @@ function ProfileEditor({ initial, busy, error, save, close }: { initial: Matchin
+       {(['start_time', 'end_time'] as const).map(field => <label key={field}>{field === 'start_time' ? 'Start' : 'End'}<input aria-label={`${field === 'start_time' ? 'Start' : 'End'} ${index + 1}`} placeholder="HH:MM:SS" value={window[field]} onChange={event => update({ availability: draft.availability.map((item, i) => i === index ? { ...item, [field]: event.target.value } : item) })} /></label>)}
+       <button type="button" className="match-button match-button-secondary" onClick={() => update({ availability: draft.availability.filter((_, i) => i !== index) })}>Remove window {index + 1}</button>
+     </div>)}<button type="button" className="match-button match-button-secondary" disabled={draft.availability.length >= 56} onClick={() => update({ availability: [...draft.availability, { dow: 1, start_time: '17:00:00', end_time: '21:00:00' }] })}>Add time window</button></fieldset>
+-    {(error || validation) && <p role="alert">{validation || error}</p>}
++    {(error || validation) && <p ref={feedback} role="alert" tabIndex={-1}>{validation?.message || error}</p>}
+     </div><footer><button type="button" className="match-button match-button-secondary" disabled={busy} onClick={dismiss}>Cancel</button><button type="submit" className="match-button match-button-secondary" disabled={busy}>{busy ? 'Saving…' : 'Save preferences'}</button></footer></form></dialog>
+ }
+ 
+diff --git a/tests/events-client.test.ts b/tests/events-client.test.ts
+new file mode 100644
+index 0000000..0cffce7
+--- /dev/null
++++ b/tests/events-client.test.ts
+@@ -0,0 +1,45 @@
++import { afterEach, expect, it, vi } from 'vitest'
++import { z } from 'zod'
++import { eventRequest } from '../src/features/events/client'
++
++vi.mock('../src/supabase', () => ({ supabase: null }))
++afterEach(() => vi.unstubAllGlobals())
++const schema = z.object({ title: z.string() })
++const unavailable = 'Events are unavailable. Try again.'
++
++it('replaces an HTML gateway response with an understandable events error', async () => {
++  vi.stubGlobal('fetch', vi.fn(async () => new Response('<html><body>Bad gateway</body></html>', { status: 502, headers: { 'Content-Type': 'text/html' } })))
++  await expect(eventRequest('/example', schema)).rejects.toThrow(unavailable)
++})
++
++it('replaces browser network diagnostics with an understandable events error', async () => {
++  vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch') }))
++  await expect(eventRequest('/example', schema)).rejects.toThrow(unavailable)
++})
++
++it.each(['invalid JSON', 'invalid event data'])('normalizes a successful response containing %s', async kind => {
++  vi.stubGlobal('fetch', vi.fn(async () => kind === 'invalid JSON' ? new Response('broken JSON') : Response.json({ title: 42 })))
++  await expect(eventRequest('/example', schema)).rejects.toThrow(unavailable)
++})
++
++it('preserves an actionable JSON error from the events server', async () => {
++  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ error: 'This event is no longer available.' }, { status: 404 })))
++  await expect(eventRequest('/example', schema)).rejects.toThrow('This event is no longer available.')
++})
++
++it('returns validated event data after a successful request', async () => {
++  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ title: 'Campus concert' })))
++  await expect(eventRequest('/example', schema)).resolves.toEqual({ title: 'Campus concert' })
++})
++
++for (const phase of ['fetch', 'body']) {
++  it(`preserves cancellation during ${phase} so leaving a page does not become a service error`, async () => {
++    const controller = new AbortController()
++    const cancelled = new DOMException('The request was aborted.', 'AbortError')
++    vi.stubGlobal('fetch', vi.fn(async () => {
++      if (phase === 'fetch') { controller.abort(); throw cancelled }
++      return { json: async () => { controller.abort(); throw cancelled } }
++    }))
++    await expect(eventRequest('/example', schema, { signal: controller.signal })).rejects.toBe(cancelled)
++  })
++}
+diff --git a/tests/matchmaking-integrated.test.tsx b/tests/matchmaking-integrated.test.tsx
+index 1147c35..a8027d5 100644
+--- a/tests/matchmaking-integrated.test.tsx
++++ b/tests/matchmaking-integrated.test.tsx
+@@ -168,6 +168,35 @@ it('does not claim a profile save succeeded when the atomic RPC is unavailable',
+   expect(screen.getByRole('dialog')).toBeTruthy()
+   expect(localStorage.getItem('pebble.matchmaking-profile')).toBeNull()
+ })
++it('moves focus to validation feedback on every rejected preference save without losing the draft', async () => {
++  mount()
++  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
++  fireEvent.click(screen.getByRole('button', { name: 'Add time window' }))
++  fireEvent.change(screen.getByLabelText('Start 1'), { target: { value: '17:00' } })
++  fireEvent.change(screen.getByLabelText('End 1'), { target: { value: '21:00' } })
++  const save = screen.getByRole('button', { name: 'Save preferences' })
++  for (let attempt = 0; attempt < 2; attempt++) {
++    save.focus()
++    fireEvent.click(save)
++    const alert = await screen.findByRole('alert')
++    await waitFor(() => expect(document.activeElement).toBe(alert))
++    expect((screen.getByLabelText('Start 1') as HTMLInputElement).value).toBe('17:00')
++    expect((screen.getByLabelText('End 1') as HTMLInputElement).value).toBe('21:00')
++  }
++  expect(requests.some(request => request.method === 'PUT')).toBe(false)
++})
++it('moves focus to a failed preference save response and keeps the edited fields', async () => {
++  mount()
++  fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
++  fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Unsaved name' } })
++  const save = screen.getByRole('button', { name: 'Save preferences' })
++  save.focus()
++  fireEvent.click(save)
++  const alert = await screen.findByRole('alert')
++  await waitFor(() => expect(document.activeElement).toBe(alert))
++  expect((screen.getByLabelText('Display name') as HTMLInputElement).value).toBe('Unsaved name')
++  expect(screen.getByRole('dialog')).toBeTruthy()
++})
+ it('updates the profile only from a successful API save', async () => {
+   saveUnavailable = false
+   mount()

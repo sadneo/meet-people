@@ -1,0 +1,50 @@
+
+=== / -> / (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /community -> /community (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30 | rect"Move Pebble friend" 43x42 | rect"Move Little Pebble" 38x37 | button"Oct 11, 10 Pebbles of activity" 40x113 | button"Oct 12, 0 Pebbles of activity" 40x113 | button"Oct 13, 20 Pebbles of activity" 40x113 | button"Oct 14, 10 Pebbles of activity" 40x113 | button"Oct 15, 30 Pebbles of activity" 40x113 | button"Oct 16, 0 Pebbles of activity" 40x113 | button"Oct 17, 20 Pebbles of activity" 40x113
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /matchmaking -> /matchmaking (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /downtime-matchmaking -> /downtime-matchmaking (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /events -> /events (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30 | a.ev-name-link"QA event 1" 338x33 | a.ev-name-link"QA event 2" 338x33 | a.ev-name-link"QA event 3" 338x33 | a.ev-name-link"QA event 4" 338x33 | a.ev-name-link"QA event 5" 338x33
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+            button.ev-button.ev-secondary"Previous" 2.29/4.5 rgb(31, 90, 60) on rgb(244, 249, 232) (disabled)
+            button.ev-button.ev-secondary"Next" 2.29/4.5 rgb(31, 90, 60) on rgb(244, 249, 232) (disabled)
+
+=== /events/ab955825-dc9e-4c0f-9dbd-5128ae3a4a03 -> /events/ab955825-dc9e-4c0f-9dbd-5128ae3a4a03 (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+            a.ev-text-button"Back to events" 3.32/4.5 rgb(66, 120, 63) on rgb(221, 202, 188)
+
+=== /messages -> /messages (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /messages/chat?conversation=17a7b258-e2ec-4f3d-864a-d112fe3ceb70 -> /messages/chat?conversation=17a7b258-e2ec-4f3d-864a-d112fe3ceb70 (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+            button.pt-button"Send" 2.98/4.5 rgb(255, 255, 255) on rgb(140, 154, 128) (disabled)
+
+=== /profile -> /profile (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /settings -> /settings (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30 | input"Plan & message notifications" 36x20 | input"Show me in discovery" 36x20 | input"Share my availability" 36x20 | input"Nearby suggestions" 36x20
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /onboarding -> /onboarding (1280x800) overflow=false sw=1280 nav=null
+
+=== /login -> / (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)

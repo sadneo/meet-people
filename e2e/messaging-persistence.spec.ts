@@ -25,7 +25,13 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
     await expect(history.getByText('M3 messaging persistence test')).toBeVisible()
     await expect(page.getByRole('img', { name: /unread/ })).toHaveCount(0)
     await expect(page.locator('.pt-inbox-pane')).toBeVisible({ visible: width > 800 })
-    await expect(page.locator('.pt-chat-details')).toBeVisible({ visible: width > 800 })
+    // A one-on-one chat has no details column; the conversation takes its space.
+    await expect(page.locator('.pt-chat-details')).toHaveCount(0)
+    if (width > 800) {
+      const workspace = (await page.locator('.pt-messages-workspace').boundingBox())!
+      const pane = (await page.getByRole('region', { name: 'Selected conversation' }).boundingBox())!
+      expect(Math.abs(pane.x + pane.width - (workspace.x + workspace.width))).toBeLessThanOrEqual(1)
+    }
     const composer = await page.getByRole('form', { name: 'Send message' }).boundingBox()
     const nav = width <= 800 ? await page.locator('.pt-bottom-nav').boundingBox() : null
     expect(composer!.y + composer!.height).toBeLessThanOrEqual(nav?.y ?? 740)
@@ -36,6 +42,9 @@ for (const width of [320, 390, 799, 800, 801, 1280, 1800]) {
     await expect(history.getByText('No messages yet. Say hello.')).toBeVisible()
     await expect(history.getByText('M3 messaging persistence test')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Leave conversation' })).toBeVisible()
+    const details = page.getByRole('complementary', { name: 'Conversation details' })
+    await expect(details.getByRole('heading', { name: 'Participants' })).toBeVisible({ visible: width > 800 })
+    if (width > 800) await expect(details.getByText(/^(Sam \(you\)|Jordan|Casey)$/)).toHaveCount(3)
     await page.setViewportSize({ width, height: 560 })
     const shortComposer = await page.getByRole('form', { name: 'Send message' }).boundingBox()
     const shortNav = width <= 800 ? await page.locator('.pt-bottom-nav').boundingBox() : null

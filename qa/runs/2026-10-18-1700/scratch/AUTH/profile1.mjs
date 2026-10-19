@@ -1,0 +1,33 @@
+import { openAs } from '/home/xqiu/Projects/meet-people/.claude/skills/qa/scripts/qa-browser.mjs'
+const R = '/home/xqiu/Projects/meet-people/qa/runs/2026-10-18-1700/screenshots'
+const user = 'qa-auth-2@example.com'
+const { page, problems, close } = await openAs(user, { width: 390, height: 844 })
+const log = (...a) => console.log(...a)
+await page.goto('/profile'); await page.waitForTimeout(2000)
+log('profile:', await page.locator('.pt-profile-copy').innerText())
+await page.getByRole('button', { name: 'Edit profile' }).click(); await page.waitForTimeout(500)
+const dlg = page.getByRole('dialog')
+await dlg.screenshot({ path: `${R}/AUTH-profile-edit-dialog-390.png` })
+log('dialog values:', await dlg.getByLabel('Display name').inputValue(), '|', await dlg.getByLabel('Bio').inputValue(), '| photo:', await dlg.getByLabel(/Photo URL/).inputValue())
+log('chips pressed:', await dlg.locator('[aria-pressed=true]').allInnerTexts())
+// change and cancel
+await dlg.getByLabel('Display name').fill('Cancelled Name')
+await dlg.getByRole('button', { name: 'Close dialog' }).click(); await page.waitForTimeout(400)
+log('after cancel h1:', await page.locator('h1').first().innerText())
+await page.getByRole('button', { name: 'Edit profile' }).click(); await page.waitForTimeout(400)
+log('reopen name:', await dlg.getByLabel('Display name').inputValue())
+// long values
+const longName = 'Maximilian-Alexander Bartholomew Featherstonehaugh-Worthington the Third of Somewhere Very Far Away Indeed OK'.slice(0, 120)
+const longBio = ('Supercalifragilisticexpialidocious '.repeat(40)).slice(0, 1000)
+await dlg.getByLabel('Display name').fill(longName)
+await dlg.getByLabel('Bio').fill(longBio)
+await dlg.getByRole('button', { name: 'Gaming' }).click()
+await dlg.getByRole('button', { name: 'Save profile' }).click()
+await page.waitForTimeout(2000)
+log('dialog open after save:', await dlg.count(), '| alerts:', await page.locator('[role=alert]').allInnerTexts())
+await page.reload(); await page.waitForTimeout(2000)
+log('after reload:', (await page.locator('h1').first().innerText()).slice(0, 60), '| chips:', await page.locator('.pt-profile-copy .pt-static-chips span').allInnerTexts())
+log('overflow:', await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
+await page.screenshot({ path: `${R}/AUTH-profile-long-text-390.png`, fullPage: true })
+log(problems.join('\n'))
+await close()

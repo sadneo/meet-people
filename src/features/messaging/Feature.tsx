@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { ConnectionRequest } from '../../../shared/connections'
 import { ConversationsSchema, HistorySchema, MESSAGE_MAX_LENGTH, MessageSchema, ReadStateSchema, type Conversation, type History, type Message, type Participant } from '../../../shared/messaging'
 import { centralSignInPath } from '../../auth/returnTo'
+import { ApiRequestError } from '../../auth/authorizedRequest'
 import { useSession } from '../../auth/useSession'
 import { connections } from '../connections/client'
 import { useVisiblePolling } from '../matchmaking/useVisiblePolling'
@@ -38,7 +39,8 @@ function PersonMark({ name, avatar }: { name: string; avatar?: string | null }) 
 function dateLabel(timestamp: string) {
   return new Date(timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
-function failureMessage(failure: unknown) { return failure instanceof Error ? failure.message : 'Could not load messages. Please try again.' }
+function failureMessage(failure: unknown, fallback = 'Could not load messages. Check your connection and try again.') { return failure instanceof Error && !(failure instanceof TypeError) ? failure.message : fallback }
+function accessEnded(failure: unknown) { return failure instanceof ApiRequestError && (failure.status === 403 || failure.status === 404) }
 
 export default function MessagesWorkspace() {
   const { session, ready } = useSession()
@@ -68,8 +70,10 @@ function SignedInMessages({ userId }: { userId: string }) {
   const [answering, setAnswering] = useState(false)
   const loadingRef = useRef(true)
   const polling = useRef(false)
+  const inboxVersion = useRef(0)
   useEffect(() => {
     const controller = new AbortController()
+    ++inboxVersion.current
     loadingRef.current = true
     void messagingRequest(`?page=${page}`, ConversationsSchema, { signal: controller.signal }).then(data => {
       if (controller.signal.aborted) return
@@ -88,22 +92,33 @@ function SignedInMessages({ userId }: { userId: string }) {
   // Keeps previews and unread counts current without resetting loaded pages.
   const poll = useCallback(async () => {
     if (loadingRef.current || polling.current) return
+    const version = inboxVersion.current
     polling.current = true
     try {
-      const [data, list] = await Promise.all([messagingRequest('?page=1', ConversationsSchema), connections.list().catch(() => null)])
-      setConversations(current => byActivity([...new Map([...current, ...data.conversations].map(item => [item.id, item])).values()]))
+      const [pages, list] = await Promise.all([
+        Promise.all(Array.from({ length: page }, (_, index) => messagingRequest(`?page=${index + 1}`, ConversationsSchema))),
+        connections.list().catch(() => null),
+      ])
+      if (loadingRef.current || version !== inboxVersion.current) return
+      setConversations(byActivity([...new Map(pages.flatMap(data => data.conversations).map(item => [item.id, item])).values()]))
+      setHasMore(pages.at(-1)?.hasMore ?? false)
       if (list) { setRequests(list.incoming); setWaiting(list.sent.length > 0) }
     } catch { /* The last loaded inbox stays; Refresh shows the error. */ }
     finally { polling.current = false }
-  }, [])
+  }, [page])
   useVisiblePolling(poll, waiting ? CHAT_POLL_MS : INBOX_POLL_MS, false)
   const selected = conversations.find(item => item.id === selectedId)
-  const visible = conversations.filter(item => `${nameOf(item, userId)} ${item.latest_message?.body ?? ''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
+  const { state: prototype } = usePrototype()
+  // Participants only help in groups; without context the chat fills the details column.
+  const group = !!selected && selected.participants.length > 2
+  const details = group || !!prototype.plan
+  const visible =conversations.filter(item => `${nameOf(item, userId)} ${item.latest_message?.body ?? ''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
   function refresh() { setLoading(true); setPage(1); setReload(value => value + 1) }
   const update = useCallback((id: string, change: (item: Conversation) => Conversation) => {
+    ++inboxVersion.current
     setConversations(items => byActivity(items.map(item => item.id === id ? change(item) : item)))
   }, [])
-  const saved = useCallback((message: Message) => update(message.conversation_id, item => ({ ...item, latest_message: message, unread_count: 0 })), [update])
+  const saved = useCallback((message: Message) => update(message.conversation_id, item => ({ ...item, latest_message: !item.latest_message || message.seq > item.latest_message.seq ? message : item.latest_message, unread_count: 0 })), [update])
   const read = useCallback((id: string) => { update(id, item => ({ ...item, unread_count: 0 })); announceMessagesActivity() }, [update])
   // Accepting opens the new direct chat.
   async function answer(person: ConnectionRequest, accept: boolean) {
@@ -117,8 +132,9 @@ function SignedInMessages({ userId }: { userId: string }) {
     } catch (failure) { setRequestError(failureMessage(failure)) }
     finally { setAnswering(false) }
   }
-  const left = useCallback((id: string) => { setConversations(items => items.filter(item => item.id !== id)); navigate('/messages') }, [navigate])
-  return <div className="pt-messages-workspace">
+  const left = useCallback((id: string) => { ++inboxVersion.current; setConversations(items => items.filter(item => item.id !== id)); navigate('/messages') }, [navigate])
+  const unavailable = useCallback((id: string) => { ++inboxVersion.current; setConversations(items => items.filter(item => item.id !== id)) }, [])
+  return <div className={`pt-messages-workspace ${details ? '' : 'is-two-pane'}`}>
     <section className="pt-inbox-pane" aria-label="Conversation inbox">
       <Header title="Messages" action={<Button secondary disabled={loading} onClick={refresh}>Refresh</Button>} />
       <label className="pt-conversation-search"><Icon name="search" /><span className="pt-sr-only">Search conversations</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search conversations…" /></label>
@@ -142,16 +158,16 @@ function SignedInMessages({ userId }: { userId: string }) {
       {hasMore && <Button secondary disabled={loading} onClick={() => { setLoading(true); setPage(value => value + 1) }}>Load more conversations</Button>}
     </section>
     <section className="pt-conversation-pane" aria-label="Selected conversation">
-      {selectedId ? <Chat key={selectedId} id={selectedId} userId={userId} conversation={selected} onSaved={saved} onRead={read} onLeft={left} /> : <div className="pt-chat-placeholder">{pathname.endsWith('/chat') && <Link to="/messages">Back to messages</Link>}<Icon name="messages" size={48} /><h2>Choose a conversation</h2><p>Open a conversation from your inbox.</p></div>}
+      {selectedId ? <Chat key={selectedId} id={selectedId} userId={userId} conversation={selected} onSaved={saved} onRead={read} onLeft={left} onUnavailable={unavailable} /> : <div className="pt-chat-placeholder">{pathname.endsWith('/chat') && <Link to="/messages">Back to messages</Link>}<Icon name="messages" size={48} /><h2>Choose a conversation</h2><p>Open a conversation from your inbox.</p></div>}
     </section>
-    <aside className="pt-chat-details" aria-label="Conversation details">
-      {selected && <section className="pt-contact-card pt-messaging-details"><h2>Participants</h2>{selected.participants.map(person => <div key={person.id}><PersonMark name={person.display_name} avatar={person.avatar_url} /><p>{person.display_name}{person.id === userId ? ' (you)' : ''}</p></div>)}</section>}
+    {details && <aside className="pt-chat-details" aria-label="Conversation details">
+      {group && <section className="pt-contact-card pt-messaging-details"><h2>Participants</h2>{selected.participants.map(person => <div key={person.id}><PersonMark name={person.display_name} avatar={person.avatar_url} /><p>{person.display_name}{person.id === userId ? ' (you)' : ''}</p></div>)}</section>}
       <DemoPlan />
-    </aside>
+    </aside>}
   </div>
 }
 
-function Chat({ id, userId, conversation, onSaved, onRead, onLeft }: { id: string; userId: string; conversation?: Conversation; onSaved: (message: Message) => void; onRead: (id: string) => void; onLeft: (id: string) => void }) {
+function Chat({ id, userId, conversation, onSaved, onRead, onLeft, onUnavailable }: { id: string; userId: string; conversation?: Conversation; onSaved: (message: Message) => void; onRead: (id: string) => void; onLeft: (id: string) => void; onUnavailable: (id: string) => void }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [members, setMembers] = useState<Participant[]>([])
   const [kind, setKind] = useState<History['kind'] | null>(null)
@@ -170,6 +186,7 @@ function Chat({ id, userId, conversation, onSaved, onRead, onLeft }: { id: strin
   const fullLoad = useRef(true)
   const loadedRef = useRef(false)
   const polling = useRef(false)
+  const historyVersion = useRef(0)
   const pending = useRef(false)
   const retry = useRef<{ body: string; id: string } | null>(null)
   const newest = useRef(0)
@@ -180,27 +197,40 @@ function Chat({ id, userId, conversation, onSaved, onRead, onLeft }: { id: strin
   useEffect(() => { newest.current = lastSeq }, [lastSeq])
   useEffect(() => {
     const controller = new AbortController()
+    const version = ++historyVersion.current
     fullLoad.current = true
     void messagingRequest(`/${id}/messages`, HistorySchema, { signal: controller.signal }).then(data => {
-      if (controller.signal.aborted) return
+      if (controller.signal.aborted || version !== historyVersion.current) return
       setMessages(data.messages); setMembers(data.participants); setKind(data.kind); setCanSend(data.canSend)
       setCursor(data.nextCursor); setLoadError(''); setLoaded(true); loadedRef.current = true
-    }).catch(failure => { if (!controller.signal.aborted) setLoadError(failureMessage(failure)) })
+    }).catch(failure => {
+      if (controller.signal.aborted || version !== historyVersion.current) return
+      setLoadError(failureMessage(failure))
+      if (accessEnded(failure)) { ++historyVersion.current; setCanSend(false); loadedRef.current = false; onUnavailable(id) }
+    })
       .finally(() => { if (!controller.signal.aborted) { fullLoad.current = false; setLoading(false) } })
     return () => controller.abort()
-  }, [id, reload])
+  }, [id, reload, onUnavailable])
   const poll = useCallback(async () => {
     if (!loadedRef.current || fullLoad.current || polling.current) return
+    const version = historyVersion.current
     polling.current = true
     try {
       const data = await messagingRequest(`/${id}/messages?after=${newest.current}`, HistorySchema)
-      if (!active.current) return
+      if (!active.current || version !== historyVersion.current) return
       // Far behind (for example after sleeping): reload instead of stitching pages.
       if (data.messages.length >= 50) { setLoading(true); setReload(value => value + 1); return }
       setMessages(current => mergeMessages(current, data.messages)); setMembers(data.participants); setCanSend(data.canSend)
-    } catch { /* The next poll or Refresh messages tries again. */ }
+      const latest = data.messages.at(-1)
+      if (latest) onSaved(latest)
+    } catch (failure) {
+      if (active.current && version === historyVersion.current && accessEnded(failure)) {
+        ++historyVersion.current; setCanSend(false); loadedRef.current = false; setLoadError(failureMessage(failure)); onUnavailable(id)
+      }
+      // Transient failures retain the last loaded chat and retry on the next poll.
+    }
     finally { polling.current = false }
-  }, [id])
+  }, [id, onSaved, onUnavailable])
   useVisiblePolling(poll, CHAT_POLL_MS)
   const lastMessageId = messages.at(-1)?.id
   useEffect(() => {
@@ -239,7 +269,12 @@ function Chat({ id, userId, conversation, onSaved, onRead, onLeft }: { id: strin
       setMessages(current => mergeMessages(current, [saved]))
       setMembers(current => current.map(person => person.id === userId ? { ...person, last_read_seq: Math.max(person.last_read_seq, saved.seq) } : person))
       setDraft(''); retry.current = null; onSaved(saved)
-    } catch (failure) { if (active.current) setSendError(`${failureMessage(failure)} Your draft is kept; retry Send.`) }
+    } catch (failure) {
+      if (!active.current) return
+      const message = failureMessage(failure, 'Could not send your message. Check your connection and try again.')
+      setSendError(accessEnded(failure) ? message : `${message} Your draft is kept; retry Send.`)
+      if (accessEnded(failure)) { ++historyVersion.current; setCanSend(false); loadedRef.current = false; onUnavailable(id) }
+    }
     finally { pending.current = false; if (active.current) setSending(false) }
   }
   async function leave() {
