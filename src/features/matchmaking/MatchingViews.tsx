@@ -1,7 +1,4 @@
 import { CardIcon } from './MatchCardIcon'
-import { DatingLive } from './DatingLive'
-import { datingLiveClient } from './dating-live-client'
-import type { DatingRuntime } from '../../../shared/dating-live'
 import { useAccount } from '../../auth/account-context'
 import { calculatedAge } from '../account/profile-rules'
 import { DatingPreferences } from './DatingPreferences'
@@ -31,20 +28,10 @@ export function MatchingViews({ mode }: { mode: MatchingMode }) {
   return <div className={`${mode === 'active' ? 'match-main-views' : 'match-home match-live match-calm'}${dating ? ' has-dating-deck' : mode === 'active' ? ' friends-page' : ''}`}>{!dating && <>{mode !== 'active' && <MatchingNavigation mode={mode} />}{selector}</>}{dating ? <DatingEntry key={pathname} selector={selector} /> : mode === 'active' ? <MatchingScreen mode={mode} /> : <section className="match-focus downtime-compatibility" aria-labelledby="downtime-settings-title"><div className="pt-mascot-scene" aria-hidden="true"><PixelPebble /></div><h1 id="downtime-settings-title" tabIndex={-1}>Manage downtime in Settings</h1><p>Allow downtime matching in Settings. Only one Friends queue can be active at a time.</p><Link className="match-button match-button-secondary" to="/settings">Open matchmaking settings</Link></section>}</div>
 }
 
-function DatingEntry({selector}:{selector:ReactNode}){
-  const account=useAccount(),session=account?.loaded?account.session:null
-  if(!session?.user.id||!session.access_token)return <DatingPrototype selector={selector}/>
-  return <DatingCapability key={`${session.user.id}:${session.access_token}:${JSON.stringify(account?.account.profile)}`} token={session.access_token} busy={account?.busy??false} selector={selector}/>
-}
-function DatingCapability({token,busy,selector}:{token:string;busy:boolean;selector:ReactNode}){
-  const [state,setState]=useState<DatingRuntime|null|undefined>(undefined)
-  useEffect(()=>{const controller=new AbortController();let live=true
-    void datingLiveClient(token).status(controller.signal).then(value=>{if(live&&!controller.signal.aborted)setState(value)}).catch(()=>{if(live&&!controller.signal.aborted)setState(null)})
-    return()=>{live=false;controller.abort()}
-  },[token])
-  if(state===undefined)return <section className="match-home match-calm dating-view dating-live-view"><header className="dating-overlay-header">{selector}</header><div className="dating-live-empty"><h1>Dating</h1><p role="status">Checking Dating availability…</p></div></section>
-  if(!state)return <DatingPrototype selector={selector}/>
-  return <DatingLive initial={state} token={token} selector={selector} accountBusy={busy}/>
+// Presentation-only demo requested for the current demo. Keep the real Dating
+// adapter in DatingLive.tsx for later integration; do not enroll or send requests.
+function DatingEntry({ selector }: { selector: ReactNode }) {
+  return <DatingPrototype selector={selector} />
 }
 
 type Decision = 'skip' | 'like' | 'star'
