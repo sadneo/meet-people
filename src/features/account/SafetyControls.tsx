@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { AccountDialog } from './AccountDialog'
 
-export type BlockedPerson = { id: string; name: string; blockedAt: string }
+export type BlockedPerson = { id: string; name: string | null; blockedAt: string | null }
+const blockedLabel = (person: BlockedPerson) => person.name ?? `Account ${person.id}`
 // Future authenticated adapter; the UI does not invent an endpoint or local blocklist.
 export type BlocklistAdapter = { read: (signal: AbortSignal) => Promise<BlockedPerson[]>; unblock: (id: string, signal: AbortSignal) => Promise<void> }
 export function BlocklistPanel({ adapter }: { adapter?: BlocklistAdapter }) {
@@ -49,8 +50,8 @@ function BlocklistResource({ adapter }: { adapter?: BlocklistAdapter }) {
     } catch { if (active.current && !operation.signal.aborted) setError('The change could not be confirmed. Reload blocked users before trying again.') }
     finally { if (controller.current === operation) { lock.current = false; if (active.current) setBusy(false) } }
   }
-  return <div className="account-feature-form"><p>Blocks must apply across discovery, matching and contact. No sample profiles are substituted here.</p>{busy && <p role="status">Checking blocked users…</p>}{error && <p role="alert">{error}</p>}{people === null ? !busy && <p>Blocklist unavailable.</p> : people.length === 0 ? <p>No blocked users in the confirmed list.</p> : <ul className="account-blocked-list">{people.map(person => <li key={person.id}><span><strong>{person.name}</strong><small>Blocked <time dateTime={person.blockedAt}>{new Date(person.blockedAt).toLocaleDateString()}</time></small></span><button type="button" className="account-secondary" disabled={busy} onClick={() => setSelected(person)}>Unblock {person.name}</button></li>)}</ul>}<button type="button" className="account-secondary" disabled={busy} onClick={() => void read()}>Reload blocked users</button>
-    {selected && <AccountDialog title={`Unblock ${selected.name}?`} busy={busy} close={() => setSelected(null)}><p>They may be able to find and contact you again once the service confirms this change.</p>{error && <p role="alert">{error}</p>}<div className="account-feature-actions"><button type="button" className="account-secondary" disabled={busy} onClick={() => setSelected(null)}>Keep blocked</button><button type="button" className="account-green-action" disabled={busy} onClick={() => void unblock()}>{busy ? 'Checking…' : 'Confirm unblock'}</button></div></AccountDialog>}
+  return <div className="account-feature-form"><p>Blocks must apply across discovery, matching and contact. No sample profiles are substituted here.</p>{busy && <p role="status">Checking blocked users…</p>}{error && <p role="alert">{error}</p>}{people === null ? !busy && <p>Blocklist unavailable.</p> : people.length === 0 ? <p>No blocked users in the confirmed list.</p> : <ul className="account-blocked-list">{people.map(person => <li key={person.id}><span><strong>{blockedLabel(person)}</strong>{person.blockedAt === null ? <small>Block date unavailable.</small> : <small>Blocked <time dateTime={person.blockedAt}>{new Date(person.blockedAt).toLocaleDateString()}</time></small>}</span><button type="button" className="account-secondary" disabled={busy} onClick={() => setSelected(person)}>Unblock {blockedLabel(person)}</button></li>)}</ul>}<button type="button" className="account-secondary" disabled={busy} onClick={() => void read()}>Reload blocked users</button>
+    {selected && <AccountDialog title={`Unblock ${blockedLabel(selected)}?`} busy={busy} close={() => setSelected(null)}><p>They may be able to find and contact you again once the service confirms this change.</p>{error && <p role="alert">{error}</p>}<div className="account-feature-actions"><button type="button" className="account-secondary" disabled={busy} onClick={() => setSelected(null)}>Keep blocked</button><button type="button" className="account-green-action" disabled={busy} onClick={() => void unblock()}>{busy ? 'Checking…' : 'Confirm unblock'}</button></div></AccountDialog>}
   </div>
 }
 export function SafetyActions({ name }: { name: string }) {

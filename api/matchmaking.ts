@@ -14,6 +14,8 @@ import type { SaveDetailedSettings } from '../shared/detailed-settings.js'
 import { createDetailedSettingsRouter } from './detailed-settings.js'
 import type { SaveDatingAggregate } from '../shared/dating.js'
 import { createDatingRouter } from './dating.js'
+import type { SubmitSafetyReport } from '../shared/safety.js'
+import { createSafetyRouter } from './safety.js'
 
 type RpcResponse = { data: unknown; error: { code?: string } | null }
 export interface UserContextTransport {
@@ -37,6 +39,12 @@ export interface UserContextTransport {
     saveDetailedSettings?(settings: SaveDetailedSettings): PromiseLike<RpcResponse>
     datingAggregate?(): PromiseLike<RpcResponse>
     saveDatingAggregate?(aggregate: SaveDatingAggregate): PromiseLike<RpcResponse>
+    ownerBlocklist?(): PromiseLike<RpcResponse>
+    ownerBlockState?(target: string): PromiseLike<RpcResponse>
+    blockOwnerTarget?(target: string): PromiseLike<RpcResponse>
+    unblockOwnerTarget?(target: string): PromiseLike<RpcResponse>
+    submitSafetyReport?(report: SubmitSafetyReport): PromiseLike<RpcResponse>
+    ownerSafetyReport?(requestId: string): PromiseLike<RpcResponse>
     listingStatus(listingId: string): PromiseLike<RpcResponse>
     listingInterest(listingId: string): PromiseLike<RpcResponse>
     listingWithdraw(listingId: string): PromiseLike<RpcResponse>
@@ -73,6 +81,12 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         saveDetailedSettings: settings => client.rpc('save_detailed_settings', { settings_in: settings }),
         datingAggregate: () => client.rpc('get_dating_preferences'),
         saveDatingAggregate: aggregate => client.rpc('save_dating_preferences', { aggregate_in: aggregate }),
+        ownerBlocklist: () => client.rpc('get_owner_blocklist'),
+        ownerBlockState: target => client.rpc('get_owner_block_state', { target_in: target }),
+        blockOwnerTarget: target => client.rpc('block_owner_target', { target_in: target }),
+        unblockOwnerTarget: target => client.rpc('unblock_owner_target', { target_in: target }),
+        submitSafetyReport: report => client.rpc('submit_safety_report', { report_in: report }),
+        ownerSafetyReport: requestId => client.rpc('get_owner_safety_report', { request_id_in: requestId }),
         join: qtype => client.rpc('join_queue', { qtype }), leave: () => client.rpc('leave_queue'), status: () => client.rpc('get_queue_status'), result: () => client.rpc('get_queue_match'), profile: () => client.rpc('get_matchmaking_profile'), save: profile => client.rpc('save_matchmaking_profile', { profile_in: profile }),
         listingStatus: listingId => client.rpc('get_listing_matchmaking_status', { listing_id_in: listingId }),
         listingInterest: listingId => client.rpc('express_listing_matchmaking_interest', { listing_id_in: listingId }),
@@ -127,6 +141,7 @@ export function createMatchmakingRouter(transport: UserContextTransport | null) 
   router.use('/friends-search-preferences', createFriendsSearchPreferencesRouter())
   router.use('/detailed-settings', createDetailedSettingsRouter())
   router.use('/dating-preferences', createDatingRouter())
+  router.use('/safety', createSafetyRouter())
   const readAccount = async (response: Response) => {
     const read = actor(response).account
     if (!read) throw new MatchingFailure(503, 'unavailable', 'Unified account RPC is not available yet.')
