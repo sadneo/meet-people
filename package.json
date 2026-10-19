@@ -28,7 +28,9 @@
     "supabase:functions:serve:sbengaged": "sh scripts/supabase.sh functions serve ingest-sbengaged --env-file supabase/.env",
     "env:local": "node scripts/write-local-env.mjs",
     "build:android": "vite build --mode android && cap sync android",
-    "android": "pnpm build:android && cap open android"
+    "android": "pnpm build:android && cap open android",
+    "demo:queue": "tsx scripts/queue-local-demo.ts",
+    "demo:seed": "tsx scripts/seed-local-demo.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.api.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["scripts/seed-local-demo.ts", "scripts/queue-local-demo.ts", "scripts/demo-seed/**/*.ts"]
+}
