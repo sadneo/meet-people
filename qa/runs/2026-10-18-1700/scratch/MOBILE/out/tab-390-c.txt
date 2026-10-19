@@ -1,0 +1,51 @@
+== /messages 390x844 liam final URL /messages
+ 1 button.pt-button.pt-secondary "Refresh" outline 3px rgb(49, 95, 155)  [271,84,99,48] 
+ 2 input "Search conversations" parent outline label.pt-conversation-search  [67,155,290,44] 
+ 3 button.pt-conversation "FL Frank Lee Say hello Oct 18," outline 3px rgb(49, 95, 155)  [20,213,350,129] 
+ 4 a "Home" outline 3px rgb(49, 95, 155)  [10,781,68,54] 
+ 5 a "Matchmaking" outline 3px rgb(49, 95, 155)  [86,781,68,54] 
+ 6 a "Events" outline 3px rgb(49, 95, 155)  [161,781,68,54] 
+ 7 a.is-active "Messages" outline 3px rgb(49, 95, 155)  [237,781,68,54] 
+ 8 a "Profile" outline 3px rgb(49, 95, 155)  [312,781,68,54] 
+ 9 body "undefined" NO-INDICATOR  undefined 
+10 button.pt-dev-tab "Developer controls" outline 3px rgb(49, 95, 155)  [0,0,44,32] 
+11 button.pt-icon-button "Matching notifications, 0 unread" outline 3px rgb(49, 95, 155)  [322,8,48,48] 
+12 button.pt-button.pt-secondary "Refresh" outline 3px rgb(49, 95, 155)  [271,84,99,48] wrapped to first
+== /messages/chat?conversation=17a7b258-e2ec-4f3d-864a-d112fe3ceb70 390x844 liam final URL /messages/chat?conversation=17a7b258-e2ec-4f3d-864a-d112fe3ceb70
+ 1 a.pt-icon-button.pt-chat-back "Back to messages" outline 3px rgb(49, 95, 155)  [22,84,48,48] 
+ 2 button.pt-chat-tool "Refresh messages" outline 3px rgb(49, 95, 155)  [324,86,44,44] 
+ 3 input "Message" parent outline div.pt-composer-field  [28,706,272,46] 
+ 4 a "Home" outline 3px rgb(49, 95, 155)  [10,781,68,54] 
+ 5 a "Matchmaking" outline 3px rgb(49, 95, 155)  [86,781,68,54] 
+ 6 a "Events" outline 3px rgb(49, 95, 155)  [161,781,68,54] 
+ 7 a.is-active "Messages" outline 3px rgb(49, 95, 155)  [237,781,68,54] 
+ 8 a "Profile" outline 3px rgb(49, 95, 155)  [312,781,68,54] 
+ 9 body "undefined" NO-INDICATOR  undefined 
+10 button.pt-dev-tab "Developer controls" outline 3px rgb(49, 95, 155)  [0,0,44,32] 
+11 button.pt-icon-button "Matching notifications, 0 unread" outline 3px rgb(49, 95, 155)  [322,8,48,48] 
+12 a.pt-icon-button.pt-chat-back "Back to messages" outline 3px rgb(49, 95, 155)  [22,84,48,48] wrapped to first
+== /login 390x844 guest final URL /login
+ 1 input "Email" outline 3px rgb(49, 95, 155)  [25,237,340,48] 
+ 2 button.pt-button.pt-wide "Continue with email" outline 3px rgb(49, 95, 155)  [25,301,340,48] 
+ 3 button.pt-button.pt-secondary "Continue with Google" outline 3px rgb(49, 95, 155)  [25,402,340,48] 
+ 4 a "Create an account" outline 3px rgb(49, 95, 155)  [186,468,131,19] 
+ 5 a.pt-auth-home "Back to home" outline 3px rgb(49, 95, 155)  [25,506,340,48] 
+ 6 a "Open Supabase email viewer" outline 3px rgb(49, 95, 155)  [25,618,340,20] 
+ 7 body "undefined" NO-INDICATOR  undefined 
+ 8 button.pt-dev-tab "Developer controls" outline 3px rgb(49, 95, 155)  [0,0,44,32] 
+ 9 input "Email" outline 3px rgb(49, 95, 155)  [25,237,340,48] wrapped to first
+== /register 390x844 guest final URL /register
+ 1 input "Email" outline 3px rgb(49, 95, 155)  [25,237,340,48] 
+ 2 button.pt-button.pt-wide "Continue with email" outline 3px rgb(49, 95, 155)  [25,301,340,48] 
+ 3 button.pt-button.pt-secondary "Continue with Google" outline 3px rgb(49, 95, 155)  [25,402,340,48] 
+ 4 a "Create an account" outline 3px rgb(49, 95, 155)  [186,468,131,19] 
+ 5 a.pt-auth-home "Back to home" outline 3px rgb(49, 95, 155)  [25,506,340,48] 
+ 6 a "Open Supabase email viewer" outline 3px rgb(49, 95, 155)  [25,618,340,20] 
+ 7 body "undefined" NO-INDICATOR  undefined 
+ 8 button.pt-dev-tab "Developer controls" outline 3px rgb(49, 95, 155)  [0,0,44,32] 
+ 9 input "Email" outline 3px rgb(49, 95, 155)  [25,237,340,48] wrapped to first
+== /onboarding 390x844 guest final URL /onboarding
+ 1 button.pt-dev-tab "Developer controls" outline 3px rgb(49, 95, 155)  [0,0,44,32] 
+ 2 button.pt-skip "Skip animation" outline 3px rgb(49, 95, 155)  [212,670,164,46] 
+ 3 body "undefined" NO-INDICATOR  undefined 
+ 4 button.pt-dev-tab "Developer controls" outline 3px rgb(49, 95, 155)  [0,0,44,32] wrapped to first

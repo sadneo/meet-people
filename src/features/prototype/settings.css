@@ -9,6 +9,7 @@
 .pt-settings-title h1 { font-size: 24px; line-height: 29px; }
 .pt-settings-title p { font-size: 14px; line-height: 19px; }
 .pt-settings section { border: 1px solid var(--pt-line); border-radius: 13px; background: var(--pt-surface); overflow: hidden; box-shadow: 0 2px 4px color-mix(in srgb, var(--pt-ink) 3%, transparent); }
+.pt-settings > section > fieldset { margin: 0; padding: 20px 24px; }
 .pt-settings-heading { display: flex; align-items: center; gap: 18px; min-height: 47px; padding: 10px 20px; border-bottom: 1px solid var(--pt-line); background: color-mix(in srgb, var(--pt-cream) 75%, var(--pt-surface)); }
 .pt-settings-heading > svg { color: var(--pt-ink); }
 .pt-settings-heading h2 { font-size: 16px; line-height: 20px; letter-spacing: -.2px; }
@@ -68,6 +69,7 @@
   .pt-settings-title h1 { font-size: 26px; }
   .pt-settings-heading { gap: 14px; padding: 10px 16px; }
   .pt-settings-row, .pt-settings .pt-toggle-row { width: calc(100% - 32px); margin-inline: 16px !important; padding-block: 12px; }
+  .pt-settings > section > fieldset { padding: 16px; }
   .pt-settings-actions .pt-settings-row { padding-left: 0; flex-wrap: wrap; }
   .pt-settings-actions .pt-settings-row > span { flex-basis: 100%; }
   .pt-settings-actions .pt-button { width: 100%; }

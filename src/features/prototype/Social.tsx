@@ -1,7 +1,7 @@
 import { BlocklistPanel } from '../account/SafetyControls'
 import { LocationAccessDetails, SettingsDetails } from '../account/SettingsDetails'
 import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { usePrototype } from './context'
 import { activities, people, planDate, planTime } from './model'
 import { Avatar, Avatars, Button, Empty, Header, Icon, Pebble } from './ui'
@@ -17,6 +17,7 @@ import { useLogout } from '../../auth/useLogout'
 import { AccountCredentials } from '../../auth/AccountCredentials'
 import { OwnerProfile } from '../account/OwnerProfile'
 import { useAccount } from '../../auth/account-context'
+import { safeReturnTo } from '../../auth/returnTo'
 
 function Modal({ title, children, onClose, className = '' }: { title: string; children: ReactNode; onClose: () => void; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -134,6 +135,8 @@ export function Connection() {
 }
 export function ProfileScreen({ other = false }: { other?: boolean }) {
   const { state, dispatch, go, personId } = usePrototype()
+  const location = useLocation()
+  const navigate = useNavigate()
   const auth = useSession()
   const shared = useSharedUserProfile(!other ? auth.session?.access_token ?? null : null)
   const person = people.find(p => p.id === personId) ?? people[0]
@@ -144,8 +147,13 @@ export function ProfileScreen({ other = false }: { other?: boolean }) {
   const [reported, setReported] = useState(false)
   const [reason, setReason] = useState('')
   const blocked = state.blocked.includes(person.id)
+  const back = () => {
+    const returnTo = safeReturnTo(location.state?.profileReturnTo)
+    if (returnTo) navigate(returnTo)
+    else go('Free Time Match')
+  }
   return <>
-    {other ? <><Header title="Profile" back={() => go('Free Time Match')} /><div className="pt-profile-layout"><section className="pt-profile-person"><Avatar person={shown} size="large" /><h1>{shown.name}</h1><p className="pt-profile-location"><Icon name="pin" size={17} />Around campus</p><p className="pt-profile-bio">{shown.bio}</p><div className="pt-static-chips">{shown.interests.map(interest => <span key={interest}>{interest}</span>)}</div><Button disabled={blocked} onClick={() => go('Connection')}>{blocked ? 'Blocked in this demo' : `Connect with ${person.first}`}<Icon name="arrow" size={18} /></Button></section><section className="pt-profile-details"><h2>Shared ground</h2><div className="pt-shared-ground"><div><Icon name="coffee" /><span><strong>{person.interests.filter(i => state.profile.interests.includes(i)).join(' · ') || 'Open to meeting new people'}</strong><small>Interests in common</small></span></div><div><Icon name="events" /><span><strong>{person.id === 'maya' ? 'A little fresh air' : 'Acoustic afternoon'}</strong><small>Shared event interest · sample</small></span></div><div><Icon name="time" /><span><strong>{person.time} today</strong><small>Mock availability overlap</small></span></div></div><div className="pt-safety-links"><button onClick={() => { setReported(false); setReason(''); setSafety('report') }}>Report user</button><button onClick={() => setSafety('block')}>{blocked ? 'Unblock user' : 'Block user'}</button></div></section></div></> : <>
+    {other ? <><Header title="Profile" back={back} /><div className="pt-profile-layout"><section className="pt-profile-person"><Avatar person={shown} size="large" /><h1>{shown.name}</h1><p className="pt-profile-location"><Icon name="pin" size={17} />Around campus</p><p className="pt-profile-bio">{shown.bio}</p><div className="pt-static-chips">{shown.interests.map(interest => <span key={interest}>{interest}</span>)}</div><Button disabled={blocked} onClick={() => go('Connection')}>{blocked ? 'Blocked in this demo' : `Connect with ${person.first}`}<Icon name="arrow" size={18} /></Button></section><section className="pt-profile-details"><h2>Shared ground</h2><div className="pt-shared-ground"><div><Icon name="coffee" /><span><strong>{person.interests.filter(i => state.profile.interests.includes(i)).join(' · ') || 'Open to meeting new people'}</strong><small>Interests in common</small></span></div><div><Icon name="events" /><span><strong>{person.id === 'maya' ? 'A little fresh air' : 'Acoustic afternoon'}</strong><small>Shared event interest · sample</small></span></div><div><Icon name="time" /><span><strong>{person.time} today</strong><small>Mock availability overlap</small></span></div></div><div className="pt-safety-links"><button onClick={() => { setReported(false); setReason(''); setSafety('report') }}>Report user</button><button onClick={() => setSafety('block')}>{blocked ? 'Unblock user' : 'Block user'}</button></div></section></div></> : <>
       <OwnerProfile key={auth.session?.access_token ?? 'guest'} data={shared} inactive={editing} ready={auth.ready} signedIn={!!auth.session} edit={() => setEditing(true)} />
     </>}
     {editing && (shared.account && shared.profile ? <ProfileEditDialog data={shared} close={() => setEditing(false)} /> : <Modal title="Edit your profile" className="pt-profile-editor" onClose={() => setEditing(false)}>

@@ -1,0 +1,34 @@
+
+=== / -> / (320x568) overflow=false sw=320 nav={"top":496,"height":72}
+
+=== /community -> /community (320x568) overflow=false sw=320 nav={"top":496,"height":72}
+  overRight: svg[-25..298] ""
+  small: rect"Move Village bench" 37x25 | rect"Say hello to your Pebble" 22x21 | rect"Move Pebble friend" 19x18 | rect"Move Little Pebble" 16x16
+
+=== /matchmaking -> /matchmaking (320x568) overflow=false sw=320 nav={"top":496,"height":72}
+
+=== /downtime-matchmaking -> /downtime-matchmaking (320x568) overflow=false sw=320 nav={"top":496,"height":72}
+
+=== /events -> /events (320x568) overflow=false sw=320 nav={"top":496,"height":72}
+  small: a.ev-name-link"QA event 1" 240x36 | a.ev-name-link"QA event 2" 240x36 | a.ev-name-link"QA event 3" 240x36 | a.ev-name-link"QA event 4" 240x36 | a.ev-name-link"QA event 5" 240x36
+  contrast: button.ev-button.ev-secondary"Previous" 2.29/4.5 rgb(31, 90, 60) on rgb(244, 249, 232) (disabled)
+            button.ev-button.ev-secondary"Next" 2.29/4.5 rgb(31, 90, 60) on rgb(244, 249, 232) (disabled)
+
+=== /events/ab955825-dc9e-4c0f-9dbd-5128ae3a4a03 -> /events/ab955825-dc9e-4c0f-9dbd-5128ae3a4a03 (320x568) overflow=false sw=320 nav={"top":496,"height":72}
+  contrast: a.ev-text-button"Back to events" 3.32/4.5 rgb(66, 120, 63) on rgb(221, 202, 188)
+
+=== /messages -> /messages (320x568) overflow=false sw=320 nav={"top":496,"height":72}
+
+=== /messages/chat?conversation=17a7b258-e2ec-4f3d-864a-d112fe3ceb70 -> /messages/chat?conversation=17a7b258-e2ec-4f3d-864a-d112fe3ceb70 (320x568) overflow=false sw=320 nav={"top":496,"height":72}
+  contrast: button.pt-button"Send" 2.98/4.5 rgb(255, 255, 255) on rgb(140, 154, 128) (disabled)
+
+=== /profile -> /profile (320x568) overflow=false sw=320 nav={"top":496,"height":72}
+  small: a"Pebble home" 100x34
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /settings -> /settings (320x568) overflow=false sw=320 nav={"top":496,"height":72}
+  small: input"Plan & message notifications" 36x20 | input"Show me in discovery" 36x20 | input"Share my availability" 36x20 | input"Nearby suggestions" 36x20
+
+=== /onboarding -> /onboarding (320x568) overflow=false sw=320 nav=null
+
+=== /login -> / (320x568) overflow=false sw=320 nav={"top":496,"height":72}

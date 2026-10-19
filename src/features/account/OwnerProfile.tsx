@@ -27,7 +27,7 @@ function UsualPreferences({ data }: { data: ReturnType<typeof useSharedUserProfi
   const profile = data.profile
   if (!profile) return null
   const selected = interests ?? profile.interests
-  const choices = [...new Set([...interestOptions, ...selected])]
+  const choices = [...new Set([...interestOptions, ...profile.interests, ...selected])]
   const disabled = !data.canWrite
   async function save(kind: 'interests' | 'availability') {
     if (!profile || disabled) return

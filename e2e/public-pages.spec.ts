@@ -18,7 +18,7 @@ for (const width of [320, 390, 800, 1280, 1440, 2560]) {
     await expect(page.getByRole('link', { name: 'Find your people', exact: true })).toHaveCount(0)
     await expect(page.getByRole('navigation', { name: 'Public navigation' }).getByRole('link', { name: 'Sign in', exact: true })).toHaveAttribute('href', '/login?returnTo=%2F')
     await expect(page.getByRole('navigation', { name: 'Footer navigation' }).getByRole('link', { name: 'Sign in', exact: true })).toHaveAttribute('href', '/login?returnTo=%2F')
-    await expect(page.getByRole('navigation', { name: 'Public navigation' }).getByRole('link', { name: 'Explore events' })).toHaveAttribute('href', '/events')
+    await expect(page.getByRole('navigation', { name: 'Public navigation' }).getByRole('link', { name: 'Explore events' })).toHaveAttribute('href', '/explore')
     await expect(page.getByRole('button', { name: 'Developer controls' })).toHaveCount(0)
     await expect(page.locator('.pt-bottom-nav')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)

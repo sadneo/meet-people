@@ -1,0 +1,26 @@
+
+=== /login -> /login (1280x800) overflow=false sw=1280 nav=null
+  small: a"Open Supabase email viewer" 355x20
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /register -> /register (1280x800) overflow=false sw=1280 nav=null
+  small: a"Open Supabase email viewer" 355x20
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /onboarding -> /onboarding (1280x800) overflow=false sw=1280 nav=null
+
+=== /matchmaking -> /matchmaking (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /messages -> /messages (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /profile -> /profile (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /settings -> /settings (1280x800) overflow=false sw=1280 nav=null
+  small: a.pt-logo-link"Pebble home" 427x30 | input"Plan & message notifications" 36x20 | input"Show me in discovery" 36x20 | input"Share my availability" 36x20 | input"Nearby suggestions" 36x20
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)

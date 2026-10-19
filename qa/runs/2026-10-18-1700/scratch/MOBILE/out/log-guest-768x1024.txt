@@ -1,0 +1,21 @@
+
+=== /login -> /login (768x1024) overflow=false sw=768 nav=null
+  small: a"Open Supabase email viewer" 355x20
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /register -> /register (768x1024) overflow=false sw=768 nav=null
+  small: a"Open Supabase email viewer" 355x20
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /onboarding -> /onboarding (768x1024) overflow=false sw=768 nav=null
+
+=== /matchmaking -> /matchmaking (768x1024) overflow=false sw=768 nav={"top":952,"height":72}
+
+=== /messages -> /messages (768x1024) overflow=false sw=768 nav={"top":952,"height":72}
+
+=== /profile -> /profile (768x1024) overflow=false sw=768 nav={"top":952,"height":72}
+  small: a"Pebble home" 100x34
+  contrast: span.pt-brand-dot"." 2.86/3 rgb(217, 52, 103) on rgb(221, 202, 188)
+
+=== /settings -> /settings (768x1024) overflow=false sw=768 nav={"top":952,"height":72}
+  small: input"Plan & message notifications" 36x20 | input"Show me in discovery" 36x20 | input"Share my availability" 36x20 | input"Nearby suggestions" 36x20

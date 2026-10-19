@@ -1,0 +1,1267 @@
+
+ RUN  v5.0.1 /home/xqiu/Projects/meet-people
+
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+ ❯ tests/messaging.test.tsx (20 tests | 4 failed) 3488ms
+   ❯ persisted messaging UI with mocked API (20)
+     × updates the inbox preview as soon as an open chat receives a message 235ms
+     × disables a chat and explains when access ends during polling 1032ms
+     × removes ended conversations during polling while retaining loaded later pages 1073ms
+     × explains network send failures without browser diagnostics and preserves the draft 49ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/messaging.test.tsx > persisted messaging UI with mocked API > updates the inbox preview as soon as an open chat receives a message
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name `/Taylor.*Fresh incoming preview/`
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Developer controls":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"pt-dev-controls"[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33maria-label[39m=[32m"Developer controls"[39m
+    [33mclass[39m=[32m"pt-dev-tab"[39m
+    [33mtitle[39m=[32m"Developer controls"[39m
+  [36m/>[39m
+
+  Name "Account menu":
+  [36m<summary[39m
+    [33maria-label[39m=[32m"Account menu"[39m
+    [33mrole[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Log out":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Matching notifications, status unavailable":
+  [36m<button[39m
+    [33maria-haspopup[39m=[32m"dialog"[39m
+    [33maria-label[39m=[32m"Matching notifications, status unavailable"[39m
+    [33mclass[39m=[32m"pt-icon-button"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Refresh":
+  [36m<button[39m
+    [33mclass[39m=[32m"pt-button pt-secondary "[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "TaylorPersisted helloOct 8, 8:00 AM":
+  [36m<button[39m
+    [33maria-current[39m=[32m"true"[39m
+    [33mclass[39m=[32m"pt-conversation is-selected"[39m
+  [36m/>[39m
+
+  Name "JordanSay helloOct 8, 8:00 AM":
+  [36m<button[39m
+    [33mclass[39m=[32m"pt-conversation "[39m
+  [36m/>[39m
+
+  Name "Refresh messages":
+  [36m<button[39m
+    [33maria-label[39m=[32m"Refresh messages"[39m
+    [33mclass[39m=[32m"pt-chat-tool"[39m
+    [33mtitle[39m=[32m"Refresh messages"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Send":
+  [36m<button[39m
+    [33mclass[39m=[32m"pt-button  "[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"pt-app-header"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"pt-page-heading"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"pt-chat-header"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "Pebble home":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Pebble home"[39m
+    [33mclass[39m=[32m"pt-logo-link"[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/"[39m
+  [36m/>[39m
+
+  Name "Home":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Home"[39m
+    [33mclass[39m=[32m""[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/"[39m
+    [33mtitle[39m=[32m"Home"[39m
+  [36m/>[39m
+
+  Name "Matchmaking":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Matchmaking"[39m
+    [33mclass[39m=[32m""[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/matchmaking"[39m
+    [33mtitle[39m=[32m"Matchmaking"[39m
+  [36m/>[39m
+
+  Name "Events":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Events"[39m
+    [33mclass[39m=[32m""[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/events"[39m
+    [33mtitle[39m=[32m"Events"[39m
+  [36m/>[39m
+
+  Name "Messages":
+  [36m<a[39m
+    [33maria-current[39m=[32m"page"[39m
+    [33maria-label[39m=[32m"Messages"[39m
+    [33mclass[39m=[32m"is-active"[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/messages"[39m
+    [33mtitle[39m=[32m"Messages"[39m
+  [36m/>[39m
+
+  Name "Profile":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Profile"[39m
+    [33mclass[39m=[32m""[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/profile"[39m
+    [33mtitle[39m=[32m"Profile"[39m
+  [36m/>[39m
+
+  Name "Settings":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Settings"[39m
+    [33mclass[39m=[32m""[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/settings"[39m
+    [33mtitle[39m=[32m"Settings"[39m
+  [36m/>[39m
+
+  Name "Back to messages":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Back to messages"[39m
+    [33mclass[39m=[32m"pt-icon-button pt-chat-back"[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/messages"[39m
+  [36m/>[39m
+
+  Name "Home":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Home"[39m
+    [33mclass[39m=[32m""[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/"[39m
+    [33mtitle[39m=[32m"Home"[39m
+  [36m/>[39m
+
+  Name "Matchmaking":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Matchmaking"[39m
+    [33mclass[39m=[32m""[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/matchmaking"[39m
+    [33mtitle[39m=[32m"Matchmaking"[39m
+  [36m/>[39m
+
+  Name "Events":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Events"[39m
+    [33mclass[39m=[32m""[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/events"[39m
+    [33mtitle[39m=[32m"Events"[39m
+  [36m/>[39m
+
+  Name "Messages":
+  [36m<a[39m
+    [33maria-current[39m=[32m"page"[39m
+    [33maria-label[39m=[32m"Messages"[39m
+    [33mclass[39m=[32m"is-active"[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/messages"[39m
+    [33mtitle[39m=[32m"Messages"[39m
+  [36m/>[39m
+
+  Name "Profile":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Profile"[39m
+    [33mclass[39m=[32m""[39m
+    [33mdata-discover[39m=[32m"true"[39m
+    [33mhref[39m=[32m"/profile"[39m
+    [33mtitle[39m=[32m"Profile"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "Primary navigation":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"Primary navigation"[39m
+    [33mclass[39m=[32m"pt-desktop-nav"[39m
+  [36m/>[39m
+
+  Name "Account navigation":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"Account navigation"[39m
+    [33mclass[39m=[32m"pt-account-nav"[39m
+  [36m/>[39m
+
+  Name "Primary navigation":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"Primary navigation"[39m
+    [33mclass[39m=[32m"pt-bottom-nav"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  group:
+
+  Name "":
+  [36m<details[39m
+    [33mclass[39m=[32m"pt-account-dropdown"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  img:
+
+  Name "Alex":
+  [36m<img[39m
+    [33malt[39m=[32m"Alex"[39m
+    [33mclass[39m=[32m"pt-avatar pt-avatar-normal"[39m
+    [33mreferrerpolicy[39m=[32m"no-referrer"[39m
+    [33msrc[39m=[32m"/prototype/you.jpg"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  main:
+
+  Name "":
+  [36m<main[39m
+    [33mclass[39m=[32m"pt-main"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "Conversation inbox":
+  [36m<section[39m
+    [33maria-label[39m=[32m"Conversation inbox"[39m
+    [33mclass[39m=[32m"pt-inbox-pane"[39m
+  [36m/>[39m
+
+  Name "Selected conversation":
+  [36m<section[39m
+    [33maria-label[39m=[32m"Selected conversation"[39m
+    [33mclass[39m=[32m"pt-conversation-pane"[39m
+  [36m/>[39m
+
+  Name "Message history":
+  [36m<section[39m
+    [33maria-label[39m=[32m"Message history"[39m
+    [33maria-live[39m=[32m"polite"[39m
+    [33mclass[39m=[32m"pt-chat"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Messages":
+  [36m<h1[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  Name "Taylor":
+  [36m<h1 />[39m
+
+  Name "Participants":
+  [36m<h2 />[39m
+
+  --------------------------------------------------
+  searchbox:
+
+  Name "Search conversations":
+  [36m<input[39m
+    [33mplaceholder[39m=[32m"Search conversations…"[39m
+    [33mtype[39m=[32m"search"[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  strong:
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p />[39m
+
+  --------------------------------------------------
+  time:
+
+  Name "":
+  [36m<time[39m
+    [33mdatetime[39m=[32m"2026-10-08T12:00:00Z"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<time[39m
+    [33mdatetime[39m=[32m"2026-10-08T12:00:00Z"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  form:
+
+  Name "Send message":
+  [36m<form[39m
+    [33maria-label[39m=[32m"Send message"[39m
+    [33mclass[39m=[32m"pt-composer"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "Message":
+  [36m<input[39m
+    [33mautocomplete[39m=[32m"off"[39m
+    [33mid[39m=[32m"pt-message"[39m
+    [33mmaxlength[39m=[32m"2000"[39m
+    [33mplaceholder[39m=[32m"Write a message…"[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  complementary:
+
+  Name "Conversation details":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"Conversation details"[39m
+    [33mclass[39m=[32m"pt-chat-details"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  status:
+
+  Name "Current route":
+  [36m<output[39m
+    [33maria-label[39m=[32m"Current route"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"pt-app pt-scene-chat"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"pt-dev-panel"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"pt-dev-controls"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Developer controls"[39m
+          [33mclass[39m=[32m"pt-dev-tab"[39m
+          [33mtitle[39m=[32m"Developer controls"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"16"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"1.7"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"16"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m7 6-5 6 5 6m10-12 5 6-5 6m-4-15-2 18"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"Development scene switcher"[39m
+          [33mclass[39m=[32m"pt-review-tools"[39m
+          [33mhidden[39m=[32m""[39m
+          [33mid[39m=[32m"pt-dev-controls"[39m
+        [36m>[39m
+          [36m<strong>[39m
+            [0mDEV · Design review[0m
+          [36m</strong>[39m
+          [36m<label>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"pt-sr-only"[39m
+            [36m>[39m
+              [0mReview scene[0m
+            [36m</span>[39m
+            [36m<select[39m
+              [33maria-label[39m=[32m"Review scene"[39m
+            [36m>[39m
+              [36m<option>[39m
+                [0mHome[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mCommunity[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mMatchmaking[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mDowntime Matchmaking[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mIntro[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mLogin[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mRegister[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mOnboarding[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mEvents[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mEvent Detail[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mFree Time[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mFree Time Match[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mActivities[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mPlanning[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mReview[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mConfirmed[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mMessages[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mChat[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mConnection[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mProfile[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mOther User Profile[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mSettings[0m
+              [36m</option>[39m
+            [36m</select>[39m
+          [36m</label>[39m
+          [36m<label[39m
+            [33mclass[39m=[32m"pt-empty-toggle"[39m
+          [36m>[39m
+            [36m<input[39m
+              [33mtype[39m=[32m"checkbox"[39m
+            [36m/>[39m
+            [0mEmpty states[0m
+          [36m</label>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"pt-dev-economy"[39m
+          [36m>[39m
+            [36m<button>[39m
+              [0mAdd 100 demo Pebbles[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mtitle[39m=[32m"Resets balance and upgrades; keeps earned chapter history"[39m
+            [36m>[39m
+              [0mReset community/upgrades[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<small>[39m
+            [0mCommunity history uses isolated demo activity. Purchases use your saved local balance.[0m
+          [36m</small>[39m
+          [36m<small>[39m
+            [0mHome people are fictional profile previews, not live presence. Refresh only cycles local samples.[0m
+          [36m</small>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"pt-app-header"[39m
+      [36m>[39m
+        [36m<a[39m
+          [33maria-label[39m=[32m"Pebble home"[39m
+          [33mclass[39m=[32m"pt-logo-link"[39m
+          [33mdata-discover[39m=[32m"true"[39m
+          [33mhref[39m=[32m"/"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"pt-brand"[39m
+          [36m>[39m
+            [0mpebble[0m
+            [36m<span[39m
+              [33mclass[39m=[32m"pt-brand-leaf"[39m
+            [36m/>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"pt-brand-dot"[39m
+            [36m>[39m
+              [0m.[0m
+            [36m</span>[39m
+          [36m</span>[39m
+        [36m</a>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"Primary navigation"[39m
+          [33mclass[39m=[32m"pt-desktop-nav"[39m
+        [36m>[39m
+          [36m<a[39m
+            [33maria-label[39m=[32m"Home"[39m
+            [33mclass[39m=[32m""[39m
+            [33mdata-discover[39m=[32m"true"[39m
+            [33mhref[39m=[32m"/"[39m
+            [33mtitle[39m=[32m"Home"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"25"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.7"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m...
+ ❯ Object.getElementError node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/messaging.test.tsx:143:19
+    141|     await act(() => vi.advanceTimersByTimeAsync(5000))
+    142|     await history().findByText('Fresh incoming preview')
+    143|     expect(screen.getByRole('button', { name: /Taylor.*Fresh incoming …
+       |                   ^
+    144|   })
+    145|   it('disables a chat and explains when access ends during polling', a…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/messaging.test.tsx > persisted messaging UI with mocked API > disables a chat and explains when access ends during polling
+TestingLibraryElementError: Unable to find an element with the text: You are not in this conversation.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"pt-app pt-scene-chat"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"pt-dev-panel"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"pt-dev-controls"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Developer controls"[39m
+          [33mclass[39m=[32m"pt-dev-tab"[39m
+          [33mtitle[39m=[32m"Developer controls"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"16"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"1.7"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"16"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m7 6-5 6 5 6m10-12 5 6-5 6m-4-15-2 18"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"Development scene switcher"[39m
+          [33mclass[39m=[32m"pt-review-tools"[39m
+          [33mhidden[39m=[32m""[39m
+          [33mid[39m=[32m"pt-dev-controls"[39m
+        [36m>[39m
+          [36m<strong>[39m
+            [0mDEV · Design review[0m
+          [36m</strong>[39m
+          [36m<label>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"pt-sr-only"[39m
+            [36m>[39m
+              [0mReview scene[0m
+            [36m</span>[39m
+            [36m<select[39m
+              [33maria-label[39m=[32m"Review scene"[39m
+            [36m>[39m
+              [36m<option>[39m
+                [0mHome[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mCommunity[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mMatchmaking[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mDowntime Matchmaking[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mIntro[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mLogin[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mRegister[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mOnboarding[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mEvents[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mEvent Detail[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mFree Time[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mFree Time Match[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mActivities[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mPlanning[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mReview[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mConfirmed[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mMessages[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mChat[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mConnection[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mProfile[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mOther User Profile[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mSettings[0m
+              [36m</option>[39m
+            [36m</select>[39m
+          [36m</label>[39m
+          [36m<label[39m
+            [33mclass[39m=[32m"pt-empty-toggle"[39m
+          [36m>[39m
+            [36m<input[39m
+              [33mtype[39m=[32m"checkbox"[39m
+            [36m/>[39m
+            [0mEmpty states[0m
+          [36m</label>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"pt-dev-economy"[39m
+          [36m>[39m
+            [36m<button>[39m
+              [0mAdd 100 demo Pebbles[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mtitle[39m=[32m"Resets balance and upgrades; keeps earned chapter history"[39m
+            [36m>[39m
+              [0mReset community/upgrades[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<small>[39m
+            [0mCommunity history uses isolated demo activity. Purchases use your saved local balance.[0m
+          [36m</small>[39m
+          [36m<small>[39m
+            [0mHome people are fictional profile previews, not live presence. Refresh only cycles local samples.[0m
+          [36m</small>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"pt-app-header"[39m
+      [36m>[39m
+        [36m<a[39m
+          [33maria-label[39m=[32m"Pebble home"[39m
+          [33mclass[39m=[32m"pt-logo-link"[39m
+          [33mdata-discover[39m=[32m"true"[39m
+          [33mhref[39m=[32m"/"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"pt-brand"[39m
+          [36m>[39m
+            [0mpebble[0m
+            [36m<span[39m
+              [33mclass[39m=[32m"pt-brand-leaf"[39m
+            [36m/>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"pt-brand-dot"[39m
+            [36m>[39m
+              [0m.[0m
+            [36m</span>[39m
+          [36m</span>[39m
+        [36m</a>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"Primary navigation"[39m
+          [33mclass[39m=[32m"pt-desktop-nav"[39m
+        [36m>[39m
+          [36m<a[39m
+            [33maria-label[39m=[32m"Home"[39m
+            [33mclass[39m=[32m""[39m
+            [33mdata-discover[39m=[32m"true"[39m
+            [33mhref[39m=[32m"/"[39m
+            [33mtitle[39m=[32m"Home"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"25"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.7"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"pt-app pt-scene-chat"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"pt-dev-panel"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"pt-dev-controls"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Developer controls"[39m
+          [33mclass[39m=[32m"pt-dev-tab"[39m
+          [33mtitle[39m=[32m"Developer controls"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"16"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"1.7"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"16"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m7 6-5 6 5 6m10-12 5 6-5 6m-4-15-2 18"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"Development scene switcher"[39m
+          [33mclass[39m=[32m"pt-review-tools"[39m
+          [33mhidden[39m=[32m""[39m
+          [33mid[39m=[32m"pt-dev-controls"[39m
+        [36m>[39m
+          [36m<strong>[39m
+            [0mDEV · Design review[0m
+          [36m</strong>[39m
+          [36m<label>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"pt-sr-only"[39m
+            [36m>[39m
+              [0mReview scene[0m
+            [36m</span>[39m
+            [36m<select[39m
+              [33maria-label[39m=[32m"Review scene"[39m
+            [36m>[39m
+              [36m<option>[39m
+                [0mHome[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mCommunity[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mMatchmaking[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mDowntime Matchmaking[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mIntro[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mLogin[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mRegister[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mOnboarding[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mEvents[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mEvent Detail[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mFree Time[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mFree Time Match[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mActivities[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mPlanning[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mReview[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mConfirmed[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mMessages[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mChat[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mConnection[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mProfile[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mOther User Profile[0m
+              [36m</option>[39m
+              [36m<option>[39m
+                [0mSettings[0m
+              [36m</option>[39m
+            [36m</select>[39m
+          [36m</label>[39m
+          [36m<label[39m
+            [33mclass[39m=[32m"pt-empty-toggle"[39m
+          [36m>[39m
+            [36m<input[39m
+              [33mtype[39m=[32m"checkbox"[39m
+            [36m/>[39m
+            [0mEmpty states[0m
+          [36m</label>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"pt-dev-economy"[39m
+          [36m>[39m
+            [36m<button>[39m
+              [0mAdd 100 demo Pebbles[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mtitle[39m=[32m"Resets balance and upgrades; keeps earned chapter history"[39m
+            [36m>[39m
+              [0mReset community/upgrades[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<small>[39m
+            [0mCommunity history uses isolated demo activity. Purchases use your saved local balance.[0m
+          [36m</small>[39m
+          [36m<small>[39m
+            [0mHome people are fictional profile previews, not live presence. Refresh only cycles local samples.[0m
+          [36m</small>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"pt-app-header"[39m
+      [36m>[39m
+        [36m<a[39m
+          [33maria-label[39m=[32m"Pebble home"[39m
+          [33mclass[39m=[32m"pt-logo-link"[39m
+          [33mdata-discover[39m=[32m"true"[39m
+          [33mhref[39m=[32m"/"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"pt-brand"[39m
+          [36m>[39m
+            [0mpebble[0m
+            [36m<span[39m
+              [33mclass[39m=[32m"pt-brand-leaf"[39m
+            [36m/>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"pt-brand-dot"[39m
+            [36m>[39m
+              [0m.[0m
+            [36m</span>[39m
+          [36m</span>[39m
+        [36m</a>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"Primary navigation"[39m
+          [33mclass[39m=[32m"pt-desktop-nav"[39m
+        [36m>[39m
+          [36m<a[39m
+            [33maria-label[39m=[32m"Home"[39m
+            [33mclass[39m=[32m""[39m
+            [33mdata-discover[39m=[32m"true"[39m
+            [33mhref[39m=[32m"/"[39m
+            [33mtitle[39m=[32m"Home"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"25"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.7"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m...
+ ❯ waitForWrapper node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/messaging.test.tsx:150:18
+    148|     historyStatus = 403
+    149|     await act(async () => { document.dispatchEvent(new Event('visibili…
+    150|     await screen.findByText('You are not in this conversation.')
+       |                  ^
+    151|     expect(screen.getByLabelText('Message', { exact: true }).hasAttrib…
+    152|     expect(screen.queryByRole('button', { name: /Taylor.*Persisted hel…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/messaging.test.tsx > persisted messaging UI with mocked API > removes ended conversations during polling while retaining loaded later pages
+AssertionError: expected <button …(1)>…(3)</button> to be null
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"pt-app pt-scene-messages"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"pt-dev-panel"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"pt-dev-controls"[39m
+            [33maria-expanded[39m=[32m"false"[39m
+            [33maria-label[39m=[32m"Developer controls"[39m
+            [33mclass[39m=[32m"pt-dev-tab"[39m
+            [33mtitle[39m=[32m"Developer controls"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"16"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.7"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"16"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"m7 6-5 6 5 6m10-12 5 6-5 6m-4-15-2 18"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+          [36m</button>[39m
+          [36m<aside[39m
+            [33maria-label[39m=[32m"Development scene switcher"[39m
+            [33mclass[39m=[32m"pt-review-tools"[39m
+            [33mhidden[39m=[32m""[39m
+            [33mid[39m=[32m"pt-dev-controls"[39m
+          [36m>[39m
+            [36m<strong>[39m
+              [0mDEV · Design review[0m
+            [36m</strong>[39m
+            [36m<label>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"pt-sr-only"[39m
+              [36m>[39m
+                [0mReview scene[0m
+              [36m</span>[39m
+              [36m<select[39m
+                [33maria-label[39m=[32m"Review scene"[39m
+              [36m>[39m
+                [36m<option>[39m
+                  [0mHome[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mCommunity[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mMatchmaking[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mDowntime Matchmaking[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mIntro[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mLogin[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mRegister[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mOnboarding[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mEvents[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mEvent Detail[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mFree Time[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mFree Time Match[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mActivities[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mPlanning[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mReview[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mConfirmed[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mMessages[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mChat[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mConnection[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mProfile[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mOther User Profile[0m
+                [36m</option>[39m
+                [36m<option>[39m
+                  [0mSettings[0m
+                [36m</option>[39m
+              [36m</select>[39m
+            [36m</label>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"pt-empty-toggle"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [0mEmpty states[0m
+            [36m</label>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"pt-dev-economy"[39m
+            [36m>[39m
+              [36m<button>[39m
+                [0mAdd 100 demo Pebbles[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtitle[39m=[32m"Resets balance and upgrades; keeps earned chapter history"[39m
+              [36m>[39m
+                [0mReset community/upgrades[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<small>[39m
+              [0mCommunity history uses isolated demo activity. Purchases use your saved local balance.[0m
+            [36m</small>[39m
+            [36m<small>[39m
+              [0mHome people are fictional profile previews, not live presence. Refresh only cycles local samples.[0m
+            [36m</small>[39m
+          [36m</aside>[39m
+        [36m</div>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"pt-app-header"[39m
+        [36m>[39m
+          [36m<a[39m
+            [33maria-label[39m=[32m"Pebble home"[39m
+            [33mclass[39m=[32m"pt-logo-link"[39m
+            [33mdata-discover[39m=[32m"true"[39m
+            [33mhref[39m=[32m"/"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"pt-brand"[39m
+            [36m>[39m
+              [0mpebble[0m
+              [36m<span[39m
+                [33mclass[39m=[32m"pt-brand-leaf"[39m
+              [36m/>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"pt-brand-dot"[39m
+              [36m>[39m
+                [0m.[0m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</a>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"Primary navigation"[39m
+            [33mclass[39m=[32m"pt-desktop-nav"[39m
+          [36m>[39m
+            [36m<a[39m
+              [33maria-label[39m=[32m"Home"[39m
+              [33mclass[39m=[32m""[39m
+              [33mdata-discover[39m=[32m"true"[39m
+              [33mhref[39m=[32m"/"[39m
+              [33mtitle[39m=[32m"Home"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-hidden[39m=[32m"true"[39m
+ ...
+
+- Expected:
+null
+
++ Received:
+<button
+  class="pt-conversation "
+>
+  <span
+    aria-hidden="true"
+    class="pt-avatar pt-messaging-initials"
+  >
+    T
+  </span>
+  <span>
+    <strong>
+      Taylor
+    </strong>
+    <span>
+      Persisted hello
+    </span>
+  </span>
+  <small>
+    Oct 8, 8:00 AM
+    <span
+      aria-label="1 unread"
+      class="pt-unread"
+      role="img"
+    />
+  </small>
+</button>
+
+ ❯ tests/messaging.test.tsx:162:82
+    160|     removedConversations = [a]
+    161|     await act(async () => { document.dispatchEvent(new Event('visibili…
+    162|     await waitFor(() => expect(screen.queryByRole('button', { name: /T…
+       |                                                                                  ^
+    163|     expect(screen.getByRole('button', { name: /Jordan.*Say hello/ })).…
+    164|   })
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/messaging.test.tsx > persisted messaging UI with mocked API > explains network send failures without browser diagnostics and preserves the draft
+AssertionError: expected 'Failed to fetch Your draft is kept; r…' to contain 'Could not send your message.'
+
+Expected: "Could not send your message."
+Received: "Failed to fetch Your draft is kept; retry Send."
+
+ ❯ tests/messaging.test.tsx:218:31
+    216|     fireEvent.click(screen.getByRole('button', { name: 'Send', exact: …
+    217|     const alert = await screen.findByRole('alert')
+    218|     expect(alert.textContent).toContain('Could not send your message.')
+       |                               ^
+    219|     expect(alert.textContent).not.toContain('Failed to fetch')
+    220|     expect((screen.getByLabelText('Message', { exact: true }) as HTMLI…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 16 passed (20)
+   Start at  17:23:57
+   Duration  4.42s (tests 80%, transform 9%, environment 7%, import 4%)
+

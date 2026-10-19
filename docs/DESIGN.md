@@ -122,7 +122,9 @@ The active shell is `src/features/prototype/AppShell.tsx`, wrapped by
 - Community uses a scalable SVG scene up to 1600px wide, constrained by viewport
   height to reserve room for the weekly chart. Mobile uses a tighter scene.
 - Messages uses fluid 26/48/26 desktop columns, independent pane scrolling,
-  readable bubble widths, and a reachable composer. At 800px it becomes a
+  readable bubble widths, and a reachable composer. The details column appears
+  only with content: Participants for conversations of more than two people, or
+  a local demo plan. Otherwise the conversation fills it (26/74). At 800px it becomes a
   routed inbox or chat. Preserve the existing Events wide preview behavior.
 
 Verify 320px, tablet, 799/800/801px, 1280×720, 1440×900, 1920×1080,

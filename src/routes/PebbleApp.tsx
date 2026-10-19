@@ -24,7 +24,7 @@ export default function PebbleApp() {
 
 function PebbleWorkspace() {
   const account = useAccount()
-  const { pathname } = useLocation()
+  const { pathname, search, hash } = useLocation()
   const navigate = useNavigate()
   const scene = isEventDetailPath(pathname) ? 'Event Detail' : scenes.find(value => scenePaths[value] === pathname) ?? 'Home'
   const [localState, localDispatch] = useReducer(reducer, initialState, initial => ({ ...initial, community: account?.session ? initial.community : loadCommunity() }))
@@ -56,7 +56,7 @@ function PebbleWorkspace() {
   const go = (next: Scene) => {
     if (next === 'Intro') setIntroRun(run => run + 1)
     if (next === 'Confirmed') setChatPerson(null)
-    navigate(scenePaths[next])
+    navigate(scenePaths[next], next === 'Other User Profile' ? { state: { profileReturnTo: pathname + search + hash } } : undefined)
   }
 
   return <PrototypeContext.Provider value={{ state, dispatch, scene, go, empty, setEmpty, personId, setPersonId, eventId, setEventId, chatPerson, setChatPerson }}>

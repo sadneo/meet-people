@@ -1,0 +1,34 @@
+{
+  "testedAt": "2026-10-18T21:32:01.503Z",
+  "databaseWrites": 0,
+  "results": [
+    {
+      "scenario": "preview-order",
+      "width": 390,
+      "passed": true,
+      "inboxSequence": 3,
+      "newerMessageRetained": true
+    },
+    {
+      "scenario": "closed-composer",
+      "width": 390,
+      "passed": true,
+      "composerDisabled": true,
+      "sendDisabled": true
+    },
+    {
+      "scenario": "preview-order",
+      "width": 1280,
+      "passed": true,
+      "inboxSequence": 3,
+      "newerMessageRetained": true
+    },
+    {
+      "scenario": "closed-composer",
+      "width": 1280,
+      "passed": true,
+      "composerDisabled": true,
+      "sendDisabled": true
+    }
+  ]
+}

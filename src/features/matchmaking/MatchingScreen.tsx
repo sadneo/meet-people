@@ -35,6 +35,10 @@ const setupBlocks = [
 export function MatchingSetup({ token, initial = null, busy, error, save, findFriends, searching = false, presentation = 'setup', writesAvailable = true, minimumRequired = false, submitLabel, canonicalIdentity, friends = false, savedIdentity }: { token: string; initial?: MatchingProfile | null; busy: boolean; error: string; save: (profile: MatchingProfile) => Promise<boolean>; findFriends?: (profile: MatchingProfile) => Promise<boolean>; searching?: boolean; navigation?: boolean; presentation?: 'setup' | 'profile'; writesAvailable?: boolean; minimumRequired?: boolean; submitLabel?: string; canonicalIdentity?: AccountProfile; friends?: boolean; savedIdentity?: ReturnType<typeof useSavedIdentity> }) {
   const [draft, setDraft] = useState(initial ?? blankProfile)
   const [validation, setValidation] = useState('')
+  const [rejected, setRejected] = useState(0)
+  const feedback = useRef<HTMLParagraphElement>(null)
+  const reject = (message: string) => { setValidation(message); setRejected(value => value + 1) }
+  useEffect(() => { if (validation || error) feedback.current?.focus() }, [validation, error, rejected])
   const read = useSavedIdentity(canonicalIdentity || savedIdentity ? null : token)
   const account = savedIdentity ?? (canonicalIdentity ? { ...read, account: canonicalIdentity, loading: false } : read)
   const submitting = useRef(false)
@@ -49,11 +53,11 @@ export function MatchingSetup({ token, initial = null, busy, error, save, findFr
     <form aria-label={presentation === 'profile' ? 'Shared profile preferences' : 'Matching profile setup'} onSubmit={async event => {
       event.preventDefault()
       if (blocked || !identity || submitting.current) return
-      if (presentation === 'profile' && (draft.birthdate || minimumRequired) && (calculatedAge(draft.birthdate) === null || (draft.birthdate ?? '') > todayDate())) { setValidation('Enter a valid birthdate that is not in the future.'); return }
+      if (presentation === 'profile' && (draft.birthdate || minimumRequired) && (calculatedAge(draft.birthdate) === null || (draft.birthdate ?? '') > todayDate())) { reject('Enter a valid birthdate that is not in the future.'); return }
       const { username, display_name, bio, avatar_url } = identity
       const parsed = MatchingProfileSchema.safeParse(withAccountIdentity(draft, { username, display_name, bio, avatar_url }))
-      if (!parsed.success) { setValidation('Check your interests and non-overlapping same-day time windows. Up to 30 unique interests and 56 windows are supported.'); return }
-      if (minimumRequired && !ReadyPreferencesSchema.safeParse(parsed.data).success) { setValidation(readinessMessage); return }
+      if (!parsed.success) { reject('Check your interests and non-overlapping same-day time windows. Up to 30 unique interests and 56 windows are supported.'); return }
+      if (minimumRequired && !ReadyPreferencesSchema.safeParse(parsed.data).success) { reject(readinessMessage); return }
       setValidation('')
       submitting.current = true
       try { await (findFriends ?? save)(parsed.data) } finally { submitting.current = false }
@@ -72,7 +76,7 @@ export function MatchingSetup({ token, initial = null, busy, error, save, findFr
       </section>
       {presentation === 'profile' && <div className="match-setup-location"><h3>Location &amp; account details</h3><label>City or campus area<input maxLength={120} required={minimumRequired} disabled={busy} value={draft.location_city ?? ''} onChange={event => update({ location_city: event.target.value || null })} /></label><p>Area text does not set coordinates or enforce a travel range.</p><label>{minimumRequired ? 'Birthdate' : 'Birthdate (optional)'}<input type="date" max={todayDate()} required={minimumRequired} disabled={busy} value={draft.birthdate ?? ''} onChange={event => update({ birthdate: event.target.value || null })} /></label></div>}
       <footer className="match-setup-footer" role="group" aria-label="Matching setup actions">{friends && <FriendsPartyPreference disabled={busy || !writesAvailable} />}{account.loading ? <p role="status">Checking saved identity…</p> : identity ? !friends && <p>Using your saved account identity. Display name and bio are edited on Profile.</p> : <IdentityRetry account={account} busy={busy} />}
-        {(validation || error) && <p role="alert">{validation || error}</p>}
+        {(validation || error) && <p ref={feedback} tabIndex={-1} role="alert">{validation || error}</p>}
         {presentation === 'setup' && !friends && <p><Link to="/profile">Edit location and birthdate on Profile</Link></p>}
         {findFriends && <p className={friends ? 'pt-sr-only' : undefined}>Find Friends saves your interests and free time, then starts an active search.</p>}
         <button type="submit" className="match-button match-button-primary" disabled={blocked}>{busy ? searching ? 'Searching…' : 'Saving…' : submitLabel ?? (presentation === 'profile' ? 'Save shared preferences' : findFriends ? 'Find Friends' : 'Save matching preferences')}{friends && <Icon name="arrow" size={18} />}</button>

@@ -1,0 +1,18 @@
+import { openAs } from '/home/xqiu/Projects/meet-people/.claude/skills/qa/scripts/qa-browser.mjs'
+const R = '/home/xqiu/Projects/meet-people/qa/runs/2026-10-18-1700/screenshots'
+const [w, h] = (process.argv[2] ?? '1920x1080').split('x').map(Number)
+const { page, problems, close } = await openAs('dave', { width: w, height: h })
+await page.goto('/events'); await page.waitForTimeout(2500)
+const link = page.getByRole('link', { name: 'See event & people' }).nth(4)
+await link.scrollIntoViewIfNeeded()
+await link.click(); await page.waitForTimeout(2000)
+console.log('url:', page.url())
+const box = await page.locator('aside h1').first().boundingBox()
+const title = await page.locator('aside article h1').innerText()
+const vy = await page.evaluate(() => scrollY)
+console.log('scrollY', vy, 'preview heading box y (viewport):', box?.y, 'viewport h', h, 'preview title:', title)
+console.log('preview title visible in viewport:', await page.locator('aside article h1').evaluate(el => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight }))
+console.log('focused element:', await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)))
+await page.screenshot({ path: `${R}/EVENTS-wide-select-5-${w}.png` })
+console.log('problems', problems.filter(p => !p.includes('favicon')))
+await close()
