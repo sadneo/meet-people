@@ -35,6 +35,8 @@ export function PublicLayout() {
   const { session } = useSession()
   const { pathname } = useLocation()
   const main = useRef<HTMLElement>(null)
+  // The logged-out events browser hides Sign in; Get started stays.
+  const guestEvents = pathname.startsWith(publicEventsPath)
   useEffect(() => {
     window.scrollTo(0, 0)
     main.current?.focus({ preventScroll: true })
@@ -47,13 +49,13 @@ export function PublicLayout() {
       <Link to="/" aria-label="Pebble home"><Brand /></Link>
       <nav aria-label="Public navigation">
         <NavLink to={publicEventsPath}>Explore events</NavLink>
-        {session ? <Link className="pt-button pt-discovery-action" to="/">Open Pebble</Link> : <><Link to={publicAuthPath('login')}>Sign in</Link>{pathname !== '/' && <Link className="pt-button pt-discovery-action" to={publicAuthPath('register')}>Get started</Link>}</>}
+        {session ? <Link className="pt-button pt-discovery-action" to="/">Open Pebble</Link> : <>{!guestEvents && <Link to={publicAuthPath('login')}>Sign in</Link>}{pathname !== '/' && <Link className="pt-button pt-discovery-action" to={publicAuthPath('register')}>Get started</Link>}</>}
       </nav>
     </header>
     <main id="public-content" ref={main} tabIndex={-1} className="public-main public-width"><Outlet /></main>
     <footer className="public-footer public-width">
       <div><Link to="/" aria-label="Pebble home"><Brand /></Link><p>A little time. A new connection.</p></div>
-      <nav aria-label="Footer navigation"><Link to="/terms">Terms of Service</Link><Link to="/privacy">Privacy Policy</Link><Link to="/cookies">Cookie Policy</Link><Link to={publicAuthPath('login')}>Sign in</Link></nav>
+      <nav aria-label="Footer navigation"><Link to="/terms">Terms of Service</Link><Link to="/privacy">Privacy Policy</Link><Link to="/cookies">Cookie Policy</Link>{!guestEvents && <Link to={publicAuthPath('login')}>Sign in</Link>}</nav>
     </footer>
   </div>
 }

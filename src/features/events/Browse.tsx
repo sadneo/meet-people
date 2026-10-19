@@ -89,7 +89,7 @@ function EventsFeed({ guest }: { guest: boolean }) {
       </article>
     })}</div>}
     {result && <div className="ev-event-pagination"><Button secondary disabled={page === 1} onClick={() => goPage(page - 1)}>Previous</Button><span>Page {page}</span><Button secondary disabled={!result.hasMore} onClick={() => goPage(page + 1)}>Next</Button></div>}
-  </section><aside className="ev-event-preview">{previewId && <EventDetail key={previewId} id={previewId} preview />}</aside></div>
+  </section><aside className="ev-event-preview">{previewId && <EventDetail key={previewId} id={previewId} preview guest={guest} />}</aside></div>
 }
 
 export function EventDetail({ id, preview = false, guest = false }: { id?: string; preview?: boolean; guest?: boolean }) {
@@ -122,12 +122,12 @@ function EventDetailContent({ id, preview, guest }: { id: string; preview: boole
     <Header title={preview ? 'Selected event' : 'Event details'} />
     {error ? <div role="alert"><p>{error}</p><Button onClick={() => setRetry(value => value + 1)}>Retry</Button></div> : !event ? <p role="status">Loading event…</p> : <article className="ev-event-detail">
       <EventPhoto event={event} detail onImageFailure={setFailedImage} />
-      <div className="ev-detail-body"><div><span className="ev-eyebrow">{event.category ?? 'Other'}</span><h1>{event.title}</h1>
+      <div className="ev-detail-body" style={guest ? { gridTemplateColumns: '1fr' } : undefined}><div><span className="ev-eyebrow">{event.category ?? 'Other'}</span><h1>{event.title}</h1>
         <p className="ev-detail-fact"><Icon name="events" />{eventDate(event.starts_at, event.ends_at)}</p><p className="ev-detail-fact"><Icon name="pin" />{event.location_name ?? event.city ?? 'Location to be announced'}</p>
         {event.address && <p>{event.address}</p>}<p className="ev-description">{event.description ?? 'No description provided.'}</p>
         <span className="ev-hint">Source: {event.source}{safeImage(event.image_url) === eventImagePlaceholder || failedImage === safeImage(event.image_url) ? ' · Pebble placeholder illustration (not an event photo)' : ''}</span>
         {url && <p><a className="ev-text-button" href={url} target="_blank" rel="noopener noreferrer">View original listing</a></p>}
-      </div><EventGroupQueue listingId={id} /></div>
+      </div>{!guest && <EventGroupQueue listingId={id} />}</div>
     </article>}
   </>
 }
