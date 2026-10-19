@@ -255,3 +255,184 @@ fresh reviewed disposable installation (candidate deliberately does not replace
 existing objects), execute the updated guarded SQL and perform separate observed
 CAS/DOB/ref concurrency checks. No UI/prototype-fixture changes, live discovery/eligibility
 admission, legacy RPC gate, downtime redesign or additional resource was enabled.
+
+## Canonical preference UI integration — next bounded source slice
+
+Approved baseline is now parent checkpoint
+`38fdf3915716fdb8442511e6336079750f3c4c45` on the same worktree/branch, initially
+clean. Parent reports the repaired foundation accepted with no material findings,
+67 focused tests / seven files, both typechecks/diff and actual guarded network-none
+PostgreSQL 17 acceptance using synthetic Auth, exact historical profiles and the
+facts/Friends prerequisites. This is foundation evidence, not frontend execution,
+full replay, multi-session concurrency, live PostgREST or app-DB application.
+
+### Canonical resource, not a second subsystem or activation path
+
+`dating-aggregate-client.ts` captures the existing canonical AccountContext token,
+strictly validates Dating aggregate/errors, retains its 15s deadline through JSON
+consumption and never retries PUT. Its mutation entry rejects enabled=true even
+if otherwise schema-valid. `useDatingPreferences.ts` follows the repaired domain-
+specific facts/Settings pattern, without changing either or creating a generic
+resource framework. Render-time client/account-busy fences and synchronous locking
+precede transport; layout unmount cleanup fences late work before passive cleanup.
+Owner/client generations abort/ignore obsolete continuations and retained callbacks.
+
+Both expected revisions must match current authority. A single aggregate PUT must
+confirm both revisions/values, followed by a separate browser GET comparison of
+both domains. Eligibility may independently change, but each response validates its
+mask; no effective live-Dating claim follows. Conflict, uncertain transport or
+malformed/partial/divergent save/readback closes write capability. Explicit reload
+is required; repeated same-owner token refreshes cannot clear that gate. Confirmed
+invalid input can be corrected without claiming a write. Read failures retain the
+last confirmed snapshot, never editable invented defaults. Resource state survives
+sheet dismissal, so close/reopen does not bypass reconciliation. Owner change
+remounts private resource/form state. Whole route/auth-shell replacement discards
+local drafts; a fresh instance still requires canonical GET before mutation.
+
+`DatingPreferences.tsx` owns that resource while the existing sheet is open/closed.
+`MatchingViews.tsx` removes only Dating's memory-persisted filters/search/details.
+Production always passes the canonical boundary; the old render-only sheet callback
+interface remains for existing isolated layout tests, never an unavailable fallback.
+No Friends resource, global account, picture, bio, interests, availability, home,
+DOB, queue, provider, notification or post-match write is added.
+
+### Sheet semantics and preserved design
+
+The existing MatchFilterSheet, DatingPreferenceFields and SearchPreferenceFields
+are reused. Unknown/unavailable capability exposes no sliders/identity controls,
+only honest state and a read-only retry; there is no fake local save. Server
+profile defaults (including visibility off) override old preview defaults. Missing
+search is shown as explicitly **unsaved suggested bounds**, saved only by a user's
+explicit action, never by GET or field mounting.
+
+The action is **Save disabled Dating draft**, available only for an already-disabled
+or absent profile. A stored enabled-consent snapshot is read-only: the UI locks
+details/search and save/reset/clarification controls; the synchronous hook authority
+and mapper independently reject attempts to construct/send a disabling edit. No
+activation or opt-out control is introduced. Reload/close remain available.
+Unresolved/null locations and incomplete/adult-ineligible details
+remain savable disabled drafts. Visibility choices do not activate. The sheet
+shows a dated server eligibility receipt, not a locally fabricated adult capability.
+
+Fixed identity choices retain exact custom legacy labels; Unicode scalar lengths
+and existing exact custom target labels round-trip without rewriting or inventing
+categories. Existing custom target checkboxes remain available after uncheck.
+Select identity changes clear target drafts. Initial identity clarification saves
+once; established/partial edits that try to submit new targets receive explicit
+clear/save/reopen/confirm guidance and no bypass/automatic server normalization.
+Height maps nullable total 24–107 inches to feet/remainder and back; 60 is 5ft 0in,
+not missing. Partial units are rejected. Numeric age/radius drafts are independent
+of Friends. Reset affects age/distance only, Cancel/Escape/drag discards unsaved
+form state, and focus/scroll restoration stays in the existing sheet. Pending
+save/readback locks fields, close/Escape/drag, Reset and reload until confirmation.
+
+Explicit reload warns that it replaces both drafts; a synchronous local reload
+lock prevents duplicate callbacks reopening editing while a read is pending.
+Reload failure keeps drafts and any reconciliation gate. Closing a read-only reload
+is allowed; layout-unmount fencing prevents its completion from overwriting a new
+sheet's edits. Refreshed revisions cannot silently rebase an old draft. A same-area
+trusted reference is retained only when currently confirmed resolved; edited area,
+changed home or revoked/unconfirmed resolution sends null, never guessed geography.
+Area text is preserved exactly; no trim rewrite, geocoder or coordinate payload.
+
+The action rows wrap in canonical Dating sheets for narrow screens. Existing
+heading/handle drag threshold, native form scrolling, short-sheet overflow and
+desktop layout are retained. Exact disclosure remains:
+**Local prototype recommendations — not live Dating matches.**
+Fixture recommendations/likes/cards and their local decision state are unchanged;
+saved preferences do not filter them. Existing availability/global masters/downtime
+and Dating safety/legacy bypass gaps remain separate unchanged gates.
+
+### New tests, browser sources and actual verification limits
+
+New offline fixture/client/hook/render source covers strict capability, unavailable/
+partial responses, both revisions, zero remainder/custom labels, exact area text,
+disabled-only transport, deadlines, duplicate pending locks, separate GET, conflict/
+uncertainty and failed reload, repeated token refresh, retained pre-effect callbacks,
+account-busy/owner changes, late initial reads, unmount, Cancel/Reset, initial versus
+established clarification and cancelled late reloads. Older no-account Dating tests
+now assert honest unavailable state rather than local-save fallback; equivalent
+draft/cancel/reset/persistence behavior is covered against the canonical fixture.
+
+The shared browser fixture adds a separate synthetic Dating aggregate, not keys in
+the account document. It rejects activation/stale transitions and keeps external
+traffic blocked. Updated reference/mixed-readiness tests expect canonical writes
+and reload persistence; card metadata and global/shared no-write assertions remain.
+New `e2e/dating-preferences.spec.ts` authors 320/390/1440 and 390x420 draft/pending/
+reloaded captures, unavailable capability, legacy identity guidance, conflict and
+uncertain readback. These are screenshot **source**, not produced/inspected images.
+No browser/Vite service was started under this task's no-service restriction.
+Proposed isolated parent execution (not run by agent):
+
+```text
+pnpm --config.verify-deps-before-run=false test:e2e --config worktree/friends-light-review/playwright.config.ts e2e/dating-preferences.spec.ts e2e/dating-reference.spec.ts e2e/account-matchmaking-readiness.spec.ts
+```
+
+The following actual attempts were **Permission denied: shell**; no unit/typecheck
+pass is claimed for this frontend cycle:
+
+```text
+pnpm --config.verify-deps-before-run=false exec vitest run --configLoader runner --config vite.isolated.config.ts --environment jsdom tests/dating-ui-client.test.ts tests/dating-ui-hook.test.ts tests/dating-ui-render.test.tsx tests/dating-views.test.tsx tests/match-filter-sheet.test.tsx tests/frontend-preference-rules.test.tsx tests/detailed-settings-hook.test.ts tests/profile-details-hook.test.ts
+pnpm --config.verify-deps-before-run=false typecheck
+pnpm --config.verify-deps-before-run=false exec tsc --project tsconfig.api.json --noEmit
+```
+
+`git diff --check` passed during implementation; final checks/status are reported
+in completion. Parent must execute focused/broader regressions, inspect real narrow/
+short/desktop screenshots and review authority, reload and identity fences before
+checkpoint. Neither SQL foundation acceptance nor source review is frontend runtime
+evidence. No SQL/backend application, migration replay, multi-session concurrency,
+live PostgREST/discovery, resolver, delivery, safety, native-device or all-surface
+privacy enforcement has been established here. No staging/commit/push, Git mutation,
+secret/environment access, provider/network/geocoder request, service/deployment,
+configuration/install or protected-checkout operation occurred.
+
+### Pending browser locator repair and adversarial consent review
+
+Same authorized HEAD `38fdf3915716fdb8442511e6336079750f3c4c45`; initial dirty
+inventory remains the existing 22-path frontend slice. Parent reports the preceding
+**79 units / eight files, both typechecks and diff PASS**. Actual browser execution
+returned **28 PASS / 1 FAIL of 29**, not a full pass: the short-mobile test in
+`e2e/account-matchmaking-readiness.spec.ts:199` still selected obsolete
+`Save preferences`, while the actual canonical action is `Save disabled Dating draft`.
+That locator is updated with exact accessible matching and explicit visibility;
+scroll reachability, screenshot, overflow, zero writes and external-traffic checks
+are retained. No UI label alias or removed coverage masks the failure.
+
+The adversarial review found one concrete product defect beyond the locator:
+the disabled-draft mapper previously sent enabled=false even when the loaded owner
+profile had enabled=true. Ordinary visibility/detail/search editing would therefore
+disable existing consent. Explicit copy did not make this a suitable implicit
+consent mutation. The bounded repair is read-only handling for enabled snapshots,
+not new activation, consent editing or a backend-policy redesign. Both baseline and
+current snapshot flags lock the form; hook mutation entry checks current synchronous
+authority, including retained ready callbacks after reload, and the mapper refuses
+an enabled baseline. The client still refuses enabled=true requests. No PUT is sent
+for a known enabled profile. If consent changes elsewhere after an old disabled
+GET, both-revision CAS rejects the stale attempt without changing stored consent;
+explicit reload then makes the resource read-only. Independent concurrency runtime
+acceptance remains outstanding; the test is a deterministic offline transport model.
+
+New regression source covers initial/reloaded enabled snapshots, retained callbacks,
+stale-version concurrent-consent model, read-only form/direct submit/cancel/reload,
+and preserved stored values/zero PUTs. The existing browser source adds a synthetic
+enabled-snapshot read-only case and screenshot for parent execution. A mapper check
+also covers current-home change dropping an otherwise resolved home reference,
+alongside existing temporary-label/revocation checks; no geocoding is introduced.
+
+Other reviewed invariants remain: exact custom labels and targets survive reads;
+partial/established identity edits require cleared targets while absent/unset initial
+identity can clarify once; 60 inches round-trips as 5ft + 0in; current render/session/
+account-busy fences and layout unmount cleanup precede obsolete request continuation;
+separate canonical GET failure retains uncertainty/no retry; stale refs clear to
+unresolved selections instead of fabricated coordinates. No additional concrete
+material defect was identified in those source paths during this repair review.
+
+The focused three-suite regression attempt and the eight-suite regression command
+above were **Permission denied: shell**, as were both typechecks. These are not
+fresh repair passes. `git diff --check` passed during this repair. Browser tests were
+not rerun or screenshots inspected by the agent; do not report 29 passed, nor treat
+the earlier 79-unit/typecheck results as execution of these new tests. Parent owns
+independent rerun/review/checkpoint. No backend, shared aggregate contract, SQL,
+operational/Dating fixture cards, exact disclosure, global account data or downtime
+behavior was changed; no service, network/provider/DB action or Git mutation occurred.

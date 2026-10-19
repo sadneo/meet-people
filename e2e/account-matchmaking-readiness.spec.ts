@@ -102,7 +102,7 @@ for (const width of [320, 390, 1440]) {
     await sheet.getByLabel('Height in feet').selectOption('6')
     await sheet.getByLabel('Additional height inches').selectOption('0')
     await page.screenshot({ path: testInfo.outputPath('dating-clarification.png') })
-    await sheet.getByRole('button', { name: 'Save preferences', exact: true }).click()
+    await sheet.getByRole('button', { name: 'Save disabled Dating draft', exact: true }).click()
     await page.getByRole('button', { name: 'Prototype preferences', exact: true }).click()
     await expect(sheet.getByRole('group', { name: 'Dating matching clarification' }).getByRole('checkbox', { name: 'Nonbinary', exact: true })).toBeChecked()
     await page.keyboard.press('Escape')
@@ -124,7 +124,10 @@ for (const width of [320, 390, 1440]) {
     await page.screenshot({ path: testInfo.outputPath('settings-blocklist.png') })
     await page.keyboard.press('Escape')
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
-    expect(fixture.calls.filter(call => call.method !== 'GET')).toEqual([{ path: '/api/matchmaking/detailed-settings', method: 'PUT', body: { expectedRevision: 0, settings: { messages: false, plans: false, matches: false, friendsDiscovery: false, datingDiscovery: true } } }])
+    expect(fixture.calls.filter(call => call.method !== 'GET')).toEqual([
+      { path: '/api/matchmaking/dating-preferences', method: 'PUT', body: { expectedProfileRevision: 0, expectedSearchRevision: 0, profile: { gender: 'Man', sexuality: 'Questioning', intent: '', style: '', heightInches: 72, visibility: { gender: false, sexuality: false, height: false }, clarifiedTargets: ['Nonbinary'], enabled: false }, search: { ageMin: 18, ageMax: 99, radiusMiles: 15, searchArea: { source: 'home', resolvedLocationRef: null } } } },
+      { path: '/api/matchmaking/detailed-settings', method: 'PUT', body: { expectedRevision: 0, settings: { messages: false, plans: false, matches: false, friendsDiscovery: false, datingDiscovery: true } } },
+    ])
     expect(fixture.external).toEqual([])
   })
 }
@@ -193,7 +196,8 @@ test('new dialogs fit a short mobile viewport and keep actions reachable', async
   await page.keyboard.press('Escape')
   await page.getByRole('link', { name: 'Dating', exact: true }).click()
   await page.getByRole('button', { name: 'Prototype preferences', exact: true }).click()
-  await sheet.getByRole('button', { name: 'Save preferences', exact: true }).scrollIntoViewIfNeeded()
+  await sheet.getByRole('button', { name: 'Save disabled Dating draft', exact: true }).scrollIntoViewIfNeeded()
+  await expect(sheet.getByRole('button', { name: 'Save disabled Dating draft', exact: true })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('dating-short.png') })
   expect(await sheet.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
   expect(fixture.calls.filter(call => call.method !== 'GET')).toEqual([])

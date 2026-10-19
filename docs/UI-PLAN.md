@@ -185,7 +185,9 @@ priority disables downtime. Optional owner facts now use their versioned resourc
 only after authenticated capability readback; otherwise they remain unavailable.
 Detailed Settings choices now use their versioned owner resource after authenticated
 capability/readback; saved preferences do not prove delivery or live discovery.
-Unsupported filters and picture upload remain React-memory previews. Numeric mode filters and temporary
+Dating preference details/search now use the owner aggregate after capability GET,
+with an explicit disabled-draft save; recommendations remain the local prototype.
+Friends numeric filters and picture upload remain React-memory previews. Numeric mode filters and temporary
 search areas are independent from home/profile data. One cream/sage preferences
 sheet supports mobile drag dismissal, native dropdowns and independent age thumbs.
 Do not add API/storage writes to preview fields without their own contracts.

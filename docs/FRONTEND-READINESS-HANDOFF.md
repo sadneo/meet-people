@@ -18,6 +18,17 @@ preferences does not verify delivery or live discovery enforcement. Only picture
 preview remains in `AccountUiPreviewProvider`; safety stays unavailable. See
 `settings-safety-backend.md` for current integration and parent-reported evidence.
 
+**Subsequent Dating preference integration:** the production Dating sheet now uses
+the canonical owner aggregate after valid GET, rather than component-memory saves.
+It saves details/search atomically as an explicitly disabled draft; no activation
+switch, location resolver or live filtering was added. Unknown/unavailable backend
+stays unavailable. Fixed choices, exact retained legacy labels, clarification,
+height conversion, independent bounds and drag/cancel remain. Cards/decisions keep
+the exact prototype disclosure and do not consume saved preferences. See
+`dating-aggregate-backend.md` for current frontend boundaries and unexecuted checks.
+Existing enabled-consent snapshots are read-only in this draft editor: ordinary
+editing cannot implicitly disable them, and no consent-change control is introduced.
+
 ## Product rules confirmed by the owner
 
 - One global interest catalogue/selection and one global weekly schedule. Explicit Profile and Friends saves update the shared source in both directions. They are not separate temporary-search copies.

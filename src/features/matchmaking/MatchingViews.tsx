@@ -1,7 +1,6 @@
 import { useAccount } from '../../auth/account-context'
 import { calculatedAge } from '../account/profile-rules'
-import { emptySearchOptions } from './search-preferences'
-import { emptyDatingPreferences } from './dating-preferences'
+import { DatingPreferences } from './DatingPreferences'
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router'
@@ -11,7 +10,6 @@ import { isDatingView } from './views'
 import { PixelPebble } from '../pebble-art/PixelArt'
 import { datingPrototypeFixtures } from './dating-prototype-fixtures'
 import './dating-views.css'
-import { MatchFilterSheet, filterDefaults } from './MatchFilterSheet'
 
 export function MatchingViews({ mode }: { mode: MatchingMode }) {
   const { pathname, search } = useLocation()
@@ -60,14 +58,11 @@ function PrototypeDialog({ title, close, children }: { title: string; close: () 
 function DatingPrototype({ selector }: { selector: ReactNode }) {
   const account = useAccount()
   const age = calculatedAge(account?.account.profile?.birthdate)
-  const [searchOptions, setSearchOptions] = useState(emptySearchOptions)
-  const [filters, setFilters] = useState(filterDefaults.Dating)
   const [cursor, setCursor] = useState(0)
   const [decision, setDecision] = useState<Decision | null>(null)
   const [history, setHistory] = useState<number[]>([])
   const [entering, setEntering] = useState(false)
   const [dialog, setDialog] = useState<'info' | 'filter' | null>(null)
-  const [datingPreferences, setDatingPreferences] = useState(emptyDatingPreferences)
   const locked = useRef(false)
   const focusAfter = useRef<FocusTarget | null>(null)
   const touch = useRef<{ x: number; y: number } | null>(null)
@@ -153,7 +148,7 @@ function DatingPrototype({ selector }: { selector: ReactNode }) {
       </div>
       <small className="dating-account-note pt-sr-only"><span>Same Pebble account. Your Friends queue stays as it is.</span><span>Decisions reset when you leave or reload.</span></small>
     </div>
-    {dialog === 'filter' && <MatchFilterSheet mode="Dating" value={filters} searchValue={searchOptions} home={account?.account.profile?.location_city ?? null} datingValue={datingPreferences} close={() => setDialog(null)} saveDating={async (value, profile, options) => { setFilters(value); setDatingPreferences(profile); if (options) setSearchOptions(options) }} />}
+    <DatingPreferences open={dialog === 'filter'} close={() => setDialog(null)} />
     {dialog === 'info' && <PrototypeDialog title={`About ${fixture.name} — prototype profile`} close={() => setDialog(null)}><p>{fixture.longBio}</p></PrototypeDialog>}
   </section>
 }

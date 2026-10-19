@@ -16,8 +16,8 @@ export function datingTargets(value: DatingPreferenceDraft): string[] | null {
   return value.clarifiedTargets.length ? value.clarifiedTargets : null
 }
 export function validateDatingPreferences(value: DatingPreferenceDraft, previous: DatingPreferenceDraft = emptyDatingPreferences): string {
-  if (Object.entries(datingChoices).some(([key, options]) => value[key as keyof typeof datingChoices] !== '' && !options.includes(value[key as keyof typeof datingChoices]) && !(['gender', 'sexuality'].includes(key) && value[key as keyof typeof datingChoices] === previous[key as keyof typeof datingChoices] && value[key as keyof typeof datingChoices].length <= 120))) return 'Choose one of the available options.'
-  if (value.clarifiedTargets.some(target => !datingChoices.gender.includes(target)) || new Set(value.clarifiedTargets).size !== value.clarifiedTargets.length) return 'Choose one of the available matching options.'
+  if (Object.entries(datingChoices).some(([key, options]) => value[key as keyof typeof datingChoices] !== '' && !options.includes(value[key as keyof typeof datingChoices]) && !(['gender', 'sexuality'].includes(key) && value[key as keyof typeof datingChoices] === previous[key as keyof typeof datingChoices] && Array.from(value[key as keyof typeof datingChoices]).length <= 120))) return 'Choose one of the available options.'
+  if (value.clarifiedTargets.some(target => !datingChoices.gender.includes(target) && !previous.clarifiedTargets.includes(target)) || new Set(value.clarifiedTargets).size !== value.clarifiedTargets.length) return 'Choose one of the available matching options.'
   if (value.feet !== '' || value.inches !== '') {
     if (!/^[2-8]$/.test(value.feet) || !/^(?:[0-9]|1[01])$/.test(value.inches)) return 'Choose both feet and inches, or leave both blank.'
   }

@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test'
-import { mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
+import { sharedProfileFixture } from './shared-profile-fixture'
 
 for (const size of [{width:320,height:740},{width:375,height:812},{width:390,height:844},{width:430,height:932},{width:505,height:664},{width:800,height:1100},{width:1440,height:900},{width:390,height:480}]) {
   test(`Dating card metadata and preferences reference ${size.width}x${size.height}`, async ({ page }, testInfo) => {
     await page.setViewportSize(size)
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.route('**/*', route => new URL(route.request().url()).origin === 'http://127.0.0.1:3194' ? route.continue() : route.abort())
-    await mockMatchingSession(page); await mockMatchingApi(page)
+    const fixture = await sharedProfileFixture(page)
     const apiRequests: string[] = []
     page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/')) apiRequests.push(`${request.method()} ${new URL(request.url()).pathname}`) })
     await page.goto('/matchmaking?view=dating')
@@ -57,16 +57,19 @@ for (const size of [{width:320,height:740},{width:375,height:812},{width:390,hei
     await expect(gender).toHaveValue('Other')
     await distance.focus(); await page.keyboard.press('End')
     await sheet.screenshot({ path: testInfo.outputPath('full-preferences.png') })
-    await sheet.getByRole('button', { name: 'Save preferences', exact: true }).click()
+    await sheet.getByRole('button', { name: 'Save disabled Dating draft', exact: true }).click()
     await expect(sheet).toHaveCount(0); await expect(opener).toBeFocused()
     await opener.click(); await expect(sheet.getByRole('slider', { name: 'Maximum distance in miles' })).toHaveValue('100')
     await expect(gender).toHaveValue('Other')
     await page.keyboard.press('Escape')
     await expect(front.getByRole('definition')).toHaveText(['North campus', '3 miles', '5′7″'])
     await page.reload(); await opener.click()
-    await expect(sheet.getByRole('slider', { name: 'Maximum distance in miles' })).toHaveValue('15')
+    await expect(sheet.getByRole('slider', { name: 'Maximum distance in miles' })).toHaveValue('100')
+    await expect(gender).toHaveValue('Other')
     await page.keyboard.press('Escape')
-    expect(apiRequests.every(request => request === 'GET /api/matchmaking/account')).toBe(true)
+    expect(apiRequests.filter(request => !request.startsWith('GET '))).toEqual(['PUT /api/matchmaking/dating-preferences'])
+    expect(fixture.calls.filter(call => call.method === 'PUT')[0].body).toMatchObject({ profile: { heightInches: 72, enabled: false }, search: { radiusMiles: 100 } })
+    expect(fixture.external).toEqual([])
     expect(await page.evaluate(() => localStorage.getItem('pebble.match-filters.v1'))).toBeNull()
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(size.width)
   })
@@ -75,7 +78,7 @@ for (const size of [{width:320,height:740},{width:375,height:812},{width:390,hei
 test('mobile pull-down threshold discards drafts; short and cancelled pulls keep the sheet', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.route('**/*', route => new URL(route.request().url()).origin === 'http://127.0.0.1:3194' ? route.continue() : route.abort())
-  await mockMatchingSession(page); await mockMatchingApi(page)
+  const fixture = await sharedProfileFixture(page)
   await page.goto('/matchmaking?view=dating')
   const opener = page.getByRole('button', { name: 'Prototype preferences', exact: true })
   await opener.click()
@@ -96,4 +99,6 @@ test('mobile pull-down threshold discards drafts; short and cancelled pulls keep
   await page.mouse.move(region.x, region.y); await page.mouse.down()
   await sheet.locator('.mfs-drag-region').dispatchEvent('pointercancel', { pointerId: 1 }); await page.mouse.up()
   await expect(sheet).toBeVisible()
+  expect(fixture.calls.every(call => call.method === 'GET')).toBe(true)
+  expect(fixture.external).toEqual([])
 })
