@@ -25,4 +25,13 @@ describe('API', () => {
 
     expect(response.status).toBe(400)
   })
+
+  it('rejects invalid email lookup input', async () => {
+    const response = await fetch(`${url}/api/auth/email`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'not-an-email' }),
+    })
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Invalid email address.' })
+  })
 })
