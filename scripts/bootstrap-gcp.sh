@@ -12,7 +12,7 @@ gcloud services enable run.googleapis.com artifactregistry.googleapis.com \
   cloudbuild.googleapis.com secretmanager.googleapis.com iamcredentials.googleapis.com \
   sts.googleapis.com firebase.googleapis.com firebasehosting.googleapis.com monitoring.googleapis.com \
   --project="$GCP_PROJECT_ID" --quiet
-for name in github-deployer pebble-api; do
+for name in github-deployer pebble-api pebble-event-group-worker; do
   if ! gcloud iam service-accounts describe "$name@$GCP_PROJECT_ID.iam.gserviceaccount.com" --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
     gcloud iam service-accounts create "$name" --project="$GCP_PROJECT_ID" --quiet
   fi
@@ -27,6 +27,14 @@ for role in roles/run.admin roles/firebasehosting.admin roles/serviceusage.servi
 done
 gcloud iam service-accounts add-iam-policy-binding "$RUNTIME" --project="$GCP_PROJECT_ID" \
   --member="serviceAccount:$DEPLOYER" --role=roles/iam.serviceAccountUser --condition=None --quiet >/dev/null
+WORKER="pebble-event-group-worker@$GCP_PROJECT_ID.iam.gserviceaccount.com"
+gcloud iam service-accounts add-iam-policy-binding "$WORKER" --project="$GCP_PROJECT_ID" \
+  --member="serviceAccount:$DEPLOYER" --role=roles/iam.serviceAccountUser --condition=None --quiet >/dev/null
+if ! gcloud secrets describe pebble-event-group-worker-jwt --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
+  gcloud secrets create pebble-event-group-worker-jwt --replication-policy=automatic --project="$GCP_PROJECT_ID" --quiet
+fi
+gcloud secrets add-iam-policy-binding pebble-event-group-worker-jwt --project="$GCP_PROJECT_ID" \
+  --member="serviceAccount:$WORKER" --role=roles/secretmanager.secretAccessor --condition=None --quiet >/dev/null
 if ! gcloud secrets describe pebble-supabase-service-role --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
   gcloud secrets create pebble-supabase-service-role --replication-policy=automatic --project="$GCP_PROJECT_ID" --quiet
 fi

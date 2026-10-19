@@ -226,6 +226,40 @@ credentials in the test process only.
 
 ## Recovery and operation
 
+### Event worker image entrypoint
+
+Version-tag releases now deploy/update `pebble-event-group-worker` in `us-east4`
+using the same immutable image digest as the API. Releases neither execute the
+job nor create a schedule. One task runs with zero retries and a 300-second limit.
+
+Before the first release with this job, rerun `scripts/bootstrap-gcp.sh` with
+the documented owner environment to provision its dedicated runtime identity,
+deployer impersonation permission, and `pebble-event-group-worker-jwt` secret.
+The secret is created without a version; paused deployment does not require one.
+
+The GitHub `production` environment variable `EVENT_GROUP_WORKER_ENABLED`
+defaults to `false`. To enable a future release, first populate that secret with
+the dedicated worker JWT, register its actor as `production-worker` in the
+database, enable the database scoring gate, and verify Gemini configuration.
+Then set the variable to `true`; deployment sets both process gates and mounts
+the secret. Setting it back to `false` pauses the next deployed revision and
+removes the secret binding. It does not cancel an already running execution.
+
+The existing Dockerfile also compiles the event worker; no separate image or
+production TypeScript loader is needed. For a Cloud Run Job, override the image
+command with `node` and argument `dist/api/api/event-group-worker-main.js`.
+Locally, after `pnpm build:api`, use `pnpm start:worker`.
+
+Both `EVENT_GROUP_WORKER_ENABLED=true` and `MATCHMAKING_SCORING_ENABLED=true`
+are required to perform work. Also provide `SUPABASE_URL`,
+`SUPABASE_PUBLISHABLE_KEY`, `EVENT_GROUP_WORKER_ID`, and secret
+`EVENT_GROUP_WORKER_JWT`; the database worker registry and scoring gate must
+permit that actor. Without both environment gates the process exits paused.
+Each execution handles at most three jobs and exits; uncertain outcomes exit
+nonzero. Configure platform retries to zero to avoid automatic re-execution
+after uncertain scoring. Scheduling and database/provider activation are separate
+from packaging this entrypoint.
+
 - Roll back the Hosting release in Firebase Console → Hosting → release
   history. Its `pinTag` also restores the paired API revision.
 - If the direct Cloud Run URL must also roll back, select the prior revision

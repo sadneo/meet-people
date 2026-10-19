@@ -32,6 +32,7 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       RELEASE_SHA: ${{ github.sha }}
+      EVENT_GROUP_WORKER_ENABLED: ${{ vars.EVENT_GROUP_WORKER_ENABLED || 'false' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -76,6 +77,8 @@ jobs:
       - run: pnpm exec supabase db push --db-url "$SUPABASE_DB_URL" --yes
       - run: pnpm hosting:configure
       - run: sh scripts/deploy-api.sh
+      - name: Deploy event worker job (no execution)
+        run: sh scripts/deploy-worker.sh
       - name: Deploy web and pin API revision
         run: pnpm dlx firebase-tools@15.28.2 deploy --only hosting --project "$GCP_PROJECT_ID" --non-interactive
       - run: pnpm test:hosted "https://${{ vars.FIREBASE_HOSTING_SITE_ID }}.web.app"
@@ -87,5 +90,6 @@ jobs:
             echo "- URL: https://${{ vars.FIREBASE_HOSTING_SITE_ID }}.web.app"
             echo "- Commit: $RELEASE_SHA"
             echo "- Image: $API_IMAGE"
+            echo "- Worker: pebble-event-group-worker (enabled=$EVENT_GROUP_WORKER_ENABLED; not executed or scheduled)"
             echo "- Latest migration: $MIGRATION"
           } >> "$GITHUB_STEP_SUMMARY"
