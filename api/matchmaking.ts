@@ -134,6 +134,8 @@ function unwrap(result: RpcResponse): unknown {
     if (['PGRST301', 'PGRST302', 'PGRST303', '28000'].includes(result.error.code ?? '')) throw new MatchingFailure(401, 'auth', 'Your session has expired. Sign in again.')
     if (['PGRST202', '42883'].includes(result.error.code ?? '')) throw new MatchingFailure(503, 'unavailable', 'Matching RPC is not available yet.')
     if (['22023', '23505', '23514'].includes(result.error.code ?? '')) throw new MatchingFailure(400, 'invalid', 'Check your profile fields and onboarding steps. No changes were saved.')
+    if (result.error.code === 'AQ409') throw new MatchingFailure(409, 'unavailable', 'Save Friends filters and choose a current search location before joining or checking.')
+    if (result.error.code === 'AQ503') throw new MatchingFailure(503, 'unavailable', 'Downtime results are not available yet. Active Friends matching remains separate.')
     if (result.error.code === 'PF409') throw new MatchingFailure(409, 'unavailable', 'Complete your profile and enable discovery in Settings before joining.')
     if (result.error.code === 'PT404') throw new MatchingFailure(404, 'unavailable', 'This event is no longer available.')
     if (result.error.code === 'PT409') throw new MatchingFailure(409, 'unavailable', 'Event matching prerequisites are not met. Check your saved profile, event availability and consent for this queue or compatibility action.')

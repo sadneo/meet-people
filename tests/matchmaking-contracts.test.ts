@@ -228,3 +228,12 @@ it('malformed avatar strings never throw: invalid PUT is 400 and raw result is 5
   }
   expect(actor.save).not.toHaveBeenCalled()
 })
+
+it('keeps unresolved active filters and deferred downtime results honest', async () => {
+  providerError = { code: 'AQ409' }
+  expect(await request('/queue', 'POST', { mode: 'active' })).toMatchObject({ status: 409, data: { code: 'unavailable' } })
+  mode = 'matchmaking'
+  expect(await request('/result')).toMatchObject({ status: 409, data: { code: 'unavailable' } })
+  mode = 'downtime'; providerError = { code: 'AQ503' }
+  expect(await request('/result')).toMatchObject({ status: 503, data: { code: 'unavailable' } })
+})
