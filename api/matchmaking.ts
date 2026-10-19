@@ -39,6 +39,13 @@ export interface UserContextTransport {
     saveDetailedSettings?(settings: SaveDetailedSettings): PromiseLike<RpcResponse>
     datingAggregate?(): PromiseLike<RpcResponse>
     saveDatingAggregate?(aggregate: SaveDatingAggregate): PromiseLike<RpcResponse>
+    socialConnection?(target: string, action: 'get' | 'request' | 'accept' | 'remove'): PromiseLike<RpcResponse>
+    socialConnectionList?(): PromiseLike<RpcResponse>
+    socialInbox?(page: number): PromiseLike<RpcResponse>
+    socialHistory?(conversation: string, before: number | null, after: number | null): PromiseLike<RpcResponse>
+    socialSend?(conversation: string, body: string, requestId: string): PromiseLike<RpcResponse>
+    socialRead?(conversation: string, seq: number): PromiseLike<RpcResponse>
+    socialActivity?(): PromiseLike<RpcResponse>
     ownerBlocklist?(): PromiseLike<RpcResponse>
     ownerBlockState?(target: string): PromiseLike<RpcResponse>
     blockOwnerTarget?(target: string): PromiseLike<RpcResponse>
@@ -81,6 +88,13 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         saveDetailedSettings: settings => client.rpc('save_detailed_settings', { settings_in: settings }),
         datingAggregate: () => client.rpc('get_dating_preferences'),
         saveDatingAggregate: aggregate => client.rpc('save_dating_preferences', { aggregate_in: aggregate }),
+        socialConnection: (target, action) => client.rpc('social_connection', { target_in: target, action_in: action }),
+        socialConnectionList: () => client.rpc('social_connection_list'),
+        socialInbox: page => client.rpc('social_inbox', { page_in: page }),
+        socialHistory: (conversation, before, after) => client.rpc('social_history', { conversation_in: conversation, before_in: before, after_in: after }),
+        socialSend: (conversation, body, requestId) => client.rpc('social_send', { conversation_in: conversation, body_in: body, request_in: requestId }),
+        socialRead: (conversation, seq) => client.rpc('social_read', { conversation_in: conversation, seq_in: seq }),
+        socialActivity: () => client.rpc('social_activity'),
         ownerBlocklist: () => client.rpc('get_owner_blocklist'),
         ownerBlockState: target => client.rpc('get_owner_block_state', { target_in: target }),
         blockOwnerTarget: target => client.rpc('block_owner_target', { target_in: target }),

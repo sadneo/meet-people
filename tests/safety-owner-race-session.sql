@@ -62,6 +62,10 @@ create function safety_race_fixture.legacy_unblock() returns void language plpgs
 declare n int; begin
  delete from public.blocks where blocker_id=auth.uid() and blocked_id='ca100000-0000-4000-8000-000000000001';
  get diagnostics n=row_count; if n<>1 then raise exception 'Missing race block' using errcode='22023'; end if; end $$;
+create function safety_race_fixture.social_send() returns void language plpgsql security definer set search_path='' as $$
+begin perform public.social_send((select alias.id from social_private.conversations alias join public.conversations c on c.id=alias.legacy_id where c.user_a='ca100000-0000-4000-8000-000000000001' and c.user_b='ca100000-0000-4000-8000-000000000002'),'Synthetic race message','cd100000-0000-4000-8000-000000000001'); end $$;
+create function safety_race_fixture.social_read() returns void language plpgsql security definer set search_path='' as $$
+begin perform public.social_read((select alias.id from social_private.conversations alias join public.conversations c on c.id=alias.legacy_id where c.user_a='ca100000-0000-4000-8000-000000000001' and c.user_b='ca100000-0000-4000-8000-000000000002'),(select max(m.id) from public.messages m join public.conversations c on c.id=m.conversation_id where c.user_a='ca100000-0000-4000-8000-000000000001' and c.user_b='ca100000-0000-4000-8000-000000000002')); end $$;
 create function safety_race_fixture.profile_delete() returns void language plpgsql security definer set search_path='' as $$
 declare n int; begin
  if auth.uid() is distinct from 'ca100000-0000-4000-8000-000000000001'::uuid then raise exception 'Fixture profile owner required' using errcode='42501'; end if;
@@ -96,9 +100,9 @@ insert into safety_race_fixture.connection_ids select id from public.connections
 commit;
 \elif :run_mode
 select set_config('pebble.safety_race_operation', :'operation',true),set_config('application_name','pebble-safety-race-'||:'participant',true),set_config('pebble.safety_race_report_request_id',:'report_request_id',true);
-do $$ begin if current_setting('pebble.safety_race_operation') not in ('block','legacy_block','legacy_unblock','request','accept','send','receipt','report','profile_delete') then raise exception 'Invalid operation'; end if; end $$;
+do $$ begin if current_setting('pebble.safety_race_operation') not in ('block','legacy_block','legacy_unblock','request','accept','send','receipt','social_send','social_read','report','profile_delete') then raise exception 'Invalid operation'; end if; end $$;
 set local role authenticated;
-select set_config('request.jwt.claim.sub',case when :'operation' in ('block','legacy_block','legacy_unblock','accept','receipt') then 'ca100000-0000-4000-8000-000000000002' else 'ca100000-0000-4000-8000-000000000001' end,true),set_config('request.jwt.claims','{}',true);
+select set_config('request.jwt.claim.sub',case when :'operation' in ('block','legacy_block','legacy_unblock','accept','receipt','social_read') then 'ca100000-0000-4000-8000-000000000002' else 'ca100000-0000-4000-8000-000000000001' end,true),set_config('request.jwt.claims','{}',true);
 \if :hold_row_mode
 select safety_race_fixture.hold_row(:'row_kind');
 \echo 'Row held WITHOUT the advisory lock. Start the competing operation and require observer evidence first.'
@@ -119,6 +123,8 @@ do $$ begin
     when 'accept' then perform safety_race_fixture.accept();
     when 'send' then perform safety_race_fixture.send();
     when 'receipt' then perform safety_race_fixture.receipt();
+    when 'social_send' then perform safety_race_fixture.social_send();
+    when 'social_read' then perform safety_race_fixture.social_read();
     when 'report' then perform public.submit_safety_report(jsonb_build_object('requestId',current_setting('pebble.safety_race_report_request_id'),'targetId','ca100000-0000-4000-8000-000000000002','reason','Other','context','Synthetic race report'));
     when 'profile_delete' then perform safety_race_fixture.profile_delete();
   end case;
@@ -165,7 +171,7 @@ do $$ begin
 end $$;
 delete from safety_private.revoked_connections where connection_id in(select id from safety_race_fixture.connection_ids union select id from public.connections where user_a='ca100000-0000-4000-8000-000000000001' and user_b='ca100000-0000-4000-8000-000000000002');
 delete from auth.users where id in ('ca100000-0000-4000-8000-000000000001','ca100000-0000-4000-8000-000000000002');
-drop function safety_race_fixture.request(),safety_race_fixture.accept(),safety_race_fixture.send(),safety_race_fixture.receipt(),safety_race_fixture.legacy_block(),safety_race_fixture.legacy_unblock(),safety_race_fixture.profile_delete(),safety_race_fixture.hold_row(text);
+drop function safety_race_fixture.request(),safety_race_fixture.accept(),safety_race_fixture.send(),safety_race_fixture.receipt(),safety_race_fixture.legacy_block(),safety_race_fixture.legacy_unblock(),safety_race_fixture.profile_delete(),safety_race_fixture.hold_row(text),safety_race_fixture.social_send(),safety_race_fixture.social_read();
 drop table safety_race_fixture.connection_ids;
 drop schema safety_race_fixture;
 commit;
