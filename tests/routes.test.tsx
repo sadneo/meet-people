@@ -1,19 +1,187 @@
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter, useLocation } from 'react-router'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../src/App'
+import { requiredPreferences, accountFixture } from './complete-profile-fixture'
+vi.mock('../src/supabase', () => ({ supabase: null }))
+const auth = vi.hoisted(() => ({ ready: true, session: { access_token: 'route-fixture', user: { id: 'route-fixture' } } as { access_token: string; user: { id: string } } | null }))
+vi.mock('../src/auth/useSession', () => ({ useSession: () => auth }))
+beforeEach(() => {
+  auth.ready = true
+  auth.session = { access_token: 'route-fixture', user: { id: 'route-fixture' } }
+  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
+  vi.stubGlobal('scrollTo', () => {})
+  vi.stubGlobal('fetch', vi.fn(async input => Response.json(String(input).endsWith('/account') ? accountFixture({ username: 'route-fixture', display_name: 'Route fixture', bio: null, avatar_url: null, ...requiredPreferences }) : String(input).endsWith('/account-profile') ? { profile: { username: 'route-fixture', display_name: 'Route fixture', bio: null, avatar_url: null } } : String(input).endsWith('/notifications') ? { notifications: [], unreadCount: 0 } : String(input).endsWith('/profile') ? { profile: { username: 'route-fixture', display_name: 'Route fixture', bio: null, avatar_url: null, ...requiredPreferences } } : { mode: null })))
+})
+
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
+async function appReady() { await waitFor(() => expect(screen.queryByText('Checking your profile…')).toBeNull()) }
+
+function CurrentPath() {
+  return <output aria-label="Current path">{useLocation().pathname}</output>
+}
 
 describe('routes', () => {
-  it('renders the home route', () => {
+  it('keeps marketing separate from the private Home and prototype shell', () => {
+    auth.session = null
+    render(<MemoryRouter initialEntries={['/welcome']}><App /></MemoryRouter>)
+    expect(screen.getByRole('heading', { name: 'Find a little time in common.' })).toBeTruthy()
+    expect(screen.queryByRole('navigation', { name: 'Primary navigation' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Developer controls' })).toBeNull()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it.each(['/', '/home', '/messages', '/profile', '/matchmaking?view=dating'])('keeps %s private without mounting shell or data hooks', async path => {
+    auth.session = null
+    render(<MemoryRouter initialEntries={[path]}><App /><CurrentPath /></MemoryRouter>)
+    await waitFor(() => expect(screen.getByLabelText('Current path').textContent).toBe('/login'))
+    expect(screen.queryByRole('navigation', { name: 'Primary navigation' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Find a little time in common.' })).toBeNull()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it.each(['/explore', '/explore/a0000000-0000-4000-8000-000000000001'])('preserves public event browsing at %s without private profile or queue hooks', async path => {
+    auth.session = null
+    render(<MemoryRouter initialEntries={[path]}><App /><CurrentPath /></MemoryRouter>)
+    expect(screen.getByRole('navigation', { name: 'Public navigation' })).toBeTruthy()
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    expect(vi.mocked(fetch).mock.calls.every(([input, init]) => String(input).startsWith('/api/events') && (!init?.method || init.method === 'GET'))).toBe(true)
+    expect(screen.queryByRole('navigation', { name: 'Primary navigation' })).toBeNull()
+    expect(screen.getByLabelText('Current path').textContent).toBe(path)
+  })
+
+  it.each(['/terms', '/privacy', '/cookies'])('keeps %s public without private data hooks', path => {
+    auth.session = null
+    render(<MemoryRouter initialEntries={[path]}><App /><CurrentPath /></MemoryRouter>)
+    expect(screen.getByLabelText('Current path').textContent).toBe(path)
+    expect(screen.getByRole('navigation', { name: 'Public navigation' })).toBeTruthy()
+    expect(screen.queryByRole('navigation', { name: 'Primary navigation' })).toBeNull()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('keeps the home alias inside the authenticated product shell', async () => {
+    render(<MemoryRouter initialEntries={['/home']}><App /></MemoryRouter>)
+    await appReady()
+    expect(screen.getByRole('heading', { name: 'Who’s around?' })).toBeTruthy()
+    expect(screen.getAllByRole('navigation', { name: 'Primary navigation' })).toHaveLength(2)
+  })
+
+  it('renders the home route', async () => {
     render(
       <MemoryRouter initialEntries={['/']}><App /></MemoryRouter>,
     )
 
-    expect(screen.getByRole('heading', { name: 'Meet People' })).toBeTruthy()
+    await appReady()
+    expect(screen.getByRole('heading', { name: 'Who’s around?' })).toBeTruthy()
   })
 
-  it('renders the not-found route', () => {
+  it('opens the dedicated interactive matchmaking page from the prototype homepage', async () => {
+    render(<MemoryRouter initialEntries={['/']}><App /><CurrentPath /></MemoryRouter>)
+    await appReady()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Find people' }))
+
+    expect(screen.getByRole('heading', { name: 'Active matchmaking' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Sign in to match' })).toBeNull()
+    expect(await screen.findByRole('button', { name: 'Preferences' })).toBeTruthy()
+    expect(screen.getByLabelText('Current path').textContent).toBe('/matchmaking')
+  })
+
+  it('shows Matchmaking before Events and opens active matchmaking', async () => {
+    render(<MemoryRouter initialEntries={['/']}><App /><CurrentPath /></MemoryRouter>)
+    await appReady()
+
+    const desktopNavigation = screen.getAllByRole('navigation', { name: 'Primary navigation' })[0]
+    const links = Array.from(desktopNavigation.querySelectorAll('a')).map(link => link.textContent)
+    expect(links).toEqual(['Home', 'Matchmaking', 'Events', 'Messages'])
+
+    fireEvent.click(screen.getAllByRole('link', { name: 'Matchmaking' })[0])
+    expect(screen.getByLabelText('Current path').textContent).toBe('/matchmaking')
+    expect(screen.getByRole('heading', { name: 'Active matchmaking' })).toBeTruthy()
+    expect(screen.getAllByRole('link', { name: 'Matchmaking' }).every(link => link.getAttribute('aria-current') === 'page')).toBe(true)
+  })
+
+  it('keeps the Matchmaking tab active on downtime matchmaking', async () => {
+    render(<MemoryRouter initialEntries={['/downtime-matchmaking']}><App /></MemoryRouter>)
+    await appReady()
+    expect(screen.getAllByRole('link', { name: 'Matchmaking' }).every(link => link.getAttribute('aria-current') === 'page')).toBe(true)
+  })
+
+  it('opens standalone downtime matchmaking from the prototype homepage', async () => {
+    render(<MemoryRouter initialEntries={['/']}><App /><CurrentPath /></MemoryRouter>)
+    await appReady()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Downtime matchmaking' }))
+
+    expect(screen.getByRole('heading', { name: 'Manage downtime in Settings' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Open matchmaking settings' }).getAttribute('href')).toBe('/settings')
+    expect(screen.getByLabelText('Current path').textContent).toBe('/downtime-matchmaking')
+  })
+
+  it('hides Free Time from navigation but preserves its direct route', async () => {
+    const view = render(<MemoryRouter initialEntries={['/matchmaking']}><App /></MemoryRouter>)
+    await appReady()
+    expect(screen.queryByRole('link', { name: 'Free Time' })).toBeNull()
+
+    view.unmount()
+    render(<MemoryRouter initialEntries={['/free-time']}><App /></MemoryRouter>)
+    await appReady()
+    expect(screen.getByRole('heading', { name: 'Who’s free?' })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Free Time' })).toBeNull()
+  })
+
+  it('renders canonical product routes', async () => {
+    render(<MemoryRouter initialEntries={['/events']}><App /></MemoryRouter>)
+    await appReady()
+
+    expect(screen.getByRole('heading', { name: 'Events' })).toBeTruthy()
+  })
+
+  it.each(['/prototype', '/prototype?scene=events'])('removes %s', async path => {
+    render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
+    await appReady()
+
+    expect(screen.getByRole('heading', { name: 'Page not found' })).toBeTruthy()
+  })
+
+  it('opens Community from Home without changing the primary destinations', async () => {
+    render(<MemoryRouter initialEntries={['/']}><App /><CurrentPath /></MemoryRouter>)
+    await appReady()
+    fireEvent.click(screen.getByRole('link', { name: 'Community', exact: true }))
+    expect(screen.getByRole('link', { name: 'Back to Home' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Community' })).toBeNull()
+    expect(screen.getByLabelText('Current path').textContent).toBe('/community')
+    expect(screen.getAllByRole('link', { name: 'Home', exact: true }).every(link => link.getAttribute('aria-current') === 'page')).toBe(true)
+  })
+
+  it('returns to Home after opening a person from a thought bubble', async () => {
+    render(<MemoryRouter initialEntries={['/home']}><App /><CurrentPath /></MemoryRouter>)
+    await appReady()
+    fireEvent.click(screen.getByRole('button', { name: "View Aaron Patel's profile" }))
+    expect(screen.getByRole('heading', { name: 'Aaron Patel' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Back', exact: true }))
+    expect(screen.getByLabelText('Current path').textContent).toBe('/home')
+    expect(screen.getByRole('heading', { name: 'Who’s around?' })).toBeTruthy()
+  })
+
+  it('preserves the free-time return path for a person opened from planning', async () => {
+    render(<MemoryRouter initialEntries={['/free-time/matches']}><App /><CurrentPath /></MemoryRouter>)
+    await appReady()
+    fireEvent.click(screen.getByRole('button', { name: "View Aaron's profile" }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back', exact: true }))
+    expect(screen.getByLabelText('Current path').textContent).toBe('/free-time/matches')
+  })
+
+  it('retains a useful fallback for a person profile opened directly', async () => {
+    render(<MemoryRouter initialEntries={['/profile/person']}><App /><CurrentPath /></MemoryRouter>)
+    await appReady()
+    fireEvent.click(screen.getByRole('button', { name: 'Back', exact: true }))
+    expect(screen.getByLabelText('Current path').textContent).toBe('/free-time/matches')
+  })
+
+  it('renders the not-found route', async () => {
     render(<MemoryRouter initialEntries={['/missing']}><App /></MemoryRouter>)
+    await appReady()
 
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeTruthy()
   })

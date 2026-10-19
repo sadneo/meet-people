@@ -10,3 +10,10 @@ This project uses pnpm exclusively.
 - Use `pnpm dlx` instead of `npx`.
 - Do not create or modify `package-lock.json`.
 - `pnpm-lock.yaml` is the canonical lockfile.
+
+# Frontend
+
+- Read `docs/DESIGN.md` before designing or changing product UI.
+- Refer to `docs/UI-PLAN.md` as well for the direction for the app UI
+- Reuse existing frontend components when available.
+- `docs/DESIGN.md` is the product-design authority.

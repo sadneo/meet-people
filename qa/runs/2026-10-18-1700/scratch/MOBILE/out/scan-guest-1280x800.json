@@ -1,0 +1,308 @@
+{
+  "/login": {
+    "url": "http://127.0.0.1:3000/login",
+    "vw": 1280,
+    "vh": 800,
+    "scrollWidth": 1280,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a",
+        "name": "Create an account",
+        "w": 131,
+        "h": 19,
+        "x": 631,
+        "y": 460,
+        "inlineText": true
+      },
+      {
+        "el": "a",
+        "name": "Open Supabase email viewer",
+        "w": 355,
+        "h": 20,
+        "x": 463,
+        "y": 610,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 45,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/register": {
+    "url": "http://127.0.0.1:3000/register",
+    "vw": 1280,
+    "vh": 800,
+    "scrollWidth": 1280,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a",
+        "name": "Create an account",
+        "w": 131,
+        "h": 19,
+        "x": 631,
+        "y": 460,
+        "inlineText": true
+      },
+      {
+        "el": "a",
+        "name": "Open Supabase email viewer",
+        "w": 355,
+        "h": 20,
+        "x": 463,
+        "y": 610,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 45,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/onboarding": {
+    "url": "http://127.0.0.1:3000/onboarding",
+    "vw": 1280,
+    "vh": 800,
+    "scrollWidth": 1280,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [
+      {
+        "el": "div.pt-enormous-shadow",
+        "left": 148,
+        "right": 1444,
+        "text": "",
+        "clip": "section.pt-origin.pt-origin-opening"
+      }
+    ],
+    "small": [],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/matchmaking": {
+    "url": "http://127.0.0.1:3000/matchmaking",
+    "vw": 1280,
+    "vh": 800,
+    "scrollWidth": 1280,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a.pt-logo-link",
+        "name": "Pebble home",
+        "w": 427,
+        "h": 30,
+        "x": 51,
+        "y": 25,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 30,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/messages": {
+    "url": "http://127.0.0.1:3000/messages",
+    "vw": 1280,
+    "vh": 800,
+    "scrollWidth": 1280,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a.pt-logo-link",
+        "name": "Pebble home",
+        "w": 427,
+        "h": 30,
+        "x": 51,
+        "y": 25,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 30,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/profile": {
+    "url": "http://127.0.0.1:3000/profile",
+    "vw": 1280,
+    "vh": 800,
+    "scrollWidth": 1280,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a.pt-logo-link",
+        "name": "Pebble home",
+        "w": 427,
+        "h": 30,
+        "x": 51,
+        "y": 25,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 30,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/settings": {
+    "url": "http://127.0.0.1:3000/settings",
+    "vw": 1280,
+    "vh": 800,
+    "scrollWidth": 1280,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a.pt-logo-link",
+        "name": "Pebble home",
+        "w": 427,
+        "h": 30,
+        "x": 51,
+        "y": 25,
+        "inlineText": false
+      },
+      {
+        "el": "input",
+        "name": "Plan & message notifications",
+        "w": 36,
+        "h": 20,
+        "x": 897,
+        "y": 418,
+        "inlineText": false
+      },
+      {
+        "el": "input",
+        "name": "Show me in discovery",
+        "w": 36,
+        "h": 20,
+        "x": 897,
+        "y": 565,
+        "inlineText": false
+      },
+      {
+        "el": "input",
+        "name": "Share my availability",
+        "w": 36,
+        "h": 20,
+        "x": 897,
+        "y": 628,
+        "inlineText": false
+      },
+      {
+        "el": "input",
+        "name": "Nearby suggestions",
+        "w": 36,
+        "h": 20,
+        "x": 897,
+        "y": 775,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 30,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  }
+}

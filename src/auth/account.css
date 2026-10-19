@@ -1,0 +1,40 @@
+.pt-auth-form { display: grid; gap: 16px; }
+.pt-auth-form > p { margin: 0; }
+.pt-auth :where(a:not(.pt-button)) { color: var(--pt-ink); text-underline-offset: 3px; }
+.pt-auth :where(a:not(.pt-button)):hover { color: var(--pt-green); text-decoration-thickness: 2px; }
+.pt-auth-form fieldset, .pt-chapter-form > fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.pt-auth-form fieldset { display: grid; gap: 16px; }
+.pt-password-field { display: grid; gap: 8px; }
+.pt-password-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pt-password-heading a { font-size: 14px; padding-block: 12px; }
+.pt-password-input { position: relative; }
+.pt-app .pt-password-input input { width: 100%; padding-right: 70px; }
+.pt-app .pt-auth-form label, .pt-app .pt-auth-form fieldset { margin: 0; }
+.pt-password-input button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); min-width: 60px; min-height: 44px; border: 0; background: transparent; color: var(--pt-ink); font: inherit; font-weight: 700; cursor: pointer; }
+.pt-app .pt-password-input button:not(:disabled):active { transform: translateY(-50%); }
+.pt-app-header .pt-account-nav > .pt-button:hover { background: var(--pt-ink); }
+.pt-auth-error, .pt-auth-message { margin: 0; font-size: 14px; line-height: 1.5; }
+.pt-auth-error { display: flex; align-items: flex-start; gap: 8px; color: var(--pt-berry-hover); }
+.pt-auth-error svg { flex-shrink: 0; margin-top: 1px; }
+.pt-auth-divider { display: flex; align-items: center; gap: 16px; color: var(--pt-muted); font-size: 14px; }
+.pt-auth-divider::before, .pt-auth-divider::after { content: ''; height: 1px; flex: 1; background: var(--pt-line); }
+.pt-auth-account, .pt-auth-home { text-align: center; }
+.pt-auth-email { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pt-auth-email span { min-width: 0; overflow-wrap: anywhere; }
+.pt-auth-email button { min-height: 44px; flex-shrink: 0; }
+.pt-auth-home { padding-block: 12px; color: var(--pt-muted); }
+.pt-auth-dev { display: grid; gap: 8px; border-top: 1px solid var(--pt-line); padding-top: 20px; font-size: 13px; color: var(--pt-muted); }
+.pt-auth-spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: pt-auth-spin .8s linear infinite; }
+@keyframes pt-auth-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pt-auth-spinner { animation: none; } }
+.pt-avatar-empty { display: inline-flex !important; align-items: center; justify-content: center; background: var(--color-surface); border: 1px solid var(--color-line); color: var(--color-muted); }
+.pt-avatar-empty svg { width: 50%; height: 50%; }
+.pt-account-error { padding: 16px; color: var(--color-ink); background: var(--color-surface); }
+
+/* Email-first entry only; private pages retain their white canvas. */
+.pt-access-root:has(.pt-auth-email-first) { background: #DDCABC; }
+.pt-auth-email-first { background: #DDCABC; }
+
+.pt-auth-email-first .pt-auth-form label { display: grid; gap: 8px; font-weight: 700; }
+.pt-auth-email-first .pt-auth-form input:not([hidden]) { box-sizing: border-box; width: 100%; min-width: 0; min-height: 48px; border: 1px solid var(--pt-line); border-radius: 10px; padding: 12px; background: var(--pt-surface); color: var(--pt-ink); font: inherit; }
+.pt-auth-email-first .pt-auth-home { display: block; text-align: center; }

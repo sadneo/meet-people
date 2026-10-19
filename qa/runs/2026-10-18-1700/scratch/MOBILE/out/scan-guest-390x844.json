@@ -1,0 +1,505 @@
+{
+  "/": {
+    "url": "http://127.0.0.1:3000/",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [],
+    "unnamed": [],
+    "nav": {
+      "top": 772,
+      "height": 72
+    },
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/community": {
+    "url": "http://127.0.0.1:3000/community",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [
+      {
+        "el": "svg",
+        "left": -32,
+        "right": 365,
+        "text": "",
+        "clip": null
+      }
+    ],
+    "clippedOver": [
+      {
+        "el": "g.pt-village-movable",
+        "left": -32,
+        "right": 284,
+        "text": "",
+        "clip": "svg"
+      },
+      {
+        "el": "g",
+        "left": -32,
+        "right": 284,
+        "text": "",
+        "clip": "svg"
+      },
+      {
+        "el": "svg",
+        "left": -32,
+        "right": 284,
+        "text": "",
+        "clip": "svg"
+      },
+      {
+        "el": "image",
+        "left": -32,
+        "right": 284,
+        "text": "",
+        "clip": "svg"
+      }
+    ],
+    "small": [
+      {
+        "el": "rect",
+        "name": "Move Village bench",
+        "w": 46,
+        "h": 31,
+        "x": 216,
+        "y": 299,
+        "inlineText": false
+      },
+      {
+        "el": "rect",
+        "name": "Say hello to your Pebble",
+        "w": 27,
+        "h": 26,
+        "x": 178,
+        "y": 304,
+        "inlineText": false
+      },
+      {
+        "el": "rect",
+        "name": "Move Pebble friend",
+        "w": 23,
+        "h": 22,
+        "x": 221,
+        "y": 324,
+        "inlineText": false
+      },
+      {
+        "el": "rect",
+        "name": "Move Little Pebble",
+        "w": 20,
+        "h": 20,
+        "x": 166,
+        "y": 327,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": {
+      "top": 772,
+      "height": 72
+    },
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/matchmaking": {
+    "url": "http://127.0.0.1:3000/matchmaking",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [],
+    "unnamed": [],
+    "nav": {
+      "top": 772,
+      "height": 72
+    },
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/downtime-matchmaking": {
+    "url": "http://127.0.0.1:3000/downtime-matchmaking",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [],
+    "unnamed": [],
+    "nav": {
+      "top": 772,
+      "height": 72
+    },
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/events": {
+    "url": "http://127.0.0.1:3000/events",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a.ev-name-link",
+        "name": "QA event 1",
+        "w": 310,
+        "h": 36,
+        "x": 40,
+        "y": 398,
+        "inlineText": false
+      },
+      {
+        "el": "a.ev-name-link",
+        "name": "QA event 2",
+        "w": 310,
+        "h": 36,
+        "x": 40,
+        "y": 911,
+        "inlineText": false
+      },
+      {
+        "el": "a.ev-name-link",
+        "name": "QA event 3",
+        "w": 310,
+        "h": 36,
+        "x": 40,
+        "y": 1424,
+        "inlineText": false
+      },
+      {
+        "el": "a.ev-name-link",
+        "name": "QA event 4",
+        "w": 310,
+        "h": 36,
+        "x": 40,
+        "y": 1937,
+        "inlineText": false
+      },
+      {
+        "el": "a.ev-name-link",
+        "name": "QA event 5",
+        "w": 310,
+        "h": 36,
+        "x": 40,
+        "y": 2450,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": {
+      "top": 772,
+      "height": 72
+    },
+    "contrast": [
+      {
+        "el": "button.ev-button.ev-secondary",
+        "text": "Previous",
+        "ratio": 2.29,
+        "need": 4.5,
+        "color": "rgb(31, 90, 60)",
+        "bg": "rgb(244, 249, 232)",
+        "size": 16,
+        "weight": 700,
+        "disabled": true
+      },
+      {
+        "el": "button.ev-button.ev-secondary",
+        "text": "Next",
+        "ratio": 2.29,
+        "need": 4.5,
+        "color": "rgb(31, 90, 60)",
+        "bg": "rgb(244, 249, 232)",
+        "size": 16,
+        "weight": 700,
+        "disabled": true
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/events/ab955825-dc9e-4c0f-9dbd-5128ae3a4a03": {
+    "url": "http://127.0.0.1:3000/events/ab955825-dc9e-4c0f-9dbd-5128ae3a4a03",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [],
+    "unnamed": [],
+    "nav": {
+      "top": 772,
+      "height": 72
+    },
+    "contrast": [
+      {
+        "el": "a.ev-text-button",
+        "text": "Back to events",
+        "ratio": 3.32,
+        "need": 4.5,
+        "color": "rgb(66, 120, 63)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 16,
+        "weight": 700,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/messages": {
+    "url": "http://127.0.0.1:3000/messages",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [],
+    "unnamed": [],
+    "nav": {
+      "top": 772,
+      "height": 72
+    },
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/profile": {
+    "url": "http://127.0.0.1:3000/profile",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a",
+        "name": "Pebble home",
+        "w": 100,
+        "h": 34,
+        "x": 20,
+        "y": 17,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": {
+      "top": 772,
+      "height": 72
+    },
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 32,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/settings": {
+    "url": "http://127.0.0.1:3000/settings",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "input",
+        "name": "Plan & message notifications",
+        "w": 36,
+        "h": 20,
+        "x": 317,
+        "y": 366,
+        "inlineText": false
+      },
+      {
+        "el": "input",
+        "name": "Show me in discovery",
+        "w": 36,
+        "h": 20,
+        "x": 317,
+        "y": 540,
+        "inlineText": false
+      },
+      {
+        "el": "input",
+        "name": "Share my availability",
+        "w": 36,
+        "h": 20,
+        "x": 317,
+        "y": 613,
+        "inlineText": false
+      },
+      {
+        "el": "input",
+        "name": "Nearby suggestions",
+        "w": 36,
+        "h": 20,
+        "x": 317,
+        "y": 797,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": {
+      "top": 772,
+      "height": 72
+    },
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/login": {
+    "url": "http://127.0.0.1:3000/login",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a",
+        "name": "Create an account",
+        "w": 131,
+        "h": 19,
+        "x": 186,
+        "y": 468,
+        "inlineText": true
+      },
+      {
+        "el": "a",
+        "name": "Open Supabase email viewer",
+        "w": 340,
+        "h": 20,
+        "x": 25,
+        "y": 618,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 45,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/register": {
+    "url": "http://127.0.0.1:3000/register",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a",
+        "name": "Create an account",
+        "w": 131,
+        "h": 19,
+        "x": 186,
+        "y": 468,
+        "inlineText": true
+      },
+      {
+        "el": "a",
+        "name": "Open Supabase email viewer",
+        "w": 340,
+        "h": 20,
+        "x": 25,
+        "y": 618,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 45,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/onboarding": {
+    "url": "http://127.0.0.1:3000/onboarding",
+    "vw": 390,
+    "vh": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [
+      {
+        "el": "div.pt-enormous-shadow",
+        "left": 61,
+        "right": 452,
+        "text": "",
+        "clip": "section.pt-origin.pt-origin-opening"
+      }
+    ],
+    "small": [],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  }
+}

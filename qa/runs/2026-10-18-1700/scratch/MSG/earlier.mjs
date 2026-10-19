@@ -1,0 +1,22 @@
+import { openAs } from '/home/xqiu/Projects/meet-people/.claude/skills/qa/scripts/qa-browser.mjs'
+const R = '/home/xqiu/Projects/meet-people/qa/runs/2026-10-18-1700'
+const [w, h] = [+(process.argv[2] ?? 390), +(process.argv[3] ?? 844)]
+const A = await openAs('alice', { width: w, height: h })
+await A.page.goto('/messages/chat?conversation=6297ae9d-9f11-4123-b82b-727394f9e1af')
+await A.page.getByRole('textbox', { name: 'Message' }).waitFor(); await A.page.waitForTimeout(2000)
+const pane = A.page.locator('section.pt-chat')
+const pos = () => pane.evaluate(p => ({ top: Math.round(p.scrollTop), h: p.scrollHeight, fromBottom: Math.round(p.scrollHeight - p.scrollTop - p.clientHeight) }))
+console.log('on open', await pos(), 'bubbles', await A.page.locator('.pt-chat-bubble').count())
+await pane.evaluate(p => { p.scrollTop = 0 })
+await A.page.waitForTimeout(300)
+const first = async () => (await A.page.locator('.pt-chat-bubble').first().innerText()).slice(0, 40)
+const topVisible = () => A.page.evaluate(() => { const p = document.querySelector('section.pt-chat').getBoundingClientRect(); const b = [...document.querySelectorAll('.pt-chat-bubble')].find(b => b.getBoundingClientRect().bottom > p.top + 60); return b?.innerText.slice(0, 40) })
+console.log('first bubble before', await first(), '| top visible', await topVisible())
+await A.shot(`${R}/screenshots/MSG-earlier-before-${w}.png`)
+await A.page.getByRole('button', { name: 'Load earlier messages' }).click()
+await A.page.waitForTimeout(1500)
+console.log('after load earlier', await pos(), 'bubbles', await A.page.locator('.pt-chat-bubble').count(), '| first', await first(), '| top visible', await topVisible())
+console.log('button still there?', await A.page.getByRole('button', { name: 'Load earlier messages' }).count())
+await A.shot(`${R}/screenshots/MSG-earlier-after-${w}.png`)
+console.log(A.problems.filter(p => !p.includes('Not Found')))
+await A.close()

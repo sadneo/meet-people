@@ -1,165 +1,311 @@
 # Pebble Design System
 
-## Purpose
+## Real matchmaking demo scope (2026-10-19)
 
-Pebble helps students make local, platonic connections. The interface should
-feel like a tiny, cozy world sitting inside a straightforward social utility.
-The pixel scene provides the personality; the surrounding interface stays
-quiet, practical, and easy to scan.
+Daniel explicitly authorized real signed-in Dating and one shared uploaded profile
+photo for the demo. Capability-gated real Dating, current Friends filter consumption
+and confirmed private photo storage supersede older prototype-only/preview-only
+statements below **only when their installed backend capability is confirmed**.
+Otherwise retain honest unavailable/prototype states and the exact local disclosure.
+See [demo-matchmaking-readiness.md](demo-matchmaking-readiness.md) for behavior,
+actual bounded verification, privacy limits and pending activation. This document
+change does not claim app installation or live Auth/PostgREST acceptance.
 
-## Principles
+## Direction
 
-1. Home has one job: move someone toward meeting another person.
-2. Reserve visual drama for the Pebble scene and connection-moving actions.
-3. Make the application chrome calm and familiar. Do not turn every surface
-   into a field guide, bulletin board, or game UI.
-4. Show a clear next action in empty, loading, and error states.
-5. Prefer one consistent pattern over several near-identical variants.
+Pebble is a friends-first college social app: find people, make a plan, meet in
+person, build community. The visual direction is Forest-like calm minimalism
+with Pebble's warm palette and illustrated characters. A focal visual, one
+primary action, and generous space do more work than explanatory paragraphs.
+This document reflects the October 2026 visual brief and supersedes the older
+full-screen world on Home and permanently labelled navigation directions.
 
-## Color
+## Product structure
 
-Use semantic names in code. Do not use palette values directly in component
-styles.
+Signed-out `/` is the public marketing page; signed-in `/` remains Home.
+Explore events links to the existing app Events route without changing its shell.
+Terms, Privacy and Cookie drafts stay reachable without account/onboarding gates.
+Public pages reuse the palette, typography and 800px breakpoint below, with
+marketing compositions rather than the signed-in icon navigation. See
+`PUBLIC-FRONTEND.md` for the route boundary, design and integration notes.
 
-| Token | Value | Use |
+Five primary destinations remain Home, Matchmaking, Events, Messages, and
+Profile. Community is a supporting route (`/community`) entered from Home;
+Home remains active in primary navigation. Settings, free-time planning, and
+onboarding remain supporting flows. Use real links for destinations.
+
+- Home starts discovery: balance, interactive large Pebble with small person
+  thought bubbles, “Who’s around?”, “Find people”, and a quiet downtime control.
+  One Community icon sits in the upper-left product area; balance sits upper-right.
+  No dashboard cards or duplicate Community/history entry.
+- Community contains the diorama, weekly history, and existing local Build
+  economy. The world does not fill Home or the browser.
+- Matchmaking presents the current queue state or a candidate. Preserve real
+  queue behavior, manual checking, profile gating, and error recovery.
+- Events retains useful names, dates, places, categories, people, and filters.
+- Messages retains its conversation, timestamps, plan and person context.
+- Profile functionality and overall composition remain owned by its team.
+
+## Shared palette and typography
+
+The shared product palette lives on `:root` in `prototype.css`; `calm.css`
+provides semantic aliases and focal sizing. Avoid another theme layer.
+
+| Token | Value | Role |
 | --- | --- | --- |
-| `--color-page` | `#FFF9EC` | Main application background |
-| `--color-surface` | `#FFFFFF` | Navigation and elevated surfaces |
-| `--color-ink` | `#3E4934` | Main text and icons |
-| `--color-muted` | `#6D7862` | Supporting text and inactive UI |
-| `--color-line` | `#E6DEC9` | Borders and separators |
-| `--color-pine` | `#647653` | Secondary actions and active navigation |
-| `--color-meadow` | `#A9C77E` | Scene-only landscape green |
-| `--color-stone` | `#A89D87` | Scene-only rocks and quiet fills |
-| `--color-coral` | `#FF7A63` | Actions that move a person toward an in-person connection |
-| `--color-coral-pressed` | `#E96552` | Pressed coral actions |
-| `--color-focus` | `#315F9B` | Visible keyboard focus ring |
+| `--pt-page-canvas` | `#ffffff` | Default page canvas and standard desktop/mobile navigation, including above/below Friends |
+| `--pt-cream` | `#DDCABC` | Existing cream surfaces, not the page canvas or standard navigation |
+| `--pt-surface` / `--pt-soft` | `#fffef9` / `#f4f9e8` | Neutral and light green surfaces |
+| `--pt-ink` | `#1f5a3c` | Forest text and active icons |
+| `--pt-muted` | `#425b49` | Muted forest text/icons (4.69:1 on tan) |
+| `--pt-green` / `--pt-leaf` | `#42783f` / `#4f8a4c` | Accessible filled controls / fresh nature accents |
+| `--pt-fresh` | `#9bcb63` | Grass, highlights and progression |
+| `--pt-pale` | `#eaf5d9` | Mint selection and quiet controls |
+| `--pt-berry` / `--pt-berry-hover` | `#d93467` / `#be2857` | Social CTA / hover and press |
+| `--pt-berry-soft` | `#f3a1b8` | Small pink accents |
+| `--pt-line` / `--pt-green-line` | `#dddccb` / `#c5dcb6` | Neutral / soft green borders |
+| `--pt-water` / `--pt-yellow` | `#78c7c4` / `#f1c85b` | Water / small warm accents |
+| `--pt-sand` / `--pt-terracotta` | `#ead9b1` / `#c57657` | Paths / roof and warm objects |
+| `--pt-cheek` / `--pt-stone-highlight` | `#e89a91` / `#f0e5c9` | Neutral mascot accents |
+| `--pt-on-action` / `--pt-focus` | `#ffffff` / `#315f9b` | Filled-action text / keyboard focus |
 
-Coral is exclusive to `Start matching`, `Accept match`, `Make plan`, and
-`Join event`. It is not a general decoration or badge color. Scene colors do
-not belong in application controls unless a component specifically represents
-the world.
+`--pt-coral` remains a compatibility alias to berry. Feature namespaces for
+Events and matching reference these tokens; Messages, Profile and Settings
+inherit them. Keep stronger color for social CTAs, selections and nature details.
+Messages bubbles stay soft green/mint. Do not restore per-screen color themes.
+The white canvas supersedes earlier continuous warm-tan canvas guidance. Friends
+matching uses the later approved light `#FAFBF7` canvas, white panels and sage
+selected states in `friends.css`; preserve the `#DFCBBD` sand mascot scene,
+original pixel artwork and animations. Dating keeps its
+photo cards on the white canvas and its exact local-only disclosure. Profile and
+Settings retain off-white cards/dialogs; green/berry controls and inputs are not
+recolored. Existing `--color-page` aliases used inside controls remain unchanged;
+full-page backgrounds use `--pt-page-canvas` instead.
+White on raspberry has 4.53:1 contrast; do not substitute off-white button text.
+Leaf green is artwork/indicator color; filled green controls use the darker
+`--pt-green` to preserve contrast for small white labels.
 
-## Typography
+Retain the existing Trebuchet/Segoe UI application stack and rounded wordmark.
+Use one concise heading or state on minimal screens. Do not stack a heading,
+subtitle, and explanatory paragraph. Body text stays readable; responsive
+scaling primarily changes visuals and spacing, not unlimited text sizes.
+Controls use 14px radii; record/dialog surfaces use 18px. Cards are for distinct
+records, not every group. Share semantic tokens in UI; placeholder artwork may
+use its own controlled natural palette.
 
-Use a rounded system display stack for the Pebble wordmark and page titles,
-with the system sans-serif stack for all application UI. The prototype does
-not load remote fonts.
+## Shell and responsive layout
 
-| Role | Size | Weight | Notes |
-| --- | --- | --- | --- |
-| Wordmark | 3rem | 800 | Compact, rounded, used only on Home |
-| Page title | 1.75rem | 750 | One per standard screen |
-| Section title | 1.125rem | 700 | Introduces a meaningful group |
-| Body | 1rem | 450 | Default reading text |
-| Supporting text | 0.875rem | 500 | Metadata and directions |
-| Navigation label | 0.6875rem | 650 | Always visible under its icon |
+The active shell is `src/features/prototype/AppShell.tsx`, wrapped by
+`src/routes/PebbleApp.tsx`. The older design-system shell is not routed.
 
-Use sentence case. Avoid all-caps labels, decorative eyebrow text, and
-monospace data labels. Keep body copy under 70 characters per line where
-possible.
+- Expanded (>800px): white header, wordmark, centered icon navigation, account
+  avatar at the right. Compact bottom navigation is white too, including on Friends;
+  Friends content uses its approved light palette and sand artwork. Public header/footer
+  remain on the white public canvas. Forest icons/text, pale-green selected tabs,
+  active dots, focus treatment, geometry and target sizes are unchanged.
+- Compact (<=800px): five-item bottom navigation with accessible names and
+  native hover tooltips. Labels are visually hidden. Active tabs use a soft
+  background plus a small dot; focus remains visible. A raspberry dot at the
+  Messages icon's top right marks unread messages or connection requests.
+- Navigation graphics are 25px inside approximately 48px targets; secondary
+  icon controls use 24px graphics and 44–48px targets. Home Community and Community
+  Build use `clamp(32px, 2.5vw, 36px)` graphics in 56px targets. Home currency
+  uses the same icon size and `clamp(20px, 1.55vw, 22px)` text. Their existing
+  toolbar footprint is preserved. Community has only the labelled back arrow,
+  with no visible page title.
+- Shell owns `--pt-gutter`, `--pt-navigation-height`, `--pt-safe-area-bottom`,
+  `--pt-navigation-clearance`, and the visual `--pt-header-height`.
+- Gutters, gaps and focal visuals scale with `clamp()`. No fixed-width app
+  canvas. Long copy and individual records retain local readable widths.
+- Home uses a viewport-height composition that can scroll on short screens.
+  Its mascot scales with both viewport width and height.
+- Community uses a scalable SVG scene up to 1600px wide, constrained by viewport
+  height to reserve room for the weekly chart. Mobile uses a tighter scene.
+- Messages uses fluid 26/48/26 desktop columns, independent pane scrolling,
+  readable bubble widths, and a reachable composer. The details column appears
+  only with content: Participants for conversations of more than two people, or
+  a local demo plan. Otherwise the conversation fills it (26/74). At 800px it becomes a
+  routed inbox or chat. Preserve the existing Events wide preview behavior.
 
-## Spacing And Shape
+Verify 320px, tablet, 799/800/801px, 1280×720, 1440×900, 1920×1080,
+2560×1440 and short screens. Space should support the focal point; do not fill
+wide layouts with extra cards or copy. Decoration gives way to useful controls.
 
-Use a four-pixel spacing base: `4`, `8`, `12`, `16`, `20`, `24`, `32`, `40`,
-and `48` pixels. Standard screen content has `20px` horizontal padding on
-mobile and a `32px` maximum outer gutter on larger screens.
+## Home and Community artwork
 
-| Token | Value | Use |
-| --- | --- | --- |
-| `--radius-control` | `14px` | Buttons and fields |
-| `--radius-card` | `18px` | Record surfaces |
-| `--radius-shell` | `24px` | Bottom navigation and app frame details |
-| `--shadow-float` | soft moss-tinted shadow | Coral primary action only |
+Use the supplied Happy/Thinking pixel PNGs through the shared `pebble-art`
+components. Home uses one upright Pebble with its artwork's own grass; no second
+ground patch. Matching uses Happy while idle and Thinking for its existing
+searching/waiting state. Preserve aspect ratio and crisp pixel rendering.
+Currency uses one shared PNG crop and 32–36px responsive icon size everywhere
+a balance is shown. Home and Community share the same balance component and
+20–22px number styling. Build uses the supplied hammer in its existing 56px
+target; retain the simple SVG tree for Community.
 
-Do not put every section in a card. Cards represent distinct records such as
-an event, person, invitation, or profile summary.
+Home's `AvailablePeoplePreview` shows at most three avatar/first-name thought
+bubbles, or two at <=520px. Small green availability dots are presentation
+indicators tied to the same temporary preview data, not a live presence signal. This is a Home content-density exception, not a
+second shell breakpoint. Bubbles are asymmetric, small, and clear of the face,
+controls and action. Clicking one reuses the existing sample-profile selection
+and `/profile/person` route. `Find people` still enters `/matchmaking`.
 
-## Layout
+Clicking the central semantic button fades the bubbles and shows the Thinking
+PNG for a minimum of 1750ms, then returns to Happy. The visual timer runs in
+parallel with the optional refresh adapter, so slow loading finishes without
+an additional delay. Home currently supplies only the local preview data.
+Repeated activation is guarded;
+focus remains on the button. Reduced motion disables image fades while
+retaining the state change. Each refresh advances through the local pool and
+wraps after its end. No timer survives leaving Home.
 
-The prototype is mobile-first. On desktop, retain a centered app frame rather
-than turning the product into a wide dashboard.
+`available-people-preview.ts` isolates temporary fictional preview data drawn
+from existing sample profiles, excluding locally blocked people. The current
+matchmaking API exposes a single candidate, not an available-user roster, so
+Home does not infer presence from it. Replace this adapter when real available
+users are supplied. No presence polling, backend contract or persistence is
+introduced. Keep fixture disclosure in code and developer controls.
 
-```text
-Desktop                         Mobile
-+---------------------+         +-----------------+
-|     app frame       |         |     content     |
-|                     |         |                 |
-|      page body      |         |   page body     |
-|                     |         |                 |
-|  Home Events Chats  |         | Home Events ... |
-+---------------------+         +-----------------+
-```
+Community uses the supplied raster village art family on the square isometric
+platform. `village-landscape.png` removes the movable cottage, bench and Pebbles
+from the reference; `village-props.png` supplies their independent sprites.
+Trees, river, terrain, rocks and wild landscape remain fixed. Build's compact
+Landscape section sells the river, four-tree cluster, walkway, flower meadow,
+shrubs, rock formation and grass details using original landscape pixels in
+predetermined positions. These purchases use the existing local economy and
+refund receipts but never enter the draggable-object or saved-position system.
+Reset removes purchased landscape along with objects, restoring plain grass
+and one Pebble. The demo history progression is independent of these purchases. All
+history stages clip their terrain to one island silhouette and share the
+original `community-village.png` shadow. Generated PNG shadows must never stack
+under the shared shadow. Sunday remains one centered Pebble on plain grass.
 
-Standard content is left-aligned. The Home wordmark, scene, matching status,
-and primary action are centered as a deliberate exception.
+There is no user-facing Museum or area navigation. Its unused components/assets
+are retained for possible future reuse; Community does not import them.
 
-## Components
+Saturday is the editable current village; other days are read-only growth
+snapshots. Drag placed decorations, structures and Pebbles with mouse, pen or
+touch; arrow keys move a focused item. Ground-contact positions snap to a loose
+12px grid and stay on the inset island, clear of water and tree trunks (the
+footbridge may cross water). Objects and permanent tree overlays sort by ground
+depth. Escape/cancel discards an in-progress drag. Position updates use the
+existing local Community reducer/save, not a server or database. Reset clears
+positions as well as purchases. Old saves without positions remain valid.
 
-### App shell
+Garnet (determined), Sapphire (wistful), Emerald (content), and Citrine (excited)
+are rare expressive geological Pebbles. `expressive-pebbles.png` uses the same
+soft pixel outline, face, cheeks and squat shape as the mascot. Each costs 300
+Pebbles, above the normal catalog's 10–120. The existing Build dialog handles
+affordability, single ownership and currency deduction. Buying selects Saturday
+and places the item at a default position ready to drag. There is no additional
+currency, museum progression or backend dependency.
 
-Provides the page background, safe content area, centered desktop frame, and
-room for the persistent bottom navigation. It does not add a header by
-default.
+`community-history.ts` is an isolated UI-only fixture because the local economy
+has balance, upgrades, and earned chapter IDs but no dated activity ledger.
+Bars represent sample earned-Pebble activity. Day selection changes a 0–6
+landscape/visitor stage: Sunday has only one centered Pebble on plain grass;
+Monday adds the back tree, Tuesday the left tree, Wednesday the river, Thursday
+the path/cottage, Friday the right tree/friend, and Saturday the front tree and
+second friend. Owned upgrades join cumulatively in a fixed demo reveal order;
+all appear by Saturday; rare Pebbles appear only then. This presentation order does not represent purchase
+dates, earn currency, or change saved ownership. The fixture distinction is documented in developer
+controls and `VISUAL-REVIEW.md`, without a visible “Demo history” label.
 
-### Bottom navigation
+Build opens a native modal dialog with focus containment, Escape, focus return,
+and scrolling. The same catalog appears in two labelled sections: Rare Finds
+first, then Village Decorations. All four 300-Pebble rocks remain listed regardless
+of affordability/ownership; only their purchase buttons change state. Header and
+secondary Reset purchases footer stay visible while the catalog scrolls. The
+right drawer is 360px on desktop, inset 12px, with a 94% light surface, restrained
+blur/shadow and a very light backdrop. Mobile uses up to 340px, leaving an outer
+gap. Item cards show image, short name, price and Build/Owned state only.
 
-Has exactly four destinations: Home, Events, Chats, and Profile. Every item
-uses an icon and visible text label. The current location is identified by
-color and a small indicator, not color alone.
+Reset purchases requires a native confirmation dialog with Cancel focused first.
+It refunds each owned Build item once, clears ownership, purchase receipts and
+all Community object positions, and restores the current village to one centered
+Pebble on the same plain-grass platform as Sunday. Earned chapters and unrelated
+app state are preserved. The local `freshStart` flag survives reload; purchases
+then appear on the empty platform without restoring the developed base. Historical
+day selection still renders the existing 0–6 progression. Reset is available even
+without purchases when the current base is developed. Confirmation says “Reset
+your entire Pebble Community?” and “Reset everything”, explicitly showing the
+refund. Confirming closes Build so the restored scene is immediately visible. New purchases record the deducted price in optional local
+`purchaseCosts`. Older ownership-only saves use the unchanged catalog prices.
+Refunds are not capped by the demo funding limit. The existing local storage key
+and reducer persist everything; no backend/database schema change.
 
-### Primary action
+## Matchmaking and service states
 
-Coral, full-width on mobile, and described by the outcome: `Start matching`,
-`Join event`, or `Make plan`. It has a visible focus ring, pressed state, and
-disabled state. It never relies on an arrow glyph to communicate meaning.
+Minimal state structure: central visual or candidate, concise status, one
+primary action, quiet supporting controls. Candidate portraits/avatars and up
+to four shared interests are prominent. The current API returns suggestions;
+do not invent acceptance, invitations, or conversations. **Connect** on a
+candidate is the real exception: it sends a connection request, and acceptance
+opens a direct chat (`docs/MESSAGING-M3.md`). While a candidate is shown,
+Connect is the one primary action.
 
-### Secondary action
+Checking for a match remains manual. The queue does not acquire new polling or
+matching logic as part of visual work. Preferences retains all server fields;
+local-only display preferences live in a disclosure with their limitations.
+Signed-out matchmaking links to the existing login flow, or shows the small
+“Sign-in unavailable” state when configuration is absent.
 
-Text or quiet outlined control for reversible actions such as `Cancel search`
-and `Edit profile`. It must remain visibly actionable and keyboard reachable.
+Events unavailable uses a large calendar icon, concise title, and Retry. Empty
+filters have a clear next action. Never fabricate production event content.
 
-### Record card
+## Developer controls
 
-Used for a discrete event or profile summary. It has a clear title, compact
-metadata, a single optional action, and no decorative shadow by default.
+Development only. A small code tab in the top-left opens a fixed floating panel;
+collapsed by default, it never reserves page space. Preserve scene selection,
+empty-state toggle, demo funds, reset, and Intro replay. A click toggles it.
+Keep prototype and fixture disclosures here, outside the normal composition.
 
-### Status and empty states
+## Accessibility and motion
 
-Explain the current condition and give a next step. Use `Looking around...`
-while matching, not an indefinite spinner. An empty chat state directs someone
-to matching or events.
+Semantic links/buttons, accessible names for every icon control, title tooltips,
+visible focus, readable contrast, and 44px touch targets. History buttons expose
+selected state, date, metric and scene relationship. Dialogs must work on short
+screens. Respect reduced motion. Community uses visible downstream river streaks,
+ground-anchored Pebble breathing and a soft 4.5s lantern glow. Pebbles hold three
+pixelated poses (normal, compressed, stretched) in independently painted,
+integer-sized SVG viewports. Only visibility changes with `steps(1, end)`;
+never tween SVG dimensions or interpolate raster scale/rotation: these
+compositor transforms blur the pixel edges. The center and bottom anchor stay
+fixed in every pose; maximum width/height changes are 4/3 SVG units. Stagger
+normal Pebbles and give rare rocks individual 9–14s rhythms and pose sizes
+matching their painted personalities. Current PNGs have no blink frames or separate facial layers;
+preserve their existing expressions. Animate the inner sprite;
+the outer group owns drag position. Buildings, paths, trunks and the island stay still.
+Trees have small inset canopy patches switching between integer horizontal
+offsets; three grass-tip patches use the same quiet, staggered breeze. Fixed
+masks preserve the baked landscape silhouettes without shifting the platform.
+Home's happy Pebble uses three separately painted integer-sized poses on a
+12-second stepped cycle, with less than 1% size variation and a fixed bottom
+anchor. The existing thinking sprite replaces these poses during refresh.
+Disable these decorative loops under `prefers-reduced-motion: reduce`.
 
-## Pebble Scene
+## Team boundaries
 
-The scene is the brand signature, not a generic header illustration. It is a
-small pixel-like diorama that represents the current Home state:
+This visual pass does not change matchmaking algorithms/contracts, authentication
+logic, database schemas, messaging APIs, deployment, Android, or Profile behavior.
+The separate `/prototype/yzcommunity` experiment remains intact.
 
-| State | Copy | Scene |
-| --- | --- | --- |
-| Idle | `Ready when you are.` | Pebble resting in a quiet meadow |
-| Matching | `Looking around...` | Pebble moving through the meadow |
-| Match found | `You found someone!` | Two pebbles meeting |
-| Plan coming up | Event name and time | Pebbles gathered around an activity |
+## Matchmaking, Profile and Settings ownership
 
-The initial prototype may implement only idle and matching. Build the scene as
-a self-contained SVG placeholder with crisp, grid-aligned shapes. Do not add
-a pixel-art dependency or use decorative animation. Any later animation must
-respond to the user's matching action and respect reduced-motion preferences.
+Profile and Friends share one saved selection of interests and one exact weekly
+schedule. Explicit saves update that shared source; filters do not overwrite home
+city, private birthdate or identity. Active Friends takes priority and turns
+downtime off; downtime never silently resumes. Friends still suggests at most one
+real candidate through its existing manual queue flow. The 1–3 new-people control
+is a disclosed presentation preference until a real group-session contract exists.
 
-## Accessibility
+Profile uses one global picture and bio. Education, occupation and languages are
+optional shared facts with per-field visibility. Own gender/sexuality, intentions,
+relationship style and height belong to Dating. Gender plus sexuality resolves
+clear matching targets; ambiguous combinations ask for a matching clarification.
+Field visibility does not activate Dating. Keep exact local-only disclosure.
 
-- Meet WCAG AA contrast for text and interactive controls.
-- Use semantic buttons and links. Do not attach click handlers to decorative
-  scene elements until they have a defined action.
-- Keep a visible `:focus-visible` ring using `--color-focus`.
-- Bottom navigation has accessible names and an `aria-current` value for the
-  active destination.
-- Preserve a 44px minimum target for touch controls.
-- Respect `prefers-reduced-motion` for any future scene movement.
-
-## Boundaries
-
-This system intentionally excludes a remote font provider, icon package,
-asset pipeline, dark theme, elaborate elevation scale, and a broad component
-catalog. Add them only after a real product need appears.
+New unsupported UI fields are explicitly memory-only previews, scoped to the
+current actor. They must not be written into legacy account documents or device
+storage. Show unavailable safety states rather than an invented empty blocklist
+or successful report. See `FRONTEND-READINESS-HANDOFF.md` for resource contracts,
+verification and which controls still need backend integration.

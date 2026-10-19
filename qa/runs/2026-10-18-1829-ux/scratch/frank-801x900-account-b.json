@@ -1,0 +1,32 @@
+[
+  {
+    "text": "Profile",
+    "font": "700 12px / 18px \"Trebuchet MS\", \"Segoe UI\", sans-serif",
+    "rect": [
+      597.96875,
+      79,
+      162,
+      44
+    ]
+  },
+  {
+    "text": "Settings",
+    "font": "700 12px / 18px \"Trebuchet MS\", \"Segoe UI\", sans-serif",
+    "rect": [
+      597.96875,
+      123,
+      162,
+      44
+    ]
+  },
+  {
+    "text": "Log out",
+    "font": "16px / 24px \"Trebuchet MS\", \"Segoe UI\", sans-serif",
+    "rect": [
+      597.96875,
+      167,
+      162,
+      49
+    ]
+  }
+]

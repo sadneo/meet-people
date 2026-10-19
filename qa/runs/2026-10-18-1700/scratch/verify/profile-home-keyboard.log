@@ -1,0 +1,6 @@
+{"id":"AUTH-02","width":390,"savedCustomInterestsVisibleAndToggleable":true,"unsavedDraftDiscarded":true,"problems":["console: Failed to load resource: the server responded with a status of 404 (Not Found)"]}
+{"id":"HOME-01","user":"guest","width":390,"backReturnsHome":true,"returnOriginSurvivesReload":true,"problems":["console: Failed to load resource: the server responded with a status of 404 (Not Found)"]}
+{"id":"AUTH-02","width":1280,"savedCustomInterestsVisibleAndToggleable":true,"unsavedDraftDiscarded":true,"problems":["console: Failed to load resource: the server responded with a status of 404 (Not Found)"]}
+{"id":"HOME-01","user":"frank","width":1280,"backReturnsHome":true,"returnOriginSurvivesReload":true,"problems":["console: Failed to load resource: the server responded with a status of 404 (Not Found)"]}
+{"id":"MOBILE-01","route":"/settings","width":390,"top":720,"bottom":764,"navTop":772,"visible":true,"scrollY":524,"problems":["console: Failed to load resource: the server responded with a status of 404 (Not Found)"]}
+{"id":"MOBILE-01","route":"/matchmaking","width":390,"top":719,"bottom":764,"navTop":772,"visible":true,"scrollY":65,"problems":["console: Failed to load resource: the server responded with a status of 404 (Not Found)"]}

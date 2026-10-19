@@ -1,0 +1,123 @@
+.match-filter-sheet { box-sizing: border-box; width: calc(100% - 32px); max-width: 460px; max-height: 90dvh; margin: auto; border: 0; border-radius: 26px; padding: 29px; background: #faf8f0; color: #314b37; overflow: auto; box-shadow: 0 25px 100px #0003; font-family: Arial, Helvetica, sans-serif; }
+.match-filter-sheet::backdrop { background: #0e1a14a6; backdrop-filter: blur(12px); }
+.match-filter-sheet .mfs-grabber { display: none; }
+.match-filter-sheet .mfs-header { position: static; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 0; }
+.match-filter-sheet .mfs-header span { font-size: 10px; text-transform: uppercase; letter-spacing: 1.6px; color: #647357; }
+.match-filter-sheet .mfs-header h2 { font: 400 30px/1.2 Georgia, serif; letter-spacing: -.8px; margin: 8px 0 0; }
+.match-filter-sheet .mfs-close { flex: 0 0 44px; width: 44px; height: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; border: 0; background: #eaf0df; color: #58734b; border-radius: 50%; font-size: 26px; cursor: pointer; }
+.match-filter-sheet .mfs-scope { font-size: 12px; line-height: 1.7; color: #647357; margin: 13px 0 8px; }
+.match-filter-sheet .mfs-section { min-width: 0; margin: 0; padding: 24px 0 22px; border: 0; border-bottom: 1px solid #e0e4d5; }
+.match-filter-sheet .mfs-label { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; font-weight: 500; }
+.match-filter-sheet .mfs-label label { display: block; margin: 0; font-size: inherit; }
+.match-filter-sheet output { font-size: 13px; font-weight: 600; color: #567445; }
+.match-filter-sheet .mfs-endpoints { display: flex; justify-content: space-between; font-size: 10px; color: #647357; }
+.match-filter-sheet .mfs-explanation { font-size: 11px; color: #647357; margin: 9px 0 0; }
+.match-filter-sheet .mfs-distance { appearance: none; display: block; width: 100%; height: 44px; margin: 12px 0 0; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.match-filter-sheet .mfs-distance::-webkit-slider-runnable-track { height: 5px; border-radius: 5px; background: linear-gradient(to right, #567a4b var(--distance), #e5e5e9 var(--distance)); }
+.match-filter-sheet .mfs-distance::-moz-range-track { height: 5px; background: #e5e5e9; }
+.match-filter-sheet .mfs-distance::-moz-range-progress { height: 5px; background: #567a4b; }
+.match-filter-sheet .mfs-distance::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; margin-top: -7.5px; border: 2px solid #fff; border-radius: 50%; background: #696876; }
+.match-filter-sheet .mfs-distance::-moz-range-thumb { width: 18px; height: 18px; border: 2px solid #fff; border-radius: 50%; background: #696876; }
+.match-filter-sheet .mfs-age { position: relative; height: 54px; margin: 12px 12px 0; }
+.match-filter-sheet .mfs-track, .match-filter-sheet .mfs-fill { position: absolute; height: 4px; top: 25px; left: 0; right: 0; border-radius: 10px; background: #e0e5d6; }
+.match-filter-sheet .mfs-fill { left: var(--lower); right: calc(100% - var(--upper)); background: #567a4b; }
+.match-filter-sheet .mfs-age input { appearance: none; position: absolute; left: -12px; top: 0; width: calc(100% + 24px); height: 54px; background: transparent; margin: 0; padding: 0; border: 0; pointer-events: none; }
+.match-filter-sheet .mfs-age input::-webkit-slider-runnable-track { background: transparent; height: 4px; }
+.match-filter-sheet .mfs-age input::-moz-range-track { background: transparent; height: 4px; }
+.match-filter-sheet .mfs-age input::-webkit-slider-thumb { appearance: none; width: 24px; height: 24px; margin-top: -10px; border-radius: 50%; background: #fdfcf6; border: 2px solid #6d8b59; box-shadow: 0 2px 5px #35512d22; pointer-events: auto; cursor: grab; }
+.match-filter-sheet .mfs-age input::-moz-range-thumb { width: 21px; height: 21px; border-radius: 50%; background: #fdfcf6; border: 2px solid #6d8b59; pointer-events: auto; cursor: grab; }
+/* Split coincident thumbs into left/right hit areas. Both remain draggable at
+   equal values, and each retains a separate native keyboard focus stop. */
+.match-filter-sheet .mfs-age input[data-bound=lower] { clip-path: polygon(0 0, calc(12px + (100% - 24px) * var(--split)) 0, calc(12px + (100% - 24px) * var(--split)) 100%, 0 100%); }
+.match-filter-sheet .mfs-age input[data-bound=upper] { clip-path: polygon(calc(12px + (100% - 24px) * var(--split)) 0, 100% 0, 100% 100%, calc(12px + (100% - 24px) * var(--split)) 100%); }
+.match-filter-sheet input:focus-visible { outline: 2px solid var(--pt-focus, #315f9b); outline-offset: 3px; }
+.match-filter-sheet .mfs-age input:focus-visible::-webkit-slider-thumb { outline: 3px solid var(--pt-focus, #315f9b); outline-offset: 2px; }
+.match-filter-sheet .mfs-age input:focus-visible::-moz-range-thumb { outline: 3px solid var(--pt-focus, #315f9b); outline-offset: 2px; }
+.match-filter-sheet .mfs-actions { display: flex; gap: 10px; margin-top: 24px; }
+.match-filter-sheet .mfs-actions button { min-height: 44px; border-radius: 12px; font: inherit; font-size: 12px; cursor: pointer; }
+.match-filter-sheet .mfs-reset { flex: 0 0 74px; padding: 13px 16px; background: transparent; color: #647357; border: 1px solid #d7e0ca; }
+.match-filter-sheet .mfs-save { flex: 1; padding: 14px 18px; background: #33533d; color: #fff; border: 0; }
+.match-filter-sheet button:disabled { cursor: default; opacity: .6; }
+.match-filter-sheet button:focus-visible { outline: 2px solid var(--pt-focus, #315f9b); outline-offset: 3px; }
+.match-filter-sheet .mfs-note { font-size: 10px; color: #647357; text-align: center; line-height: 1.6; margin: 14px 0 0; }
+.match-filter-sheet .mfs-error { color: var(--pt-ink, #314b37); font-size: 12px; }
+.match-filter-sheet[data-canonical] .mfs-actions { flex-wrap: wrap; }
+.match-filter-sheet[data-canonical] .mfs-actions .mfs-reset { flex: 1 1 100px; }
+.match-filter-sheet[data-canonical] .mfs-actions .mfs-save { flex: 1 1 100%; min-width: 0; }
+.match-filter-sheet[data-canonical] .dpf-visibility { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 800px) {
+  .match-filter-sheet { width: 100%; max-width: 100%; max-height: 90dvh; margin: auto 0 0; border-radius: 26px 26px 0 0; padding: 14px 24px max(25px, env(safe-area-inset-bottom)); }
+  .match-filter-sheet .mfs-grabber { display: block; width: 34px; height: 4px; background: #d6ddcb; border-radius: 5px; margin: 0 auto 24px; }
+  .match-filter-sheet .mfs-header h2 { font-size: 29px; }
+}
+
+/* Dating's approved floating preferences card; Friends retains its bottom sheet. */
+.match-filter-sheet[data-mode="dating"] { width: calc(100% - 24px); max-width: 460px; max-height: calc(100dvh - 32px); margin: auto; border-radius: 26px; padding: 29px; }
+.match-filter-sheet[data-mode="dating"] .mfs-grabber { display: none; }
+.match-filter-sheet[data-mode="dating"] .mfs-header h2 { font-size: 34px; }
+.match-filter-sheet[data-mode="dating"] .mfs-section { padding-bottom: 18px; }
+@media (max-width: 375px) {
+  .match-filter-sheet[data-mode="dating"] { padding: 22px; }
+  .match-filter-sheet[data-mode="dating"] .mfs-header h2 { font-size: 27px; }
+}
+
+.match-filter-sheet .dating-preference-fields fieldset { min-width: 0; border: 0; border-bottom: 1px solid #e1e7d6; margin: 0; padding: 28px 0 22px; }
+.match-filter-sheet .dating-preference-fields legend { float: left; display: flex; align-items: center; gap: 9px; width: 100%; padding: 0; margin: 0 0 20px; font: 600 12px Arial, sans-serif; color: #4c6c40; }
+.match-filter-sheet .dating-preference-fields legend span { font-size: 9px; font-weight: 400; letter-spacing: 1px; color: #647357; }
+.match-filter-sheet .dpf-field { display: block; clear: both; margin: 18px 0 0; color: #58714c; font-size: 11px; }
+.match-filter-sheet .dpf-field > span { display: block; margin-bottom: 9px; }
+.match-filter-sheet .dpf-field select { box-sizing: border-box; width: 100%; min-height: 44px; padding: 12px; border: 1px solid #d8e1cb; border-radius: 11px; background: #fffef9; color: #3e5c35; font: 12px Arial, sans-serif; }
+.match-filter-sheet .dpf-visibility { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 3px 0 0; color: #596e4e; font-size: 10px; line-height: 1.5; }
+.match-filter-sheet .dpf-visibility input { flex: 0 0 16px; width: 16px; height: 16px; margin: 0; accent-color: #718f59; }
+.match-filter-sheet .dpf-caption { clear: both; display: flex; justify-content: space-between; font-size: 11px; color: #58714c; margin-bottom: 11px; }
+.match-filter-sheet .dpf-caption small { color: #647357; font-size: 10px; }
+.match-filter-sheet .dpf-height { display: flex; gap: 10px; }
+.match-filter-sheet .dpf-height label { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 7px; padding: 11px 13px; background: #fffefa; border: 1px solid #dce5cf; border-radius: 12px; }
+.match-filter-sheet .dpf-height label > span { text-transform: uppercase; letter-spacing: 1.1px; font-size: 9px; color: #647357; }
+.match-filter-sheet .dpf-height select { width: 100%; min-height: 44px; padding: 0; border: 0; background: transparent; color: #3e5c35; font: 19px Arial, sans-serif; }
+.match-filter-sheet select:focus-visible { outline: 2px solid var(--pt-focus, #315f9b); outline-offset: 3px; }
+@media (max-width: 800px) {
+  .match-filter-sheet[data-mode="dating"] { width: 100%; max-width: 100%; max-height: 94dvh; margin: auto 0 0; border-radius: 26px 26px 0 0; padding-bottom: max(25px, env(safe-area-inset-bottom)); }
+}
+
+/* Only the heading/handle starts dismissal; form scrolling stays native. */
+@media (max-width: 800px) {
+  .match-filter-sheet { overscroll-behavior: contain; transition: transform 180ms ease-out; }
+  .match-filter-sheet[data-dragging] { transition: none; }
+  .match-filter-sheet .mfs-drag-region { touch-action: none; }
+  .match-filter-sheet[data-mode="dating"] .mfs-grabber { display: block; margin: 0 auto 18px; }
+  .match-filter-sheet .mfs-close { touch-action: manipulation; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .match-filter-sheet { transition: none; }
+}
+.match-filter-sheet .mfs-search-options { min-width: 0; border: 0; border-bottom: 1px solid #e0e4d5; margin: 0; padding: 24px 0; }
+.match-filter-sheet .mfs-search-options legend { float: left; width: 100%; margin-bottom: 10px; padding: 0; font-size: 13px; font-weight: 600; }
+.match-filter-sheet .mfs-search-options p { clear: both; color: #586c4d; font-size: 11px; line-height: 1.6; }
+.match-filter-sheet .mfs-location-choice { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 12px; line-height: 1.6; }
+.match-filter-sheet .mfs-location-choice input { flex: 0 0 17px; width: 17px; height: 17px; margin: 0; accent-color: #567a4b; }
+.match-filter-sheet .mfs-area-field { display: grid; gap: 8px; font-size: 12px; margin: 10px 0; }
+.match-filter-sheet .mfs-area-field input { box-sizing: border-box; min-width: 0; width: 100%; min-height: 44px; border-radius: 11px; border: 1px solid #d8e1cb; padding: 10px; background: #fffef9; color: #314b37; }
+.match-filter-sheet .mfs-search-options a { display: inline-flex; align-items: center; min-height: 44px; font-size: 11px; color: #3e5c35; }
+.match-filter-sheet .mfs-friendship-goals { margin-top: 18px; }
+.match-filter-sheet .mfs-friendship-goals h3 { font-size: 13px; margin: 0; }
+.match-filter-sheet .mfs-friendship-goals [role=group] { display: flex; flex-wrap: wrap; gap: 8px; }
+.match-filter-sheet .mfs-friendship-goals button { min-height: 44px; padding: 10px; border: 1px solid #e0e7d6; border-radius: 11px; background: #fafcf6; color: #416535; font-size: 12px; }
+.match-filter-sheet .mfs-friendship-goals button[aria-pressed=true] { background: #e4efd5; border-color: #c9dab4; }
+.match-filter-sheet[data-canonical] .mfs-friendship-goals button { max-width: 100%; overflow-wrap: anywhere; white-space: pre-wrap; }
+.match-filter-sheet .dpf-clarification { margin: 16px 0 0; padding: 14px; background: #eff4e5; border: 1px solid #d8e1cb; border-radius: 12px; }
+.match-filter-sheet .dpf-clarification h4 { font-size: 12px; margin: 0; }
+.match-filter-sheet .dpf-clarification p, .match-filter-sheet .dpf-compatibility { color: #586c4d; font-size: 11px; line-height: 1.7; }
+.match-filter-sheet .dpf-clarification [role=group] { display: grid; grid-template-columns: 1fr 1fr; }
+.pt-app .friends-page .friends-shared-note { color: #596d50; font-size: 12px; line-height: 1.7; margin: 0; padding-inline: 14px; }
+
+/* Location controls share the existing sheet palette and native touch targets. */
+.match-filter-sheet .mfs-location-resolution { padding: 18px 0; border-bottom: 1px solid #e0e4d5; min-width: 0; }
+.match-filter-sheet .mfs-location-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.match-filter-sheet .mfs-location-resolution button { min-height: 44px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; cursor: pointer; font: 12px Arial, sans-serif; }
+.match-filter-sheet .mfs-location-resolution .mfs-reset { flex: 1 1 130px; border-radius: 11px; }
+.match-filter-sheet .mfs-location-results { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 8px; }
+.match-filter-sheet .mfs-location-results button { width: 100%; padding: 12px; display: grid; gap: 5px; text-align: left; background: #fffef9; color: #314b37; border: 1px solid #d8e1cb; border-radius: 11px; }
+.match-filter-sheet .mfs-location-results small, .match-filter-sheet .mfs-location-results span { color: #586c4d; font-size: 11px; }
+.match-filter-sheet .mfs-location-results button:hover:not(:disabled) { border-color: #6d8b59; background: #eaf0df; }
+.match-filter-sheet .mfs-location-resolution a { display: inline-flex; align-items: center; min-height: 44px; color: #3e5c35; text-decoration: underline; }

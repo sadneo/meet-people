@@ -1,0 +1,20 @@
+e2e/app.spec.ts › app shell switches between desktop and mobile navigation
+e2e/app.spec.ts › avatar dropdown navigates and dismisses at 1280px
+e2e/app.spec.ts › avatar dropdown navigates and dismisses at 801px
+e2e/auth.spec.ts › progressive registration, retry, recovery and callback errors at 1280px
+e2e/auth.spec.ts › progressive registration, retry, recovery and callback errors at 390px
+e2e/build-purchases.spec.ts › Rare Finds and confirmed purchase refunds at 320px
+e2e/event-group-queue.spec.ts › mocked event queue persists across reload; no old consent, Company, scoring or group-found claim
+e2e/event-group-queue.spec.ts › mocked missing RPC and unsaved profile block enrollment but existing queue can leave
+e2e/event-group-queue.spec.ts › mocked persistent inbox keyboard/read lifecycle and proposal at 1440px
+e2e/event-group-queue.spec.ts › mocked persistent inbox keyboard/read lifecycle and proposal at 390px
+e2e/event-group-queue.spec.ts › mocked slow profile never locks Leave; conflicting queue/feed reads visibly disable controls then recover
+e2e/event-group-queue.spec.ts › mocked wide event preview mounts the same queue without scoring or enrollment
+e2e/event-group-queue.spec.ts › signed-in central callback recovers validated return, but never an external destination
+e2e/matchmaking.spec.ts › mocked settings logout failure stays signed in; retry signs out through auth notifications
+e2e/matchmaking.spec.ts › mocked shell logout failure stays signed in; retry signs out through auth notifications
+e2e/matchmaking.spec.ts › mocked sign-in gating and atomic profile failure are honest
+e2e/prototype-community.spec.ts › curious Pebble visits actual viewport edges and retreats fully at 4K
+e2e/prototype.spec.ts › cinematic finishes; reduced motion bypasses it and disables movement
+e2e/prototype.spec.ts › connected planning path, edit and chat at 1440px
+e2e/prototype.spec.ts › registration has no demo bypass; prototype custom time is preserved; signed-out Messages stays offline

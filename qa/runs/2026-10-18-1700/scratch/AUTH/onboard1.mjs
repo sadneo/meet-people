@@ -1,0 +1,28 @@
+import { openAs } from '/home/xqiu/Projects/meet-people/.claude/skills/qa/scripts/qa-browser.mjs'
+const R = '/home/xqiu/Projects/meet-people/qa/runs/2026-10-18-1700/screenshots'
+const user = 'qa-auth-2@example.com'
+const { page, problems, close } = await openAs(user, { width: 390, height: 844 })
+const log = (...a) => console.log(...a)
+const state = async label => log(label, page.url(), '|', (await page.locator('h1, h2').allInnerTexts()).join(' / '), '|', await page.locator('.pt-step-row').innerText().catch(() => ''))
+page.on('request', r => { if (r.url().includes('/api/matchmaking/account')) log('  req', r.method(), r.url().replace('http://127.0.0.1:3000', '')) })
+await page.goto('/onboarding?returnTo=%2Fevents'); await page.waitForTimeout(1000)
+await state('start')
+await page.screenshot({ path: `${R}/AUTH-onboarding-opening-390.png` })
+const skip = page.getByRole('button', { name: 'Skip animation' })
+if (await skip.count()) await skip.click()
+await page.waitForTimeout(800)
+await state('chapters')
+await page.screenshot({ path: `${R}/AUTH-onboarding-ch1-390.png`, fullPage: true })
+log('name value:', await page.getByLabel('Display name').inputValue(), '| bio:', await page.getByLabel('A short bio').inputValue())
+await page.getByLabel('Display name').fill('QA Auth Two')
+await page.getByLabel('A short bio').fill('Testing onboarding')
+await page.getByRole('button', { name: /Complete chapter/ }).dblclick()
+await page.waitForTimeout(300); await state('after dblclick')
+await page.waitForTimeout(2500); await state('after advance')
+await page.screenshot({ path: `${R}/AUTH-onboarding-ch2-390.png`, fullPage: true })
+await page.reload(); await page.waitForTimeout(2000)
+await state('after reload')
+const skip2 = page.getByRole('button', { name: 'Skip animation' }); if (await skip2.count()) { await skip2.click(); await page.waitForTimeout(600); await state('after skip2') }
+await page.screenshot({ path: `${R}/AUTH-onboarding-after-reload-390.png`, fullPage: true })
+log(problems.join('\n'))
+await close()
