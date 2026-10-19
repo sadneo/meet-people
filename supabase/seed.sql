@@ -245,17 +245,17 @@ values (
 -- ============================================
 -- MESSAGES
 -- ============================================
-insert into messages (conversation_id, sender_id, body)
-select c.id, '11111111-1111-1111-1111-111111111111', 'Hey! Nice to connect. Coffee this week?'
+-- Accepted connections above create direct chats through the messaging trigger.
+-- Use the send function so sequence and retry bookkeeping match real messages.
+select public.messaging_send('11111111-1111-1111-1111-111111111111', c.id,
+  'Hey! Nice to connect. Coffee this week?', 'd0000000-0000-4000-8000-000000000001')
 from conversations c
-where c.user_a = '11111111-1111-1111-1111-111111111111'
-  and c.user_b = '22222222-2222-2222-2222-222222222222';
+where c.source_key = 'direct:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222';
 
-insert into messages (conversation_id, sender_id, body)
-select c.id, '22222222-2222-2222-2222-222222222222', 'Yes! Thursday at the usual spot?'
+select public.messaging_send('22222222-2222-2222-2222-222222222222', c.id,
+  'Yes! Thursday at the usual spot?', 'd0000000-0000-4000-8000-000000000002')
 from conversations c
-where c.user_a = '11111111-1111-1111-1111-111111111111'
-  and c.user_b = '22222222-2222-2222-2222-222222222222';
+where c.source_key = 'direct:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222';
 
 -- ============================================
 -- PAST INTERACTIONS
