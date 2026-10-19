@@ -6,7 +6,8 @@ import { Button, Chips, Header, Icon } from './ui'
 import { EventGroupQueue } from './EventGroupQueue'
 import { EventsFeature } from './Feature'
 import { eventDetailPath, eventsPath } from './routes'
-import { publicEventPath, publicEventsPath } from '../public/links'
+import { publicAuthPath, publicEventPath, publicEventsPath } from '../public/links'
+import { PixelPebble } from '../pebble-art/PixelArt'
 
 function EventPhoto({ event, detail = false, onImageFailure }: { event: LiveEvent; detail?: boolean; onImageFailure?: (source: string) => void }) {
   const [failedSource, setFailedSource] = useState<string | null>(null)
@@ -15,6 +16,12 @@ function EventPhoto({ event, detail = false, onImageFailure }: { event: LiveEven
   return <img className={detail ? 'ev-detail-hero' : undefined} src={placeholder ? eventImagePlaceholder : source} alt={placeholder ? 'Pebble placeholder illustration (not an event photo)' : `${event.title} event image`} onError={() => {
     if (!placeholder) { setFailedSource(source); onImageFailure?.(source) }
   }} />
+}
+// Guest cards lead with the date, since "when" is what people scan an events list for.
+function DateStub({ value }: { value: string | null }) {
+  const date = value ? new Date(value) : null
+  if (!date || Number.isNaN(date.getTime())) return null
+  return <time className="ev-guest-date" dateTime={date.toISOString()} aria-hidden="true"><span>{date.toLocaleString(undefined, { month: 'short' })}</span><strong>{date.getDate()}</strong></time>
 }
 export function EventsScreen({ guest = false }: { guest?: boolean }) {
   return <EventsFeature><EventsFeed guest={guest} /></EventsFeature>
@@ -64,13 +71,15 @@ function EventsFeed({ guest }: { guest: boolean }) {
     setSearch({ ...(category !== 'All' ? { category } : {}), page: String(next) })
   }
 
-  return <div className={`ev-events-workspace ${!visible.length ? 'is-empty' : ''}`}><section className="ev-events-feed">
-    <Header title="Events" />
+  return <div className={`ev-events-workspace ${!visible.length ? 'is-empty' : ''} ${guest ? 'ev-guest' : ''}`}><section className="ev-events-feed">
+    {guest ? <section className="ev-guest-hero"><div><h1 tabIndex={-1}>Find your kind of thing.</h1><p>Events happening around campus, open to everyone. Browse without an account.</p></div><PixelPebble className="ev-guest-pebble" /></section> : <Header title="Events" />}
+    <div className={guest ? 'ev-guest-filters' : undefined}>
     <Chips label="Event category" options={[...new Set(['All', 'Music', 'Food', 'Outdoors', ...(result?.categories ?? []), category])]} values={[category]} onChange={([value]) => changeCategory(value)} />
     <button className="ev-icon-button ev-location-control" aria-label="Show distances from me" title="Show distances from me" onClick={() => {
       if (!navigator.geolocation) { setGeoError('Location is unavailable in this browser.'); return }
       navigator.geolocation.getCurrentPosition(position => { setOrigin({ latitude: position.coords.latitude, longitude: position.coords.longitude }); setGeoError('') }, () => setGeoError('Could not access your location. Allow location access and try again.'), { timeout: 10000 })
-    }}><Icon name="pin" size={24} /></button>
+    }}>{guest ? <><Icon name="pin" size={20} /><span>Near me</span></> : <Icon name="pin" size={24} />}</button>
+    </div>
     {geoError && <p role="alert">{geoError}</p>}
     {error ? <div className="ev-empty ev-calm-empty" role="alert"><Icon name="events" size={72} /><h2>Events unavailable</h2><Button secondary onClick={() => setRetry(value => value + 1)}>Retry</Button></div> : !result ? <p role="status">Loading events…</p> : !visible.length ? <div className="ev-empty ev-calm-empty"><Icon name="events" size={72} /><h2>A quiet calendar</h2><Button onClick={() => { changeCategory('All'); setRetry(r => r + 1); }}>Show all events</Button></div> : <div className="ev-event-grid">{visible.map(event => {
       const open = (click: React.MouseEvent<HTMLAnchorElement>) => {
@@ -79,7 +88,7 @@ function EventsFeed({ guest }: { guest: boolean }) {
         }
       }
       return <article className={`ev-event-card ${event.id === previewId ? 'is-current' : ''}`} key={event.id}>
-        <Link className="ev-event-image" aria-label={`View ${event.title}`} to={detailPath(event.id)} onClick={open}><EventPhoto event={event} /></Link>
+        <Link className="ev-event-image" aria-label={`View ${event.title}`} to={detailPath(event.id)} onClick={open}><EventPhoto event={event} />{guest && <DateStub value={event.starts_at} />}</Link>
         <div className="ev-event-copy"><span className="ev-eyebrow">{event.category ?? 'Other'}{event.distance_miles !== null ? ` · ${event.distance_miles} mi` : ''}</span>
           <Link className="ev-name-link" to={detailPath(event.id)} onClick={open}><h2>{event.title}</h2></Link>
           <p className="ev-event-date">{eventDate(event.starts_at, event.ends_at)}</p><p><Icon name="pin" size={16} />{event.location_name ?? event.city ?? 'Location to be announced'}</p>
@@ -89,6 +98,7 @@ function EventsFeed({ guest }: { guest: boolean }) {
       </article>
     })}</div>}
     {result && <div className="ev-event-pagination"><Button secondary disabled={page === 1} onClick={() => goPage(page - 1)}>Previous</Button><span>Page {page}</span><Button secondary disabled={!result.hasMore} onClick={() => goPage(page + 1)}>Next</Button></div>}
+    {guest && result && visible.length > 0 && <section className="ev-guest-cta" aria-labelledby="ev-guest-cta-title"><div><h2 id="ev-guest-cta-title">Going to one of these?</h2><p>Create an account and Pebble helps you find people who share your interests and free time.</p></div><Link className="pt-button pt-discovery-action" to={publicAuthPath('register')}>Get started</Link></section>}
   </section><aside className="ev-event-preview">{previewId && <EventDetail key={previewId} id={previewId} preview guest={guest} />}</aside></div>
 }
 
@@ -117,12 +127,12 @@ function EventDetailContent({ id, preview, guest }: { id: string; preview: boole
   }, [id, retry])
   
   const url = sourceLink(event?.source_url ?? null)
-  return <>
+  const body = <>
     {!preview && <Link className="ev-text-button" to={guest ? publicEventsPath : eventsPath}><Icon name="back" />Back to events</Link>}
     <Header title={preview ? 'Selected event' : 'Event details'} />
     {error ? <div role="alert"><p>{error}</p><Button onClick={() => setRetry(value => value + 1)}>Retry</Button></div> : !event ? <p role="status">Loading event…</p> : <article className="ev-event-detail">
       <EventPhoto event={event} detail onImageFailure={setFailedImage} />
-      <div className="ev-detail-body" style={guest ? { gridTemplateColumns: '1fr' } : undefined}><div><span className="ev-eyebrow">{event.category ?? 'Other'}</span><h1>{event.title}</h1>
+      <div className="ev-detail-body"><div><span className="ev-eyebrow">{event.category ?? 'Other'}</span><h1>{event.title}</h1>
         <p className="ev-detail-fact"><Icon name="events" />{eventDate(event.starts_at, event.ends_at)}</p><p className="ev-detail-fact"><Icon name="pin" />{event.location_name ?? event.city ?? 'Location to be announced'}</p>
         {event.address && <p>{event.address}</p>}<p className="ev-description">{event.description ?? 'No description provided.'}</p>
         <span className="ev-hint">Source: {event.source}{safeImage(event.image_url) === eventImagePlaceholder || failedImage === safeImage(event.image_url) ? ' · Pebble placeholder illustration (not an event photo)' : ''}</span>
@@ -130,4 +140,5 @@ function EventDetailContent({ id, preview, guest }: { id: string; preview: boole
       </div>{!guest && <EventGroupQueue listingId={id} />}</div>
     </article>}
   </>
+  return guest && !preview ? <div className="ev-guest-detail">{body}</div> : body
 }

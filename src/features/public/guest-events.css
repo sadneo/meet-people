@@ -1,0 +1,46 @@
+/* Guest events browser (/explore). Everything is scoped to .ev-guest* classes, which only the
+   guest view renders, so the signed-in /events page is untouched. Uses the shared --pt-* palette.
+   The .ev-feature.ev-feature prefix matches events.css specificity; this file loads after it. */
+
+/* Hero: one big line, one sentence, and the same happy Pebble as the landing page. */
+.ev-feature.ev-feature .ev-guest-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-block: clamp(4px, 1.5vw, 20px) clamp(22px, 3vw, 38px); }
+.ev-feature.ev-feature .ev-guest-hero h1 { max-width: 12ch; font-size: clamp(42px, 5.6vw, 84px); line-height: 1.02; letter-spacing: -.045em; }
+.ev-feature.ev-feature .ev-guest-hero p { max-width: 36ch; margin-top: 18px; font-size: clamp(17px, 1.4vw, 20px); }
+.ev-feature.ev-feature .ev-guest-hero .ev-guest-pebble { width: clamp(112px, 15vw, 220px); height: auto; flex-shrink: 0; transform: none; animation: none; }
+
+/* Filters: pill chips with a filled selected state, and a labelled "Near me" button on the same row. */
+.ev-feature.ev-feature .ev-guest-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
+.ev-feature.ev-feature .ev-guest-filters .ev-chips button { border-radius: 999px; padding-inline: 18px; border-color: color-mix(in srgb, var(--pt-ink) 30%, transparent); background: transparent; }
+.ev-feature.ev-feature .ev-guest-filters .ev-chips button:hover { background: var(--pt-surface); }
+.ev-feature.ev-feature .ev-guest-filters .ev-chips button[aria-pressed=true],
+.ev-feature.ev-feature .ev-guest-filters .ev-chips button[aria-pressed=true]:hover { background: var(--pt-ink); border-color: var(--pt-ink); color: var(--pt-surface); box-shadow: none; }
+.ev-feature.ev-feature .ev-guest-filters .ev-location-control { position: static; display: inline-flex; width: auto; height: 48px; padding-inline: 18px; gap: 8px; border-radius: 999px; background: var(--pt-surface); font-weight: 700; }
+
+/* Cards: date stub on the photo, category as a quiet pill. */
+.ev-feature.ev-feature .ev-guest .ev-event-card { border-radius: 22px; }
+.ev-feature.ev-feature .ev-guest .ev-event-image { height: auto; aspect-ratio: 16 / 10; }
+.ev-feature.ev-feature .ev-guest .ev-event-image img { position: absolute; inset: 0; }
+.ev-feature.ev-feature .ev-guest .ev-guest-date { position: absolute; top: 14px; left: 14px; display: grid; justify-items: center; min-width: 56px; padding: 8px 10px 9px; border-radius: 14px; background: var(--pt-surface); color: var(--pt-ink); line-height: 1; box-shadow: 0 0 0 1px var(--pt-line); }
+.ev-feature.ev-feature .ev-guest .ev-guest-date span { font-size: 13px; font-weight: 700; }
+.ev-feature.ev-feature .ev-guest .ev-guest-date strong { margin-top: 4px; font-size: 26px; letter-spacing: -.03em; }
+.ev-feature.ev-feature .ev-guest .ev-event-copy > .ev-eyebrow { align-self: flex-start; padding: 4px 11px; border-radius: 999px; background: var(--pt-pale); font-size: 13px; letter-spacing: 0; text-transform: none; }
+
+/* Closing band, echoing the dark Community panel on the landing page. */
+.ev-feature.ev-feature .ev-guest-cta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px 40px; margin-top: clamp(40px, 6vw, 80px); padding: clamp(24px, 4vw, 48px); border-radius: 28px; background: var(--pt-ink); color: var(--pt-surface); }
+.ev-feature.ev-feature .ev-guest-cta h2 { max-width: 18ch; color: var(--pt-surface); font-size: clamp(26px, 3vw, 40px); line-height: 1.1; letter-spacing: -.03em; }
+.ev-feature.ev-feature .ev-guest-cta p { max-width: 46ch; margin-top: 10px; color: var(--pt-pale); }
+.ev-feature.ev-feature .ev-guest-cta .pt-button { color: var(--pt-on-action); text-decoration: none; }
+
+/* Event page: a readable single column now that "Go together" is not shown to guests. */
+.ev-feature.ev-feature .ev-guest-detail { max-width: 860px; margin-inline: auto; }
+.ev-feature.ev-feature .ev-guest-detail .ev-event-detail { border-radius: 24px; }
+.ev-feature.ev-feature .ev-guest-detail .ev-detail-hero { height: clamp(240px, 34vw, 440px); }
+.ev-feature.ev-feature .ev-guest-detail .ev-detail-body { grid-template-columns: 1fr; gap: 0; padding: clamp(22px, 4vw, 40px); }
+.ev-feature.ev-feature .ev-guest-detail .ev-detail-body h1 { margin: 12px 0 20px; font-size: clamp(30px, 4vw, 46px); line-height: 1.08; letter-spacing: -.03em; }
+.ev-feature.ev-feature .ev-guest-detail .ev-description { max-width: 62ch; font-size: 17px; line-height: 1.65; }
+
+@media (max-width: 800px) {
+  .ev-feature.ev-feature .ev-guest-hero h1 { max-width: none; }
+  .ev-feature.ev-feature .ev-guest-hero .ev-guest-pebble { width: 96px; }
+  .ev-feature.ev-feature .ev-guest-cta .pt-button { width: 100%; }
+}
