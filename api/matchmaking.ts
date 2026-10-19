@@ -10,6 +10,8 @@ import type { SaveProfileDetails } from '../shared/profile-details.js'
 import { createProfileDetailsRouter } from './profile-details.js'
 import type { SaveFriendsSearchPreferences } from '../shared/friends-search-preferences.js'
 import { createFriendsSearchPreferencesRouter } from './friends-search-preferences.js'
+import type { SaveDetailedSettings } from '../shared/detailed-settings.js'
+import { createDetailedSettingsRouter } from './detailed-settings.js'
 
 type RpcResponse = { data: unknown; error: { code?: string } | null }
 export interface UserContextTransport {
@@ -29,6 +31,8 @@ export interface UserContextTransport {
     saveProfileDetails?(details: SaveProfileDetails): PromiseLike<RpcResponse>
     friendsSearchPreferences?(): PromiseLike<RpcResponse>
     saveFriendsSearchPreferences?(preferences: SaveFriendsSearchPreferences): PromiseLike<RpcResponse>
+    detailedSettings?(): PromiseLike<RpcResponse>
+    saveDetailedSettings?(settings: SaveDetailedSettings): PromiseLike<RpcResponse>
     listingStatus(listingId: string): PromiseLike<RpcResponse>
     listingInterest(listingId: string): PromiseLike<RpcResponse>
     listingWithdraw(listingId: string): PromiseLike<RpcResponse>
@@ -61,6 +65,8 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         saveProfileDetails: details => client.rpc('save_profile_details', { details_in: details }),
         friendsSearchPreferences: () => client.rpc('get_friends_search_preferences'),
         saveFriendsSearchPreferences: preferences => client.rpc('save_friends_search_preferences', { preferences_in: preferences }),
+        detailedSettings: () => client.rpc('get_detailed_settings'),
+        saveDetailedSettings: settings => client.rpc('save_detailed_settings', { settings_in: settings }),
         join: qtype => client.rpc('join_queue', { qtype }), leave: () => client.rpc('leave_queue'), status: () => client.rpc('get_queue_status'), result: () => client.rpc('get_queue_match'), profile: () => client.rpc('get_matchmaking_profile'), save: profile => client.rpc('save_matchmaking_profile', { profile_in: profile }),
         listingStatus: listingId => client.rpc('get_listing_matchmaking_status', { listing_id_in: listingId }),
         listingInterest: listingId => client.rpc('express_listing_matchmaking_interest', { listing_id_in: listingId }),
@@ -113,6 +119,7 @@ export function createMatchmakingRouter(transport: UserContextTransport | null) 
   const actor = (response: Response): ReturnType<UserContextTransport['actor']> => response.locals.actor
   router.use('/profile-details', createProfileDetailsRouter())
   router.use('/friends-search-preferences', createFriendsSearchPreferencesRouter())
+  router.use('/detailed-settings', createDetailedSettingsRouter())
   const readAccount = async (response: Response) => {
     const read = actor(response).account
     if (!read) throw new MatchingFailure(503, 'unavailable', 'Unified account RPC is not available yet.')
