@@ -37,8 +37,9 @@ exact content, serialize concurrent replay, and conflict on changed body/chat.
 Requesting a person who already sent a request accepts it, as the existing client
 contract specifies. A sender cannot accept their own pending request. New requests
 and acceptance require current valid persisted onboarding facts, adult campus-date
-eligibility and bilateral global discovery consent. A forged completed marker alone
-is insufficient: interests, home, DOB, schedule and private intent/distance/group
+eligibility and bilateral global discovery consent. Completion follows actual facts, as canonical reconciliation requires; a missing
+stored marker does not force valid legacy users to repeat onboarding. A forged
+completed marker alone is insufficient: interests, home, DOB, schedule and private intent/distance/group
 are rechecked. Existing contact/history reads do not infer new discovery consent.
 
 Daniel delegated the historical visibility choice on 2026-10-19. Recommendation

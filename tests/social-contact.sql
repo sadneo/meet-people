@@ -84,6 +84,8 @@ do $$ begin
 end $$;
 reset role;
 insert into public.user_interests(profile_id,text) values('da000000-0000-4000-8000-000000000003','Coffee');
+-- Canonical reconciliation derives completion from facts, not a stored marker.
+update public.account_settings set completed='[]' where user_id='da000000-0000-4000-8000-000000000003';
 set local role authenticated;
 do $$ declare chat uuid; begin
  perform set_config('request.jwt.claim.sub','da000000-0000-4000-8000-000000000001',true);

@@ -53,7 +53,7 @@ create trigger social_alias_message after insert on public.messages for each row
 create function social_private.discoverable(person uuid) returns boolean language sql stable security definer set search_path='' as $$
  select exists(select 1 from public.profiles p join public.account_settings a on a.user_id=p.id
  where p.id=person and p.is_active and public.detailed_settings_masters(a.settings)->>'discoverable'='true'
- and a.completed='[0,1,2,3]'::jsonb and p.birthdate between date '0001-01-01' and date '9999-12-31'
+ and p.birthdate between date '0001-01-01' and date '9999-12-31'
  and p.birthdate<=(statement_timestamp() at time zone 'America/New_York')::date-interval '18 years'
  and char_length(p.username) between 1 and 80 and char_length(p.display_name) between 1 and 120
  and public.profile_language_key(p.username)<>'' and public.profile_language_key(p.display_name)<>''
@@ -61,6 +61,7 @@ create function social_private.discoverable(person uuid) returns boolean languag
  and (select count(*) from public.user_interests i where i.profile_id=p.id) between 3 and 30
  and not exists(select 1 from public.user_interests i where i.profile_id=p.id and (char_length(i.text)>120 or public.profile_language_key(i.text)=''))
  and (select count(*) from public.availability w where w.profile_id=p.id) between 1 and 56
+ and not exists(select 1 from public.availability w where w.profile_id=p.id and (w.start_time::text !~ '^(([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9])$' or w.end_time::text !~ '^(([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]|24:00:00)$'))
  and not exists(select 1 from public.availability w join public.availability x on x.profile_id=w.profile_id and x.id>w.id where w.profile_id=p.id and w.dow=x.dow and w.start_time<x.end_time and x.start_time<w.end_time)
  and jsonb_typeof(a.preferences->'intents')='array' and jsonb_array_length(a.preferences->'intents') between 1 and 20
  and not exists(select 1 from jsonb_array_elements(a.preferences->'intents') item where jsonb_typeof(item)<>'string' or char_length(item #>> '{}')>120 or public.profile_language_key(item #>> '{}')='')
