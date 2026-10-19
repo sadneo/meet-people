@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { useSession } from '../../auth/useSession'
-import { publicAuthPath } from './links'
+import { publicAuthPath, publicEventsPath } from './links'
 import { Brand } from '../prototype/ui'
 import { AppShell } from '../prototype/AppShell'
 import { Home } from '../prototype/Home'
@@ -38,7 +38,7 @@ export function PublicLayout() {
   useEffect(() => {
     window.scrollTo(0, 0)
     main.current?.focus({ preventScroll: true })
-    const title = ({ '/': 'Find a little time in common', '/terms': 'Terms of Service', '/privacy': 'Privacy Policy', '/cookies': 'Cookie Policy' } as Record<string, string>)[pathname] ?? 'Pebble'
+    const title = pathname.startsWith(publicEventsPath) ? 'Events' : ({ '/': 'Find a little time in common', '/terms': 'Terms of Service', '/privacy': 'Privacy Policy', '/cookies': 'Cookie Policy' } as Record<string, string>)[pathname] ?? 'Pebble'
     document.title = `${title} | Pebble`
   }, [pathname])
   return <div className="pt-app public-site">
@@ -46,7 +46,7 @@ export function PublicLayout() {
     <header className="public-header public-width">
       <Link to="/" aria-label="Pebble home"><Brand /></Link>
       <nav aria-label="Public navigation">
-        <NavLink to="/events">Explore events</NavLink>
+        <NavLink to={publicEventsPath}>Explore events</NavLink>
         {session ? <Link className="pt-button pt-discovery-action" to="/">Open Pebble</Link> : <><Link to={publicAuthPath('login')}>Sign in</Link>{pathname !== '/' && <Link className="pt-button pt-discovery-action" to={publicAuthPath('register')}>Get started</Link>}</>}
       </nav>
     </header>

@@ -6,6 +6,7 @@ import { Button, Chips, Header, Icon } from './ui'
 import { EventGroupQueue } from './EventGroupQueue'
 import { EventsFeature } from './Feature'
 import { eventDetailPath, eventsPath } from './routes'
+import { publicEventPath, publicEventsPath } from '../public/links'
 
 function EventPhoto({ event, detail = false, onImageFailure }: { event: LiveEvent; detail?: boolean; onImageFailure?: (source: string) => void }) {
   const [failedSource, setFailedSource] = useState<string | null>(null)
@@ -15,11 +16,12 @@ function EventPhoto({ event, detail = false, onImageFailure }: { event: LiveEven
     if (!placeholder) { setFailedSource(source); onImageFailure?.(source) }
   }} />
 }
-export function EventsScreen() {
-  return <EventsFeature><EventsFeed /></EventsFeature>
+export function EventsScreen({ guest = false }: { guest?: boolean }) {
+  return <EventsFeature><EventsFeed guest={guest} /></EventsFeature>
 }
 
-function EventsFeed() {
+function EventsFeed({ guest }: { guest: boolean }) {
+  const detailPath = guest ? publicEventPath : eventDetailPath
   const [search, setSearch] = useSearchParams()
   const category = search.get('category') ?? 'All'
   const page = Math.max(1, Number(search.get('page')) || 1)
@@ -77,12 +79,12 @@ function EventsFeed() {
         }
       }
       return <article className={`ev-event-card ${event.id === previewId ? 'is-current' : ''}`} key={event.id}>
-        <Link className="ev-event-image" aria-label={`View ${event.title}`} to={eventDetailPath(event.id)} onClick={open}><EventPhoto event={event} /></Link>
+        <Link className="ev-event-image" aria-label={`View ${event.title}`} to={detailPath(event.id)} onClick={open}><EventPhoto event={event} /></Link>
         <div className="ev-event-copy"><span className="ev-eyebrow">{event.category ?? 'Other'}{event.distance_miles !== null ? ` · ${event.distance_miles} mi` : ''}</span>
-          <Link className="ev-name-link" to={eventDetailPath(event.id)} onClick={open}><h2>{event.title}</h2></Link>
+          <Link className="ev-name-link" to={detailPath(event.id)} onClick={open}><h2>{event.title}</h2></Link>
           <p className="ev-event-date">{eventDate(event.starts_at, event.ends_at)}</p><p><Icon name="pin" size={16} />{event.location_name ?? event.city ?? 'Location to be announced'}</p>
           <div className="ev-social-context"><Icon name="profile" /><span>{event.interested_count} people looking for company</span></div>
-          <Link className="ev-button ev-secondary ev-wide" to={eventDetailPath(event.id)} onClick={open}>See event & people<Icon name="arrow" size={18} /></Link>
+          <Link className="ev-button ev-secondary ev-wide" to={detailPath(event.id)} onClick={open}>See event & people<Icon name="arrow" size={18} /></Link>
         </div>
       </article>
     })}</div>}
@@ -90,15 +92,15 @@ function EventsFeed() {
   </section><aside className="ev-event-preview">{previewId && <EventDetail key={previewId} id={previewId} preview />}</aside></div>
 }
 
-export function EventDetail({ id, preview = false }: { id?: string; preview?: boolean }) {
+export function EventDetail({ id, preview = false, guest = false }: { id?: string; preview?: boolean; guest?: boolean }) {
   const params = useParams()
   const eventId = id ?? params.id ?? ''
   // Remount event data and queue when navigating directly between event URLs.
-  const content = <EventDetailContent key={eventId} id={eventId} preview={preview} />
+  const content = <EventDetailContent key={eventId} id={eventId} preview={preview} guest={guest} />
   return preview ? content : <EventsFeature>{content}</EventsFeature>
 }
 
-function EventDetailContent({ id, preview }: { id: string; preview: boolean }) {
+function EventDetailContent({ id, preview, guest }: { id: string; preview: boolean; guest: boolean }) {
   const [event, setEvent] = useState<LiveEvent | null>(null)
   const [failedImage, setFailedImage] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -116,7 +118,7 @@ function EventDetailContent({ id, preview }: { id: string; preview: boolean }) {
   
   const url = sourceLink(event?.source_url ?? null)
   return <>
-    {!preview && <Link className="ev-text-button" to={eventsPath}><Icon name="back" />Back to events</Link>}
+    {!preview && <Link className="ev-text-button" to={guest ? publicEventsPath : eventsPath}><Icon name="back" />Back to events</Link>}
     <Header title={preview ? 'Selected event' : 'Event details'} />
     {error ? <div role="alert"><p>{error}</p><Button onClick={() => setRetry(value => value + 1)}>Retry</Button></div> : !event ? <p role="status">Loading event…</p> : <article className="ev-event-detail">
       <EventPhoto event={event} detail onImageFailure={setFailedImage} />
