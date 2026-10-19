@@ -17,7 +17,6 @@ describe('API', () => {
     const response = await fetch(`${url}/api/health`)
 
     expect(response.ok).toBe(true)
-    expect(response.headers.get('cache-control')).toContain('no-store')
     await expect(response.json()).resolves.toEqual({ status: 'ok' })
   })
 

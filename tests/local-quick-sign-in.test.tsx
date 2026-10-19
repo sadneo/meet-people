@@ -1,11 +1,14 @@
-import { StrictMode } from 'react'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { StrictMode, type ReactNode } from 'react'
+import { MemoryRouter } from 'react-router'
+import { act, cleanup, fireEvent, render as rtlRender, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { EmailLinkSignIn } from '../src/auth/EmailLinkSignIn'
+const render = (ui: ReactNode) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>)
 
 const auth = vi.hoisted(() => ({
   signInAnonymously: vi.fn(),
   signInWithOtp: vi.fn(),
+  signInWithPassword: vi.fn(),
   configured: true,
   dev: true,
 }))
@@ -25,24 +28,27 @@ function host(hostname: string) {
 }
 
 beforeEach(() => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ error: 'Fixture not configured' }, { status: 503 })))
   auth.dev = true
   auth.configured = true
   auth.signInAnonymously.mockReset().mockResolvedValue({ error: null })
   auth.signInWithOtp.mockReset().mockResolvedValue({ error: null })
+  auth.signInWithPassword.mockReset().mockResolvedValue({ error: new Error('Fixture authentication unavailable') })
 })
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllEnvs() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals() })
 
-it.each(['localhost', '127.0.0.1'])('offers explicit real anonymous SDK sign-in only on dev %s', async hostname => {
+it.each(['localhost', '127.0.0.1'])('offers one-click development sign-in only on dev %s, without anonymous authentication', async hostname => {
   host(hostname)
   render(<StrictMode><EmailLinkSignIn /></StrictMode>)
   expect(auth.signInAnonymously).not.toHaveBeenCalled()
   expect(auth.signInWithOtp).not.toHaveBeenCalled()
-  expect(screen.getByText(/disposable.*anonymous.*session/i)).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Quick sign in (local only)' }))
-  await screen.findByText(/Signed in/)
-  expect(auth.signInAnonymously).toHaveBeenCalledExactlyOnceWith()
+  expect(screen.getByText(/operator-provisioned local development account/i)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in as development user', exact: true }))
+  await screen.findByRole('alert')
+  expect(screen.queryByLabelText('Password')).toBeNull()
+  expect(auth.signInAnonymously).not.toHaveBeenCalled()
   expect(auth.signInWithOtp).not.toHaveBeenCalled()
-  expect(screen.getByRole('status').textContent).toContain('Signed in')
+  expect(auth.signInWithPassword).not.toHaveBeenCalled()
 })
 
 it.each([
@@ -54,33 +60,28 @@ it.each([
   auth.dev = dev
   host(hostname)
   render(<EmailLinkSignIn />)
-  expect(screen.queryByRole('button', { name: /quick sign in/i })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Sign in as development user', exact: true })).toBeNull()
   expect(screen.queryByText(/disposable.*anonymous.*session/i)).toBeNull()
   expect(auth.signInAnonymously).not.toHaveBeenCalled()
   expect(screen.getByRole('button', { name: 'Send sign-in link' })).toBeTruthy()
 })
 
-it('announces pending state and prevents duplicate and competing email requests', async () => {
+it('a missing dedicated account never falls back to anonymous authentication or ordinary password mode', async () => {
   host('localhost')
-  let resolve!: (value: { error: null }) => void
-  auth.signInAnonymously.mockReturnValue(new Promise(done => { resolve = done }))
   render(<EmailLinkSignIn />)
-  const quick = screen.getByRole('button', { name: 'Quick sign in (local only)' })
-  const email = screen.getByRole('button', { name: 'Send sign-in link' })
-  act(() => { quick.click(); quick.click(); fireEvent.submit(email.closest('form')!) })
-  expect(screen.getByRole('status').textContent).toContain('Signing in')
-  expect((quick as HTMLButtonElement).disabled).toBe(true)
-  expect((email as HTMLButtonElement).disabled).toBe(true)
-  expect(auth.signInAnonymously).toHaveBeenCalledTimes(1)
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in as development user', exact: true }))
+  expect(screen.getByLabelText('Email')).toHaveProperty('value', '')
+  await screen.findByRole('alert')
+  expect(screen.queryByLabelText('Password')).toBeNull()
+  expect(auth.signInWithPassword).not.toHaveBeenCalled()
+  expect(auth.signInAnonymously).not.toHaveBeenCalled()
   expect(auth.signInWithOtp).not.toHaveBeenCalled()
-  await act(async () => resolve({ error: null }))
-  expect((email as HTMLButtonElement).disabled).toBe(false)
 })
 
 it('rechecks the environment before a stale quick sign-in button can call Auth', () => {
   host('localhost')
   render(<EmailLinkSignIn />)
-  const quick = screen.getByRole('button', { name: 'Quick sign in (local only)' })
+  const quick = screen.getByRole('button', { name: 'Sign in as development user', exact: true })
   auth.dev = false
   fireEvent.click(quick)
   auth.dev = true
@@ -90,22 +91,21 @@ it('rechecks the environment before a stale quick sign-in button can call Auth',
   expect(auth.signInWithOtp).not.toHaveBeenCalled()
 })
 
-it.each(['sdk-error', 'rejection'])('announces %s without fallback and preserves email sign-in', async failure => {
+it.each(['unavailable', 'rejection'])('announces development endpoint %s without fallback and preserves email sign-in', async failure => {
   host('localhost')
-  if (failure === 'sdk-error') auth.signInAnonymously.mockResolvedValue({ error: new Error('Anonymous sign-ins disabled') })
-  else auth.signInAnonymously.mockRejectedValue(new Error('Network failure'))
+  if (failure === 'rejection') vi.mocked(fetch).mockRejectedValue(new Error('Synthetic network failure'))
   render(<EmailLinkSignIn />)
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in as development user', exact: true }))
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'sam@example.test' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Quick sign in (local only)' }))
-  expect((await screen.findByRole('alert')).textContent).toMatch(/could not.*local.*sign.in/i)
+  expect((await screen.findByRole('alert')).textContent).toMatch(/development account is not ready/i)
   expect(auth.signInWithOtp).not.toHaveBeenCalled()
   expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('sam@example.test')
   fireEvent.click(screen.getByRole('button', { name: 'Send sign-in link' }))
   await screen.findByText('Check your email for a sign-in link.')
   expect(auth.signInWithOtp).toHaveBeenCalledExactlyOnceWith({
-    email: 'sam@example.test', options: { emailRedirectTo: 'http://localhost:3000/login' },
+    email: 'sam@example.test', options: { emailRedirectTo: 'http://localhost:3000/auth/callback?returnTo=%2Fsettings' },
   })
-  expect(auth.signInAnonymously).toHaveBeenCalledTimes(1)
+  expect(auth.signInAnonymously).not.toHaveBeenCalled()
 })
 
 it('prevents duplicate email and competing anonymous requests while email is pending', async () => {
@@ -115,7 +115,7 @@ it('prevents duplicate email and competing anonymous requests while email is pen
   render(<EmailLinkSignIn />)
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'sam@example.test' } })
   const email = screen.getByRole('button', { name: 'Send sign-in link' })
-  const quick = screen.getByRole('button', { name: 'Quick sign in (local only)' })
+  const quick = screen.getByRole('button', { name: 'Sign in as development user', exact: true })
   act(() => { fireEvent.submit(email.closest('form')!); fireEvent.submit(email.closest('form')!); quick.click() })
   expect(auth.signInWithOtp).toHaveBeenCalledTimes(1)
   expect(auth.signInAnonymously).not.toHaveBeenCalled()
@@ -129,7 +129,7 @@ it('discloses unavailable configuration and disables quick sign-in without calli
   auth.configured = false
   render(<EmailLinkSignIn />)
   expect(screen.getByRole('alert').textContent).toBe('Sign-in service is not configured.')
-  expect((screen.getByRole('button', { name: 'Quick sign in (local only)' }) as HTMLButtonElement).disabled).toBe(true)
-  expect(screen.getByText(/disposable.*anonymous.*session/i)).toBeTruthy()
+  expect((screen.getByRole('button', { name: 'Sign in as development user', exact: true }) as HTMLButtonElement).disabled).toBe(true)
+  expect(screen.getByText(/operator-provisioned local development account/i)).toBeTruthy()
   expect(auth.signInAnonymously).not.toHaveBeenCalled()
 })

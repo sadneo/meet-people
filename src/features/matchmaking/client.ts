@@ -2,6 +2,7 @@ import { type z } from 'zod'
 import { AccountSchema, SaveAccountSchema, type Account } from '../../../shared/account'
 import { JoinQueueSchema, QueueStatusSchema, MatchResultSchema, MatchingProfileSchema, ProfileResponseSchema, SavedProfileResponseSchema, MatchingErrorSchema, type MatchingMode, type MatchingProfile } from '../../../shared/matchmaking'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, EventCompatibilityResponseSchema, ListingIdSchema, ListingMatchmakingStatusSchema } from '../../../shared/matchmaking'
+import { AccountProfileSchema, AccountProfileResponseSchema, SavedAccountProfileResponseSchema, type AccountProfile } from '../../../shared/account-profile'
 import { apiUrl } from '../../platform/native'
 
 export class MatchmakingClientError extends Error {
@@ -30,6 +31,8 @@ export function matchmakingClient(token: string) {
     } finally { clearTimeout(timer) }
   }
   return {
+    accountProfile: () => request('account-profile', AccountProfileResponseSchema),
+    saveAccountProfile: (profile: AccountProfile) => request('account-profile', SavedAccountProfileResponseSchema, 'PUT', AccountProfileSchema.parse(profile)),
     account: () => request('account', AccountSchema),
     saveAccount: (account: Account) => request('account', AccountSchema, 'PUT', SaveAccountSchema.parse(account)),
     status: () => request('status', QueueStatusSchema),

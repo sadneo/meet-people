@@ -1,171 +1,120 @@
 # Accounts and authentication
 
-## Flow
+## Current product and source flow
 
-Authentication starts with email only. `POST /api/auth/email` validates the email
-and uses the server's service-role client to call `auth_email_exists`. Existing
-accounts proceed to password sign-in; new emails proceed to registration. Google
-is available at either step, including for Google-only accounts. Supabase still
-performs all password verification, registration, confirmation, OAuth and recovery.
-Only a valid session enters account loading/onboarding or the requested internal
-destination. Email/step navigation uses router history state; passwords stay in
-component memory and are cleared when the email changes. Recovery reuses the email.
+There is **no guest preview, skip or anonymous login**. Public login/register,
+callback and recovery routes sit outside the private shell. After verified Auth,
+`GET /api/matchmaking/account` supplies the unified document. Null/incomplete
+profiles require `/onboarding`; errors block with read-only retry/logout. Internal
+return path/query/hash is preserved and validated. `/complete-profile` is a legacy
+redirect. Native links and `/reset-password` use the same scrub-and-verify callback,
+not a second AuthScreen or automatic grant exchange. Google is not activated.
 
-### Email lookup security and privacy
+`/` and `/home` remain private product routes. Only `/welcome` and the separate
+legal routes are public marketing/legal pages; they never mount the private shell.
+The incoming public-root preview and email-existence/service-role lookup flow are
+not adopted. The existing verified email/password/link flow remains routed; incoming
+`AuthScreen` is not an alternate entry point. Any incoming API lookup source outside
+the nine-file resolution scope still requires parent security review/removal before
+this merge can be considered safe to run. No provider or schema activation is claimed.
 
-Automatic branching **reveals whether an email is registered**. This is an
-intentional product/privacy tradeoff; it cannot be eliminated while retaining
-account-existence branching. The response contains only a boolean, never user
-IDs, providers, passwords or profile data. Recovery messages remain non-enumerating.
+Four sequential saved chapters:
 
-The migration `20261016120000_auth_email_lookup.sql` is required. Its fixed-search-path
-function performs one exact email lookup (using the non-SSO email index), excludes
-deleted/anonymous accounts, and grants execution only to `service_role`, with
-`PUBLIC`, `anon` and `authenticated` explicitly revoked. No users are listed or
-enumerated in application code. Service credentials stay in the API environment.
-Missing keys/migrations and database failures fail closed; the UI never guesses
-that an email is new after a lookup failure. SAML SSO accounts are outside this
-app's supported email/Google provider flow.
+1. Explicit username and display name; bio/photo are optional, avatar starts null.
+2. At least three unique real interests, using shared chips/custom labels.
+3. At least one social intent.
+4. Valid birthdate, nonempty city/campus area, at least one valid weekly availability
+   window, explicit distance and group choices.
 
-The API accepts JSON only, rejects browser cross-site requests, returns no-store
-responses and generic errors, and bounds lookups to 10 attempts per socket IP
-and 1,000 total per ten-minute window. It does not trust `X-Forwarded-For`.
-These limits are in-memory and single-process: restarts reset them, and multiple
-replicas each have their own budget. Deploy shared gateway/WAF rate limiting and
-bot protection before scaling or exposing this endpoint to sustained automated
-abuse. Behind a proxy, socket-IP limits conservatively group all traffic from
-that proxy; configure client-IP limits at the trusted edge, not by trusting
-arbitrary forwarded headers in Express. Supabase's own Auth rate limits remain
-in effect for sign-in, registration and recovery, but do not protect this lookup.
-Do not log submitted emails or request bodies at the API or gateway.
+Each chapter requires unified PUT plus authoritative GET before advancing. Existing
+valid data maps to the first missing chapter; a fully valid saved account with no
+marker does not repeat onboarding. No prototype/email/metadata fields are imported
+or generated. No queue starts automatically. Photo uploads remain separate work.
 
-Supabase Auth supplies identity. After login, the app loads
-`GET /api/matchmaking/account` using the access token. New or incomplete
-accounts enter `/onboarding`; completed accounts return to their requested
-internal route. Each chapter saves before advancing. Refresh resumes the
-first unfinished chapter. Profile and settings edits use the same account.
+## One source and preserved boundaries
 
-`PUT /api/matchmaking/account` validates the account snapshot and calls
-`save_account` under the user's JWT. The RPC derives ownership from
-`auth.uid()` and atomically writes:
+`shared/account.ts` owns the document contract. `save_account` uses the verified
+user JWT/`auth.uid()` and, after approved reconciliation, transactionally coordinates:
 
-| Table | Data |
+| Storage | Ownership |
 | --- | --- |
-| `profiles` | Display name, username, bio, nullable avatar URL, area, birthdate |
-| `user_interests` | Interest labels |
-| `availability` | Weekly matching time windows |
-| `account_settings` | Private settings, social intent, time presets, distance/group preferences, completed chapters |
+| `account_profiles` | Canonical identity; existing namespace lock/projector retained |
+| `profiles` | Identity projection, birthdate and city for existing algorithms |
+| `user_interests` | Exact interest labels; embedding is optional derived data |
+| `availability` | Actual weekly windows, including custom/late times |
+| `account_settings` | Owner-private settings, social intent, distance/group and progress |
 
-Settings are readable only by their owner. Browser roles cannot directly
-write the private table. Public profiles retain their existing public-read
-policy. Signing out or changing accounts unmounts the old workspace; late
-responses cannot populate the next account. Failed saves retain the last
-confirmed data and show an error.
+Compatibility identity/preferences endpoints delegate to the unified writer, not
+parallel unsynchronized identity stores. Browser direct writes/internal primitive
+execution remain denied. No historical migrations, data or projector are removed.
+Profile alone edits display name/bio/location/birthdate; Profile and matching share
+interests/windows. Required minima survive editing. Settings owns downtime opt-in
+and explicit active-queue replacement consent. Live Dating remains disabled; its
+recommendation UI is local-only with no persistence or backend actions. Distance
+and group are stored preferences, not new matching/geolocation enforcement.
 
-Photos are optional and default to `null`, displayed as a silhouette.
-Users may set an HTTPS image URL in onboarding or profile editing. Google
-photos are not automatically imported. Upload/storage support is separate.
+Owner/token changes unmount old state and fence retained callbacks. Uncertain saves
+keep drafts and require read-only reconciliation, never automatic resubmission.
+Preflight rejects dirty-field baseline conflicts and merges independent fresh
+fields; this is **not** atomic cross-tab lost-update prevention. Readback accepts
+SQL ordering of exact interest sets/window tuples, but not missing or changed data.
+Same-owner matching refresh restores focus to the new Preferences opener.
 
-Availability presets populate campus-time windows: mornings 08:00–12:00,
-afternoons 12:00–17:00, evenings 17:00–21:00 daily, weekends 08:00–21:00
-Saturday/Sunday. Matchmaking preferences edit the underlying weekly windows.
-Profile edits preserve custom windows unless time presets change.
-Distance/group preferences are saved; they do not introduce new ranking
-rules or geolocation enforcement.
+## Source versus installation and live readiness
 
-Interest embedding is optional enrichment. Provider failure leaves the label
-saved with a null embedding rather than rolling back onboarding. Semantic
-matching still requires a configured provider; null embeddings do not claim
-semantic similarity. No automatic backfill is added.
+The merge source is not a running database installation. **Do not blindly apply
+pending migrations or run resets/auth provisioning to validate this integration.**
+The candidate needs upstream accounts schema/RPC creation before reconciliation;
+without it, default settings-table grants correctly trip the ACL gate. See
+[dev-account-reconciliation.md](dev-account-reconciliation.md) for both installation
+orders and parent-reported disposable network-none tests. Any running-DB application
+still requires explicit user approval.
 
-Guest preview remains available. Sample people, messaging, safety controls,
-plans, and community progression remain prototype features. Guest state is
-not imported into authenticated accounts. Profile, settings, interests,
-preferences, and onboarding progress are database-backed.
+Optional embedding policy preserves labels with NULL vectors when enrichment
+fails. Parent tested provider-RAISE behavior offline; no fake vectors, trigger bypass
+or claim of semantic matching readiness is made. Live provider availability and
+dedicated-account population remain unverified. The guarded one-click DEV account
+option is authentication only, not provisioning; see
+[development-onboarding.md](development-onboarding.md).
 
-## Local setup
+## Verification boundaries
 
-```bash
-pnpm supabase:start
-pnpm exec supabase migration up --local
-pnpm env:local
-pnpm dev
-```
+Source checks: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`,
+`git diff --check`. Parent owns isolated Playwright/screenshot review. Browser Auth
+coverage uses explicit mocked SDK/network fixtures, with no env/admin access or
+real account creation. `pnpm test:auth` and local Auth provisioning scripts perform
+real operations and are not source-only checks. API authorization/RLS remains
+server-owned; SPA gating does not protect static bundle downloads.
 
-After auth configuration changes, restart without resetting data:
+### Local Auth acceptance script
 
-```bash
-pnpm supabase:stop
-pnpm supabase:start
-```
+`scripts/test-local-auth.mjs` is a separately authorized **live local acceptance
+check**, not a unit test. It obtains local status through the existing wrapper,
+requires a plain HTTP `127.0.0.1` origin, and creates only two disposable users via
+signup, out-of-band local email confirmation and password login. Passwords and
+addresses are generated per run; credentials/tokens/provider diagnostics are not
+printed or embedded. It does not provision the dedicated development account.
 
-Email confirmation is enabled; passwords require eight characters.
-Local confirmation and recovery emails appear at
-[Mailpit](http://127.0.0.1:54324), not in external inboxes.
-An existing email-link account can use **Forgot your password?** to establish
-a password, then sign in with email/password.
+The first user saves four sequential chapters through `save_account`: identity;
+three unique interests; social intent; then birthdate, synthetic campus area, an
+actual availability window, distance and group. Each save (including a later
+profile/settings edit) is followed by independent `get_account` readback. Exact
+labels/window tuples are compared independent of SQL ordering, with no missing
+fields accepted. The script also checks own-settings readback, the second user's
+empty account and private-row isolation, denied direct settings writes, rejected
+skipped onboarding with unchanged state, anonymous denial, logout/password login,
+and recovery/password-change/password login with account preservation.
 
-## Google setup
+The `finally` block attempts deletion only for IDs returned by this run's signup
+calls. It attempts all recorded deletions even if one fails; cleanup failures are
+reported generically and suppress the success message. A server/network failure
+can still prevent deletion, so success is never claimed in that case. There is no
+user enumeration, bulk cleanup, schema change, environment/config rewrite or reset.
 
-Create a Google Cloud **Web application** OAuth client. Configure:
-
-| Setting | Local | Hosted |
-| --- | --- | --- |
-| JavaScript origin | `http://127.0.0.1:3000` | Your app origin |
-| Google redirect URI | `http://127.0.0.1:54321/auth/v1/callback` | Callback copied from Supabase's Google provider panel |
-
-Export these variables in the shell that starts local Supabase (or source
-them from an ignored secrets file):
-
-```bash
-export SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID='your-client-id'
-export SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET='your-client-secret'
-```
-
-Set `[auth.external.google].enabled = true` in `supabase/config.toml`, then
-restart the stack. Keep credentials out of `VITE_*` variables and git.
-Add test users to Google's consent screen while the OAuth app is in testing.
-
-For hosted Supabase, enable Google and enter the client ID/secret in
-**Authentication → Sign In / Providers → Google**. The app's
-`Continue with Google` button uses that provider configuration.
-
-## Hosted setup
-
-1. Apply the checked-in migrations to the intended Supabase project.
-2. Set browser URL/publishable key and API URL/publishable/service-role keys.
-3. Set the Site URL to your app origin; allow its `/auth/callback` redirects,
-   including the `returnTo` query string, and `/reset-password` URL with its
-   `returnTo` query string. Use
-   environment-specific allowlists. Google redirects to Supabase first,
-   then Supabase redirects to the app.
-4. Enable email confirmation and minimum password length eight.
-5. Configure custom SMTP for delivery to real inboxes.
-6. Configure the Google provider as above.
-7. Ensure static hosting rewrites app routes to `index.html` and forwards
-   `/api/*` to Express.
-
-Recovery emails return to `/reset-password`. The recovery session can set a
-new password before normal account/onboarding redirects resume. Supabase's
-browser session handling persists and refreshes tokens.
-
-## Verification
-
-```bash
-pnpm test:auth
-pnpm test tests/account.test.tsx
-pnpm test:e2e e2e/auth.spec.ts
-pnpm verify
-```
-
-The auth check creates disposable accounts, verifies password login/recovery,
-sequential onboarding, persistent edits, optional photos and private-data
-isolation, then deletes those accounts. The browser check reads ignored
-`.env.local` server credentials only in its test process, requires local
-Supabase, and checks real login, onboarding resume, profile/settings
-persistence, logout, and switching accounts. Google's complete round trip
-requires configured credentials and a manual check.
-
-Sources: [password auth](https://supabase.com/docs/guides/auth/passwords),
-[Google auth](https://supabase.com/docs/guides/auth/social-login/auth-google),
-[redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls).
+`tests/local-auth-script.test.ts` executes the script with mocked status/client
+boundaries, SQL-sorted synthetic readbacks and injected failures. These tests need
+no local services, credentials or real users. They do **not** establish live Auth,
+RPC/RLS installation, recovery delivery or optional-embedding/provider readiness.
+Real execution requires a separately approved local stack with the reconciled
+account contract and approved interest-trigger/provider behavior; no provider or
+trigger bypass is introduced by the script repair.

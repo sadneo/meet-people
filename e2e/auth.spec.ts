@@ -1,187 +1,139 @@
 import { test, expect } from '@playwright/test'
-import { createClient } from '@supabase/supabase-js'
-import { randomUUID } from 'node:crypto'
+import { emptyAccount, type Account } from '../shared/account'
+import { chooseDistanceAndGroup, saveInterestChapter, saveSocialChapter } from './onboarding-fixture'
+import { mockMatchingSession } from './matchmaking-fixture'
 
-try { process.loadEnvFile('.env.local') } catch { /* CI supplies environment directly. */ }
-const url = process.env.SUPABASE_URL
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-const local = Boolean(url && key && ['127.0.0.1', 'localhost'].includes(new URL(url).hostname))
-test.use({ actionTimeout: 10000, reducedMotion: 'reduce' })
-
+// Isolated source browser coverage only: no env files, admin client, account
+// creation, provider requests or database cleanup. The SDK module is intercepted.
 for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
-test(`new account onboarding, blank avatar, profile/settings persistence and account switching at ${viewport.width}px`, async ({ page }) => {
-  test.setTimeout(90000)
-  test.skip(!local, 'Requires local Supabase and ignored .env.local server credentials.')
-  await page.setViewportSize(viewport)
-  const admin = createClient(url!, key!, { auth: { persistSession: false, autoRefreshToken: false } })
-  const password = 'auth-browser-test-password'
-  const users: { id: string; email: string }[] = []
-  try {
-    for (let i = 0; i < 2; i++) {
-      const email = `browser-${randomUUID()}@example.test`
-      const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true })
-      if (error) throw error
-      users.push({ id: data.user.id, email })
+  test(`mocked authenticated four-chapter resume, profile/settings persistence and owner switching at ${viewport.width}px`, async ({ page }) => {
+    const accounts: Record<string, Account> = { first: structuredClone(emptyAccount), second: structuredClone(emptyAccount) }
+    const requests: { path: string; method: string; owner: string }[] = [], external: string[] = []
+    await page.route('**/*', route => {
+      const request = route.request(), url = new URL(request.url())
+      if (url.origin !== 'http://127.0.0.1:3194') { external.push(url.origin); return route.abort() }
+      if (!url.pathname.startsWith('/api/')) return route.continue()
+      const owner = request.headers().authorization?.replace('Bearer fixture-jwt-', '') ?? ''
+      if (!accounts[owner]) return route.fulfill({ status: 401, json: { code: 'auth', error: 'Fixture authentication required.' } })
+      requests.push({ path: url.pathname, method: request.method(), owner })
+      const account = accounts[owner]
+      if (url.pathname.endsWith('/account')) {
+        if (request.method() === 'PUT') accounts[owner] = request.postDataJSON()
+        return route.fulfill({ json: accounts[owner] })
+      }
+      if (url.pathname.endsWith('/account-profile')) {
+        if (request.method() === 'PUT') account.profile = { ...account.profile!, ...request.postDataJSON() }
+        const p = account.profile
+        return route.fulfill({ json: { profile: p ? { username: p.username, display_name: p.display_name, bio: p.bio, avatar_url: p.avatar_url } : null } })
+      }
+      if (url.pathname.endsWith('/profile')) {
+        if (request.method() === 'PUT') account.profile = request.postDataJSON()
+        return route.fulfill({ json: { profile: account.profile } })
+      }
+      if (url.pathname.endsWith('/notifications')) return route.fulfill({ json: { notifications: [], unreadCount: 0 } })
+      if (url.pathname.endsWith('/status')) return route.fulfill({ json: { mode: null } })
+      return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Unexpected fixture capability.' } })
+    })
+    await page.route('**/src/supabase.ts', route => route.fulfill({ contentType: 'application/javascript', body: `
+      // Test-only SDK persistence, never imported into the production application.
+      let session = JSON.parse(sessionStorage.getItem('fixture:auth-session') || 'null');
+      const listeners = new Set();
+      const emit = (event) => { sessionStorage.setItem('fixture:auth-session', JSON.stringify(session)); for (const callback of listeners) callback(event, session); };
+      export const supabase = { auth: {
+        onAuthStateChange(callback) { listeners.add(callback); queueMicrotask(() => { if (listeners.has(callback)) callback('INITIAL_SESSION', session); }); return { data: { subscription: { unsubscribe() { listeners.delete(callback); } } } }; },
+        signInWithPassword: async ({ email, password }) => {
+          const id = email === 'first@example.test' ? 'first' : email === 'second@example.test' ? 'second' : null;
+          if (!id || password !== 'Synthetic-password-1!') return { data: { session: null }, error: new Error('Fixture credentials rejected') };
+          session = { access_token: 'fixture-jwt-' + id, user: { id, email, is_anonymous: false, email_confirmed_at: '2026-10-01' } }; emit('SIGNED_IN'); return { data: { session }, error: null };
+        },
+        getUser: async () => ({ data: { user: session?.user ?? null }, error: null }),
+        getSession: async () => ({ data: { session } }),
+        signOut: async ({ scope }) => { if (scope !== 'local') throw new Error('Fixture expects local signout'); session = null; emit('SIGNED_OUT'); return { error: null }; }
+      } };
+    ` }))
+    await page.setViewportSize(viewport)
+    const login = async (owner: string) => {
+      await page.goto('/login'); await page.getByRole('button', { name: 'Use password', exact: true }).click()
+      await page.getByLabel('Email', { exact: true }).fill(`${owner}@example.test`)
+      await page.getByLabel('Password', { exact: true }).fill('Synthetic-password-1!')
+      await page.getByRole('button', { name: 'Sign in with password', exact: true }).click()
     }
-    const login = async (email: string) => {
-      await page.goto('/login')
-      await page.getByLabel('Email', { exact: true }).fill(email)
-      await page.getByRole('button', { name: 'Continue with email', exact: true }).click()
-      await page.getByLabel('Password', { exact: true }).fill(password)
-      await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-    }
-    await login(users[0].email)
+    await login('first')
     await expect(page).toHaveURL(/\/onboarding/)
-    await page.getByLabel('Display name').fill('My Student')
-    await page.getByLabel('A short bio').fill('My own bio')
-    await page.getByRole('button', { name: 'Complete chapter' }).click()
-    await expect(page.getByRole('heading', { name: 'Interests', exact: true })).toBeVisible()
-    // Reload mid-onboarding: saved steps and profile must be restored.
+    await expect(page.locator('.pt-app')).toHaveCount(0)
+    await page.getByLabel('Username', { exact: true }).fill('chosen-first')
+    await page.getByLabel('Display name', { exact: true }).fill('My Student')
+    await page.getByRole('button', { name: 'Save identity and continue', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Save interests and continue', exact: true })).toBeEnabled()
     await page.reload()
-    await expect(page.getByRole('heading', { name: 'Interests', exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Coffee', exact: true }).click()
-    await page.getByRole('button', { name: 'Complete chapter' }).click()
-    await page.getByRole('group', { name: 'Social intent', exact: true }).getByRole('button').first().click()
-    await page.getByRole('button', { name: 'Complete chapter' }).click()
-    await page.getByRole('button', { name: 'Afternoons', exact: true }).click()
-    await page.getByRole('button', { name: 'Complete chapter' }).click()
-    await expect(page.getByRole('heading', { name: 'Your Pebble is ready.' })).toBeVisible()
-    await page.getByRole('button', { name: 'Enter Pebble' }).click()
-    await page.goto('/profile')
-    await expect(page.getByRole('heading', { name: 'My Student', exact: true })).toBeVisible()
-    await expect(page.getByRole('img', { name: 'My Student profile picture not set' }).first()).toBeVisible()
-    await page.getByRole('button', { name: 'Edit profile' }).click()
-    const bio = page.getByRole('dialog').getByRole('textbox', { name: 'Bio', exact: true })
-    await expect(bio).toBeEnabled()
-    await expect(bio).toBeVisible()
-    await bio.fill('Persisted personal bio')
-    await page.getByRole('button', { name: 'Save profile', exact: true }).click()
-    await expect(page.getByRole('dialog')).not.toBeVisible()
+    await expect(page.getByLabel('Username', { exact: true })).toHaveCount(0)
+    expect(accounts.first.completed).toEqual([0])
+    await saveInterestChapter(page); await saveSocialChapter(page); await chooseDistanceAndGroup(page)
+    await page.getByLabel('Birthdate', { exact: true }).fill('2001-02-03')
+    await page.getByLabel('City or campus area', { exact: true }).fill('Chosen campus')
+    await page.getByRole('button', { name: 'Sunday late, not available', exact: true }).click()
+    await page.getByRole('button', { name: 'Finish onboarding', exact: true }).click()
+    await expect(page).toHaveURL('/settings')
+    expect(accounts.first.completed).toEqual([0, 1, 2, 3]); expect(accounts.first.profile!.avatar_url).toBeNull()
+    expect(requests.filter(request => request.method === 'PUT').map(request => request.path)).toEqual(Array(4).fill('/api/matchmaking/account'))
+    await page.goto('/profile'); await page.getByRole('button', { name: 'Edit profile', exact: true }).click()
+    const editor = page.getByRole('dialog', { name: 'Edit your profile', exact: true })
+    await editor.getByLabel('Bio', { exact: true }).fill('Persisted personal bio')
+    await editor.getByRole('button', { name: 'Save profile', exact: true }).click(); await expect(editor).toHaveCount(0)
     await page.goto('/settings')
-    await page.getByRole('switch', { name: 'Plan & message notifications' }).click()
-    await expect(page.getByRole('switch', { name: 'Plan & message notifications' })).not.toBeChecked()
-    await expect(page.getByRole('switch', { name: 'Plan & message notifications' })).toBeEnabled()
-    await page.reload()
-    await expect(page.getByRole('switch', { name: 'Plan & message notifications' })).not.toBeChecked()
-    await page.getByRole('button', { name: 'Account details' }).click()
-    await expect(page.getByRole('dialog')).toContainText(users[0].email)
-    await page.getByRole('button', { name: 'Close dialog' }).click()
-    const rows = await admin.from('profiles').select('display_name,bio,avatar_url').eq('id', users[0].id).single()
-    expect(rows.error).toBeNull()
-    expect(rows.data).toEqual({ display_name: 'My Student', bio: 'Persisted personal bio', avatar_url: null })
-    const settings = await admin.from('account_settings').select('completed,settings').eq('user_id', users[0].id).single()
-    expect(settings.data?.completed).toEqual([0, 1, 2, 3])
-    expect(settings.data?.settings.notifications).toBe(false)
+    const notifications = page.getByRole('switch', { name: 'Plan & message notifications', exact: true })
+    await notifications.click(); await expect(notifications).not.toBeChecked(); await expect(notifications).toBeEnabled()
+    await page.reload(); await expect(notifications).not.toBeChecked()
+    expect(accounts.first.profile!.bio).toBe('Persisted personal bio')
+    await page.getByRole('region', { name: 'Account actions' }).getByRole('button', { name: 'Manage', exact: true }).click()
+    await expect(page.getByLabel('Sign-in email', { exact: true })).toHaveValue('first@example.test')
+    await page.getByRole('button', { name: 'Close dialog', exact: true }).click()
     await page.getByRole('region', { name: 'Account actions' }).getByRole('button', { name: 'Log out', exact: true }).click()
-    await expect(page).toHaveURL(/\/login/)
-    await login(users[1].email)
-    await expect(page).toHaveURL(/\/onboarding/)
-    await expect(page.getByLabel('Display name')).toHaveValue('')
-    await expect(page.getByLabel('A short bio')).toHaveValue('')
-    await page.getByRole('button', { name: 'Log out', exact: true }).click()
-    await expect(page).toHaveURL(/\/login/)
-    await login(users[0].email)
-    await expect(page).toHaveURL(new URL('/', page.url()).href)
-    await page.goto('/profile')
-    await expect(page.getByRole('heading', { name: 'My Student', exact: true })).toBeVisible()
+    await expect(page).toHaveURL('/login?returnTo=%2Fsettings'); await expect(page.locator('.pt-app')).toHaveCount(0)
+    await login('second'); await expect(page).toHaveURL(/\/onboarding/)
+    await expect(page.getByLabel('Username', { exact: true })).toHaveValue('')
+    await expect(page.getByLabel('Display name', { exact: true })).toHaveValue('')
+    await expect(page.getByLabel('Bio', { exact: true })).toHaveValue('')
+    await page.getByRole('button', { name: 'Log out', exact: true }).click(); await expect(page).toHaveURL(/\/login/)
+    await login('first'); await expect(page).toHaveURL('/settings')
+    await page.goto('/profile'); await expect(page.getByRole('heading', { name: 'My Student', exact: true })).toBeVisible()
     await expect(page.getByText('Persisted personal bio', { exact: true })).toBeVisible()
-  } finally {
-    for (const user of users) { const { error } = await admin.auth.admin.deleteUser(user.id); expect(error).toBeNull() }
-  }
-})
+    expect(requests.some(request => /\/(queue|result)$/.test(request.path))).toBe(false)
+    expect(accounts.second).toEqual(emptyAccount); expect(external).toEqual([])
+  })
 }
 
-for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
-test(`progressive registration, retry, recovery and callback errors at ${viewport.width}px`, async ({ page }) => {
-  test.setTimeout(90000)
-  test.skip(!local, 'Requires local Supabase and ignored .env.local server credentials.')
-  await page.setViewportSize(viewport)
-  const admin = createClient(url!, key!, { auth: { persistSession: false, autoRefreshToken: false } })
-  const email = `progressive-${randomUUID()}@example.test`
-  const password = 'progressive-browser-password'
-  let userId: string | undefined
-  try {
-    await page.goto('/auth/callback?error=access_denied&error_description=technical-provider-error')
-    await expect(page.getByText(/Sign-in did not complete/)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeEnabled()
-    await expect(page.getByText('technical-provider-error')).toHaveCount(0)
-    await page.goto('/reset-password#error=access_denied&error_description=expired')
-    await expect(page.getByText(/recovery link is invalid or expired/)).toBeVisible()
-
-    await page.goto('/login?returnTo=%2Fevents')
-    await expect(page.getByLabel('Password', { exact: true })).toHaveCount(0)
-    await page.getByLabel('Email', { exact: true }).fill('invalid-email')
-    await page.getByRole('button', { name: 'Continue with email' }).click()
-    await expect(page.getByRole('heading', { name: 'Welcome to Pebble' })).toBeVisible()
-    await page.getByLabel('Email', { exact: true }).fill(email)
-    await page.getByLabel('Email', { exact: true }).press('Enter')
-    await expect(page.getByRole('heading', { name: 'Create your account' })).toBeFocused()
-    await expect(page.getByText(email, { exact: true })).toBeVisible()
-    await page.getByLabel('Password', { exact: true }).fill(password)
-    await page.getByRole('button', { name: 'Show password' }).click()
-    await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'text')
-    await page.getByRole('button', { name: 'Hide password' }).click()
-    await page.getByLabel('Confirm password').fill('different-password')
-    await page.getByLabel('Confirm password').press('Enter')
-    await expect(page.getByText(/Passwords do not match/)).toBeVisible()
-    await page.getByLabel('Confirm password').fill(password)
-    const signup = page.waitForResponse(response => response.url().includes('/auth/v1/signup') && response.request().method() === 'POST')
-    await page.getByLabel('Confirm password').press('Enter')
-    const registered = await (await signup).json()
-    userId = registered.id ?? registered.user?.id
-    expect(userId).toBeTruthy()
-    await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
-    await expect(page.getByText(/Check your email to confirm/)).toBeVisible()
-    await expect(page).toHaveURL(/\/login/)
-    const confirmed = await admin.auth.admin.updateUserById(userId!, { email_confirm: true })
-    expect(confirmed.error).toBeNull()
-
-    await page.getByRole('button', { name: 'Back to sign in' }).click()
-    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeFocused()
-    await page.getByLabel('Password', { exact: true }).fill('incorrect-password')
-    await page.getByLabel('Password', { exact: true }).press('Enter')
-    await expect(page.getByText('Incorrect email or password. Please try again.')).toBeVisible()
-    await expect(page.getByLabel('Password', { exact: true })).toHaveValue('incorrect-password')
-    await page.getByRole('button', { name: 'Change', exact: true }).click()
-    await expect(page.getByLabel('Email', { exact: true })).toHaveValue(email)
-    await page.goBack()
-    await expect(page.getByLabel('Password', { exact: true })).toHaveValue('incorrect-password')
-    await page.getByRole('link', { name: 'Forgot password?' }).click()
-    await expect(page.getByLabel('Email', { exact: true })).toHaveValue(email)
-    await page.getByLabel('Email', { exact: true }).press('Enter')
-    await expect(page.getByText(new RegExp(`If ${email} has an account`))).toBeVisible()
-
-    // Use a genuine recovery session, without relying on external email delivery.
-    const recovery = await admin.auth.admin.generateLink({ type: 'recovery', email })
-    expect(recovery.error).toBeNull()
-    const actor = createClient(url!, process.env.SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } })
-    const verified = await actor.auth.verifyOtp({ token_hash: recovery.data.properties.hashed_token, type: 'recovery' })
-    expect(verified.error).toBeNull()
-    const session = verified.data.session!
-    const hash = new URLSearchParams({ access_token: session.access_token, refresh_token: session.refresh_token, expires_in: String(session.expires_in), token_type: 'bearer', type: 'recovery' })
-    await page.goto(`/reset-password?returnTo=%2Fevents#${hash}`)
-    await page.getByLabel('Password', { exact: true }).fill(`${password}-updated`)
-    await page.getByLabel('Confirm password').fill(`${password}-updated`)
-    await page.getByLabel('Confirm password').press('Enter')
-    await expect(page.getByText('Your password has been updated.')).toBeVisible()
-    await page.getByRole('link', { name: 'Continue to Pebble' }).click()
-    await expect(page).toHaveURL(/\/onboarding\?returnTo=%2Fevents/)
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  } finally {
-    if (userId) expect((await admin.auth.admin.deleteUser(userId)).error).toBeNull()
+test('private Home cannot become a guest preview while marketing and legal stay public', async ({ page }) => {
+  await mockMatchingSession(page, false)
+  const apiRequests: string[] = []
+  await page.route('**/api/**', route => { apiRequests.push(route.request().url()); return route.abort() })
+  for (const path of ['/', '/home', '/matchmaking', '/messages', '/profile']) {
+    await page.goto(path)
+    await expect(page).toHaveURL(`/login?returnTo=${encodeURIComponent(path)}`)
+    await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toHaveCount(0)
   }
+  await page.goto('/welcome')
+  await expect(page.getByRole('heading', { name: 'Find a little time in common.' })).toBeVisible()
+  for (const path of ['/terms', '/privacy', '/cookies']) {
+    await page.goto(path)
+    await expect(page).toHaveURL(path)
+    await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toHaveCount(0)
+  }
+  expect(apiRequests).toEqual([])
 })
-}
 
-test('email entry remains usable across shell breakpoints and short screens', async ({ page }) => {
+test('verified password entry remains usable across shell breakpoints and short screens', async ({ page }) => {
+  await mockMatchingSession(page, false)
+  await page.route('**/api/**', route => route.abort())
   for (const viewport of [{ width: 320, height: 568 }, { width: 799, height: 600 }, { width: 800, height: 600 }, { width: 801, height: 600 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(viewport)
     await page.goto('/login')
-    await expect(page.getByRole('button', { name: 'Continue with email' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible()
+    await page.getByRole('button', { name: 'Use password', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Sign in with password', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Continue with Google' })).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.getByLabel('Email', { exact: true }).focus()
     await page.keyboard.press('Tab')
-    await expect(page.getByRole('button', { name: 'Continue with email' })).toBeFocused()
+    await expect(page.getByLabel('Password', { exact: true })).toBeFocused()
   }
 })

@@ -1,10 +1,27 @@
+import { createDatingLiveRouter } from './dating-live.js'
+import type { DatingEnable } from '../shared/dating-live.js'
+import { createProfilePhotoRouter } from './profile-photo.js'
+import type { ProfilePhotoWrite } from '../shared/profile-photo.js'
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { AccountSchema, SaveAccountSchema, type Account } from '../shared/account.js'
+import { AccountSchema, SaveAccountSchema, completedAccountChapters, type Account } from '../shared/account.js'
 import { isPublicSupabaseKey } from './env.js'
 import { JoinQueueSchema, MatchingProfileSchema, RawMatchSchema, RawQueueStatusSchema, type MatchingProfile } from '../shared/matchmaking.js'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, ListingIdSchema, ListingInterestRequestSchema, ListingMatchmakingStatusSchema, RawListingEventMatchesSchema } from '../shared/matchmaking.js'
+import { AccountProfileSchema, type AccountProfile } from '../shared/account-profile.js'
+import type { SaveProfileDetails } from '../shared/profile-details.js'
+import { createProfileDetailsRouter } from './profile-details.js'
+import type { SaveFriendsSearchPreferences } from '../shared/friends-search-preferences.js'
+import { createFriendsSearchPreferencesRouter } from './friends-search-preferences.js'
+import type { SaveDetailedSettings } from '../shared/detailed-settings.js'
+import { createDetailedSettingsRouter } from './detailed-settings.js'
+import type { SaveDatingAggregate } from '../shared/dating.js'
+import { createDatingRouter } from './dating.js'
+import { createSearchLocationsRouter } from './search-locations.js'
+import type { BrowserSearchLocation, ResolveSearchArea } from '../shared/search-locations.js'
+import type { SubmitSafetyReport } from '../shared/safety.js'
+import { createSafetyRouter } from './safety.js'
 
 type RpcResponse = { data: unknown; error: { code?: string } | null }
 export interface UserContextTransport {
@@ -16,8 +33,44 @@ export interface UserContextTransport {
     result(): PromiseLike<RpcResponse>
     profile(): PromiseLike<RpcResponse>
     save(profile: MatchingProfile): PromiseLike<RpcResponse>
+    accountProfile?(): PromiseLike<RpcResponse>
+    saveAccountProfile?(profile: AccountProfile): PromiseLike<RpcResponse>
     account?(): PromiseLike<RpcResponse>
     saveAccount?(account: Account): PromiseLike<RpcResponse>
+    profileDetails?(): PromiseLike<RpcResponse>
+    saveProfileDetails?(details: SaveProfileDetails): PromiseLike<RpcResponse>
+    friendsRuntime?(): PromiseLike<RpcResponse>
+    friendsSearchPreferences?(): PromiseLike<RpcResponse>
+    saveFriendsSearchPreferences?(preferences: SaveFriendsSearchPreferences): PromiseLike<RpcResponse>
+    detailedSettings?(): PromiseLike<RpcResponse>
+    saveDetailedSettings?(settings: SaveDetailedSettings): PromiseLike<RpcResponse>
+    datingRuntime?(): PromiseLike<RpcResponse>
+    setDatingEnabled?(value: DatingEnable): PromiseLike<RpcResponse>
+    datingCandidate?(excludedIds: string[]): PromiseLike<RpcResponse>
+    requestDatingConnection?(target: string): PromiseLike<RpcResponse>
+    datingAggregate?(): PromiseLike<RpcResponse>
+    saveDatingAggregate?(aggregate: SaveDatingAggregate): PromiseLike<RpcResponse>
+    profilePhotoReference?(owner: string): PromiseLike<RpcResponse>
+    profilePhotoState?(): PromiseLike<RpcResponse>
+    saveProfilePhoto?(value: ProfilePhotoWrite): PromiseLike<RpcResponse>
+    readProfilePhoto?(owner: string, revision: number): PromiseLike<RpcResponse>
+    searchPlaces?(query: string): PromiseLike<RpcResponse>
+    resolveSearchArea?(request: ResolveSearchArea): PromiseLike<RpcResponse>
+    browserSearchLocation?(request: BrowserSearchLocation): PromiseLike<RpcResponse>
+    searchLocationReceipt?(mode: 'friends' | 'dating', reference: string): PromiseLike<RpcResponse>
+    socialConnection?(target: string, action: 'get' | 'request' | 'accept' | 'remove'): PromiseLike<RpcResponse>
+    socialConnectionList?(): PromiseLike<RpcResponse>
+    socialInbox?(page: number): PromiseLike<RpcResponse>
+    socialHistory?(conversation: string, before: number | null, after: number | null): PromiseLike<RpcResponse>
+    socialSend?(conversation: string, body: string, requestId: string): PromiseLike<RpcResponse>
+    socialRead?(conversation: string, seq: number): PromiseLike<RpcResponse>
+    socialActivity?(): PromiseLike<RpcResponse>
+    ownerBlocklist?(): PromiseLike<RpcResponse>
+    ownerBlockState?(target: string): PromiseLike<RpcResponse>
+    blockOwnerTarget?(target: string): PromiseLike<RpcResponse>
+    unblockOwnerTarget?(target: string): PromiseLike<RpcResponse>
+    submitSafetyReport?(report: SubmitSafetyReport): PromiseLike<RpcResponse>
+    ownerSafetyReport?(requestId: string): PromiseLike<RpcResponse>
     listingStatus(listingId: string): PromiseLike<RpcResponse>
     listingInterest(listingId: string): PromiseLike<RpcResponse>
     listingWithdraw(listingId: string): PromiseLike<RpcResponse>
@@ -39,13 +92,42 @@ export function createUserContextTransport(config: { url: string; publicKey: str
     async verify(token) {
       const { data, error } = await verifier.auth.getUser(token)
       if (error && (!error.status || error.status >= 500)) throw new Error('Verification unavailable')
-      return !error && data.user && z.uuid().safeParse(data.user.id).success ? { id: data.user.id } : null
+      return !error && data.user && data.user.is_anonymous !== true && z.uuid().safeParse(data.user.id).success ? { id: data.user.id } : null
     },
     actor(token) {
       const client = createClient(config.url, config.publicKey, { ...options, global: { fetch: config.fetch, headers: { Authorization: `Bearer ${token}` } } })
       return {
         account: () => client.rpc('get_account'),
         saveAccount: account => client.rpc('save_account', { account_in: account }),
+        profileDetails: () => client.rpc('get_profile_details'),
+        saveProfileDetails: details => client.rpc('save_profile_details', { details_in: details }),
+        friendsSearchPreferences: () => client.rpc('get_friends_search_preferences'),
+        saveFriendsSearchPreferences: preferences => client.rpc('save_friends_search_preferences', { preferences_in: preferences }),
+        detailedSettings: () => client.rpc('get_detailed_settings'),
+        saveDetailedSettings: settings => client.rpc('save_detailed_settings', { settings_in: settings }),
+        datingAggregate: () => client.rpc('get_dating_preferences'),
+        saveDatingAggregate: aggregate => client.rpc('save_dating_preferences', { aggregate_in: aggregate }),
+        searchPlaces: query => client.rpc('search_location_places', { query_in: query }),
+        resolveSearchArea: request => client.rpc('resolve_search_area', { resolution_in: request }),
+        browserSearchLocation: request => client.rpc('issue_browser_search_location', { location_in: request }),
+        searchLocationReceipt: (mode, reference) => client.rpc('get_search_location_receipt', { mode_in: mode, reference_in: reference }),
+        socialConnection: (target, action) => client.rpc('social_connection', { target_in: target, action_in: action }),
+        socialConnectionList: () => client.rpc('social_connection_list'),
+        socialInbox: page => client.rpc('social_inbox', { page_in: page }),
+        socialHistory: (conversation, before, after) => client.rpc('social_history', { conversation_in: conversation, before_in: before, after_in: after }),
+        socialSend: (conversation, body, requestId) => client.rpc('social_send', { conversation_in: conversation, body_in: body, request_in: requestId }),
+        socialRead: (conversation, seq) => client.rpc('social_read', { conversation_in: conversation, seq_in: seq }),
+        socialActivity: () => client.rpc('social_activity'),
+        ownerBlocklist: () => client.rpc('get_owner_blocklist'),
+        ownerBlockState: target => client.rpc('get_owner_block_state', { target_in: target }),
+        blockOwnerTarget: target => client.rpc('block_owner_target', { target_in: target }),
+        unblockOwnerTarget: target => client.rpc('unblock_owner_target', { target_in: target }),
+        submitSafetyReport: report => client.rpc('submit_safety_report', { report_in: report }),
+        ownerSafetyReport: requestId => client.rpc('get_owner_safety_report', { request_id_in: requestId }),
+        friendsRuntime: () => client.rpc('get_friends_runtime'),
+        datingRuntime: () => client.rpc('get_dating_runtime'), setDatingEnabled: value => client.rpc('set_dating_enabled', { change_in: value }), datingCandidate: excludedIds => client.rpc('find_dating_candidate', { excluded_in: excludedIds }), requestDatingConnection: target => client.rpc('request_dating_connection', { target_in: target }),
+        profilePhotoReference: owner => client.rpc('get_profile_photo_reference', { owner_in: owner }),
+        profilePhotoState: () => client.rpc('get_profile_photo_state'), saveProfilePhoto: value => client.rpc('save_profile_photo', { photo_in: value }), readProfilePhoto: (owner, revision) => client.rpc('read_profile_photo', { owner_in: owner, revision_in: revision }),
         join: qtype => client.rpc('join_queue', { qtype }), leave: () => client.rpc('leave_queue'), status: () => client.rpc('get_queue_status'), result: () => client.rpc('get_queue_match'), profile: () => client.rpc('get_matchmaking_profile'), save: profile => client.rpc('save_matchmaking_profile', { profile_in: profile }),
         listingStatus: listingId => client.rpc('get_listing_matchmaking_status', { listing_id_in: listingId }),
         listingInterest: listingId => client.rpc('express_listing_matchmaking_interest', { listing_id_in: listingId }),
@@ -69,6 +151,9 @@ function unwrap(result: RpcResponse): unknown {
     if (['PGRST301', 'PGRST302', 'PGRST303', '28000'].includes(result.error.code ?? '')) throw new MatchingFailure(401, 'auth', 'Your session has expired. Sign in again.')
     if (['PGRST202', '42883'].includes(result.error.code ?? '')) throw new MatchingFailure(503, 'unavailable', 'Matching RPC is not available yet.')
     if (['22023', '23505', '23514'].includes(result.error.code ?? '')) throw new MatchingFailure(400, 'invalid', 'Check your profile fields and onboarding steps. No changes were saved.')
+    if (result.error.code === 'AQ409') throw new MatchingFailure(409, 'unavailable', 'Save Friends filters and choose a current search location before joining or checking.')
+    if (result.error.code === 'AQ503') throw new MatchingFailure(503, 'unavailable', 'Downtime results are not available yet. Active Friends matching remains separate.')
+    if (result.error.code === 'PF409') throw new MatchingFailure(409, 'unavailable', 'Complete your profile and enable discovery in Settings before joining.')
     if (result.error.code === 'PT404') throw new MatchingFailure(404, 'unavailable', 'This event is no longer available.')
     if (result.error.code === 'PT409') throw new MatchingFailure(409, 'unavailable', 'Event matching prerequisites are not met. Check your saved profile, event availability and consent for this queue or compatibility action.')
     throw new MatchingFailure(503, 'provider', 'Matching service failed. Please try again.')
@@ -96,6 +181,26 @@ export function createMatchmakingRouter(transport: UserContextTransport | null) 
     } catch (error) { next(error) }
   })
   const actor = (response: Response): ReturnType<UserContextTransport['actor']> => response.locals.actor
+  router.use('/profile-details', createProfileDetailsRouter())
+  router.use('/friends-search-preferences', createFriendsSearchPreferencesRouter())
+  router.use('/detailed-settings', createDetailedSettingsRouter())
+  router.use('/dating-preferences', createDatingRouter())
+  router.use('/dating', createDatingLiveRouter())
+  router.use('/safety', createSafetyRouter())
+  router.use('/search-locations', createSearchLocationsRouter())
+  router.use('/profile-photo', createProfilePhotoRouter())
+  const readAccount = async (response: Response) => {
+    const read = actor(response).account
+    if (!read) throw new MatchingFailure(503, 'unavailable', 'Unified account RPC is not available yet.')
+    return validate(AccountSchema, unwrap(await read()))
+  }
+  const writeAccount = async (response: Response, next: Account, previous: Account) => {
+    const save = actor(response).saveAccount
+    if (!save) throw new MatchingFailure(503, 'unavailable', 'Unified account RPC is not available yet.')
+    const before = completedAccountChapters(previous).length
+    if (completedAccountChapters(next).length < before || next.completed.length > before + 1) throw new MatchingFailure(400, 'invalid', 'Preserve required fields and complete chapters sequentially.')
+    return validate(AccountSchema, unwrap(await save(SaveAccountSchema.parse(next))))
+  }
   const status = async (response: Response) => {
     const [row] = validate(RawQueueStatusSchema, unwrap(await actor(response).status()))
     if (row.my_queue === 'dating') throw new MatchingFailure(409, 'unavailable', 'You are in a queue outside active or downtime matching.')
@@ -128,18 +233,35 @@ export function createMatchmakingRouter(transport: UserContextTransport | null) 
     const data = unwrap(await actor(response).profile())
     response.json({ profile: data === null ? null : validate(MatchingProfileSchema, data) })
   })
+  router.get('/account-profile', async (_request, response) => {
+    const account = await readAccount(response)
+    const profile = account.profile
+    response.json({ profile: profile ? AccountProfileSchema.parse({ username: profile.username, display_name: profile.display_name, bio: profile.bio, avatar_url: profile.avatar_url }) : null })
+  })
+  router.put('/account-profile', async (request, response) => {
+    const parsed = AccountProfileSchema.safeParse(request.body)
+    if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid account profile. No changes were saved.')
+    const previous = await readAccount(response)
+    if (previous.profile && previous.profile.username !== parsed.data.username) throw new MatchingFailure(409, 'unavailable', 'Reload your existing identity before editing.')
+    const saved = await writeAccount(response, { ...previous, profile: { ...(previous.profile ?? { birthdate: null, location_city: null, interests: [], availability: [] }), ...parsed.data }, completed: previous.completed.length ? previous.completed : [0] }, previous)
+    response.json({ profile: AccountProfileSchema.parse({ username: saved.profile!.username, display_name: saved.profile!.display_name, bio: saved.profile!.bio, avatar_url: saved.profile!.avatar_url }) })
+  })
   router.get('/account', async (_request, response) => {
-    response.json(validate(AccountSchema, unwrap(await actor(response).account!())))
+    response.json(await readAccount(response))
   })
   router.put('/account', async (request, response) => {
     const parsed = SaveAccountSchema.safeParse(request.body)
     if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid account data. No changes were saved.')
-    response.json(validate(AccountSchema, unwrap(await actor(response).saveAccount!(parsed.data))))
+    response.json(await writeAccount(response, parsed.data, await readAccount(response)))
   })
   router.put('/profile', async (request, response) => {
     const parsed = MatchingProfileSchema.safeParse(request.body)
     if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid matching profile. No changes were saved.')
-    response.json({ profile: validate(MatchingProfileSchema, unwrap(await actor(response).save(parsed.data))) })
+    const previous = await readAccount(response)
+    if (!previous.profile) throw new MatchingFailure(409, 'unavailable', 'Create your identity through onboarding first.')
+    if (['username', 'display_name', 'bio', 'avatar_url'].some(key => parsed.data[key as keyof MatchingProfile] !== previous.profile![key as keyof MatchingProfile])) throw new MatchingFailure(400, 'invalid', 'Edit identity on Profile, not matching preferences.')
+    const saved = await writeAccount(response, { ...previous, profile: parsed.data }, previous)
+    response.json({ profile: saved.profile })
   })
   const listingId = (request: Request) => {
     const parsed = ListingIdSchema.safeParse(request.params.listingId)

@@ -2,23 +2,23 @@ import { expect, test } from '@playwright/test'
 import { mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
 import { mkdir } from 'node:fs/promises'
 
-const shots = 'output/public-review'
+const shots = '/home/Danuu/.cache/pebble-reconcile-browser/public-review'
 test.beforeAll(async () => { await mkdir(shots, { recursive: true }) })
 
 for (const width of [320, 390, 800, 1280, 1440, 2560]) {
   test(`marketing and legal pages at ${width}px`, async ({ page }) => {
     await mockMatchingSession(page, false)
     await page.setViewportSize({ width, height: width < 801 ? 844 : 900 })
-    await page.goto('/')
+    await page.goto('/welcome')
     await expect(page.getByRole('heading', { name: 'Find a little time in common.' })).toBeVisible()
-    await expect(page.getByRole('navigation', { name: 'Public navigation' }).getByRole('link', { name: 'Get started' })).toHaveCount(0)
+    await expect(page.getByRole('navigation', { name: 'Public navigation' }).getByRole('link', { name: 'Get started' })).toHaveAttribute('href', '/register?returnTo=%2F')
     await expect(page.getByRole('main').getByRole('link', { name: 'Get started', exact: true })).toHaveAttribute('href', '/register?returnTo=%2F')
     await expect(page.getByRole('link', { name: 'Create an account', exact: true })).toHaveAttribute('href', '/register?returnTo=%2F')
     await expect(page.getByRole('main').getByRole('link', { name: 'Sign in', exact: true })).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Find your people', exact: true })).toHaveCount(0)
     await expect(page.getByRole('navigation', { name: 'Public navigation' }).getByRole('link', { name: 'Sign in', exact: true })).toHaveAttribute('href', '/login?returnTo=%2F')
     await expect(page.getByRole('navigation', { name: 'Footer navigation' }).getByRole('link', { name: 'Sign in', exact: true })).toHaveAttribute('href', '/login?returnTo=%2F')
-    await expect(page.getByRole('navigation', { name: 'Public navigation' }).getByRole('link', { name: 'Explore events' })).toHaveAttribute('href', '/events')
+    await expect(page.getByRole('navigation', { name: 'Public navigation' }).getByRole('link', { name: 'Explore events' })).toHaveAttribute('href', '/explore')
     await expect(page.getByRole('button', { name: 'Developer controls' })).toHaveCount(0)
     await expect(page.locator('.pt-bottom-nav')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -45,7 +45,7 @@ for (const width of [320, 390, 800, 1280, 1440, 2560]) {
 test('marketing signup/sign-in links hand off to existing auth without changing it', async ({ page }) => {
   await mockMatchingSession(page, false)
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
+  await page.goto('/welcome')
   await page.getByRole('link', { name: 'Skip to content' }).focus()
   await page.keyboard.press('Enter')
   await expect(page.getByRole('main')).toBeFocused()
@@ -53,12 +53,21 @@ test('marketing signup/sign-in links hand off to existing auth without changing 
   expect(animated).toBe(false)
   await page.getByRole('main').getByRole('link', { name: 'Get started', exact: true }).click()
   await expect(page).toHaveURL(/\/register\?returnTo=%2F$/)
-  await expect(page.getByRole('heading', { name: 'Welcome to Pebble', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Create an account', exact: true })).toBeVisible()
   await expect(page.getByLabel('Email', { exact: true })).toBeVisible()
-  await page.goto('/')
+  await page.goto('/welcome')
   await page.getByRole('navigation', { name: 'Public navigation' }).getByRole('link', { name: 'Sign in', exact: true }).click()
   await expect(page).toHaveURL(/\/login\?returnTo=%2F$/)
   await expect(page.getByLabel('Email', { exact: true })).toBeVisible()
+})
+
+test('signed-out root is product-private, not marketing', async ({ page }) => {
+  await mockMatchingSession(page, false)
+  await page.goto('/')
+  await expect(page).toHaveURL('/login?returnTo=%2F')
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Public navigation' })).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toHaveCount(0)
 })
 
 test('signed-in root retains Home, while legal pages bypass failed account loading', async ({ page }) => {

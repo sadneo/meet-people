@@ -1,5 +1,5 @@
 /* Namespaced and scoped so host app styles and navigation remain independent. */
-.ev-feature.ev-feature { --ev-ink: var(--pt-ink); --ev-muted: var(--pt-muted); --ev-green: var(--pt-green); --ev-pale: var(--pt-pale); --ev-cream: var(--pt-cream); --ev-line: var(--pt-line); --ev-coral: var(--pt-coral); color: var(--ev-ink); background: var(--ev-cream); font: 16px/1.5 'Trebuchet MS', 'Segoe UI', sans-serif; }
+.ev-feature.ev-feature { --ev-ink: var(--pt-ink); --ev-muted: var(--pt-muted); --ev-green: var(--pt-green); --ev-pale: var(--pt-pale); --ev-cream: var(--pt-cream); --ev-line: var(--pt-line); --ev-coral: var(--pt-coral); color: var(--ev-ink); background: var(--pt-page-canvas); font: 16px/1.5 'Trebuchet MS', 'Segoe UI', sans-serif; }
 .ev-feature.ev-feature *, .ev-feature.ev-feature *::before, .ev-feature.ev-feature *::after { box-sizing: border-box; }
 .ev-feature.ev-feature h1, .ev-feature.ev-feature h2, .ev-feature.ev-feature h3, .ev-feature.ev-feature p { margin: 0; }
 .ev-feature.ev-feature h1 { font-size: clamp(25px, 3vw, 30px); line-height: 1.2; letter-spacing: -.8px; font-weight: 700; outline: none; }

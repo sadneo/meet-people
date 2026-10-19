@@ -1,7 +1,9 @@
 .pt-pixel-art, .pt-pixel-art image { image-rendering: pixelated; }
 .pt-pixel-art { overflow: hidden; }
-.pt-expression-image { transition: opacity .16s ease; }
+.pt-expression-image.is-expression-change { animation: pt-expression-reveal .16s ease; }
+/* One image per expression: a reveal can never crossfade two faces. */
+@keyframes pt-expression-reveal { from { opacity: 0; } to { opacity: 1; } }
 .pt-app .pt-currency-art, .pebble-app .pt-currency-art { width: var(--pt-primary-icon-size, clamp(32px, 2.5vw, 36px)); height: var(--pt-primary-icon-size, clamp(32px, 2.5vw, 36px)); flex-shrink: 0; }
 .pt-app .pt-pebble-refresh > .pt-pixel-pebble { width: 125%; height: 100%; transform: none; animation: none; }
 .pt-app .pt-mascot-scene > .pt-pixel-pebble { width: calc(var(--pt-focus-size) * 1.25); max-width: 100%; height: var(--pt-focus-size); transform: none; }
-@media (prefers-reduced-motion: reduce) { .pt-expression-image { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .pt-expression-image.is-expression-change { animation: none; } }

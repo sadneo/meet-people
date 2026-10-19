@@ -1,7 +1,7 @@
 /* Feature-scoped styles: the scaffold and other teammates' pages stay untouched. */
 body:has(.pebble-app) { display: block; place-items: normal; }
 #root:has(> .pebble-app) { width: 100%; }
-.pebble-app { --ink: #364632; --muted: #75806c; --green: #506b44; --cream: #faf8f0; color: var(--ink); background: var(--cream); width: 100%; min-height: 100dvh; font-family: 'Trebuchet MS', 'Segoe UI', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+.pebble-app { --ink: #364632; --muted: #75806c; --green: #506b44; --cream: #faf8f0; color: var(--ink); background: var(--pt-page-canvas, #ffffff); width: 100%; min-height: 100dvh; font-family: 'Trebuchet MS', 'Segoe UI', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
 .pebble-app *, .pebble-app *::before, .pebble-app *::after { box-sizing: border-box; }
 .pebble-app button, .pebble-app a { -webkit-tap-highlight-color: transparent; }
 .pebble-app button { font: inherit; cursor: pointer; transition: background .2s, transform .2s, box-shadow .2s; }

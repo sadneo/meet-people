@@ -1,11 +1,12 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { developmentLoginPlugin } from './dev/development-login.js'
 
 const apiPort = process.env.API_PORT ?? 3001
 const proxy = { '/api': `http://127.0.0.1:${apiPort}` }
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), developmentLoginPlugin()],
   build: {
     outDir: 'dist/web',
   },

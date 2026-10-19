@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { browserProfile, mockMatchingSession } from './matchmaking-fixture'
+import { browserAccount, browserProfile, mockMatchingSession } from './matchmaking-fixture'
 
 const id = 'e0000000-0000-4000-8000-000000000001'
 const me = 'a0000000-0000-4000-8000-000000000001'
@@ -21,6 +21,7 @@ async function fixture(page: Page, signedIn = true) {
     const request = route.request(), path = new URL(request.url()).pathname
     state.paths.push(path)
     expect(request.headers().authorization).toBe('Bearer browser-user-jwt')
+    if (path.endsWith('/account')) return route.fulfill({ json: browserAccount() })
     if (path.endsWith('/profile')) { if (state.profileReadGate) await state.profileReadGate; return route.fulfill({ json: { profile: state.profile ? browserProfile : null } }) }
     if (path.endsWith('/notifications') || path.endsWith('/read')) {
       if (request.method() === 'GET' && state.feedReadGate) await state.feedReadGate

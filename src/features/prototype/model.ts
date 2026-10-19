@@ -60,7 +60,11 @@ export const times = [
   { id: '16:00', label: '4:00–4:45 PM', unavailable: [] },
   { id: '17:00', label: '5:00–5:45 PM', unavailable: ['aaron'] },
 ]
-export type Profile = { name: string; bio: string; photo: string; interests: string[]; intents: string[]; usual: string[]; distance: string; group: string }
+export const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const
+export const dayPeriods = ['morning', 'afternoon', 'evening'] as const
+export type WeeklyAvailabilityBlock = `${typeof weekdays[number]} ${typeof dayPeriods[number]}`
+// Editor-only session preference: separate from onboarding usual/matching fields.
+export type Profile = { name: string; bio: string; photo: string; interests: string[]; intents: string[]; usual: string[]; distance: string; group: string; weeklyAvailability?: WeeklyAvailabilityBlock[] }
 export type Draft = { when: string; date: string; customTime: string; vibe: string; distance: string; people: string[]; activity: string; time: string; note: string }
 export type Plan = Draft & { status: 'Confirmed' }
 export type State = { profile: Profile; draft: Draft; plan: Plan | null; completed: number[]; messages: Record<string, string[]>; blocked: string[]; settings: Record<string, boolean>; readChannels: string[]; community: Community }

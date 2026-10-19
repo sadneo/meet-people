@@ -30,3 +30,11 @@
 .pt-avatar-empty { display: inline-flex !important; align-items: center; justify-content: center; background: var(--color-surface); border: 1px solid var(--color-line); color: var(--color-muted); }
 .pt-avatar-empty svg { width: 50%; height: 50%; }
 .pt-account-error { padding: 16px; color: var(--color-ink); background: var(--color-surface); }
+
+/* Email-first entry only; private pages retain their white canvas. */
+.pt-access-root:has(.pt-auth-email-first) { background: #DDCABC; }
+.pt-auth-email-first { background: #DDCABC; }
+
+.pt-auth-email-first .pt-auth-form label { display: grid; gap: 8px; font-weight: 700; }
+.pt-auth-email-first .pt-auth-form input:not([hidden]) { box-sizing: border-box; width: 100%; min-width: 0; min-height: 48px; border: 1px solid var(--pt-line); border-radius: 10px; padding: 12px; background: var(--pt-surface); color: var(--pt-ink); font: inherit; }
+.pt-auth-email-first .pt-auth-home { display: block; text-align: center; }

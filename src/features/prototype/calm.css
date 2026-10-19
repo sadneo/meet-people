@@ -14,7 +14,7 @@
   --pt-focus-size: clamp(220px, min(26vw, 37dvh), 580px);
 }
 .pt-app :focus-visible { outline-color: var(--color-focus); }
-.pt-app .pt-app-header { min-height: var(--pt-header-height); border: 0; background: var(--pt-cream); padding-block: 12px; grid-template-columns: 1fr auto 1fr; }
+.pt-app .pt-app-header { min-height: var(--pt-header-height); border: 0; background: var(--pt-page-canvas); padding-block: 12px; grid-template-columns: 1fr auto 1fr; }
 .pt-app .pt-account-nav { justify-self: end; }
 .pt-app .pt-app-header .pt-brand { font-size: clamp(30px, 2.2vw, 42px); }
 .pt-app .pt-desktop-nav { gap: clamp(12px, 2vw, 44px); }
@@ -23,7 +23,7 @@
 .pt-app .pt-desktop-nav a > span, .pt-app .pt-bottom-nav a > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .pt-app .pt-desktop-nav a.is-active::after, .pt-app .pt-bottom-nav a.is-active::after { content: ''; position: absolute; width: 4px; height: 4px; border-radius: 50%; background: currentColor; bottom: 3px; }
 /* Unread messages or connection requests; distinct from the active tab's bottom dot. */
-.pt-app .pt-desktop-nav a > .pt-nav-activity, .pt-app .pt-bottom-nav a > .pt-nav-activity { position: absolute; top: 8px; left: calc(50% + 6px); width: 10px; height: 10px; border: 2px solid var(--pt-cream); border-radius: 50%; background: var(--pt-berry); }
+.pt-app .pt-desktop-nav a > .pt-nav-activity, .pt-app .pt-bottom-nav a > .pt-nav-activity { position: absolute; top: 8px; left: calc(50% + 6px); width: 10px; height: 10px; border: 2px solid var(--pt-page-canvas); border-radius: 50%; background: var(--pt-berry); }
 .pt-app .pt-app-header .pt-account-nav .pt-avatar { width: 44px; height: 44px; }
 .pt-icon-button { width: var(--pt-control-size); height: var(--pt-control-size); text-decoration: none; color: var(--pt-green); }
 .pt-icon-button > svg { width: 24px; height: 24px; }
@@ -82,7 +82,7 @@
 @media (max-width: 800px) {
   .pt-app { --pt-header-height: 0px; --pt-focus-size: clamp(180px, min(56vw, 34dvh), 360px); }
   .pt-app .pt-app-header { display: none; }
-  .pt-app .pt-bottom-nav { background: var(--pt-cream); border: 0; border-radius: 0; box-shadow: 0 -4px 20px #36463206; }
+  .pt-app .pt-bottom-nav { background: var(--pt-page-canvas); border: 0; border-radius: 0; box-shadow: 0 -4px 20px #36463206; }
   .pt-app .pt-bottom-nav a { position: relative; min-height: 54px; margin: 4px; }
   .pt-scene-home .pt-main { padding-bottom: var(--pt-navigation-clearance); }
   .pt-home-focus { min-height: calc(100dvh - var(--pt-navigation-clearance)); padding-bottom: 16px; }

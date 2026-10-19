@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { AccountBoundary } from '../src/auth/account'
 import { AuthScreen } from '../src/auth/AuthScreen'
 import { useAccount } from '../src/auth/account-context'
-import { emptyAccount } from '../shared/account'
+import { accountFixture, requiredPreferences } from './complete-profile-fixture'
 
 const auth = vi.hoisted(() => ({
   session: null as Session | null,
@@ -22,11 +22,8 @@ vi.mock('../src/supabase', () => ({ supabase: { auth: {
   signOut: auth.signOut,
 } } }))
 
-const account = {
-  ...emptyAccount, completed: [0, 1, 2, 3],
-  preferences: { ...emptyAccount.preferences, intents: ['Meet people'], usual: ['Evenings' as const] },
-  profile: { username: 'first', display_name: 'Private account', bio: 'My bio', birthdate: null, location_city: null, avatar_url: null, interests: ['Coffee'], availability: [] },
-}
+const account = accountFixture({ username: 'first', display_name: 'Private account', bio: 'My bio', avatar_url: null, ...requiredPreferences })
+
 function Workspace() {
   const state = useAccount()!
   return <><p>{state.account.profile?.display_name}</p><button onClick={() => void state.save(account)}>Save account</button></>

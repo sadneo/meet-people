@@ -1,7 +1,7 @@
-import { MatchingScreen } from '../matchmaking/MatchingScreen'
+import { MatchingViews } from '../matchmaking/MatchingViews'
 import './matchmaking.css'
 import './downtime-matchmaking.css'
 
 export default function DowntimeMatchmaking() {
-  return <MatchingScreen mode="downtime" />
+  return <MatchingViews mode="downtime" />
 }

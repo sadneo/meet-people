@@ -5,6 +5,7 @@ import { scenePaths, type Scene } from './model'
 import { Avatar, Brand, Icon } from './ui'
 import { useLogout } from '../../auth/useLogout'
 import { MatchingInbox } from '../matchmaking/MatchingInbox'
+import { isDatingView } from '../matchmaking/views'
 import { useMessagesActivity } from '../messaging/useMessagesActivity'
 
 const primaryTabs: { label: Scene; icon: string }[] = [
@@ -20,9 +21,10 @@ function Tab({ label, icon, active, activity = false }: { label: Scene; icon: st
 
 export function AppShell() {
   const { scene, state } = usePrototype()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const auth = useLogout()
-  const messagesActivity = useMessagesActivity()
+  const dating = isDatingView(pathname, search)
+  const messagesActivity = useMessagesActivity(!dating)
   const main = useRef<HTMLElement>(null)
   const account = useRef<HTMLDetailsElement>(null)
   const activeTab: Scene = scene === 'Community' ? 'Home' : scene === 'Event Detail' ? 'Events' : scene === 'Downtime Matchmaking' ? 'Matchmaking' : ['Free Time Match', 'Activities', 'Planning', 'Review', 'Confirmed', 'Connection'].includes(scene) ? 'Free Time' : scene === 'Chat' ? 'Messages' : ['Other User Profile', 'Settings'].includes(scene) ? 'Profile' : scene
@@ -31,7 +33,7 @@ export function AppShell() {
     if (account.current) account.current.open = false
     main.current?.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true })
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [pathname])
+  }, [pathname, search])
 
   useEffect(() => {
     const dismiss = (event: PointerEvent | KeyboardEvent) => {
@@ -66,7 +68,7 @@ export function AppShell() {
       </nav>
     </header>
     {auth.error && <p className="pt-logout-error" role="alert">{auth.error}</p>}
-    <MatchingInbox />
+    {!dating && <MatchingInbox />}
     <main ref={main} className="pt-main"><Outlet /></main>
     <nav className="pt-bottom-nav" aria-label="Primary navigation">{[...primaryTabs, { label: 'Profile' as Scene, icon: 'profile' }].map(tab => <Tab key={tab.label} {...tab} active={activeTab === tab.label} activity={tab.label === 'Messages' && messagesActivity} />)}</nav>
   </>
