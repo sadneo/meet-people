@@ -7,6 +7,16 @@
 - Docker-compatible container runtime (Docker or rootless Podman)
 - Nix users can install the declared development tools with `nix develop`.
 
+## Dating presentation override (2026-10-19)
+
+For the immediate presentation, Dating now shows the original **local photo demo**
+(Ari/Rowan/Noa), with undo, X, star and heart controls. Decisions are local only;
+they do not call the real Dating matcher or send requests. The page explicitly says
+“Local prototype recommendations — not live Dating matches.” The real Dating
+adapter/backend remains in source for later reconnection. The real Dating UI steps
+and acceptance evidence below describe the earlier integration, not the currently
+mounted Dating experience. Friends remains connected to its existing real flow.
+
 ## Current local demo: Friends and Dating
 
 This runbook describes the **existing, activated Arch demo**, last checked on
