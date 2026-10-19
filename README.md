@@ -184,6 +184,148 @@ weaken authorization to force a match. See [detailed acceptance and remaining li
 checks](docs/demo-matchmaking-readiness.md); its earlier chronological login notes
 are superseded by the current-login warning above.
 
+## Android Studio with the local backend and database
+
+This is the **Android Studio emulator** workflow on the same Arch PC. It uses the
+same activated local database and seeded accounts as the browser demo. Android
+Studio builds/runs the app; it does not start the API or database for you.
+
+### 1. Prepare Android Studio
+
+Install Android Studio and its Android SDK/emulator tools. Capacitor 8 requires
+Android Studio 2025.2.1 or newer; see the official
+[Capacitor environment requirements](https://capacitorjs.com/docs/getting-started/environment-setup).
+For this repository, install **Android SDK Platform 36** in **Tools → SDK Manager**
+and use **JDK 21** for Gradle (Settings → Build, Execution, Deployment → Build Tools
+→ Gradle → Gradle JDK). These match `android/variables.gradle` and
+`android/app/capacitor.build.gradle`. In **Tools → Device Manager**, create/start an
+Android virtual device; API 36 is suitable (the app minimum is API 24).
+
+### 2. Keep Supabase and the API running on the PC
+
+From the repository root, use separate terminals:
+
+```sh
+pnpm exec supabase start
+node scripts/start-local-demo-api.mjs
+```
+
+Use existing running instances if already started. The API uses the PC address
+`http://127.0.0.1:54321` for Supabase and listens on port3001. Do not change the
+server's Supabase URL to the emulator alias. The existing reviewed schema and
+operator/public-key configuration described above are prerequisites; a fresh
+Supabase start alone does not install the demo schema.
+
+Optionally prepare the presentation from another PC terminal:
+
+```sh
+pnpm demo:seed
+pnpm demo:queue --count 2
+```
+
+These remain host/operator commands. Do not run them inside the emulator.
+
+### 3. Build the Android web bundle and open Android Studio
+
+Build with emulator addresses, then sync the existing Android project:
+
+```sh
+VITE_SUPABASE_URL=http://10.0.2.2:54321 VITE_API_BASE_URL=http://10.0.2.2:3001 pnpm build:android
+pnpm exec cap open android
+```
+
+The build also needs this local project's **public**
+`VITE_SUPABASE_PUBLISHABLE_KEY`, as the browser build does. The command above assumes
+that public configuration is already available to the build. If missing, supply the
+local public anon/publishable key through your approved local configuration before
+building. Never substitute a service-role key or commit credentials. No key is
+included in these instructions.
+
+`pnpm build:android` runs the frontend/API typecheck, Vite's Android-mode web build
+into `dist/web`, then `cap sync android`. Sync copies the bundle and updates native
+plugin/configuration artifacts; review generated changes before committing them.
+It does not activate schema or start services. The shorter equivalent is
+`VITE_SUPABASE_URL=http://10.0.2.2:54321 VITE_API_BASE_URL=http://10.0.2.2:3001 pnpm android`,
+which builds, syncs and opens Studio in one command. See the
+[Capacitor CLI](https://capacitorjs.com/docs/cli) for the sync/open workflow.
+
+If automatic IDE launch fails, open Android Studio manually and choose **Open**:
+
+```text
+/home/Danuu/Projects/meet-people-worktrees/reconciled-ui-baseline/android
+```
+
+Allow Gradle sync to finish, select the **app** run configuration and your emulator,
+then click **Run ▶**. Initial SDK/Gradle dependency downloads may be required. The
+bundled app does not need the Vite web server on port3006. Backend and Supabase
+must stay running. Editing React/CSS or build-time URLs requires rebuilding,
+syncing, and rerunning; restarting the API alone does not update the installed UI.
+
+### Networking: use the address for the process making the request
+
+| Caller | API URL | Supabase URL |
+| --- | --- | --- |
+| PC browser at port3006 | Same-origin `/api`, proxied to `127.0.0.1:3001` | `http://127.0.0.1:54321` |
+| API process on PC | Listens on port3001 | `http://127.0.0.1:54321` |
+| Android Studio emulator, packaged app | `http://10.0.2.2:3001` | `http://10.0.2.2:54321` |
+
+Android documents `10.0.2.2` as the emulator's alias for the host loopback interface;
+`127.0.0.1` inside the emulator means the emulator itself. See
+[Android emulator network addresses](https://developer.android.com/studio/run/emulator-networking-address).
+Port3006 is a web-development proxy, not the packaged app's API endpoint. This
+alias does **not** work on a physical phone; a phone needs a separately configured
+USB port-forwarding or secured network path and a corresponding rebuild. This
+runbook does not expose services to Wi-Fi or modify firewall rules.
+
+The native WebView origin remains `https://localhost`, already allowed by the
+API CORS configuration. Current `capacitor.config.ts` permits local cleartext/mixed
+content for development; do not assume these local HTTP settings are suitable for
+production. Do not disable CORS or authorization to fix a connection error.
+
+### What currently blocks an Android sign-in demo
+
+- **The packaged build has no development-user button.** It uses a production
+  Vite build, so `import.meta.env.DEV` is false even when Android Studio runs its
+  debug APK. `pnpm build:android` does not create an authentication bypass.
+- **Ordinary email-first login currently calls the missing `/api/auth/email`
+  endpoint**, as explained in the browser runbook. Seeded accounts have real Auth
+  passwords, but their current native/browser login UI still needs repair and
+  end-to-end verification. Having the containers running does not resolve this.
+- **Native email callback wiring is incomplete.** `authRedirect` requests
+  `com.cse416.meetpeople://app/auth/callback`, but the current Android manifest has
+  no matching deep-link intent filter and the local Supabase redirect allowlist
+  lacks that scheme. Confirmation/recovery/OAuth return flows need reviewed native
+  and Auth configuration plus tests; Google is not activated. Password login does
+  not require a callback, but still has the email-first blocker above.
+
+You can launch/build the native UI using this workflow, but do not present native
+signed-in matchmaking as verified until those relevant gates are resolved and an
+actual emulator acceptance run passes. The verified Friends/Dating backend evidence
+is from local browser/real-Auth and integration tests, not an Android Studio run.
+
+### Troubleshooting and stopping
+
+- In the emulator browser, open `http://10.0.2.2:3001/api/health`. A health response
+  checks API reachability only, not Auth/database readiness. For Supabase, a request
+  to `http://10.0.2.2:54321/auth/v1/health` may require the public API key; an HTTP
+  response such as a missing-key error establishes reachability, not successful Auth.
+- If the app reports invalid browser configuration or an unavailable sign-in
+  service, check that **both** the public Supabase URL and public key were supplied
+  at build time, then rebuild/sync. Do not print keys in bug reports.
+- Use Android Studio **Logcat** and its Gradle sync/build output for native errors.
+  Keep tokens/passwords out of shared logs. A permission-denied Gradle wrapper
+  error may indicate the local executable bit; this worktree has an existing
+  unrelated `android/gradlew` mode change that the demo docs do not alter.
+- Stop the app/emulator with Android Studio. Keep API/Supabase running if the web
+  demo still needs them. Otherwise stop the API terminal with Ctrl+C and use normal
+  `pnpm supabase:stop` to stop local containers while retaining database data.
+  Do not use reset or volume deletion as shutdown steps.
+
+**Documentation verification:** commands/configuration were checked against source
+and official platform documentation. No Android build, Gradle download, emulator
+launch, Auth reconfiguration or service restart was executed for this documentation
+update.
+
 ## General development setup
 
 For dependencies on a fresh checkout, use `pnpm install --frozen-lockfile` (or enter
