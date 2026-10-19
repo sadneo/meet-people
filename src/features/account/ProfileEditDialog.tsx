@@ -1,3 +1,4 @@
+import { calculatedAge, todayDate } from './profile-rules'
 import { useEffect, useId, useRef, useState } from 'react'
 import { AccountProfileSchema } from '../../../shared/account-profile'
 import { ReadyPreferencesSchema, readinessMessage } from '../../../shared/profile-readiness'
@@ -14,13 +15,16 @@ export function ProfileEditDialog({ data, close }: { data: ReturnType<typeof use
   const [saving, setSaving] = useState(false), [validation, setValidation] = useState('')
   const [identitySaved, setIdentitySaved] = useState(false)
   useEffect(() => {
-    const element = dialog.current!, opener = document.activeElement
+    const element = dialog.current!, opener = document.activeElement, overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     element.showModal()
-    return () => { element.close(); if (opener instanceof HTMLElement && opener.isConnected) opener.focus() }
+    element.querySelector<HTMLInputElement>('input')?.focus()
+    return () => { element.close(); document.body.style.overflow = overflow; if (opener instanceof HTMLElement && opener.isConnected) opener.focus() }
   }, [])
   const blocked = saving || data.busy || !data.canWrite
   async function save() {
     if (blocked || pending.current || !data.account || !data.profile) return
+    if (calculatedAge(birthdate) === null || birthdate > todayDate()) { setValidation('Enter a valid birthdate that is not in the future.'); return }
     const identity = AccountProfileSchema.safeParse({ ...data.account, display_name: name.trim(), bio: bio || null })
     const profile = ReadyPreferencesSchema.safeParse({ ...data.profile, birthdate: birthdate || null, location_city: city.trim() || null })
     if (!identity.success || !profile.success) { setValidation(!identity.success ? 'Add a display name of up to 120 characters and a bio of up to 1000 characters.' : readinessMessage); return }
@@ -43,9 +47,9 @@ export function ProfileEditDialog({ data, close }: { data: ReturnType<typeof use
     <form aria-label="Edit profile details" onSubmit={event => { event.preventDefault(); void save() }}>
       <div className="account-edit-fields">
         <p className="account-edit-description">These details belong to your profile across all matching modes.</p>
-        <label htmlFor={`${id}-name`}>Display name<input id={`${id}-name`} autoFocus required maxLength={120} disabled={blocked} value={name} onChange={event => setName(event.target.value)} /></label>
+        <label htmlFor={`${id}-name`}>Display name<input id={`${id}-name`} required maxLength={120} disabled={blocked} value={name} onChange={event => setName(event.target.value)} /></label>
         <label htmlFor={`${id}-bio`}>Bio<textarea id={`${id}-bio`} aria-label="Bio" maxLength={1000} disabled={blocked} value={bio} onChange={event => setBio(event.target.value)} /></label>
-        <div className="account-edit-fact-row"><label htmlFor={`${id}-birthdate`}>Birthdate · not public<input id={`${id}-birthdate`} aria-label="Birthdate" type="date" required disabled={blocked} value={birthdate} onChange={event => setBirthdate(event.target.value)} /></label><label htmlFor={`${id}-city`}>Home city / campus<input id={`${id}-city`} aria-label="City or campus area" required maxLength={120} disabled={blocked} value={city} onChange={event => setCity(event.target.value)} /></label></div>
+        <div className="account-edit-fact-row"><label htmlFor={`${id}-birthdate`}>Birthdate · not public<input id={`${id}-birthdate`} aria-label="Birthdate" type="date" max={todayDate()} required disabled={blocked} value={birthdate} onChange={event => setBirthdate(event.target.value)} /></label><label htmlFor={`${id}-city`}>Home city / campus<input id={`${id}-city`} aria-label="City or campus area" required maxLength={120} disabled={blocked} value={city} onChange={event => setCity(event.target.value)} /></label></div>
         <p className="account-edit-note">Your birthdate stays private. Only your age appears on your profile.</p>
         {data.loading && <p role="status">Reloading shared profile… Your draft is kept.</p>}
         {saving && <p role="status">Saving profile…</p>}

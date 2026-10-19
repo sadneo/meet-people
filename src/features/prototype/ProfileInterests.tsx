@@ -1,9 +1,9 @@
 import { useId, useState } from 'react'
-import { interests } from './model'
+import { globalInterestChoices as interests, interestLimit, interestLabelLimit } from '../account/global-interests'
 import { Button, Icon } from './ui'
 
-export const PROFILE_INTEREST_LIMIT = 30
-const LABEL_LIMIT = 120
+export const PROFILE_INTEREST_LIMIT = interestLimit
+const LABEL_LIMIT = interestLabelLimit
 
 export function ProfileInterests({ values, onChange, disabled = false }: { values: string[]; onChange: (values: string[]) => void; disabled?: boolean }) {
   const [draft, setDraft] = useState('')

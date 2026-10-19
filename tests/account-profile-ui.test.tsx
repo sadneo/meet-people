@@ -38,7 +38,7 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
 const mount = (path = '/profile') => render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
-const save = () => screen.getByRole('button', { name: 'Save preferences' }) as HTMLButtonElement
+const save = () => screen.getByRole('button', { name: 'Apply filter preview' }) as HTMLButtonElement
 async function preferences() {
   fireEvent.click(await screen.findByRole('button', { name: 'Preferences' }))
   await waitFor(() => expect(screen.queryByText('Checking saved identity…')).toBeNull())
@@ -97,14 +97,14 @@ for (const canonical of ['available', 'missing', 'unavailable']) {
       return
     }
     await preferences()
-    await screen.findByText(/Using your saved account identity/)
+    await screen.findByText(/Preview for this visit/)
     for (const label of ['Username', 'Display name', 'Bio', 'Avatar URL (HTTPS, optional)']) expect(screen.queryByLabelText(label)).toBeNull()
-    expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'Profile', exact: true }).getAttribute('href')).toBe('/profile')
+    expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'Edit your home area on Profile', exact: true }).getAttribute('href')).toBe('/profile')
     expect(screen.queryByLabelText('City or campus area')).toBeNull()
     expect(screen.queryByLabelText('Birthdate (optional)')).toBeNull()
     fireEvent.click(save())
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    expect(writes).toEqual([{ path: '/api/matchmaking/profile', body: { ...legacy, ...account } }])
+    expect(writes).toEqual([])
   })
 }
 

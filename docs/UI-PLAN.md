@@ -16,7 +16,7 @@ in-app proposal inbox; see `docs/event-group-queue.md` for the proposed parent S
 contracts and disabled worker. No Company/compatibility consent is reused.
 `docs/DESIGN.md` is the product-design authority. `--pt-page-canvas` is white
 (#ffffff) on auth, Home, Dating, Profile, Settings, Events, Messages, public/legal
-and supporting pages. Friends matching retains its exact dark-forest exception.
+and supporting pages. Friends uses its approved light #FAFBF7 canvas, white panels and original sand scene.
 Standard desktop header and compact bottom navigation are white too, including
 above/below Friends. Forest icons/text, pale-green selected tabs, active dots,
 focus and target sizes stay unchanged. The #DDCABC cream token stays on existing
@@ -176,3 +176,16 @@ older `src/design-system/AppShell.tsx` is not used by the current routes.
    targets, and horizontal overflow.
 5. Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, and relevant
    browser tests.
+
+## Profile / Settings / matchmaking frontend handoff
+
+The corrected product rules and implemented surfaces are tracked in
+`FRONTEND-READINESS-HANDOFF.md`. Shared interests/week remain canonical; active
+priority disables downtime. Optional owner facts now use their versioned resource
+only after authenticated capability readback; otherwise they remain unavailable.
+Detailed Settings choices now use their versioned owner resource after authenticated
+capability/readback; saved preferences do not prove delivery or live discovery.
+Unsupported filters and picture upload remain React-memory previews. Numeric mode filters and temporary
+search areas are independent from home/profile data. One cream/sage preferences
+sheet supports mobile drag dismissal, native dropdowns and independent age thumbs.
+Do not add API/storage writes to preview fields without their own contracts.

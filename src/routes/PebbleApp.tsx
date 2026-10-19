@@ -1,3 +1,4 @@
+import { AccountUiPreviewProvider } from '../features/account/AccountUiPreview'
 import { useEffect, useReducer, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router'
 import { PrototypeContext, usePrototype } from '../features/prototype/context'
@@ -17,7 +18,8 @@ import { profileToAccount, accountToProfile } from '../auth/profile'
 import '../auth/account.css'
 
 export default function PebbleApp() {
-  return <PebbleWorkspace />
+  const account = useAccount()
+  return <AccountUiPreviewProvider key={account?.session?.user.id ?? 'guest'}><PebbleWorkspace /></AccountUiPreviewProvider>
 }
 
 function PebbleWorkspace() {

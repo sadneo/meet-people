@@ -1,3 +1,7 @@
+import { globalInterestChoices, interestAdditionProblem } from './global-interests'
+import { ProfileDetails } from './ProfileDetails'
+import { useAccountUiPreview } from './account-ui-preview-context'
+import { calculatedAge } from './profile-rules'
 import { useId, useState } from 'react'
 import { Link } from 'react-router'
 import type { MatchingProfile } from '../../../shared/matchmaking'
@@ -8,19 +12,11 @@ import type { useSharedUserProfile } from './useSharedUserProfile'
 import { ProfileExactAvailability } from './ProfileExactAvailability'
 import './profile-handoff.css'
 
-const interestOptions = ['Coffee', 'Art', 'Music', 'Outdoors', 'Gaming', 'Food', 'Photography', 'Movies', 'Study', 'Fitness', 'Sports']
+const interestOptions = globalInterestChoices
 const art = '/prototype/account/pebble-companion.png'
 
 export function ProfilePebble({ className = '' }: { className?: string }) {
   return <img className={`account-pixel ${className}`} src={art} alt="" aria-hidden="true" />
-}
-
-// Only derive age for display; never render the private birthdate into the page.
-function profileAge(birthdate: string | null | undefined, now = new Date()) {
-  if (!birthdate) return null
-  const [year, month, day] = birthdate.split('-').map(Number)
-  if (!year || !month || !day) return null
-  return now.getFullYear() - year - (now.getMonth() + 1 < month || (now.getMonth() + 1 === month && now.getDate() < day) ? 1 : 0)
 }
 
 function UsualPreferences({ data }: { data: ReturnType<typeof useSharedUserProfile> }) {
@@ -44,16 +40,15 @@ function UsualPreferences({ data }: { data: ReturnType<typeof useSharedUserProfi
     }
   }
   function add() {
-    const value = tag.trim().replace(/\s+/g, ' ')
-    if (!value || value.length > 120) { setProblem('Use an interest of 1–120 characters.'); return }
-    if (selected.some(item => item.toLowerCase() === value.toLowerCase())) { setProblem('That interest is already selected.'); return }
-    if (selected.length >= 30) { setProblem('Choose up to 30 interests.'); return }
+    const value = tag.trim()
+    const issue = interestAdditionProblem(value, selected)
+    if (issue) { setProblem(issue); return }
     setInterests([...selected, value]); setTag(''); setProblem('')
   }
   return <>
     <section className="account-panel account-usual-interests" aria-labelledby={`${id}-interests`}>
       <header className="account-panel-head"><h2 id={`${id}-interests`}>Your kind of things.</h2><span className="account-scope">Shared</span></header>
-      <p className="account-hint">Your usual interests. Pick what feels like you.</p>
+      <p className="account-hint">Shared with matchmaking. Changes here update your interests there too.</p>
       <div className="account-chips" role="group" aria-label="Usual interests">{choices.map(option => {
         const on = selected.includes(option)
         return <button type="button" key={option} aria-label={option} disabled={disabled || (!on && selected.length >= 30)} aria-pressed={on} onClick={() => { setInterests(on ? selected.filter(item => item !== option) : [...selected, option]); setProblem('') }}>{option}{on && <span aria-hidden="true">✓</span>}</button>
@@ -64,11 +59,11 @@ function UsualPreferences({ data }: { data: ReturnType<typeof useSharedUserProfi
     </section>
     <section className="account-panel account-usual-week" aria-label="Your usual week">
       <header className="account-panel-head"><h2>Make a little time.</h2><div className="account-week-tools"><span className="account-scope">Your usual week</span><button className="account-text-action" type="button" aria-label="Clear usual availability" disabled={disabled || !(availability ?? profile.availability).length} onClick={() => { setAvailability([]); setProblem('') }}>Clear</button></div></header>
-      <p className="account-hint">Make room for coffee, a walk, or whatever comes next.</p>
+      <p className="account-hint">Your shared week for Profile and Friends. Changes here update matchmaking too.</p>
       <FriendsAvailability values={availability ?? profile.availability} onChange={value => { setAvailability(value); setProblem('') }} disabled={disabled} />
       {availability !== null && <div className="account-save-row"><span>Unsaved changes</span><button className="account-secondary" type="button" disabled={data.busy} onClick={() => { setAvailability(null); setProblem('') }}>Cancel availability</button><button className="account-primary" type="button" disabled={disabled} onClick={() => void save('availability')}>Save usual availability</button></div>}
       <ProfileExactAvailability values={availability ?? profile.availability} disabled={disabled} onChange={value => { setAvailability(value); setProblem('') }} />
-      <p className="account-caption">{(availability ?? profile.availability).length} saved time {(availability ?? profile.availability).length === 1 ? 'window' : 'windows'} · New York time · Striped = partial. Expand exact time windows to edit custom times.</p>
+      <p className="account-caption">{(availability ?? profile.availability).length} {availability === null ? 'saved' : 'draft'} time {(availability ?? profile.availability).length === 1 ? 'window' : 'windows'} · New York time · Striped = partial. Expand exact time windows to edit custom times.</p>
     </section>
     {problem && <p className="account-inline-error" role="alert">{problem}</p>}
   </>
@@ -77,7 +72,9 @@ function UsualPreferences({ data }: { data: ReturnType<typeof useSharedUserProfi
 type Plan = { title: string; when: string; open: () => void } | null
 export function OwnerProfile({ data, ready, signedIn, edit, plan, inactive = false }: { inactive?: boolean; data: ReturnType<typeof useSharedUserProfile>; ready: boolean; signedIn: boolean; edit: () => void; plan: Plan }) {
   const identity = data.account ?? data.profile
-  const age = profileAge(data.profile?.birthdate)
+  const age = calculatedAge(data.profile?.birthdate)
+  const preview = useAccountUiPreview()
+  const picture = preview.picture === undefined ? identity?.avatar_url ?? null : preview.picture
   const completion = [
     { label: 'Basic profile', done: !!identity?.display_name.trim() },
     { label: 'Interests', done: (data.profile?.interests.length ?? 0) >= 3 },
@@ -88,7 +85,7 @@ export function OwnerProfile({ data, ready, signedIn, edit, plan, inactive = fal
     <section className="account-identity" aria-label="Your profile">
       <img className="account-cover" src="/prototype/account/profile-cafe.jpg" alt="A warm, welcoming café" />
       <div className="account-identity-body">
-        {identity?.avatar_url ? <img className="account-portrait" src={identity.avatar_url} alt={identity.display_name} referrerPolicy="no-referrer" /> : <span className="account-portrait account-avatar-placeholder" role="img" aria-label="Profile picture not set"><Icon name="profile" size={36} /></span>}
+        {picture ? <img className="account-portrait" src={picture} alt={identity?.display_name ?? 'Your picture'} referrerPolicy="no-referrer" /> : <span className="account-portrait account-avatar-placeholder" role="img" aria-label="Profile picture not set"><Icon name="profile" size={36} /></span>}
         <Button secondary className="account-edit" disabled={!ready || !signedIn || data.loading} onClick={edit}>Edit profile<Icon name="edit" size={13} /></Button>
         <h1 tabIndex={-1} aria-label={identity?.display_name ?? 'Your profile'}>{identity?.display_name ?? 'Your profile'}{age !== null && <span className="account-age" aria-label={`Age ${age}`}>{age}</span>}</h1>
         <p className="account-city"><Icon name="pin" size={12} />{data.profile?.location_city || 'Campus area not provided.'}</p>
@@ -103,6 +100,7 @@ export function OwnerProfile({ data, ready, signedIn, edit, plan, inactive = fal
         <dl><div><dt>Home base</dt><dd>{data.profile?.location_city || 'Not added yet'}</dd></div><div><dt>Age</dt><dd>{age ?? 'Not added yet'}</dd></div><div><dt>Usual week</dt><dd>{data.profile ? `${data.profile.availability.length} saved ${data.profile.availability.length === 1 ? 'window' : 'windows'}` : 'Not added yet'}</dd></div><div><dt>Profile</dt><dd>{identity?.username ? `@${identity.username}` : 'Not added yet'}</dd></div></dl>
       </section>
       <UsualPreferences data={data} />
+      {data.account && data.profile && <ProfileDetails name={data.account.display_name} bio={data.account.bio} city={data.profile.location_city} age={age} picture={picture} />}
       <section className="account-panel account-plans" aria-labelledby="account-plans-title">
         <header className="account-panel-head"><h2 id="account-plans-title">Something to look forward to.</h2></header>
         {plan ? <button type="button" className="account-plan" onClick={plan.open}><Icon name="events" /><span><strong>{plan.title}</strong><small>{plan.when} · local plan</small></span><Icon name="chevron" /></button> : <div className="account-plan-empty"><ProfilePebble /><div><h3>Room for a good plan.</h3><p>Your next shared coffee, walk, or little adventure starts with a hello.</p></div><Link className="account-secondary" to="/matchmaking">Find your people<Icon name="arrow" size={14} /></Link></div>}

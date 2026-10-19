@@ -71,8 +71,10 @@ it('successful null allows explicit first identity, GET readback, then first sha
   expect(writes()[1]).toEqual({ path: '/api/matchmaking/profile', method: 'PUT', body: { ...identity, birthdate: '2001-02-03', location_city: 'Chosen campus', interests: ['Music', 'Coffee', 'Art'], availability: [{ dow: 0, start_time: '21:00:00', end_time: '24:00:00' }] } })
   expect(calls.at(-1)).toMatchObject({ path: '/api/matchmaking/profile', method: 'GET' })
   fireEvent.click(screen.getAllByRole('link', { name: 'Matchmaking', exact: true })[0])
+  await waitFor(() => expect(button('Music').getAttribute('aria-pressed')).toBe('true'))
   fireEvent.click(await screen.findByRole('button', { name: 'Preferences', exact: true }))
-  expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Music', exact: true }).getAttribute('aria-pressed')).toBe('true')
+  expect(within(screen.getByRole('dialog')).getAllByRole('slider')).toHaveLength(3)
+  expect(within(screen.getByRole('dialog')).queryByRole('button', { name: 'Music', exact: true })).toBeNull()
   expect(calls.some(call => /\/(queue|result)$/.test(call.path))).toBe(false)
 })
 

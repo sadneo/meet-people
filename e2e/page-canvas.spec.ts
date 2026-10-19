@@ -123,7 +123,7 @@ for (const width of [390, 1440]) {
     await expect(page.locator('.pt-app')).toHaveCount(0)
   })
 
-  test(`Friends stays dark forest and Dating returns to white at ${width}px`, async ({ page }, testInfo) => {
+  test(`Friends uses its light palette and Dating stays white at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     await mockMatchingSession(page)
     await mockMatchingApi(page)
@@ -135,16 +135,16 @@ for (const width of [390, 1440]) {
     const appearance = () => friends.evaluate(element => {
       const style = getComputedStyle(element)
       const scene = getComputedStyle(element.querySelector('.friends-scene')!)
-      return { background: style.backgroundImage, color: style.color, scene: scene.backgroundColor }
+      return { background: style.backgroundImage, canvas: style.backgroundColor, color: style.color, scene: scene.backgroundColor }
     })
     const original = await appearance()
-    expect(original.background).toContain('linear-gradient(155deg, rgb(48, 59, 46), rgb(23, 34, 25) 80%)')
-    expect(original.background).toContain('radial-gradient(')
-    expect(original.color).toBe('rgb(243, 240, 230)')
+    expect(original.background).toBe('none')
+    expect(original.canvas).toBe('rgb(250, 251, 247)')
+    expect(original.color).toBe('rgb(89, 109, 80)')
     expect(original.scene).toBe('rgb(223, 203, 189)')
     await whiteNavigation(page, width, 'Matchmaking')
     await expect(page.locator('.friends-mascot')).toHaveAttribute('src', '/prototype/friends/pebble-mascot.png')
-    await page.screenshot({ path: testInfo.outputPath('friends-dark-forest.png'), fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath('friends-light.png'), fullPage: true })
     for (const path of ['/matchmaking?view=dating', '/downtime-matchmaking?view=dating']) {
       await page.goto(path)
       await expect(page.getByText('Local prototype recommendations — not live Dating matches.', { exact: true })).toBeVisible()

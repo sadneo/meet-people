@@ -1,3 +1,5 @@
+import { BlocklistPanel } from '../account/SafetyControls'
+import { LocationAccessDetails, SettingsDetails } from '../account/SettingsDetails'
 import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { usePrototype } from './context'
@@ -169,23 +171,24 @@ export function Settings() {
         <div>
           <section>{heading('bell', 'Notifications', 'Stay in the loop')}{toggle('notifications', 'Plan & message notifications', 'Get notified about new messages and activity in your conversations.')}</section>
           <section>{heading('shield', 'Privacy', 'Your boundaries')}{toggle('discoverable', 'Show me in discovery', 'Let other people find your profile.')}{toggle('availability', 'Share my availability', 'Show your free-time windows to connections.')}</section>
+          <SettingsDetails notificationsEnabled={state.settings.notifications} discoveryEnabled={state.settings.discoverable} />
         </div>
         <div>
-          <section>{heading('pin', 'Location', 'Where you meet')}<Link className="pt-settings-row" to="/profile"><span><strong>Home city / campus</strong><small>{savedAccount?.account.profile?.location_city || 'Not added yet'} · edit on your shared profile</small></span><Icon name="chevron" size={16} /></Link>{toggle('location', 'Nearby suggestions', 'Save your preference for local suggestions. This does not request device location or change your home city.')}</section>
+          <section>{heading('pin', 'Location', 'Where you meet')}<Link className="pt-settings-row" to="/profile"><span><strong>Home city / campus</strong><small>{savedAccount?.account.profile?.location_city || 'Not added yet'} · edit on your shared profile</small></span><Icon name="chevron" size={16} /></Link>{toggle('location', 'Nearby suggestions', 'Save your preference for local suggestions. This does not request device location or change your home city.')}<LocationAccessDetails /></section>
           <section className="pt-settings-actions" aria-label="Account actions">
             {heading('shield', 'Safety & account', 'Keep it comfortable')}
-            <button className="pt-settings-row" onClick={() => setSafety(true)}><span><strong>Blocked users</strong><small>Manage blocked sample profiles. These controls do not affect real accounts.</small></span><Icon name="chevron" size={16} /></button>
+            <button className="pt-settings-row" onClick={() => setSafety(true)}><span><strong>Blocked users</strong><small>View and manage blocked accounts. Service connection is pending.</small></span><Icon name="chevron" size={16} /></button>
             <div className="pt-settings-row"><span><strong>Email &amp; password</strong><small>{!auth.ready ? 'Loading account…' : auth.session ? 'Manage your sign-in email and password.' : 'Sign in to manage your email and password.'}</small></span><button type="button" className="pt-button pt-secondary" disabled={!auth.ready} aria-haspopup="dialog" onClick={() => setCredentialsOpen(true)}>Manage</button></div>
             <div className="pt-settings-row"><span><strong>{auth.session ? 'Log out' : 'Sign in to Pebble'}</strong><small>{auth.session ? 'Sign out of Pebble on this browser.' : 'Sign in to access your account.'}</small></span>{!auth.ready ? <Button secondary disabled>Loading account…</Button> : auth.session ? <Button secondary disabled={auth.busy} onClick={() => void auth.logout()}>{auth.busy ? 'Logging out…' : 'Log out'}</Button> : <Link className="pt-button pt-secondary" to="/login">Sign in</Link>}</div>
             {auth.error && <p role="alert">{auth.error}</p>}
           </section>
-          <section aria-label="Matchmaking">{heading('matchmaking', 'Downtime matchmaking', 'Matching, on your terms')}<DowntimeOptIn /></section>
+          <section aria-label="Matchmaking">{heading('matchmaking', 'Downtime matchmaking', 'Matching, on your terms')}<DowntimeOptIn /><p className="account-feature-note">Active matching turns downtime off. It will not restart automatically. Interests and your weekly schedule stay shared.</p><Link className="pt-settings-row" to="/matchmaking"><span>Review Friends preferences</span><Icon name="chevron" size={16} /></Link></section>
         </div>
       </div>
       {savedAccount?.busy && <p role="status">Saving settings…</p>}
       {savedAccount?.error && <div className="account-feedback"><p role="alert">{savedAccount.error}</p><Button secondary disabled={savedAccount.busy} onClick={() => void savedAccount.reload()}>Reload account settings</Button></div>}
     </div>
     {credentialsOpen && <Modal title="Email & password" className="pt-credentials-dialog" onClose={() => setCredentialsOpen(false)}><AccountCredentials session={auth.session} ready={auth.ready} /></Modal>}
-    {safety && <Modal title="Blocked users" onClose={() => setSafety(false)}>{state.blocked.length ? state.blocked.map(id => <div className="pt-toggle-row" key={id}><strong>{people.find(p => p.id === id)?.name}</strong><Button secondary onClick={() => dispatch({ type: 'unblock', id })}>Unblock</Button></div>) : <p>No blocked users in this session.</p>}<p className="pt-hint">Block or report someone from their profile. These controls are mock UI for review.</p></Modal>}
+    {safety && <Modal title="Blocked users" onClose={() => setSafety(false)}><BlocklistPanel /></Modal>}
   </>
 }

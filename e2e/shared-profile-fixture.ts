@@ -3,18 +3,43 @@ import type { MatchingProfile } from '../shared/matchmaking'
 import type { AccountProfile } from '../shared/account-profile'
 import { browserAccount, mockMatchingSession } from './matchmaking-fixture'
 import { emptyAccount, type Account } from '../shared/account'
+import { SaveProfileDetailsSchema, type ProfileDetails } from '../shared/profile-details'
+import { emptyDetailedSettings, effectiveDetailedSettings, mastersFromLegacySettings, SaveDetailedSettingsSchema } from '../shared/detailed-settings'
 
-export async function sharedProfileFixture(page: Page, options: { identity?: 'available' | 'missing' | 'unavailable'; missingProfile?: boolean; interests?: string[] } = {}) {
+export async function sharedProfileFixture(page: Page, options: { identity?: 'available' | 'missing' | 'unavailable'; details?: 'unavailable'; detailedSettings?: 'unavailable'; missingProfile?: boolean; interests?: string[]; queue?: boolean } = {}) {
   const initial = { username: 'canonical-sam', display_name: 'Canonical Sam', bio: 'Canonical bio', avatar_url: null }
   let account: AccountProfile | null = options.identity === 'missing' ? null : initial
   let profile: MatchingProfile | null = options.missingProfile ? null : { ...initial, display_name: 'Legacy Sam', bio: 'Legacy bio', interests: options.interests ?? ['Coffee', 'Music', 'Books', 'Art', 'Games', 'Hiking'], availability: [{ dow: 2, start_time: '09:15:00', end_time: '11:45:00' }, { dow: 0, start_time: '21:00:00', end_time: '24:00:00' }], location_city: 'Campus', birthdate: '2000-01-01' }
   let unified: Account = account ? profile ? browserAccount({ ...profile, ...account }) : { ...structuredClone(emptyAccount), profile: { ...account, interests: [], availability: [], birthdate: null, location_city: null }, completed: [0] } : structuredClone(emptyAccount)
+  let mode: 'active' | null = null
+  // Synthetic owner facts service, separate from the fixture's account document.
+  let details: ProfileDetails = { revision: 0, facts: { education: '', occupation: '', languages: [], visibility: { education: false, occupation: false, languages: false } } }
+  let detailed = { revision: 0, settings: emptyDetailedSettings() }
   const calls: { path: string; method: string; body: unknown }[] = [], external: string[] = []
   await page.route('**/*', route => {
     const request = route.request(), url = new URL(request.url())
     if (url.origin !== 'http://127.0.0.1:3194') { external.push(url.origin); return route.abort() }
     if (!url.pathname.startsWith('/api/')) return route.continue()
     calls.push({ path: url.pathname, method: request.method(), body: request.method() === 'PUT' ? request.postDataJSON() : null })
+    if (url.pathname.endsWith('/detailed-settings')) {
+      if (options.detailedSettings === 'unavailable') return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Detailed preferences unavailable.' } })
+      if (request.method() === 'PUT') {
+        const write = SaveDetailedSettingsSchema.parse(request.postDataJSON())
+        if (write.expectedRevision !== detailed.revision) return route.fulfill({ status: 409, json: { code: 'conflict', error: 'Detailed preferences changed.' } })
+        detailed = { revision: detailed.revision + 1, settings: write.settings }
+      }
+      const masters = mastersFromLegacySettings(unified.settings)
+      return route.fulfill({ json: { ...detailed, masters, effective: effectiveDetailedSettings(detailed.settings, masters) } })
+    }
+    if (url.pathname.endsWith('/profile-details')) {
+      if (options.details === 'unavailable') return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Optional details unavailable.' } })
+      if (request.method() === 'PUT') {
+        const write = SaveProfileDetailsSchema.parse(request.postDataJSON())
+        if (write.expectedRevision !== details.revision) return route.fulfill({ status: 409, json: { code: 'conflict', error: 'Details changed.' } })
+        details = { revision: details.revision + 1, facts: write.facts }
+      }
+      return route.fulfill({ json: details })
+    }
     if (url.pathname.endsWith('/account')) {
       if (options.identity === 'unavailable') return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Identity unavailable.' } })
       if (request.method() === 'PUT') {
@@ -33,7 +58,9 @@ export async function sharedProfileFixture(page: Page, options: { identity?: 'av
       return route.fulfill({ json: { profile } })
     }
     if (url.pathname.endsWith('/notifications')) return route.fulfill({ json: { notifications: [], unreadCount: 0 } })
-    if (url.pathname.endsWith('/status')) return route.fulfill({ json: { mode: null } })
+    if (url.pathname.endsWith('/status')) return route.fulfill({ json: { mode } })
+    if (options.queue && url.pathname.endsWith('/queue')) { mode = request.method() === 'POST' ? 'active' : null; return route.fulfill({ json: { mode } }) }
+    if (options.queue && url.pathname.endsWith('/result')) return route.fulfill({ json: { candidate: null } })
     return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Unconnected test boundary.' } })
   })
   await mockMatchingSession(page)

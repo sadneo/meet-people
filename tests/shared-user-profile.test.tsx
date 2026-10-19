@@ -15,10 +15,11 @@ let profile = structuredClone(original)
 let identityUnavailable = false
 let profileUnavailable = false
 let readbackFails = false
+let queueMode: 'active' | null = null
 const calls: { path: string; method: string; body: unknown }[] = []
 beforeEach(() => {
   auth.session = { access_token: 'shared-fixture', user: { id: 'shared-actor' } }
-  account = { ...identity }; profile = structuredClone(original); calls.length = 0; identityUnavailable = false; profileUnavailable = false; readbackFails = false
+  account = { ...identity }; profile = structuredClone(original); calls.length = 0; queueMode = null; identityUnavailable = false; profileUnavailable = false; readbackFails = false
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
   vi.stubGlobal('scrollTo', () => {})
@@ -37,6 +38,9 @@ beforeEach(() => {
       if (method === 'GET' && readbackFails && calls.some(call => call.path.endsWith('/profile') && call.method === 'PUT')) return Response.json({ code: 'unavailable', error: 'Readback unavailable.' }, { status: 503 })
       return Response.json({ profile })
     }
+    if (path.endsWith('/queue')) { queueMode = method === 'POST' ? 'active' : null; return Response.json({ mode: queueMode }) }
+    if (path.endsWith('/status')) return Response.json({ mode: queueMode })
+    if (path.endsWith('/result')) return Response.json({ candidate: null })
     if (path.endsWith('/notifications')) return Response.json({ notifications: [], unreadCount: 0 })
     return Response.json({ mode: null })
   }))
@@ -46,7 +50,7 @@ const mount = () => render(<MemoryRouter initialEntries={['/profile']}><App /></
 const button = (name: string) => screen.getByRole('button', { name, exact: true }) as HTMLButtonElement
 async function edit() { const opener = await screen.findByRole('button', { name: 'Edit profile', exact: true }); await waitFor(() => expect((opener as HTMLButtonElement).disabled).toBe(false)); opener.focus(); fireEvent.click(opener); await waitFor(() => expect(screen.queryByText('Checking saved identity…')).toBeNull()) }
 
-it('a held matching save restores focus to the current same-owner opener after authoritative account reload replaces the private tree', async () => {
+it('a held Profile facts save keeps its draft and restores focus after confirmed readback', async () => {
   const originalFetch = vi.mocked(fetch).getMockImplementation()!
   let finish!: () => void
   const pending = new Promise<void>(resolve => { finish = resolve })
@@ -54,20 +58,16 @@ it('a held matching save restores focus to the current same-owner opener after a
     if (String(input).endsWith('/profile') && init?.method === 'PUT') await pending
     return originalFetch(input, init)
   })
-  render(<MemoryRouter initialEntries={['/matchmaking']}><App /></MemoryRouter>)
-  const oldOpener = await screen.findByRole('button', { name: 'Preferences', exact: true })
-  oldOpener.focus(); fireEvent.click(oldOpener)
-  const editor = within(screen.getByRole('dialog'))
-  await waitFor(() => expect(screen.queryByText('Checking saved identity…')).toBeNull())
-  fireEvent.click(editor.getByRole('button', { name: 'Coffee', exact: true }))
-  fireEvent.click(editor.getByRole('button', { name: 'Save preferences', exact: true }))
-  expect(screen.getByRole('dialog')).toBeTruthy()
+  mount(); await screen.findByText('Canonical name', { exact: true })
+  const opener = screen.getByRole('button', { name: 'Edit profile', exact: true }); opener.focus(); fireEvent.click(opener)
+  fireEvent.change(screen.getByLabelText('City or campus area'), { target: { value: 'Changed campus' } })
+  fireEvent.click(button('Save profile'))
+  await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Saving profile'))
+  expect(screen.getByLabelText('City or campus area')).toHaveProperty('value', 'Changed campus')
   await act(async () => { finish(); await pending })
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Preferences', exact: true })))
-  expect(oldOpener.isConnected).toBe(false)
+  expect(document.activeElement).toBe(opener)
   expect(calls.filter(call => call.method === 'PUT')).toHaveLength(1)
-  expect(calls.filter(call => call.path.endsWith('/account'))).toHaveLength(2)
   expect(calls.some(call => /\/(queue|result)$/.test(call.path))).toBe(false)
 })
 
@@ -119,26 +119,21 @@ it('an unavailable shared-profile API disables identity writes and never invents
   expect(calls.some(call => call.method === 'PUT')).toBe(false)
 })
 
-it('matching edits are read back on Profile without sharing identity edit controls', async () => {
-  mount()
-  await screen.findByText('Canonical name', { exact: true })
+it('matching interests are shared back on Profile through Find Friends, never through numeric filter preview', async () => {
+  mount(); await screen.findByText('Canonical name', { exact: true })
   fireEvent.click(screen.getAllByRole('link', { name: 'Matchmaking', exact: true })[0])
-  fireEvent.click(await screen.findByRole('button', { name: 'Preferences', exact: true }))
-  const editor = within(screen.getByRole('dialog'))
-  await waitFor(() => expect(screen.queryByText('Checking saved identity…')).toBeNull())
-  expect(editor.queryByLabelText('Display name')).toBeNull(); expect(editor.queryByLabelText('Bio')).toBeNull()
-  expect(editor.queryByLabelText('City or campus area')).toBeNull()
-  expect(editor.queryByLabelText('Birthdate (optional)')).toBeNull()
-  fireEvent.click(editor.getByRole('button', { name: 'Coffee', exact: true }))
-  fireEvent.click(editor.getByRole('button', { name: 'Save preferences', exact: true }))
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  fireEvent.click((await screen.findAllByRole('link', { name: 'Profile', exact: true }))[0])
+  await waitFor(() => expect(button('Find Friends').disabled).toBe(false))
+  fireEvent.click(button('Coffee'))
+  fireEvent.click(button('Find Friends'))
+  await screen.findByRole('button', { name: 'Cancel search', exact: true })
+  expect(calls.filter(call => call.path.endsWith('/profile') && call.method === 'PUT')).toHaveLength(1)
+  fireEvent.click(screen.getAllByRole('link', { name: 'Profile', exact: true })[0])
   await edit()
   expect(screen.getByLabelText('City or campus area')).toHaveProperty('value', 'Campus')
   expect(screen.getByLabelText('Birthdate')).toHaveProperty('value', '2000-01-01')
   fireEvent.click(button('Cancel'))
-  expect(screen.getByRole('button', { name: 'Hiking', exact: true }).getAttribute('aria-pressed')).toBe('true')
-  expect(screen.getByRole('button', { name: 'Coffee', exact: true }).getAttribute('aria-pressed')).toBe('false')
+  expect(button('Hiking').getAttribute('aria-pressed')).toBe('true')
+  expect(button('Coffee').getAttribute('aria-pressed')).toBe('false')
 })
 
 it('delayed route reads preselect authoritative interests instead of exposing empty setup while loading', async () => {

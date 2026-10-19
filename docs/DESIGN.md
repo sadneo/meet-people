@@ -63,8 +63,9 @@ Events and matching reference these tokens; Messages, Profile and Settings
 inherit them. Keep stronger color for social CTAs, selections and nature details.
 Messages bubbles stay soft green/mint. Do not restore per-screen color themes.
 The white canvas supersedes earlier continuous warm-tan canvas guidance. Friends
-matching is the explicit exception: preserve `friends.css`'s dark-forest gradient,
-foregrounds, original mascot scene and card treatments exactly. Dating keeps its
+matching uses the later approved light `#FAFBF7` canvas, white panels and sage
+selected states in `friends.css`; preserve the `#DFCBBD` sand mascot scene,
+original pixel artwork and animations. Dating keeps its
 photo cards on the white canvas and its exact local-only disclosure. Profile and
 Settings retain off-white cards/dialogs; green/berry controls and inputs are not
 recolored. Existing `--color-page` aliases used inside controls remain unchanged;
@@ -88,7 +89,7 @@ The active shell is `src/features/prototype/AppShell.tsx`, wrapped by
 
 - Expanded (>800px): white header, wordmark, centered icon navigation, account
   avatar at the right. Compact bottom navigation is white too, including on Friends;
-  only Friends page content retains the dark-forest exception. Public header/footer
+  Friends content uses its approved light palette and sand artwork. Public header/footer
   remain on the white public canvas. Forest icons/text, pale-green selected tabs,
   active dots, focus treatment, geometry and target sizes are unchanged.
 - Compact (<=800px): five-item bottom navigation with accessible names and
@@ -274,3 +275,24 @@ Disable these decorative loops under `prefers-reduced-motion: reduce`.
 This visual pass does not change matchmaking algorithms/contracts, authentication
 logic, database schemas, messaging APIs, deployment, Android, or Profile behavior.
 The separate `/prototype/yzcommunity` experiment remains intact.
+
+## Matchmaking, Profile and Settings ownership
+
+Profile and Friends share one saved selection of interests and one exact weekly
+schedule. Explicit saves update that shared source; filters do not overwrite home
+city, private birthdate or identity. Active Friends takes priority and turns
+downtime off; downtime never silently resumes. Friends still suggests at most one
+real candidate through its existing manual queue flow. The 1–3 new-people control
+is a disclosed presentation preference until a real group-session contract exists.
+
+Profile uses one global picture and bio. Education, occupation and languages are
+optional shared facts with per-field visibility. Own gender/sexuality, intentions,
+relationship style and height belong to Dating. Gender plus sexuality resolves
+clear matching targets; ambiguous combinations ask for a matching clarification.
+Field visibility does not activate Dating. Keep exact local-only disclosure.
+
+New unsupported UI fields are explicitly memory-only previews, scoped to the
+current actor. They must not be written into legacy account documents or device
+storage. Show unavailable safety states rather than an invented empty blocklist
+or successful report. See `FRONTEND-READINESS-HANDOFF.md` for resource contracts,
+verification and which controls still need backend integration.

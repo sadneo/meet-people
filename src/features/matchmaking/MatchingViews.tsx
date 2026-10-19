@@ -1,3 +1,7 @@
+import { useAccount } from '../../auth/account-context'
+import { calculatedAge } from '../account/profile-rules'
+import { emptySearchOptions } from './search-preferences'
+import { emptyDatingPreferences } from './dating-preferences'
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router'
@@ -7,6 +11,7 @@ import { isDatingView } from './views'
 import { PixelPebble } from '../pebble-art/PixelArt'
 import { datingPrototypeFixtures } from './dating-prototype-fixtures'
 import './dating-views.css'
+import { MatchFilterSheet, filterDefaults } from './MatchFilterSheet'
 
 export function MatchingViews({ mode }: { mode: MatchingMode }) {
   const { pathname, search } = useLocation()
@@ -26,8 +31,11 @@ export function MatchingViews({ mode }: { mode: MatchingMode }) {
 
 type Decision = 'skip' | 'like' | 'star'
 type FocusTarget = Decision | 'undo' | 'deck'
-function CardIcon({ name }: { name: 'friends' | 'heart' | 'filter' | 'info' | 'undo' | 'x' | 'star' }) {
+function CardIcon({ name }: { name: 'friends' | 'heart' | 'filter' | 'info' | 'undo' | 'x' | 'star' | 'pin' | 'distance' | 'height' }) {
   const paths = {
+    pin: <><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" /><circle cx="12" cy="10" r="2" /></>,
+    distance: <><path d="m4 7 4-4 4 4M8 3v14a4 4 0 0 0 8 0V7m-4 4 4-4 4 4" /></>,
+    height: <><path d="M8 3h10v18H8V3Zm5 4h5m-3 4h3m-5 4h5m-3 3h3" /></>,
     heart: <path d="M20 5c-3-3-6-1-8 1-2-2-5-4-8-1s-1 7 1 9l7 7 7-7c2-2 4-6 1-9Z" />,
     friends: <><circle cx="9" cy="8" r="3" /><path d="M3 20v-2a6 6 0 0 1 12 0v2m1-15a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v1" /></>,
     filter: <><path d="M3 6h7m4 0h7M3 12h12m4 0h2M3 18h3m4 0h11" /><circle cx="12" cy="6" r="2" /><circle cx="17" cy="12" r="2" /><circle cx="8" cy="18" r="2" /></>,
@@ -50,11 +58,16 @@ function PrototypeDialog({ title, close, children }: { title: string; close: () 
 }
 
 function DatingPrototype({ selector }: { selector: ReactNode }) {
+  const account = useAccount()
+  const age = calculatedAge(account?.account.profile?.birthdate)
+  const [searchOptions, setSearchOptions] = useState(emptySearchOptions)
+  const [filters, setFilters] = useState(filterDefaults.Dating)
   const [cursor, setCursor] = useState(0)
   const [decision, setDecision] = useState<Decision | null>(null)
   const [history, setHistory] = useState<number[]>([])
   const [entering, setEntering] = useState(false)
   const [dialog, setDialog] = useState<'info' | 'filter' | null>(null)
+  const [datingPreferences, setDatingPreferences] = useState(emptyDatingPreferences)
   const locked = useRef(false)
   const focusAfter = useRef<FocusTarget | null>(null)
   const touch = useRef<{ x: number; y: number } | null>(null)
@@ -111,10 +124,10 @@ function DatingPrototype({ selector }: { selector: ReactNode }) {
   return <section className={`match-home match-calm dating-view${complete ? ' is-complete' : ''}`} aria-labelledby="dating-title" aria-describedby="dating-prototype-disclosure">
     <div className="dating-deck-focus">
       <header className="dating-overlay-header"><h1 id="dating-title" className="pt-sr-only" tabIndex={-1}>Dating in your downtime</h1>{selector}<button type="button" className="dating-filter" aria-label="Prototype preferences" aria-haspopup="dialog" disabled={!!decision} onClick={() => setDialog('filter')}><CardIcon name="filter" /></button></header>
+      <p className={`dating-eligibility${account && (age === null || age < 18) ? '' : ' pt-sr-only'}`} role={account && (age === null || age < 18) ? 'status' : undefined}>{age === null ? 'Real Dating requires a confirmed birthdate and age of at least 18.' : age < 18 ? 'Real Dating is unavailable for accounts under 18.' : 'Adult age confirmed locally; real Dating is not connected.'}</p>
       <p id="dating-prototype-disclosure" className="dating-disclosure">Local prototype recommendations — not live Dating matches.</p>
       <p className="dating-progress" role="status" aria-live="polite">{complete ? 'Prototype complete' : `${datingPrototypeFixtures[cursor].name}, ${datingPrototypeFixtures[cursor].age} · ${cursor + 1} of ${datingPrototypeFixtures.length}`}</p>
       <p id="dating-deck-instructions" className="pt-sr-only">Fictional profiles and local decisions only. Focus the deck and use Left to pass or Right to preview a like. Swipe horizontally on the photo, or use the decision buttons. Undo restores your previous fixture. Nothing is sent or saved.</p>
-      {!complete && <div className="dating-pagination" aria-label="Profile photos"><span className="is-active" role="img" aria-label="Photo 1 of 1" /></div>}
       <div ref={deck} className="dating-stack" role="group" aria-label="Prototype recommendation stack" tabIndex={0} aria-describedby="dating-deck-instructions dating-prototype-disclosure" onKeyDown={keyboard} onTouchStart={startTouch} onTouchEnd={endTouch} onTouchCancel={() => { touch.current = null }}>
         {datingPrototypeFixtures.map((profile, index) => {
           if (index < cursor) return null
@@ -122,7 +135,11 @@ function DatingPrototype({ selector }: { selector: ReactNode }) {
           return <article key={profile.id} data-dating-card={profile.id} data-design="reference" data-presentation="photo" data-front={front ? 'true' : undefined} tabIndex={front ? -1 : undefined} className={`dating-card${front && decision ? decision === 'skip' ? ' is-skipping' : ' is-liking' : front && entering ? ' is-entering' : ''}`} style={{ '--card-depth': depth, zIndex: datingPrototypeFixtures.length - depth } as CSSProperties} aria-label={`${profile.name}, ${profile.age}, prototype recommendation`} aria-hidden={!front}>
             <img className="dating-portrait" src={profile.photo} alt="" draggable={false} decoding="async" />
             <span className="dating-photo-scrim" aria-hidden="true" />
-            <div className="dating-card-copy"><div className="dating-eyebrow">Prototype profile</div><div className="dating-name-row"><h2 aria-label={`${profile.name}, ${profile.age}`}><span className="dating-name">{profile.name}</span><span className="dating-age">{profile.age}</span></h2><button type="button" className="dating-info" aria-label={`About ${profile.name}`} aria-haspopup="dialog" disabled={!front || !!decision} onClick={() => setDialog('info')}><CardIcon name="info" /></button></div><p className="dating-card-info">{profile.info}</p><p className="dating-bio">{profile.shortBio}</p><ul aria-label="Prototype interests">{profile.interests.map((interest, tag) => <li key={interest}><span aria-hidden="true">{['✧', '♧', '♡'][tag % 3]}</span>{interest}</li>)}</ul>
+            <div className="dating-card-copy"><div className="dating-eyebrow">Prototype profile</div><div className="dating-name-row"><h2 aria-label={`${profile.name}, ${profile.age}`}><span className="dating-name">{profile.name}</span><span className="dating-age">{profile.age}</span></h2><button type="button" className="dating-info" aria-label={`About ${profile.name}`} aria-haspopup="dialog" disabled={!front || !!decision} onClick={() => setDialog('info')}><CardIcon name="info" /></button></div><dl className="dating-card-info" aria-label="Fictional profile details">
+              <div><dt className="pt-sr-only">Sample location</dt><dd><CardIcon name="pin" />{profile.location}</dd></div>
+              <div><dt className="pt-sr-only">Sample distance</dt><dd><CardIcon name="distance" />{profile.distance}</dd></div>
+              <div><dt className="pt-sr-only">Sample height</dt><dd><CardIcon name="height" />{profile.height}</dd></div>
+            </dl><ul aria-label="Prototype interests">{profile.interests.map((interest, tag) => <li key={interest}><span aria-hidden="true">{['✧', '♧', '♡'][tag % 3]}</span>{interest}</li>)}</ul>
             </div>
           </article>
         })}
@@ -136,6 +153,7 @@ function DatingPrototype({ selector }: { selector: ReactNode }) {
       </div>
       <small className="dating-account-note pt-sr-only"><span>Same Pebble account. Your Friends queue stays as it is.</span><span>Decisions reset when you leave or reload.</span></small>
     </div>
-    {dialog && <PrototypeDialog title={dialog === 'filter' ? 'Prototype preferences' : `About ${fixture.name} — prototype profile`} close={() => setDialog(null)}>{dialog === 'filter' ? <p>Prototype preferences are not connected.</p> : <p>{fixture.longBio}</p>}</PrototypeDialog>}
+    {dialog === 'filter' && <MatchFilterSheet mode="Dating" value={filters} searchValue={searchOptions} home={account?.account.profile?.location_city ?? null} datingValue={datingPreferences} close={() => setDialog(null)} saveDating={async (value, profile, options) => { setFilters(value); setDatingPreferences(profile); if (options) setSearchOptions(options) }} />}
+    {dialog === 'info' && <PrototypeDialog title={`About ${fixture.name} — prototype profile`} close={() => setDialog(null)}><p>{fixture.longBio}</p></PrototypeDialog>}
   </section>
 }

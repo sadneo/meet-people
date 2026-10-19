@@ -172,8 +172,9 @@ reviewed legacy blocks/profiles/conversations/messages and existing signatures.
 No block/unblock/report write RPC, HTTP route or adapter is implemented in this
 pass. Unblock remains unavailable rather than a no-op adapter. Reporting needs a
 real authenticated moderation intake/receipt contract; none is fabricated. Existing
-UI safety buttons stay disabled/unavailable and SettingsDetails stays preview.
-Do not seed canonical consent from that preview's default-on values on integration.
+UI safety buttons stay disabled/unavailable. The subsequent owner preference
+integration below changes neither safety enforcement nor delivery. Its canonical
+choices are never seeded from the old preview's default-on values.
 
 ## Explicit enforcement integration map / unfinished work
 
@@ -301,3 +302,199 @@ actor scope without claiming concurrent block exclusion, and blocklist failures
 reveal no target metadata or fake empty state. Safety SQL and the new harness
 remain unexecuted by the agent. No Settings, UI, existing DB, history/config,
 provider/service or Git mutation is performed; parent owns the next checkpoint.
+
+## Canonical Detailed Settings frontend integration (next source checkpoint)
+
+Starting parent-authorized HEAD `f27f5b0f374787ad3f2b2baaa8f97bd25d400070`.
+Parent reports the preceding checkpoint passed 47 units, both typechecks and diff.
+Parent also reports actual network-none PostgreSQL 17 safety acceptance using real
+historical core/RLS and 04/08 definitions: compatible OIDs preserved, incompatible
+signatures rejected, membership/foreign-conversation/anonymous protection, reverse
+block visibility under owner RLS, inactive-renamed blocklist unavailable, and no
+coarse table lock. The unrelated `shared_interest_labels` dependency was an explicitly
+empty pure test stub that was never invoked. This is parent-reported narrow SQL
+evidence, NOT agent execution, full replay, live Auth/PostgREST/resolver/matching,
+blocked-pair race closure, app-DB activation or all-surface safety completion.
+Earlier Settings guarded SQL passed independently. None of these prior results
+establish that the frontend integration tests below passed.
+
+### Resource/client and actor/session boundary
+
+`detailed-settings-client.ts` and `useDetailedSettings.ts` are deliberately
+Settings-specific, following the repaired facts client/hook rather than creating a
+generic framework. They use the existing loaded canonical `AccountContext` session,
+capture its token, validate the shared request/snapshot/error contracts and retain
+the deadline through JSON consumption. No fresh/different session is acquired
+mid-request and there is no automatic mutation retry or device-storage cache.
+
+GET capability must succeed before the form exists. The server's revision-zero
+all-off snapshot replaces the old default-on memory preview; missing/malformed/
+unavailable backend never becomes editable fake defaults. The only fields PUT
+sends are expectedRevision and the complete five choices. PUT is followed by a
+separate canonical GET; revision/choices must agree before reporting saved. Masters
+may legitimately differ between responses; both independently validate global
+masking. No master, account, safety, queue or delivery mutation is added.
+
+The hook checks synchronous current capability/revision, closes it before PUT,
+fences continuations by generation/client/owner and aborts obsolete work. Conflict,
+uncertainty, malformed save or failed/divergent GET readback retain the current
+draft and require explicit read reconciliation. Retained ready callbacks and
+repeated same-owner token refreshes cannot clear that gate. Automatic master
+refresh uses read(false), which cannot reconcile. Owner change resets private state;
+old-owner/unmounted callbacks cannot write. The existing outer auth shell's
+token-keyed remount policy is unchanged: local drafts are not promised to survive
+that whole-shell replacement. No cross-account persistence is introduced.
+
+### Form behavior and honest runtime limitations
+
+`SettingsDetails` keeps its existing disclosure, fieldsets, notification labels and
+CSS layout. It exposes Save detailed preferences, Cancel detail changes and Reload
+saved preferences only against a known resource. Pending PUT/readback locks fields,
+actions and disclosure dismissal; ordinary edits keep DOM nodes/focus stable.
+Cancel is draft-only, never a rollback claim or reconciliation bypass. Explicit
+reload warns it replaces the draft. A draft epoch prevents a delayed reload from
+overwriting edits after Cancel. Failed reload keeps the draft/save lock; a changed
+canonical revision cannot silently rebase/save an old draft.
+
+Raw checked choices are retained when global masters suppress them. Off UI masters
+conservatively suppress alongside the canonical response; unknown canonical masters
+never enable a category/mode. Changed persisted master props trigger read-only
+refresh after pending work, without replacing dirty drafts or clearing uncertainty.
+The legacy global switches/credentials/downtime operations themselves are untouched.
+
+Every form explicitly says saved preferences do not verify delivery or live discovery.
+Dating choice persistence is only an intent; Dating remains the disclosed prototype.
+No device notification request, geolocation request, notice, moderation receipt or
+public privacy enforcement is inferred. `LocationAccessDetails` is retained unchanged
+and read-only. Only Settings preview state is removed from the actor preview provider;
+picture remains visit-only. Blocklist/report/block/unblock UI remains unavailable.
+The all-surface safety/privacy/revision-consumption activation map above is not closed.
+
+### New frontend verification source / parent commands
+
+Tests were written first for the client/hook/rendered surface, including default-off
+capability, unavailable dependencies, pending canonical readback, retained callbacks,
+conflict/uncertain outcomes, failed reconciliation, repeated token refresh, owner
+replacement, master-only changes, dirty-draft preservation, Cancel/late reload and
+deadline behavior. The targeted three-suite red attempt and later regression and
+typecheck attempts were permission-denied; no executed red/green result is claimed.
+The prior parent 47-unit/SQL results are not results for this frontend cycle.
+
+```text
+pnpm --config.verify-deps-before-run=false exec vitest run --configLoader runner --config vite.isolated.config.ts --environment jsdom tests/detailed-settings-client.test.ts tests/detailed-settings-hook.test.ts tests/detailed-settings-ui.test.tsx tests/frontend-preference-rules.test.tsx tests/profile-details-hook.test.ts tests/profile-details-ui.test.tsx tests/account-profile-ui.test.tsx
+pnpm --config.verify-deps-before-run=false typecheck
+pnpm --config.verify-deps-before-run=false exec tsc --project tsconfig.api.json --noEmit
+git diff --check
+```
+
+Browser fixtures add a separate synthetic Settings CAS resource, never extra keys
+in the legacy account document; external traffic remains rejected. Screenshot
+tests cover 320/390/1440 draft/pending/saved/master-suppressed views, unavailable
+320/1440 and conflict/reload, with preference-only disclosures. Existing mixed
+readiness tests now assert a real mocked preference write, not Apply preview.
+No browser/Vite service was started and no screenshots inspected by the agent
+under the no-service constraint. Exact isolated parent commands:
+
+```text
+pnpm --config.verify-deps-before-run=false test:e2e --config worktree/friends-light-review/playwright.config.ts e2e/detailed-settings.spec.ts
+pnpm --config.verify-deps-before-run=false test:e2e --config worktree/friends-light-review/playwright.config.ts e2e/account-matchmaking-readiness.spec.ts --grep 'Friends, Dating and Settings'
+```
+
+Next review targets are authority/session fences, canonical readback vs changing
+masters, dirty/reload/Cancel races, and actual rendered screenshots. Source-only
+integration is approved sprint work; unavailable runtime access stays unavailable,
+not an invented new approval gate. App-DB application and real delivery/discovery/
+safety authority remain separate existing gates. Parent owns review/checks/commits;
+no Git mutation, SQL application or next-feature expansion is performed by the agent.
+
+## Detailed Settings browser failure / bounded repair review
+
+Same approved worktree/branch and unchanged starting HEAD
+`f27f5b0f374787ad3f2b2baaa8f97bd25d400070`; intentional dirty UI/facts retained.
+Parent reports fresh **50 unit tests / six suites passed**, both typechecks and
+whitespace check passed before this repair. Parent's actual browser command was:
+
+```text
+pnpm --config.verify-deps-before-run=false test:e2e --config worktree/friends-light-review/playwright.config.ts e2e/detailed-settings.spec.ts e2e/account-matchmaking-readiness.spec.ts
+```
+
+It returned **14 passed / 3 failed**, not a browser pass: widths 320/390/1440 failed
+at `detailed-settings.spec.ts:37` on `.uncheck()` with “click did not change state”.
+Preference save/readback, unavailable and conflict scenarios otherwise passed.
+No screenshots from that parent run were inspected by the agent.
+
+### Source-supported cause: asynchronous controlled switch, not fixture data loss
+
+- `Social.tsx` binds the switch to `state.settings.notifications` and dispatches
+  the actual account setting change. `PebbleApp.tsx` derives that state from the
+  canonical account and calls its existing save, without optimistic master state.
+- `useUnifiedAccount.ts` performs preflight GET, validated/merged PUT, then a
+  separate GET and exact field comparison before publishing confirmed settings.
+  React therefore restores the controlled checkbox's old checked state immediately
+  after event dispatch while this asynchronous writer is pending.
+- `shared-profile-fixture.ts` handles `/account` PUT by retaining the posted account
+  document and subsequent GETs return it. `/detailed-settings` derives its masters
+  from that same document. It does not omit/reset notifications or share detailed
+  preference state with the legacy account. No fixture repair is indicated.
+- Playwright `.uncheck()` requires the checkbox's state change immediately after
+  its click; it is the wrong synchronous contract here. Existing global-setting
+  coverage in `e2e/auth.spec.ts` and `e2e/profile-settings-visual.spec.ts` uses normal
+  click then awaited checked-state assertions for precisely this asynchronous UI.
+
+The repair uses the same real switch click and waits for authoritative state; no
+force, injected dispatch, optimistic canonical master, route shortcut, skipped
+assertion or weakened masking expectation is added. It additionally requires exact
+account GET/PUT/GET followed by a fresh detailed-settings GET for **both off and on**,
+checks that response's stored/effective choices and masters, and checks persisted
+fixture account state. These source-supported diagnoses/fixes await browser rerun;
+they are not newly observed runtime results.
+
+### Independent product source review and concrete repairs
+
+1. **Pre-passive-cleanup retained callbacks:** the hook previously fenced only with
+   refs updated in passive effects. A descendant layout effect could invoke an
+   old-session save/read before cleanup, or a retained ready save could bypass a
+   new account-busy render. The hook now checks the current render's client binding
+   at request entry and continuation, checks account-busy at mutation entry, and
+   withholds write capability while the client binding/account writer is unsettled.
+   Account busy changes do not abort an already-issued detail write; it still needs
+   its authoritative readback or uncertainty reconciliation. Regression source
+   invokes retained callbacks from layout effects during token/owner/busy transitions
+   and rejects old-token reload transport.
+2. **Lost round-trip master invalidation:** the old effect compared only the final
+   master fingerprint to its last observed/attempted fingerprint. Off -> on while
+   detail save/readback was pending could finish back at the starting fingerprint
+   and skip refresh even if the readback captured the intermediate off masters.
+   Every observed transition now latches pending invalidation until the account
+   writer and detail operation settle. The ensuing operation is GET only; it never
+   clears a conflict/uncertainty gate. Regression source covers ordinary off/on,
+   deferred refresh through save, and intermediate-off readback after round trip.
+
+Reviewed the full Settings-specific client/hook/form again: strict request/snapshot
+validation, captured token and body-consumption deadline remain unchanged; no retry
+or new generic framework. CAS and separate GET still compare revision/choices,
+allowing independently changed validated masters. Generation/owner/unmount fences,
+explicit reconciliation after conflict/uncertainty, failed reload draft retention,
+Cancel draft epochs and changed-revision save blocking remain. Owner changes still
+remount private form state; the outer token-keyed shell replacement policy and its
+documented draft-loss limitation are unchanged. No global account writer, frontend
+facts, read-only browser location, credentials, downtime or safety behavior changed.
+
+### Repair verification (agent)
+
+The following exact commands were attempted and returned **Permission denied: shell**;
+none is an executed repair pass or newly produced screenshot evidence:
+
+```text
+pnpm --config.verify-deps-before-run=false exec vitest run --configLoader runner --config vite.isolated.config.ts --environment jsdom tests/detailed-settings-client.test.ts tests/detailed-settings-hook.test.ts tests/detailed-settings-ui.test.tsx tests/profile-details-hook.test.ts tests/profile-details-ui.test.tsx tests/frontend-preference-rules.test.tsx tests/unified-account-readback.test.tsx
+pnpm --config.verify-deps-before-run=false typecheck
+pnpm --config.verify-deps-before-run=false exec tsc --project tsconfig.api.json --noEmit
+pnpm --config.verify-deps-before-run=false test:e2e --config worktree/friends-light-review/playwright.config.ts e2e/detailed-settings.spec.ts e2e/account-matchmaking-readiness.spec.ts
+```
+
+`git diff --check` passed. Parent must rerun repair tests and inspect narrow/desktop
+screenshots; prior 50-unit results do not prove these added regressions. No browser
+server was actually started by the denied command. Delivery/live discovery/Dating
+and safety activation, app-DB application, blocked-pair races and full migration
+replay remain unproven/out of scope. No commit, push, service change, deployment,
+Supabase action, provider/API request, secret access or Git mutation occurred.

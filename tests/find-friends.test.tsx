@@ -57,7 +57,7 @@ it('ports saved Friends setup inline with the forest full-page boundary, not the
   expect(document.querySelector('.dating-view')).toBeNull()
   expect(writes()).toEqual([])
 })
-it('saved Friends edits use the existing save path, retaining inline draft on failure and synchronising an explicit preferences save', async () => {
+it('inline Friends drafts survive failed saves and the filter sheet cannot write profile fields', async () => {
   profile = { ...structuredClone(saved), interests: ['Coffee', 'Music', 'Art'], birthdate: '2000-01-01', location_city: 'Fixture campus' }
   mount(); await ready()
   fireEvent.click(button('Outdoors')); saveFails = true
@@ -67,13 +67,13 @@ it('saved Friends edits use the existing save path, retaining inline draft on fa
   saveFails = false
   fireEvent.click(button('Preferences'))
   const dialog = within(screen.getByRole('dialog'))
-  await waitFor(() => expect((dialog.getByRole('button', { name: 'Save preferences', exact: true }) as HTMLButtonElement).disabled).toBe(false))
-  fireEvent.click(dialog.getByRole('button', { name: 'Gaming', exact: true }))
-  fireEvent.click(dialog.getByRole('button', { name: 'Save preferences', exact: true }))
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  expect(button('Gaming').getAttribute('aria-pressed')).toBe('true')
-  expect(button('Outdoors').getAttribute('aria-pressed')).toBe('false')
-  expect(writes().map(call => call.method)).toEqual(['PUT', 'PUT'])
+  expect((dialog.getByRole('button', { name: 'Apply filter preview', exact: true }) as HTMLButtonElement).disabled).toBe(false)
+  expect(dialog.getAllByRole('slider')).toHaveLength(3)
+  expect(dialog.queryByRole('table')).toBeNull()
+  expect(dialog.queryByRole('button', { name: 'Gaming', exact: true })).toBeNull()
+  fireEvent.click(dialog.getByRole('button', { name: 'Close filters' }))
+  expect(button('Outdoors').getAttribute('aria-pressed')).toBe('true')
+  expect(writes().map(call => call.method)).toEqual(['PUT'])
 })
 async function ready() { await screen.findByRole('button', { name: 'Find Friends', exact: true }); await waitFor(() => expect(button('Find Friends').disabled).toBe(false)) }
 
@@ -151,8 +151,10 @@ it('delayed saved-profile reads preselect real labels/windows, not a confirmed e
   await act(async () => { finish(); await holdProfile })
   await ready(); fireEvent.click(button('Preferences'))
   const editor = within(screen.getByRole('dialog'))
-  expect(editor.getByRole('button', { name: 'Music', exact: true }).getAttribute('aria-pressed')).toBe('true')
-  expect(editor.getByLabelText('End 1')).toHaveProperty('value', '24:00:00')
+  expect(editor.getAllByRole('slider')).toHaveLength(3)
+  fireEvent.click(editor.getByRole('button', { name: 'Close filters' }))
+  expect(button('Music').getAttribute('aria-pressed')).toBe('true')
+  expect(screen.getByRole('table')).toBeTruthy()
   expect(writes()).toEqual([])
 })
 
@@ -210,4 +212,28 @@ it('downtime discovered while saving still requires consent before join, with ca
   expect(writes().map(call => call.method)).toEqual(['PUT'])
   expect(profile?.interests).toEqual(['Music'])
   expect(mode).toBe('downtime')
+})
+
+it('requires leaving the confirmed Friends queue before opening search filters', async () => {
+  profile = structuredClone(saved); mode = 'active'
+  mount(); await screen.findByRole('button', { name: 'Cancel search', exact: true })
+  expect(button('Preferences').disabled).toBe(true)
+  expect(button('Preferences').title).toBe('Leave your queue before changing filters')
+  fireEvent.click(button('Preferences'))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(writes()).toEqual([])
+})
+
+it('keeps the normal Friends setup concise while retaining exact editing and recovery', async () => {
+  profile = structuredClone(saved); mount(); await ready()
+  expect(screen.queryByRole('button', { name: 'Refresh status' })).toBeNull()
+  expect(screen.queryByText('On this device')).toBeNull()
+  expect(screen.queryByRole('link', { name: 'Edit location and birthdate on Profile' })).toBeNull()
+  expect(screen.getByText('Exact times').closest('.friends-availability')).toBeTruthy()
+  expect(button('Find Friends').querySelector('svg')).not.toBeNull()
+  fireEvent.click(button('Find Friends'))
+  await screen.findByRole('button', { name: 'Cancel search' })
+  expect(screen.queryByRole('button', { name: 'Refresh status' })).toBeNull()
+  expect(screen.queryByText('On this device')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Check for a match' })).toBeTruthy()
 })

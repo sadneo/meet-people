@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from '../src/App'
 import { completedAccountChapters, emptyAccount, type Account } from '../shared/account'
 import { accountFixture } from './complete-profile-fixture'
+import { readinessMessage } from '../shared/profile-readiness'
 
 const auth = vi.hoisted(() => ({ ready: true, session: { access_token: 'fixture-first', user: { id: 'fixture-first' } } }))
 vi.mock('../src/auth/useSession', () => ({ useSession: () => auth }))
@@ -36,6 +37,7 @@ beforeEach(() => {
     // Ordinary private editor compatibility reads, not onboarding defaults.
     if (path.endsWith('/account-profile')) return Response.json({ profile: stored.profile ? { username: stored.profile.username, display_name: stored.profile.display_name, bio: stored.profile.bio, avatar_url: stored.profile.avatar_url } : null })
     if (path.endsWith('/profile')) return Response.json({ profile: stored.profile })
+    if (path.endsWith('/conversations/activity')) return Response.json({ unreadConversations: 0, incomingRequests: 0 })
     if (path.endsWith('/notifications')) return Response.json({ notifications: [], unreadCount: 0 })
     throw new Error(`Unexpected request ${method} ${path}`)
   }))
@@ -89,7 +91,7 @@ it('new users explicitly save all four chapters, read back readiness and return 
   expect(stored.profile).toEqual(complete); expect(stored.completed).toEqual([0, 1, 2, 3])
   expect(screen.getByLabelText('Onboarding URL').textContent).toBe('/?from=registration#anchor')
   expect(calls.filter(call => call.method === 'PUT').map(call => call.path)).toEqual(Array(4).fill('/api/matchmaking/account'))
-  expect(calls.every(call => call.path === '/api/matchmaking/account' || (call.method === 'GET' && call.path === '/api/matchmaking/notifications'))).toBe(true)
+  expect(calls.every(call => call.path === '/api/matchmaking/account' || (call.method === 'GET' && ['/api/matchmaking/notifications', '/api/conversations/activity'].includes(call.path)))).toBe(true)
   expect(calls.some(call => /\/(queue|result|status)$/.test(call.path))).toBe(false)
 })
 it('partial older profiles resume saved interests and cannot advance with fewer than three, while missing required final fields remain required', async () => {
@@ -172,6 +174,9 @@ it('ordinary Profile editing cannot clear readiness once onboarding is complete'
   const edit = await screen.findByRole('button', { name: 'Edit profile', exact: true })
   await waitFor(() => expect((edit as HTMLButtonElement).disabled).toBe(false))
   fireEvent.click(button('Coffee')); fireEvent.click(button('Save usual interests'))
-  expect(screen.getByRole('alert').textContent).toContain('three'); expect(calls.some(call => call.method === 'PUT')).toBe(false)
+  // Optional facts may independently be unavailable; assert this rejection,
+  // rather than assuming the entire Profile page has only one alert.
+  expect(screen.getByText(readinessMessage, { selector: '[role="alert"]', exact: true })).toBeTruthy()
+  expect(calls.some(call => call.method === 'PUT')).toBe(false)
   expect(completedAccountChapters(stored)).toEqual([0, 1, 2, 3])
 })
