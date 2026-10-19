@@ -7,7 +7,7 @@
 .pt-profile-identity { display: grid; grid-template-columns: 204px minmax(0, 1fr) auto; align-items: start; gap: 40px; max-width: 1210px; margin: 0 auto; padding: 26px 0 22px; }
 .pt-profile-portrait { position: relative; margin-top: -83px; }
 .pt-profile-portrait .pt-avatar { display: block; width: 204px; height: 204px; border: 6px solid var(--pt-surface); }
-.pt-profile-portrait > span { position: absolute; right: 16px; bottom: 18px; width: 28px; height: 28px; border: 5px solid var(--pt-surface); border-radius: 50%; background: var(--pt-leaf); }
+.pt-profile-portrait > span:not(.pt-avatar) { position: absolute; right: 16px; bottom: 18px; width: 28px; height: 28px; border: 5px solid var(--pt-surface); border-radius: 50%; background: var(--pt-leaf); }
 .pt-profile-copy h1 { font-size: 38px; line-height: 1.1; letter-spacing: -1px; }
 .pt-profile-copy .pt-profile-location { justify-content: start; margin: 6px 0 8px !important; font-size: 15px; }
 .pt-profile-copy .pt-profile-bio { margin: 0 0 13px !important; font-size: 17px; }
@@ -74,7 +74,7 @@
   .pt-profile-identity { grid-template-columns: 132px minmax(0, 1fr); gap: 4px 8px; padding: 0 12px 14px; }
   .pt-profile-portrait { grid-column: 1; grid-row: 1; margin-top: -62px; }
   .pt-profile-portrait .pt-avatar { width: 132px; height: 132px; border-width: 5px; }
-  .pt-profile-portrait > span { right: 9px; bottom: 8px; width: 24px; height: 24px; border-width: 4px; }
+  .pt-profile-portrait > span:not(.pt-avatar) { right: 9px; bottom: 8px; width: 24px; height: 24px; border-width: 4px; }
   .pt-profile-copy { grid-column: 1 / -1; }
   .pt-profile-copy h1 { font-size: 28px; }
   .pt-profile-copy .pt-profile-location { margin: 4px 0 6px !important; }

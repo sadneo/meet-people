@@ -10,6 +10,7 @@
 .pt-account-nav .pt-avatar { width: 34px; height: 34px; border: 0; }
 .pt-scene-messages .pt-main, .pt-scene-chat .pt-main { display: flex; min-height: 0; padding-block: 12px 16px; animation: none; }
 .pt-messages-workspace { display: grid; grid-template-columns: minmax(0, 26fr) minmax(0, 48fr) minmax(0, 26fr); gap: clamp(10px, 1.2vw, 30px); width: 100%; min-height: 0; }
+.pt-messages-workspace.is-two-pane { grid-template-columns: minmax(0, 26fr) minmax(0, 74fr); }
 .pt-inbox-pane, .pt-conversation-pane { min-width: 0; min-height: 0; background: var(--pt-message-surface); border-radius: 16px; }
 .pt-inbox-pane { padding: 20px 12px; overflow-y: auto; overscroll-behavior: contain; }
 .pt-inbox-pane .pt-page-heading { margin: 0 4px 22px; }

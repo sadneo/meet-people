@@ -19,6 +19,10 @@
   max-width: 100%;
   flex-shrink: 0;
 }
+@media (width > 800px) {
+  .pt-app.pt-scene-home { --pt-focus-size: clamp(220px, min(38vw, 37dvh), 580px); }
+  .pt-app.pt-scene-home .pt-discovery-action { width: min(100%, 300px); }
+}
 .pt-app .pt-pebble-refresh {
   position: absolute; bottom: 0; left: 50%; translate: -50% 0;
   display: grid; place-items: center; width: var(--pt-focus-size); height: var(--pt-focus-size);

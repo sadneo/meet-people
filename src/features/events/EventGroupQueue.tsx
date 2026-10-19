@@ -72,19 +72,23 @@ function SignedInQueue({ listingId, token, actorId }: { listingId: string; token
   }
   const queued = snapshot?.state === 'waiting' || snapshot?.state === 'proposal'
   return <>
-    <p role="status">{!snapshot ? 'Queue status unavailable or loading.' : snapshot.state === 'idle' ? 'Not in this event queue.' : snapshot.state === 'waiting' ? 'You are in this event queue.' : 'A group proposal is available to review.'}</p>
+    <p role="status" className="ev-queue-status">{!snapshot ? 'Queue status unavailable or loading.' : snapshot.state === 'idle' ? 'Not in this event queue.' : snapshot.state === 'waiting' ? 'You are in this event queue.' : 'A group proposal is available to review.'}</p>
     {(error || profileError) && <p role="alert">{error || profileError} Last confirmed queue state is shown.</p>}
     {!profileReady && <p>Load and save your <Link to="/matchmaking">matching profile</Link> before joining.</p>}
-    <Button disabled={busy || reading || !snapshot || (!queued && !profileReady)} onClick={() => void act(Boolean(queued))}>{queued ? 'Leave queue' : 'Find a group to go with'}</Button>
-    <Button secondary disabled={busy || reading} onClick={() => void refresh()}>Refresh queue</Button>
-    <p>Your queue is saved on the server. Background processing is not enabled by this page; joining does not mean a group has been found. No email or push delivery.</p>
+    <div className="ev-queue-actions">
+      <Button disabled={busy || reading || !snapshot || (!queued && !profileReady)} onClick={() => void act(Boolean(queued))}>{queued ? 'Leave queue' : 'Find a group to go with'}</Button>
+      <Button secondary disabled={busy || reading} onClick={() => void refresh()}>Refresh queue</Button>
+    </div>
     {snapshot?.proposal && <><Button secondary onClick={() => setReview(value => !value)}>Review proposal</Button>{review && <div><h3>Suggested group · {snapshot.proposal.members.length} people</h3><ul>{snapshot.proposal.members.map(member => <li key={member.id}>{member.avatar && <img src={member.avatar} width={48} height={48} alt="" referrerPolicy="no-referrer" />}<strong>{member.name}</strong></li>)}</ul><p>A suggestion, not a confirmed group, invitation, RSVP or chat.</p></div>}</>}
+    <p className="ev-small-note">Your queue is saved on the server. Background processing is not enabled by this page; joining does not mean a group has been found. No email or push delivery.</p>
   </>
 }
 export function EventGroupQueue({ listingId }: { listingId: string }) {
   const { session, ready } = useSession()
   const navigate = useNavigate()
-  return <section aria-label="Event group queue"><h2>Go together</h2><p>Join this event’s separate group queue for a suggestion of 2–4 people. Old Company interest and compatibility opt-in do not enroll you.</p>
-    {!ready ? <p role="status">Loading session…</p> : !session ? <Button onClick={() => navigate(centralSignInPath(eventDetailPath(listingId)))}>Find a group to go with</Button> : <SignedInQueue key={`${listingId}:${session.user.id}:${session.access_token}`} listingId={listingId} token={session.access_token} actorId={session.user.id} />}
+  // Purpose and status lead; actions share one wrapping row; service limits stay quiet below.
+  return <section aria-label="Event group queue" className="ev-group-queue"><h2>Go together</h2><p>Join this event’s separate group queue for a suggestion of 2–4 people.</p>
+    {!ready ? <p role="status" className="ev-queue-status">Loading session…</p> : !session ? <div className="ev-queue-actions"><Button onClick={() => navigate(centralSignInPath(eventDetailPath(listingId)))}>Find a group to go with</Button></div> : <SignedInQueue key={`${listingId}:${session.user.id}:${session.access_token}`} listingId={listingId} token={session.access_token} actorId={session.user.id} />}
+    <p className="ev-small-note">Old Company interest and compatibility opt-in do not enroll you.</p>
   </section>
 }

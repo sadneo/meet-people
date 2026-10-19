@@ -76,6 +76,7 @@ body:has(.pt-app) { --pt-safe-area-bottom: env(safe-area-inset-bottom, 0px); --p
 }
 @media (max-width: 800px) {
   body:has(.pt-app) { --pt-gutter: 20px; --pt-navigation-clearance: calc(var(--pt-navigation-height) + var(--pt-safe-area-bottom)); }
+  .pt-main :is(a, button, input, select, textarea, summary, [tabindex]) { scroll-margin-bottom: calc(var(--pt-navigation-clearance) + 8px); }
   .pt-scene-intro, .pt-scene-login, .pt-scene-register, .pt-scene-onboarding { --pt-navigation-clearance: 0px; }
   .pt-review-tools { gap: 6px 8px; padding-block: 6px; }
   .pt-dev-economy { margin-left: 0; gap: 6px; width: 100%; }

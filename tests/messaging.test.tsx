@@ -28,6 +28,11 @@ let sent: typeof incoming = []
 let rileyChat = false
 let failSend = false
 let failHistory = false
+let historyStatus = 200
+let sendStatus = 200
+let failSendNetwork = false
+let removedConversations: string[] = []
+let paginated = false
 let empty = false
 let resolveSend: (() => void) | null = null
 let delaySend = false
@@ -52,22 +57,27 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => 
     if (url.pathname.endsWith('/read')) { unread[id] = 0; return json({ lastReadSeq: payload.seq }) }
     if (url.pathname.endsWith('/leave')) return new Response(null, { status: 204 })
     if (delaySend) await new Promise<void>(resolve => { resolveSend = resolve })
+    if (failSendNetwork) throw new TypeError('Failed to fetch')
+    if (sendStatus !== 200) return json({ error: 'You are not in this conversation.' }, sendStatus)
     if (failSend) return json({ error: 'Could not send.' }, 503)
     const message = { ...first, id: crypto.randomUUID(), conversation_id: id, seq: (inConversation.at(-1)?.seq ?? 0) + 1, sender_id: user, body: payload.body.trim() }
     saved.push(message)
     return json(message)
   }
   if (url.pathname.endsWith('/messages')) {
+    if (historyStatus !== 200) return json({ error: 'You are not in this conversation.' }, historyStatus)
     if (id === a && delayHistory) await new Promise<void>(resolve => { holdHistory = resolve })
     if (failHistory) return json({ error: 'History unavailable.' }, 503)
     const after = Number(url.searchParams.get('after') ?? 0)
     return json({ kind: id === b ? 'event_group' : 'direct', canSend, messages: inConversation.filter(message => message.seq > after), participants: participants(id), nextCursor: null })
   }
-  return json({ conversations: empty ? [] : [a, b, ...(rileyChat ? [c] : [])].map(id => ({ id, kind: id === b ? 'event_group' : 'direct', created_at: first.created_at, participants: participants(id), latest_message: saved.filter(message => message.conversation_id === id).at(-1) ?? null, unread_count: unread[id] ?? 0 })), hasMore: false })
+  const pageIds = paginated ? (url.searchParams.get('page') === '2' ? [b] : [a]) : [a, b, ...(rileyChat ? [c] : [])]
+  return json({ conversations: empty ? [] : pageIds.filter(id => !removedConversations.includes(id)).map(id => ({ id, kind: id === b ? 'event_group' : 'direct', created_at: first.created_at, participants: participants(id), latest_message: saved.filter(message => message.conversation_id === id).at(-1) ?? null, unread_count: unread[id] ?? 0 })), hasMore: paginated && url.searchParams.get('page') !== '2' })
 })
 beforeEach(() => {
   saved = [first]; unread = { [a]: 1 }; taylorRead = 0; canSend = true; incoming = []; sent = []; rileyChat = false
   failSend = false; failHistory = false; empty = false; delaySend = false; resolveSend = null; delayHistory = false; holdHistory = null
+  historyStatus = 200; sendStatus = 200; failSendNetwork = false; removedConversations = []; paginated = false
   auth.session = { user: { id: user } } as Session
   vi.stubGlobal('fetch', fetchMock); fetchMock.mockClear()
 })
@@ -125,6 +135,64 @@ describe('persisted messaging UI with mocked API', () => {
     await history().findByText('See you there')
     expect(history().getByText('Seen')).toBeTruthy()
   })
+  it('updates the inbox preview as soon as an open chat receives a message', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    open(`/messages/chat?conversation=${a}`)
+    await history().findByText('Persisted hello')
+    saved.push({ ...first, id: crypto.randomUUID(), seq: 2, body: 'Fresh incoming preview' })
+    await act(() => vi.advanceTimersByTimeAsync(5000))
+    await history().findByText('Fresh incoming preview')
+    expect(screen.getByRole('button', { name: /Taylor.*Fresh incoming preview/ })).toBeTruthy()
+  })
+  it.each([403, 404])('disables a chat and explains when access ends during polling (%s)', async status => {
+    open(`/messages/chat?conversation=${a}`)
+    await history().findByText('Persisted hello')
+    historyStatus = status
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
+    await screen.findByText('You are not in this conversation.')
+    expect(screen.getByLabelText('Message', { exact: true }).hasAttribute('disabled')).toBe(true)
+    expect(screen.queryByRole('button', { name: /Taylor.*Persisted hello/ })).toBeNull()
+  })
+  it('keeps a newer sent preview when an older chat poll finishes afterward', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    open(`/messages/chat?conversation=${a}`)
+    await history().findByText('Persisted hello')
+    saved.push({ ...first, id: crypto.randomUUID(), seq: 2, body: 'Older incoming message' })
+    delayHistory = true
+    await act(() => vi.advanceTimersByTimeAsync(5000))
+    expect(holdHistory).not.toBeNull()
+    fireEvent.change(screen.getByLabelText('Message', { exact: true }), { target: { value: 'Newer sent message' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send', exact: true }))
+    await history().findByText('Newer sent message')
+    await act(async () => { holdHistory?.() })
+    await history().findByText('Older incoming message')
+    expect(screen.getByRole('button', { name: /Taylor.*Newer sent message/ })).toBeTruthy()
+  })
+  it('removes ended conversations during polling while retaining loaded later pages', async () => {
+    paginated = true
+    open()
+    await screen.findByRole('button', { name: /Taylor.*Persisted hello/ })
+    fireEvent.click(screen.getByRole('button', { name: 'Load more conversations' }))
+    await screen.findByRole('button', { name: /Jordan.*Say hello/ })
+    removedConversations = [a]
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Taylor/ })).toBeNull())
+    expect(screen.getByRole('button', { name: /Jordan.*Say hello/ })).toBeTruthy()
+  })
+  it('does not reenable a denied chat when an earlier successful poll finishes', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    open(`/messages/chat?conversation=${a}`)
+    await history().findByText('Persisted hello')
+    delayHistory = true
+    await act(() => vi.advanceTimersByTimeAsync(5000))
+    expect(holdHistory).not.toBeNull()
+    sendStatus = 403
+    fireEvent.change(screen.getByLabelText('Message', { exact: true }), { target: { value: 'Unsent message' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send', exact: true }))
+    await screen.findByText('You are not in this conversation.')
+    await act(async () => { holdHistory?.() })
+    expect(screen.getByLabelText('Message', { exact: true }).hasAttribute('disabled')).toBe(true)
+  })
   it('labels messages from deleted accounts and disables sending when the conversation is closed', async () => {
     saved = [{ ...first, sender_id: null }]
     canSend = false
@@ -170,6 +238,17 @@ describe('persisted messaging UI with mocked API', () => {
     failHistory = false
     fireEvent.click(screen.getByRole('button', { name: 'Retry messages' }))
     await history().findByText('Persisted hello')
+  })
+  it('explains network send failures without browser diagnostics and preserves the draft', async () => {
+    failSendNetwork = true
+    open(`/messages/chat?conversation=${a}`)
+    await history().findByText('Persisted hello')
+    fireEvent.change(screen.getByLabelText('Message', { exact: true }), { target: { value: 'Keep this draft' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send', exact: true }))
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('Could not send your message.')
+    expect(alert.textContent).not.toContain('Failed to fetch')
+    expect((screen.getByLabelText('Message', { exact: true }) as HTMLInputElement).value).toBe('Keep this draft')
   })
   it('discards a late response from the previously selected conversation', async () => {
     delayHistory = true

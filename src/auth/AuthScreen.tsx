@@ -194,7 +194,6 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
         </fieldset></form>
         {confirmEmail && <Button secondary disabled={busy} onClick={resend}>{pending === 'resend' ? 'Sending…' : 'Resend confirmation'}</Button>}
         {authMode && google}
-        {emailStep && <p className="pt-auth-account">New to Pebble? <Link to={link('/register')} state={{ email }}>Create an account</Link></p>}
         {registerStep && <Button secondary disabled={busy} onClick={() => go('password')}>Back to sign in</Button>}
         {mode === 'forgot' && <Link to={link('/login')} state={{ email, authStep: email ? 'password' : 'email' }}>Back to sign in</Link>}
       </>}

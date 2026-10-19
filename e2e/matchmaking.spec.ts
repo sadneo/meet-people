@@ -1,6 +1,36 @@
 import { expect, test } from '@playwright/test'
 import { browserProfile, mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
 
+for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 860 }]) {
+  test(`invalid matching preferences reveal their feedback at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await mockMatchingSession(page)
+    await mockMatchingApi(page)
+    let saves = 0
+    await page.route('**/api/matchmaking/profile', route => {
+      if (route.request().method() === 'PUT') saves++
+      return route.fallback()
+    })
+    await page.goto('/matchmaking')
+    await page.getByRole('button', { name: 'Preferences', exact: true }).click()
+    await page.getByRole('button', { name: 'Add time window' }).click()
+    await page.getByLabel('Start 1', { exact: true }).fill('17:00')
+    await page.getByLabel('End 1', { exact: true }).fill('21:00')
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await page.getByRole('button', { name: 'Save preferences' }).click()
+      const alert = page.getByRole('dialog').getByRole('alert')
+      await expect(alert).toBeFocused()
+      await expect.poll(() => alert.evaluate(element => {
+        const body = element.closest('.match-preferences-body')!.getBoundingClientRect()
+        const bounds = element.getBoundingClientRect()
+        return bounds.top >= body.top && bounds.bottom <= body.bottom
+      })).toBe(true)
+      await expect(page.getByLabel('Start 1', { exact: true })).toHaveValue('17:00')
+    }
+    expect(saves).toBe(0)
+  })
+}
+
 for (const origin of ['shell', 'settings']) {
   test(`mocked ${origin} logout failure stays signed in; retry signs out through auth notifications`, async ({ page }) => {
     await mockMatchingSession(page, true, 1)
