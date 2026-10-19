@@ -1,0 +1,21 @@
+import { openAs } from '/home/xqiu/Projects/meet-people/.claude/skills/qa/scripts/qa-browser.mjs'
+const R = '/home/xqiu/Projects/meet-people/qa/runs/2026-10-18-1700'
+const A = await openAs('alice', { width: 390, height: 844 })
+const E = await openAs('erin', { width: 390, height: 844 })
+await E.page.goto('/messages'); await E.page.waitForTimeout(2000)
+await A.page.goto('/messages'); await A.page.getByRole('button', { name: 'Accept' }).waitFor()
+await A.page.waitForTimeout(1000)
+const navDot = async s => s.page.evaluate(() => { const l = document.querySelector('a[href="/messages"]'); return l ? getComputedStyle(l, '::after').content + '|' + l.className + '|' + l.innerHTML.length : 'none' })
+console.log('alice nav before:', await navDot(A))
+const t0 = Date.now()
+await A.page.getByRole('button', { name: 'Accept' }).click()
+await A.page.waitForURL(/conversation=/, { timeout: 10000 }).then(() => console.log('alice navigated to chat after', Date.now() - t0, 'ms', A.page.url())).catch(() => console.log('alice did not navigate; url', A.page.url()))
+await A.page.waitForTimeout(1500)
+await A.shot(`${R}/screenshots/MSG-accept-alice-after-390.png`)
+console.log('alice main:\n' + await A.page.locator('main').ariaSnapshot())
+// Erin waits for the chat to show
+await E.page.getByRole('button', { name: /Alice/ }).waitFor({ timeout: 40000 }).then(() => console.log('erin sees chat after', Date.now() - t0, 'ms')).catch(() => console.log('erin did not see chat within 40s'))
+await E.shot(`${R}/screenshots/MSG-accept-erin-after-390.png`)
+console.log('alice nav after:', await navDot(A))
+console.log('A problems', A.problems); console.log('E problems', E.problems)
+await A.close(); await E.close()

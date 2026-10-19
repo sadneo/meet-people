@@ -1,0 +1,20 @@
+
+=== / -> / (667x375) overflow=false sw=667 nav={"top":303,"height":72}
+
+=== /community -> /community (667x375) overflow=false sw=667 nav={"top":303,"height":72}
+  small: rect"Move Village bench" 35x24 | rect"Say hello to your Pebble" 21x20 | rect"Move Pebble friend" 18x17 | rect"Move Little Pebble" 15x15
+
+=== /matchmaking -> /matchmaking (667x375) overflow=false sw=667 nav={"top":303,"height":72}
+
+=== /events -> /events (667x375) overflow=false sw=667 nav={"top":303,"height":72}
+  small: a.ev-name-link"QA event 1" 587x36 | a.ev-name-link"QA event 2" 587x36 | a.ev-name-link"QA event 3" 587x36 | a.ev-name-link"QA event 4" 587x36 | a.ev-name-link"QA event 5" 587x36
+  contrast: button.ev-button.ev-secondary"Previous" 2.29/4.5 rgb(31, 90, 60) on rgb(244, 249, 232) (disabled)
+            button.ev-button.ev-secondary"Next" 2.29/4.5 rgb(31, 90, 60) on rgb(244, 249, 232) (disabled)
+
+=== /messages -> /messages (667x375) overflow=false sw=667 nav={"top":303,"height":72}
+
+=== /messages/chat?conversation=17a7b258-e2ec-4f3d-864a-d112fe3ceb70 -> /messages/chat?conversation=17a7b258-e2ec-4f3d-864a-d112fe3ceb70 (667x375) overflow=false sw=667 nav={"top":303,"height":72}
+  contrast: button.pt-button"Send" 2.98/4.5 rgb(255, 255, 255) on rgb(140, 154, 128) (disabled)
+
+=== /settings -> /settings (667x375) overflow=false sw=667 nav={"top":303,"height":72}
+  small: input"Plan & message notifications" 36x20 | input"Show me in discovery" 36x20 | input"Share my availability" 36x20 | input"Nearby suggestions" 36x20

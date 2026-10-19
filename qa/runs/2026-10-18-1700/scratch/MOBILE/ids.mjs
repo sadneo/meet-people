@@ -1,0 +1,10 @@
+import { openAs } from '/home/xqiu/Projects/meet-people/.claude/skills/qa/scripts/qa-browser.mjs'
+const { page, problems, close } = await openAs('liam', { width: 390, height: 844 })
+await page.goto('/messages'); await page.waitForTimeout(2500)
+await page.getByRole('button', { name: /Frank Lee/ }).click(); await page.waitForTimeout(1500)
+console.log('chat url', page.url())
+await page.goto('/events'); await page.waitForLoadState('networkidle').catch(()=>{}); await page.waitForTimeout(2000)
+const links = await page.$$eval('a', as => as.map(a => a.getAttribute('href')).filter(h => h && h.includes('/events/')))
+console.log('event links', links.slice(0,5))
+console.log(problems)
+await close()

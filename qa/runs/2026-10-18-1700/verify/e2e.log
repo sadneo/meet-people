@@ -1,0 +1,721 @@
+
+Running 121 tests using 2 workers
+
+(node:802043) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:802044) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓    1 e2e/app.spec.ts:3:1 › renders home, fallback routes, and API health (824ms)
+  ✓    3 e2e/app.spec.ts:24:3 › fits the app shell at 375px (293ms)
+  ✓    4 e2e/app.spec.ts:24:3 › fits the app shell at 1280px (324ms)
+  ✓    2 e2e/auth.spec.ts:12:1 › new account onboarding, blank avatar, profile/settings persistence and account switching at 1280px (4.8s)
+  ✓    6 e2e/auth.spec.ts:12:1 › new account onboarding, blank avatar, profile/settings persistence and account switching at 390px (4.5s)
+  ✘    7 e2e/auth.spec.ts:95:1 › progressive registration, retry, recovery and callback errors at 1280px (5.8s)
+(node:803908) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘    8 e2e/auth.spec.ts:95:1 › progressive registration, retry, recovery and callback errors at 390px (6.0s)
+(node:804255) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓    9 e2e/auth.spec.ts:176:1 › email entry remains usable across shell breakpoints and short screens (747ms)
+  ✓   10 e2e/build-purchases.spec.ts:5:3 › Rare Finds and confirmed purchase refunds at 320px (3.9s)
+  ✓   11 e2e/build-purchases.spec.ts:5:3 › Rare Finds and confirmed purchase refunds at 390px (3.5s)
+  ✘    5 e2e/app.spec.ts:34:1 › app shell switches between desktop and mobile navigation (30.0s)
+(node:804968) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   13 e2e/app.spec.ts:52:3 › avatar dropdown navigates and dismisses at 801px (366ms)
+(node:805137) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   14 e2e/app.spec.ts:52:3 › avatar dropdown navigates and dismisses at 1280px (336ms)
+(node:805269) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   12 e2e/build-purchases.spec.ts:5:3 › Rare Finds and confirmed purchase refunds at 1280px (3.9s)
+  ✓   15 e2e/calm-design.spec.ts:4:3 › calm compositions scale and remain reachable at 1280x720 (1.3s)
+  ✓   17 e2e/calm-design.spec.ts:4:3 › calm compositions scale and remain reachable at 1440x900 (1.1s)
+  ✓   18 e2e/calm-design.spec.ts:4:3 › calm compositions scale and remain reachable at 1920x1080 (1.2s)
+  ✓   16 e2e/community-refinements.spec.ts:6:3 › village history, local placement and collectibles at 390px (3.0s)
+  ✓   19 e2e/calm-design.spec.ts:4:3 › calm compositions scale and remain reachable at 2560x1440 (1.4s)
+  ✓   21 e2e/calm-design.spec.ts:4:3 › calm compositions scale and remain reachable at 768x1024 (1.1s)
+  ✓   22 e2e/calm-design.spec.ts:4:3 › calm compositions scale and remain reachable at 390x844 (994ms)
+  ✓   20 e2e/community-refinements.spec.ts:6:3 › village history, local placement and collectibles at 1280px (4.0s)
+  ✓   23 e2e/calm-design.spec.ts:4:3 › calm compositions scale and remain reachable at 320x568 (1.0s)
+  ✓   25 e2e/calm-design.spec.ts:35:1 › history selection changes the scene without spending or granting Pebbles (823ms)
+  ✓   26 e2e/connections.spec.ts:9:3 › accepting a connection request opens the new chat at 390px (694ms)
+  ✓   27 e2e/connections.spec.ts:9:3 › accepting a connection request opens the new chat at 1280px (658ms)
+  ✓   28 e2e/connections.spec.ts:38:1 › a suggested match can be asked to connect, and the request cancelled (781ms)
+  ✓   29 e2e/decorative-idle.spec.ts:15:1 › Home has three sharp held poses and hands refresh back to the thinking sprite (2.5s)
+  ✓   30 e2e/decorative-idle.spec.ts:43:1 › breeze is limited to foliage patches with staggered, sharp states and reduced motion (1.2s)
+  ✘   31 e2e/event-group-queue.spec.ts:45:1 › mocked event queue persists across reload; no old consent, Company, scoring or group-found claim (250ms)
+(node:806254) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   24 e2e/community.spec.ts:15:1 › the verified mock reward loop grows, customizes, and resets on mobile (7.6s)
+  ✘   33 e2e/event-group-queue.spec.ts:67:1 › mocked missing RPC and unsaved profile block enrollment but existing queue can leave (284ms)
+(node:806412) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   34 e2e/event-group-queue.spec.ts:85:34 › mocked persistent inbox keyboard/read lifecycle and proposal at 390px (286ms)
+(node:806545) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   35 e2e/event-group-queue.spec.ts:85:34 › mocked persistent inbox keyboard/read lifecycle and proposal at 1440px (273ms)
+(node:806675) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   36 e2e/event-group-queue.spec.ts:114:1 › signed-out queue goes to central sign-in with encoded canonical event return (640ms)
+  ✓   32 e2e/community.spec.ts:60:1 › proof, partial collection, and confirmations survive closing the activity (3.1s)
+  ✘   37 e2e/event-group-queue.spec.ts:122:1 › signed-in central callback recovers validated return, but never an external destination (279ms)
+(node:806881) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   39 e2e/event-group-queue.spec.ts:131:1 › mocked wide event preview mounts the same queue without scoring or enrollment (276ms)
+(node:807076) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   40 e2e/event-group-queue.spec.ts:140:1 › mocked slow profile never locks Leave; conflicting queue/feed reads visibly disable controls then recover (276ms)
+(node:807208) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   41 e2e/events.spec.ts:8:3 › event card actions align within actual rows at 1440px without clipping copy (340ms)
+  ✓   42 e2e/events.spec.ts:8:3 › event card actions align within actual rows at 1920px without clipping copy (334ms)
+  ✓   38 e2e/community.spec.ts:77:1 › intro supports keyboard, scatters all expressions, and leaves no hidden focus layer (2.6s)
+  ✓   43 e2e/events.spec.ts:8:3 › event card actions align within actual rows at 390px without clipping copy (345ms)
+  ✓   45 e2e/events.spec.ts:79:3 › event image missing has accurate artwork and disclosure (323ms)
+  ✓   46 e2e/events.spec.ts:79:3 › event image invalid has accurate artwork and disclosure (315ms)
+  ✓   47 e2e/events.spec.ts:79:3 › event image failed has accurate artwork and disclosure (326ms)
+  ✓   48 e2e/events.spec.ts:79:3 › event image valid has accurate artwork and disclosure (322ms)
+  ✓   49 e2e/events.spec.ts:112:1 › failed event photo and failed local placeholder never enter an image retry loop (307ms)
+  ✓   50 e2e/events.spec.ts:129:1 › mobile cards, real empty categories, and shareable details (975ms)
+  ✓   51 e2e/events.spec.ts:147:1 › wide desktop retains the prototype side preview (573ms)
+  ✓   52 e2e/events.spec.ts:157:1 › failed requests can be retried and unavailable details are explained (825ms)
+  ✓   53 e2e/events.spec.ts:169:1 › feature styles preserve host prototype controls and layout (332ms)
+  ✓   44 e2e/community.spec.ts:90:1 › reduced motion retains the intro, reward flow, and static world (4.5s)
+  ✓   54 e2e/home-preview.spec.ts:9:3 › Home thought composition at 320x480 (511ms)
+  ✓   56 e2e/home-preview.spec.ts:9:3 › Home thought composition at 390x844 (424ms)
+  ✓   57 e2e/home-preview.spec.ts:9:3 › Home thought composition at 520x844 (397ms)
+  ✓   58 e2e/home-preview.spec.ts:9:3 › Home thought composition at 521x844 (391ms)
+  ✓   59 e2e/home-preview.spec.ts:9:3 › Home thought composition at 768x1024 (368ms)
+  ✓   60 e2e/home-preview.spec.ts:9:3 › Home thought composition at 1280x720 (477ms)
+  ✓   61 e2e/home-preview.spec.ts:9:3 › Home thought composition at 1920x1080 (477ms)
+  ✓   55 e2e/community.spec.ts:103:1 › intro, world, and reward dialog fit narrow and wide screens without changing Home (3.4s)
+  ✓   62 e2e/home-preview.spec.ts:9:3 › Home thought composition at 2560x1440 (481ms)
+  ✓   64 e2e/home-preview.spec.ts:49:1 › Pebble keyboard refresh waits, blocks duplicate refreshes and preserves focus (456ms)
+  ✓   63 e2e/hosting.spec.ts:3:1 › production shell supports deep-link refresh and same-origin API access (1.1s)
+  ✓   65 e2e/home-preview.spec.ts:77:1 › bubbles use existing profile selection, refresh is local and cleans up on navigation (1.1s)
+  ✓   66 e2e/keyboard-clearance.spec.ts:5:3 › focused controls clear compact navigation at 390px with 0px safe area (672ms)
+  ✓   67 e2e/home-preview.spec.ts:95:1 › bubble density updates on resize and empty preview keeps the actual matching action (534ms)
+  ✓   68 e2e/keyboard-clearance.spec.ts:5:3 › focused controls clear compact navigation at 390px with 24px safe area (695ms)
+  ✓   70 e2e/keyboard-clearance.spec.ts:5:3 › focused controls clear compact navigation at 768px with 0px safe area (619ms)
+  ✓   71 e2e/keyboard-clearance.spec.ts:5:3 › focused controls clear compact navigation at 768px with 24px safe area (659ms)
+  ✓   72 e2e/matchmaking.spec.ts:5:3 › invalid matching preferences reveal their feedback at 390px (758ms)
+  ✓   69 e2e/landscape-purchases.spec.ts:5:3 › fixed landscape purchases, persistence and full refund at 390px (2.4s)
+  ✓   73 e2e/matchmaking.spec.ts:5:3 › invalid matching preferences reveal their feedback at 1280px (760ms)
+  ✓   74 e2e/landscape-purchases.spec.ts:5:3 › fixed landscape purchases, persistence and full refund at 1280px (2.5s)
+  ✓   76 e2e/messaging-persistence.spec.ts:7:3 › saved messaging UI at 320px, refresh and conversation isolation (882ms)
+  ✓   77 e2e/messaging-persistence.spec.ts:7:3 › saved messaging UI at 390px, refresh and conversation isolation (973ms)
+  ✓   78 e2e/messaging-persistence.spec.ts:7:3 › saved messaging UI at 799px, refresh and conversation isolation (782ms)
+  ✓   79 e2e/messaging-persistence.spec.ts:7:3 › saved messaging UI at 800px, refresh and conversation isolation (870ms)
+  ✘   75 e2e/matchmaking.spec.ts:35:3 › mocked shell logout failure stays signed in; retry signs out through auth notifications (5.5s)
+(node:810614) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   80 e2e/messaging-persistence.spec.ts:7:3 › saved messaging UI at 801px, refresh and conversation isolation (872ms)
+  ✓   82 e2e/messaging-persistence.spec.ts:7:3 › saved messaging UI at 1280px, refresh and conversation isolation (837ms)
+  ✓   83 e2e/messaging-persistence.spec.ts:7:3 › saved messaging UI at 1800px, refresh and conversation isolation (782ms)
+  ✓   84 e2e/pixel-assets.spec.ts:5:3 › pixel assets and village at 320px (651ms)
+  ✓   85 e2e/pixel-assets.spec.ts:5:3 › pixel assets and village at 390px (553ms)
+  ✓   86 e2e/pixel-assets.spec.ts:5:3 › pixel assets and village at 768px (682ms)
+  ✓   87 e2e/pixel-assets.spec.ts:5:3 › pixel assets and village at 1280px (731ms)
+  ✓   88 e2e/pixel-assets.spec.ts:5:3 › pixel assets and village at 2560px (793ms)
+  ✘   81 e2e/matchmaking.spec.ts:35:3 › mocked settings logout failure stays signed in; retry signs out through auth notifications (5.5s)
+(node:811127) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   89 e2e/pixel-assets.spec.ts:35:1 › matching artwork follows the existing queue state (649ms)
+  ✓   90 e2e/matchmaking.spec.ts:61:3 › mocked active queue, explicit lookup and cancellation failure (905ms)
+  ✓   92 e2e/matchmaking.spec.ts:87:3 › mocked active enrollment requires a saved profile; failed save cannot unlock it (866ms)
+  ✓   93 e2e/matchmaking.spec.ts:122:3 › mocked active profile failure prevents enrollment until a successful retry (659ms)
+  ✓   91 e2e/prototype-community.spec.ts:9:3 › contained community persists manual purchases at 390px (2.8s)
+  ✓   94 e2e/matchmaking.spec.ts:143:3 › mocked active existing queue can refresh and leave despite profile failure (715ms)
+  ✓   96 e2e/matchmaking.spec.ts:61:3 › mocked downtime queue, explicit lookup and cancellation failure (831ms)
+  ✓   97 e2e/matchmaking.spec.ts:87:3 › mocked downtime enrollment requires a saved profile; failed save cannot unlock it (852ms)
+  ✓   98 e2e/matchmaking.spec.ts:122:3 › mocked downtime profile failure prevents enrollment until a successful retry (654ms)
+  ✓   95 e2e/prototype-community.spec.ts:9:3 › contained community persists manual purchases at 1440px (2.9s)
+  ✓   99 e2e/matchmaking.spec.ts:143:3 › mocked downtime existing queue can refresh and leave despite profile failure (682ms)
+  ✘  101 e2e/matchmaking.spec.ts:168:1 › mocked sign-in gating and atomic profile failure are honest (326ms)
+(node:811886) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  100 e2e/prototype-community.spec.ts:9:3 › contained community persists manual purchases at 3840px (2.8s)
+  ✓  103 e2e/prototype-community.spec.ts:49:1 › Intro can be replayed, reset during opening, and returns to Home (4.2s)
+  ✘  104 e2e/prototype-community.spec.ts:71:1 › curious Pebble visits actual viewport edges and retreats fully at 4K (5.3s)
+(node:812548) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  105 e2e/prototype-community.spec.ts:93:1 › invalid local economy data does not break the prototype (408ms)
+  ✓  106 e2e/prototype-community.spec.ts:102:1 › wide event selection opens details and utility scenes remain responsive (595ms)
+  ✓  107 e2e/responsive.spec.ts:5:3 › product layouts share the 800px boundary at 320px (3.8s)
+  ✓  108 e2e/responsive.spec.ts:5:3 › product layouts share the 800px boundary at 390px (5.0s)
+  ✓  109 e2e/responsive.spec.ts:5:3 › product layouts share the 800px boundary at 799px (7.5s)
+  ✘  102 e2e/prototype.spec.ts:23:3 › connected planning path, edit and chat at 1440px (30.0s)
+(node:814316) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  111 e2e/prototype.spec.ts:23:3 › connected planning path, edit and chat at 390px (2.2s)
+  ✓  110 e2e/responsive.spec.ts:5:3 › product layouts share the 800px boundary at 800px (4.1s)
+  ✓  112 e2e/prototype.spec.ts:57:1 › onboarding skip, all chapters, unique rewards and ordinary profile editing (1.5s)
+  ✓  113 e2e/responsive.spec.ts:5:3 › product layouts share the 800px boundary at 801px (4.1s)
+  ✓  115 e2e/responsive.spec.ts:5:3 › product layouts share the 800px boundary at 1280px (4.0s)
+  ✓  116 e2e/responsive.spec.ts:5:3 › product layouts share the 800px boundary at 1800px (4.0s)
+  ✓  117 e2e/responsive.spec.ts:88:1 › an existing messaging workspace switches with navigation when resized (325ms)
+  ✓  118 e2e/responsive.spec.ts:103:1 › navigation and preferences share safe-area clearance on a short screen (884ms)
+  ✘  114 e2e/prototype.spec.ts:95:1 › cinematic finishes; reduced motion bypasses it and disables movement (30.0s)
+(node:815737) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  119 e2e/prototype.spec.ts:113:1 › all scenes fit a narrow phone; filters, empty states, reporting and blocking work (4.3s)
+  ✓  120 e2e/prototype.spec.ts:155:1 › settings switches retain session changes and dialogs return focus (730ms)
+  ✘  121 e2e/prototype.spec.ts:179:1 › registration has no demo bypass; prototype custom time is preserved; signed-out Messages stays offline (5.2s)
+
+
+  1) e2e/app.spec.ts:34:1 › app shell switches between desktop and mobile navigation ───────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Account menu' })
+
+
+      37 |   await expect(page.locator('.pt-app-header')).toBeVisible()
+      38 |   await expect(page.locator('.pt-bottom-nav')).toBeHidden()
+    > 39 |   await page.getByRole('button', { name: 'Account menu' }).click()
+         |                                                            ^
+      40 |   await expect(page.locator('.pt-account-nav').getByRole('link', { name: 'Profile' })).toBeVisible()
+      41 |   await expect(page.locator('.pt-account-nav').getByRole('link', { name: 'Settings' })).toBeVisible()
+      42 |
+        at /home/xqiu/Projects/meet-people/e2e/app.spec.ts:39:60
+
+    Error Context: test-results/app-app-shell-switches-between-desktop-and-mobile-navigation/error-context.md
+
+  2) e2e/app.spec.ts:52:3 › avatar dropdown navigates and dismisses at 801px ───────────────────────
+
+    TypeError: Cannot read properties of null (reading 'width')
+
+      57 |     await expect(options).toBeHidden()
+      58 |     const avatar = await trigger.getByRole('img').boundingBox()
+    > 59 |     expect(avatar!.width).toBe(44)
+         |                    ^
+      60 |     expect(avatar!.height).toBe(44)
+      61 |
+      62 |     await trigger.focus()
+        at /home/xqiu/Projects/meet-people/e2e/app.spec.ts:59:20
+
+    Error Context: test-results/app-avatar-dropdown-navigates-and-dismisses-at-801px/error-context.md
+
+  3) e2e/app.spec.ts:52:3 › avatar dropdown navigates and dismisses at 1280px ──────────────────────
+
+    TypeError: Cannot read properties of null (reading 'width')
+
+      57 |     await expect(options).toBeHidden()
+      58 |     const avatar = await trigger.getByRole('img').boundingBox()
+    > 59 |     expect(avatar!.width).toBe(44)
+         |                    ^
+      60 |     expect(avatar!.height).toBe(44)
+      61 |
+      62 |     await trigger.focus()
+        at /home/xqiu/Projects/meet-people/e2e/app.spec.ts:59:20
+
+    Error Context: test-results/app-avatar-dropdown-navigates-and-dismisses-at-1280px/error-context.md
+
+  4) e2e/auth.spec.ts:95:1 › progressive registration, retry, recovery and callback errors at 1280px 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Check your email' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Check your email' }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Check your email' })
+
+
+      131 |     userId = registered.id ?? registered.user?.id
+      132 |     expect(userId).toBeTruthy()
+    > 133 |     await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
+          |                                                                           ^
+      134 |     await expect(page.getByText(/Check your email to confirm/)).toBeVisible()
+      135 |     await expect(page).toHaveURL(/\/login/)
+      136 |     const confirmed = await admin.auth.admin.updateUserById(userId!, { email_confirm: true })
+        at /home/xqiu/Projects/meet-people/e2e/auth.spec.ts:133:75
+
+    Error Context: test-results/auth-progressive-registrat-096ae-d-callback-errors-at-1280px/error-context.md
+
+  5) e2e/auth.spec.ts:95:1 › progressive registration, retry, recovery and callback errors at 390px 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Check your email' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Check your email' }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Check your email' })
+
+
+      131 |     userId = registered.id ?? registered.user?.id
+      132 |     expect(userId).toBeTruthy()
+    > 133 |     await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
+          |                                                                           ^
+      134 |     await expect(page.getByText(/Check your email to confirm/)).toBeVisible()
+      135 |     await expect(page).toHaveURL(/\/login/)
+      136 |     const confirmed = await admin.auth.admin.updateUserById(userId!, { email_confirm: true })
+        at /home/xqiu/Projects/meet-people/e2e/auth.spec.ts:133:75
+
+    Error Context: test-results/auth-progressive-registrat-90b32-nd-callback-errors-at-390px/error-context.md
+
+  6) e2e/event-group-queue.spec.ts:45:1 › mocked event queue persists across reload; no old consent, Company, scoring or group-found claim 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "/api/matchmaking/events/e0000000-0000-4000-8000-000000000001/group-queue"
+    Received: "/api/matchmaking/account"
+
+      28 |       return route.fulfill({ json: { notifications: state.notices, unreadCount: state.notices.filter(item => !item.readAt).length } })
+      29 |     }
+    > 30 |     expect(path).toBe(`/api/matchmaking/events/${id}/group-queue`)
+         |                  ^
+      31 |     if (request.method() === 'GET' && state.queueReadGate) await state.queueReadGate
+      32 |     if (state.missingRpc) return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Matching RPC is not available yet.' } })
+      33 |     if (request.method() !== 'GET') {
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:30:18
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator: getByRole('region', { name: 'Event group queue' }).getByRole('button', { name: 'Find a group to go with', exact: true })
+    Expected: enabled
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('region', { name: 'Event group queue' }).getByRole('button', { name: 'Find a group to go with', exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: 'Event group queue' }).getByRole('button', { name: 'Find a group to go with', exact: true })
+      - Test ended.
+
+
+      47 |   await page.goto(`/events/${id}`)
+      48 |   const panel = page.getByRole('region', { name: 'Event group queue' })
+    > 49 |   await expect(panel.getByRole('button', { name: 'Find a group to go with', exact: true })).toBeEnabled()
+         |                                                                                             ^
+      50 |   await expect(page.getByLabel('Email', { exact: true })).toHaveCount(0)
+      51 |   await expect(page.getByRole('region', { name: 'Event compatibility', exact: true })).toHaveCount(0)
+      52 |   await panel.getByRole('button', { name: 'Find a group to go with' }).click()
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:49:93
+
+    Error Context: test-results/event-group-queue-mocked-e-8f4ad-coring-or-group-found-claim/error-context.md
+
+  7) e2e/event-group-queue.spec.ts:67:1 › mocked missing RPC and unsaved profile block enrollment but existing queue can leave 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "/api/matchmaking/events/e0000000-0000-4000-8000-000000000001/group-queue"
+    Received: "/api/matchmaking/account"
+
+      28 |       return route.fulfill({ json: { notifications: state.notices, unreadCount: state.notices.filter(item => !item.readAt).length } })
+      29 |     }
+    > 30 |     expect(path).toBe(`/api/matchmaking/events/${id}/group-queue`)
+         |                  ^
+      31 |     if (request.method() === 'GET' && state.queueReadGate) await state.queueReadGate
+      32 |     if (state.missingRpc) return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Matching RPC is not available yet.' } })
+      33 |     if (request.method() !== 'GET') {
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:30:18
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('region', { name: 'Event group queue' }).getByRole('alert')
+    Expected substring: "Matching RPC is not available yet"
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByRole('region', { name: 'Event group queue' }).getByRole('alert') with timeout 5000ms
+      - waiting for getByRole('region', { name: 'Event group queue' }).getByRole('alert')
+      - Test ended.
+
+
+      70 |   await page.goto(`/events/${id}`)
+      71 |   const panel = page.getByRole('region', { name: 'Event group queue' })
+    > 72 |   await expect(panel.getByRole('alert')).toContainText('Matching RPC is not available yet')
+         |                                          ^
+      73 |   await expect(panel.getByRole('button', { name: 'Find a group to go with' })).toBeDisabled()
+      74 |   state.missingRpc = false; state.profile = false
+      75 |   await panel.getByRole('button', { name: 'Refresh queue' }).click()
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:72:42
+
+    Error Context: test-results/event-group-queue-mocked-m-426cf-ut-existing-queue-can-leave/error-context.md
+
+  8) e2e/event-group-queue.spec.ts:85:34 › mocked persistent inbox keyboard/read lifecycle and proposal at 390px 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "/api/matchmaking/events/e0000000-0000-4000-8000-000000000001/group-queue"
+    Received: "/api/matchmaking/account"
+
+      28 |       return route.fulfill({ json: { notifications: state.notices, unreadCount: state.notices.filter(item => !item.readAt).length } })
+      29 |     }
+    > 30 |     expect(path).toBe(`/api/matchmaking/events/${id}/group-queue`)
+         |                  ^
+      31 |     if (request.method() === 'GET' && state.queueReadGate) await state.queueReadGate
+      32 |     if (state.missingRpc) return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Matching RPC is not available yet.' } })
+      33 |     if (request.method() !== 'GET') {
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:30:18
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: 'Matching notifications, 1 unread', exact: true })
+    Expected: visible
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: 'Matching notifications, 1 unread', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Matching notifications, 1 unread', exact: true })
+      - Test ended.
+
+
+      89 |   await page.goto('/profile')
+      90 |   const bell = page.getByRole('button', { name: 'Matching notifications, 1 unread', exact: true })
+    > 91 |   await expect(bell).toBeVisible()
+         |                      ^
+      92 |   await bell.focus(); await page.keyboard.press('Enter')
+      93 |   const dialog = page.getByRole('dialog', { name: 'Matching notifications' })
+      94 |   await expect(dialog).toBeVisible()
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:91:22
+
+    Error Context: test-results/event-group-queue-mocked-p-21c96-cycle-and-proposal-at-390px/error-context.md
+
+  9) e2e/event-group-queue.spec.ts:85:34 › mocked persistent inbox keyboard/read lifecycle and proposal at 1440px 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "/api/matchmaking/events/e0000000-0000-4000-8000-000000000001/group-queue"
+    Received: "/api/matchmaking/account"
+
+      28 |       return route.fulfill({ json: { notifications: state.notices, unreadCount: state.notices.filter(item => !item.readAt).length } })
+      29 |     }
+    > 30 |     expect(path).toBe(`/api/matchmaking/events/${id}/group-queue`)
+         |                  ^
+      31 |     if (request.method() === 'GET' && state.queueReadGate) await state.queueReadGate
+      32 |     if (state.missingRpc) return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Matching RPC is not available yet.' } })
+      33 |     if (request.method() !== 'GET') {
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:30:18
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: 'Matching notifications, 1 unread', exact: true })
+    Expected: visible
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: 'Matching notifications, 1 unread', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Matching notifications, 1 unread', exact: true })
+      - Test ended.
+
+
+      89 |   await page.goto('/profile')
+      90 |   const bell = page.getByRole('button', { name: 'Matching notifications, 1 unread', exact: true })
+    > 91 |   await expect(bell).toBeVisible()
+         |                      ^
+      92 |   await bell.focus(); await page.keyboard.press('Enter')
+      93 |   const dialog = page.getByRole('dialog', { name: 'Matching notifications' })
+      94 |   await expect(dialog).toBeVisible()
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:91:22
+
+    Error Context: test-results/event-group-queue-mocked-p-3703b-ycle-and-proposal-at-1440px/error-context.md
+
+  10) e2e/event-group-queue.spec.ts:122:1 › signed-in central callback recovers validated return, but never an external destination 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "/api/matchmaking/events/e0000000-0000-4000-8000-000000000001/group-queue"
+    Received: "/api/matchmaking/account"
+
+      28 |       return route.fulfill({ json: { notifications: state.notices, unreadCount: state.notices.filter(item => !item.readAt).length } })
+      29 |     }
+    > 30 |     expect(path).toBe(`/api/matchmaking/events/${id}/group-queue`)
+         |                  ^
+      31 |     if (request.method() === 'GET' && state.queueReadGate) await state.queueReadGate
+      32 |     if (state.missingRpc) return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Matching RPC is not available yet.' } })
+      33 |     if (request.method() !== 'GET') {
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:30:18
+
+    Error: expect(page).toHaveURL(expected) failed
+
+    Expected: "http://127.0.0.1:3000/events/e0000000-0000-4000-8000-000000000001"
+    Received: "http://127.0.0.1:3000/login?returnTo=%2Fevents%2Fe0000000-0000-4000-8000-000000000001"
+
+    Call log:
+      - Expect "toHaveURL" with timeout 5000ms
+        - locator resolved to <html lang="en">…</html>
+        - unexpected value "http://127.0.0.1:3000/login?returnTo=%2Fevents%2Fe0000000-0000-4000-8000-000000000001"
+      - Test ended.
+
+
+      123 |   await fixture(page)
+      124 |   await page.goto(`/login?returnTo=${encodeURIComponent(`/events/${id}`)}`)
+    > 125 |   await expect(page).toHaveURL(`/events/${id}`)
+          |                      ^
+      126 |   await expect(page.getByRole('button', { name: 'Find a group to go with' })).toBeEnabled()
+      127 |   await page.goto('/login?returnTo=%2F%2Fevil.test')
+      128 |   await expect(page.getByText('You are signed in.')).toBeVisible()
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:125:22
+
+    Error Context: test-results/event-group-queue-signed-i-1d5dd-ver-an-external-destination/error-context.md
+
+  11) e2e/event-group-queue.spec.ts:131:1 › mocked wide event preview mounts the same queue without scoring or enrollment 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "/api/matchmaking/events/e0000000-0000-4000-8000-000000000001/group-queue"
+    Received: "/api/matchmaking/account"
+
+      28 |       return route.fulfill({ json: { notifications: state.notices, unreadCount: state.notices.filter(item => !item.readAt).length } })
+      29 |     }
+    > 30 |     expect(path).toBe(`/api/matchmaking/events/${id}/group-queue`)
+         |                  ^
+      31 |     if (request.method() === 'GET' && state.queueReadGate) await state.queueReadGate
+      32 |     if (state.missingRpc) return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Matching RPC is not available yet.' } })
+      33 |     if (request.method() !== 'GET') {
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:30:18
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.ev-event-preview').getByRole('region', { name: 'Event group queue' })
+    Expected: visible
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('.ev-event-preview').getByRole('region', { name: 'Event group queue' }) with timeout 5000ms
+      - waiting for locator('.ev-event-preview').getByRole('region', { name: 'Event group queue' })
+      - Protocol error (Runtime.callFunctionOn): Internal server error, session closed.
+
+
+      134 |   await page.goto('/events')
+      135 |   const panel = page.locator('.ev-event-preview').getByRole('region', { name: 'Event group queue' })
+    > 136 |   await expect(panel).toBeVisible()
+          |                       ^
+      137 |   await expect(panel.getByRole('button', { name: 'Find a group to go with' })).toBeEnabled()
+      138 |   expect(state.writes).toBe(0)
+      139 | })
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:136:23
+
+    Error Context: test-results/event-group-queue-mocked-w-6dcf3-thout-scoring-or-enrollment/error-context.md
+
+  12) e2e/event-group-queue.spec.ts:140:1 › mocked slow profile never locks Leave; conflicting queue/feed reads visibly disable controls then recover 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "/api/matchmaking/events/e0000000-0000-4000-8000-000000000001/group-queue"
+    Received: "/api/matchmaking/account"
+
+      28 |       return route.fulfill({ json: { notifications: state.notices, unreadCount: state.notices.filter(item => !item.readAt).length } })
+      29 |     }
+    > 30 |     expect(path).toBe(`/api/matchmaking/events/${id}/group-queue`)
+         |                  ^
+      31 |     if (request.method() === 'GET' && state.queueReadGate) await state.queueReadGate
+      32 |     if (state.missingRpc) return route.fulfill({ status: 503, json: { code: 'unavailable', error: 'Matching RPC is not available yet.' } })
+      33 |     if (request.method() !== 'GET') {
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:30:18
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator: getByRole('region', { name: 'Event group queue' }).getByRole('button', { name: 'Leave queue' })
+    Expected: enabled
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('region', { name: 'Event group queue' }).getByRole('button', { name: 'Leave queue' }) with timeout 5000ms
+      - waiting for getByRole('region', { name: 'Event group queue' }).getByRole('button', { name: 'Leave queue' })
+      - Protocol error (Runtime.callFunctionOn): Internal server error, session closed.
+
+
+      145 |   await page.goto(`/events/${id}`)
+      146 |   const panel = page.getByRole('region', { name: 'Event group queue' })
+    > 147 |   await expect(panel.getByRole('button', { name: 'Leave queue' })).toBeEnabled()
+          |                                                                    ^
+      148 |   await expect(panel.getByRole('button', { name: 'Refresh queue' })).toBeEnabled()
+      149 |   state.queueReadGate = new Promise(resolve => { releaseQueue = resolve })
+      150 |   await panel.getByRole('button', { name: 'Refresh queue' }).click()
+        at /home/xqiu/Projects/meet-people/e2e/event-group-queue.spec.ts:147:68
+
+    Error Context: test-results/event-group-queue-mocked-s-b2f70-sable-controls-then-recover/error-context.md
+
+  13) e2e/matchmaking.spec.ts:35:3 › mocked shell logout failure stays signed in; retry signs out through auth notifications 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Sign in to match' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Sign in to match' }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Sign in to match' })
+
+
+      47 |     await controls.getByRole('button', { name: 'Log out', exact: true }).click()
+      48 |     await expect(page).toHaveURL('/login')
+    > 49 |     await expect(page.getByRole('heading', { name: 'Sign in to match' })).toBeVisible()
+         |                                                                           ^
+      50 |     await page.getByRole('link', { name: 'Back to home preview' }).click()
+      51 |     await page.getByRole('link', { name: 'Matchmaking', exact: true }).first().click()
+      52 |     await expect(page).toHaveURL('/matchmaking')
+        at /home/xqiu/Projects/meet-people/e2e/matchmaking.spec.ts:49:75
+
+    Error Context: test-results/matchmaking-mocked-shell-l-69752--through-auth-notifications/error-context.md
+
+  14) e2e/matchmaking.spec.ts:35:3 › mocked settings logout failure stays signed in; retry signs out through auth notifications 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Sign in to match' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Sign in to match' }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Sign in to match' })
+
+
+      47 |     await controls.getByRole('button', { name: 'Log out', exact: true }).click()
+      48 |     await expect(page).toHaveURL('/login')
+    > 49 |     await expect(page.getByRole('heading', { name: 'Sign in to match' })).toBeVisible()
+         |                                                                           ^
+      50 |     await page.getByRole('link', { name: 'Back to home preview' }).click()
+      51 |     await page.getByRole('link', { name: 'Matchmaking', exact: true }).first().click()
+      52 |     await expect(page).toHaveURL('/matchmaking')
+        at /home/xqiu/Projects/meet-people/e2e/matchmaking.spec.ts:49:75
+
+    Error Context: test-results/matchmaking-mocked-setting-19208--through-auth-notifications/error-context.md
+
+  15) e2e/matchmaking.spec.ts:168:1 › mocked sign-in gating and atomic profile failure are honest ──
+
+    Error: locator.click: Error: strict mode violation: getByRole('link', { name: 'Sign in', exact: true }) resolved to 2 elements:
+        1) <a href="/login" class="pt-button" data-discover="true">Sign in</a> aka getByRole('navigation', { name: 'Account navigation' }).getByRole('link', { name: 'Sign in' })
+        2) <a data-discover="true" href="/login?returnTo=/matchmaking" class="pt-button pt-discovery-action">Sign in</a> aka getByRole('main').getByRole('link', { name: 'Sign in' })
+
+    Call log:
+      - waiting for getByRole('link', { name: 'Sign in', exact: true })
+
+
+      171 |   await expect(page.getByRole('heading', { name: 'Sign in to match' })).toBeVisible()
+      172 |   await expect(page.getByRole('button', { name: 'Start matching' })).toHaveCount(0)
+    > 173 |   await page.getByRole('link', { name: 'Sign in', exact: true }).click()
+          |                                                                  ^
+      174 |   await page.getByLabel('Email').fill('student@example.test')
+      175 |   await page.getByRole('button', { name: 'Send sign-in link' }).click()
+      176 |   await expect(page.getByRole('status')).toContainText('Check your email')
+        at /home/xqiu/Projects/meet-people/e2e/matchmaking.spec.ts:173:66
+
+    Error Context: test-results/matchmaking-mocked-sign-in-4be52--profile-failure-are-honest/error-context.md
+
+  16) e2e/prototype-community.spec.ts:71:1 › curious Pebble visits actual viewport edges and retreats fully at 4K 
+
+    Error: expect(locator).toHaveClass(expected) failed
+
+    Locator: getByRole('button', { name: 'Say hello to the curious Pebble' })
+    Expected pattern: /pt-edge-0/
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveClass" getByRole('button', { name: 'Say hello to the curious Pebble' }) with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Say hello to the curious Pebble' })
+
+
+      77 |   const mascot = page.getByRole('button', { name: 'Say hello to the curious Pebble' })
+      78 |   for (let edge = 0; edge < 4; edge++) {
+    > 79 |     await expect(mascot).toHaveClass(new RegExp(`pt-edge-${edge}`))
+         |                          ^
+      80 |     const box = (await mascot.boundingBox())!
+      81 |     expect(box.width).toBeGreaterThanOrEqual(140)
+      82 |     if (edge === 0) expect(box.y + box.height).toBeGreaterThan(2160)
+        at /home/xqiu/Projects/meet-people/e2e/prototype-community.spec.ts:79:26
+
+    Error Context: test-results/prototype-community-curiou-6e1e0-es-and-retreats-fully-at-4K/error-context.md
+
+  17) e2e/prototype.spec.ts:23:3 › connected planning path, edit and chat at 1440px ────────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Account menu' })
+
+
+      48 |     await page.getByRole('button', { name: 'Review plan' }).click()
+      49 |     await page.getByRole('button', { name: 'Confirm plan', exact: true }).click()
+    > 50 |     if (viewport.width > 800) await page.getByRole('button', { name: 'Account menu' }).click()
+         |                                                                                        ^
+      51 |     await page.getByRole('link', { name: 'Profile', exact: true }).click()
+      52 |     await expect(page.locator('.pt-profile-plan')).toContainText('A walk around campus')
+      53 |     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+        at /home/xqiu/Projects/meet-people/e2e/prototype.spec.ts:50:88
+
+    Error Context: test-results/prototype-connected-planning-path-edit-and-chat-at-1440px/error-context.md
+
+  18) e2e/prototype.spec.ts:95:1 › cinematic finishes; reduced motion bypasses it and disables movement 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.getAttribute: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Say hello to the curious Pebble' })
+
+
+      105 |   await scene(page, 'Login')
+      106 |   const curious = page.getByRole('button', { name: 'Say hello to the curious Pebble' })
+    > 107 |   const oldClass = await curious.getAttribute('class')
+          |                                  ^
+      108 |   await curious.click()
+      109 |   await expect(curious).toHaveClass(/is-hidden/)
+      110 |   await expect(curious).not.toHaveClass(/is-hidden/, { timeout: 4500 })
+        at /home/xqiu/Projects/meet-people/e2e/prototype.spec.ts:107:34
+
+    Error Context: test-results/prototype-cinematic-finish-4ca55-es-it-and-disables-movement/error-context.md
+
+  19) e2e/prototype.spec.ts:179:1 › registration has no demo bypass; prototype custom time is preserved; signed-out Messages stays offline 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Sign in to match' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Sign in to match' }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Sign in to match' })
+
+
+      182 |   page.on('request', request => { if (['fetch', 'xhr'].includes(request.resourceType())) requests.push(request.url()) })
+      183 |   await page.goto('/register')
+    > 184 |   await expect(page.getByRole('heading', { name: 'Sign in to match' })).toBeVisible()
+          |                                                                         ^
+      185 |   await expect(page.getByRole('button', { name: 'Create demo account' })).toHaveCount(0)
+      186 |   await expect(page.getByLabel('Password', { exact: true })).toHaveCount(0)
+      187 |   await page.goto('/onboarding')
+        at /home/xqiu/Projects/meet-people/e2e/prototype.spec.ts:184:73
+
+    Error Context: test-results/prototype-registration-has-135ef--out-Messages-stays-offline/error-context.md
+
+  19 failed
+    e2e/app.spec.ts:34:1 › app shell switches between desktop and mobile navigation ────────────────
+    e2e/app.spec.ts:52:3 › avatar dropdown navigates and dismisses at 801px ────────────────────────
+    e2e/app.spec.ts:52:3 › avatar dropdown navigates and dismisses at 1280px ───────────────────────
+    e2e/auth.spec.ts:95:1 › progressive registration, retry, recovery and callback errors at 1280px 
+    e2e/auth.spec.ts:95:1 › progressive registration, retry, recovery and callback errors at 390px ─
+    e2e/event-group-queue.spec.ts:45:1 › mocked event queue persists across reload; no old consent, Company, scoring or group-found claim 
+    e2e/event-group-queue.spec.ts:67:1 › mocked missing RPC and unsaved profile block enrollment but existing queue can leave 
+    e2e/event-group-queue.spec.ts:85:34 › mocked persistent inbox keyboard/read lifecycle and proposal at 390px 
+    e2e/event-group-queue.spec.ts:85:34 › mocked persistent inbox keyboard/read lifecycle and proposal at 1440px 
+    e2e/event-group-queue.spec.ts:122:1 › signed-in central callback recovers validated return, but never an external destination 
+    e2e/event-group-queue.spec.ts:131:1 › mocked wide event preview mounts the same queue without scoring or enrollment 
+    e2e/event-group-queue.spec.ts:140:1 › mocked slow profile never locks Leave; conflicting queue/feed reads visibly disable controls then recover 
+    e2e/matchmaking.spec.ts:35:3 › mocked shell logout failure stays signed in; retry signs out through auth notifications 
+    e2e/matchmaking.spec.ts:35:3 › mocked settings logout failure stays signed in; retry signs out through auth notifications 
+    e2e/matchmaking.spec.ts:168:1 › mocked sign-in gating and atomic profile failure are honest ────
+    e2e/prototype-community.spec.ts:71:1 › curious Pebble visits actual viewport edges and retreats fully at 4K 
+    e2e/prototype.spec.ts:23:3 › connected planning path, edit and chat at 1440px ──────────────────
+    e2e/prototype.spec.ts:95:1 › cinematic finishes; reduced motion bypasses it and disables movement 
+    e2e/prototype.spec.ts:179:1 › registration has no demo bypass; prototype custom time is preserved; signed-out Messages stays offline 
+  102 passed (2.7m)

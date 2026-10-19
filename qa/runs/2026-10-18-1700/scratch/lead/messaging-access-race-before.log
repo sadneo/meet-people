@@ -1,0 +1,35 @@
+
+ RUN  v5.0.1 /home/xqiu/Projects/meet-people
+
+Not implemented: Window's scrollTo() method
+ ❯ tests/messaging.test.tsx (23 tests | 1 failed | 22 skipped) 254ms
+   ❯ persisted messaging UI with mocked API (23)
+     × does not reenable a denied chat when an earlier successful poll finishes 253ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/messaging.test.tsx > persisted messaging UI with mocked API > does not reenable a denied chat when an earlier successful poll finishes
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/messaging.test.tsx:194:88
+    192|     await screen.findByText('You are not in this conversation.')
+    193|     await act(async () => { holdHistory?.() })
+    194|     expect(screen.getByLabelText('Message', { exact: true }).hasAttrib…
+       |                                                                                        ^
+    195|   })
+    196|   it('labels messages from deleted accounts and disables sending when …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 22 skipped (23)
+   Start at  17:29:04
+   Duration  1.13s (transform 37%, environment 25%, tests 24%, import 15%)
+

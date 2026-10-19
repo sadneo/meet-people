@@ -1,0 +1,255 @@
+{
+  "/login": {
+    "url": "http://127.0.0.1:3000/login",
+    "vw": 320,
+    "vh": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a",
+        "name": "Create an account",
+        "w": 131,
+        "h": 19,
+        "x": 151,
+        "y": 431,
+        "inlineText": true
+      },
+      {
+        "el": "a",
+        "name": "Open Supabase email viewer",
+        "w": 270,
+        "h": 20,
+        "x": 25,
+        "y": 582,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 45,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/register": {
+    "url": "http://127.0.0.1:3000/register",
+    "vw": 320,
+    "vh": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a",
+        "name": "Create an account",
+        "w": 131,
+        "h": 19,
+        "x": 151,
+        "y": 431,
+        "inlineText": true
+      },
+      {
+        "el": "a",
+        "name": "Open Supabase email viewer",
+        "w": 270,
+        "h": 20,
+        "x": 25,
+        "y": 582,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 45,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/onboarding": {
+    "url": "http://127.0.0.1:3000/onboarding",
+    "vw": 320,
+    "vh": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [
+      {
+        "el": "div.pt-enormous-shadow",
+        "left": 46,
+        "right": 361,
+        "text": "",
+        "clip": "section.pt-origin.pt-origin-opening"
+      }
+    ],
+    "small": [],
+    "unnamed": [],
+    "nav": null,
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/matchmaking": {
+    "url": "http://127.0.0.1:3000/matchmaking",
+    "vw": 320,
+    "vh": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [],
+    "unnamed": [],
+    "nav": {
+      "top": 496,
+      "height": 72
+    },
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/messages": {
+    "url": "http://127.0.0.1:3000/messages",
+    "vw": 320,
+    "vh": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [],
+    "unnamed": [],
+    "nav": {
+      "top": 496,
+      "height": 72
+    },
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/profile": {
+    "url": "http://127.0.0.1:3000/profile",
+    "vw": 320,
+    "vh": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "a",
+        "name": "Pebble home",
+        "w": 100,
+        "h": 34,
+        "x": 20,
+        "y": 17,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": {
+      "top": 496,
+      "height": 72
+    },
+    "contrast": [
+      {
+        "el": "span.pt-brand-dot",
+        "text": ".",
+        "ratio": 2.86,
+        "need": 3,
+        "color": "rgb(217, 52, 103)",
+        "bg": "rgb(221, 202, 188)",
+        "size": 32,
+        "weight": 900,
+        "disabled": false
+      }
+    ],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  },
+  "/settings": {
+    "url": "http://127.0.0.1:3000/settings",
+    "vw": 320,
+    "vh": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "overRight": [],
+    "clippedOver": [],
+    "small": [
+      {
+        "el": "input",
+        "name": "Plan & message notifications",
+        "w": 36,
+        "h": 20,
+        "x": 247,
+        "y": 431,
+        "inlineText": false
+      },
+      {
+        "el": "input",
+        "name": "Show me in discovery",
+        "w": 36,
+        "h": 20,
+        "x": 247,
+        "y": 625,
+        "inlineText": false
+      },
+      {
+        "el": "input",
+        "name": "Share my availability",
+        "w": 36,
+        "h": 20,
+        "x": 247,
+        "y": 707,
+        "inlineText": false
+      },
+      {
+        "el": "input",
+        "name": "Nearby suggestions",
+        "w": 36,
+        "h": 20,
+        "x": 247,
+        "y": 891,
+        "inlineText": false
+      }
+    ],
+    "unnamed": [],
+    "nav": {
+      "top": 496,
+      "height": 72
+    },
+    "contrast": [],
+    "covered": [],
+    "unreachable": [],
+    "problems": []
+  }
+}

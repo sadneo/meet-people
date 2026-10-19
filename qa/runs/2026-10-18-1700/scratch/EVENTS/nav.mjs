@@ -1,0 +1,16 @@
+import { openAs } from '/home/xqiu/Projects/meet-people/.claude/skills/qa/scripts/qa-browser.mjs'
+const R = '/home/xqiu/Projects/meet-people/qa/runs/2026-10-18-1700/screenshots'
+const [w, h] = (process.argv[2] ?? '390x844').split('x').map(Number)
+const { page, problems, close } = await openAs('dave', { width: w, height: h })
+await page.goto('/events'); await page.waitForTimeout(2000)
+const link = page.getByRole('link', { name: 'See event & people' }).nth(4)
+await link.scrollIntoViewIfNeeded()
+console.log('list scrollY before click:', await page.evaluate(() => scrollY))
+await link.click(); await page.waitForTimeout(2000)
+console.log('detail url:', page.url(), 'scrollY:', await page.evaluate(() => scrollY), 'docHeight', await page.evaluate(() => document.documentElement.scrollHeight))
+await page.screenshot({ path: `${R}/EVENTS-nav-detail-after-click-${w}.png` })
+await page.goBack(); await page.waitForTimeout(2000)
+console.log('after back scrollY:', await page.evaluate(() => scrollY))
+await page.screenshot({ path: `${R}/EVENTS-nav-list-after-back-${w}.png` })
+console.log('problems', problems.filter(p => !p.includes('favicon')))
+await close()
