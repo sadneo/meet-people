@@ -3,7 +3,7 @@ import NotFound from './routes/NotFound'
 import Community from './routes/Community'
 import PebbleApp, { ImmersiveLayout, IntroScreen } from './routes/PebbleApp'
 import { AppShell } from './features/prototype/AppShell'
-import { Auth } from './features/prototype/Onboarding'
+import { AuthScreen } from './auth/AuthScreen'
 import NativeBridge from './platform/NativeBridge'
 import MessagesWorkspace from './features/messaging/Feature'
 import { EventDetail, EventsScreen } from './features/events/Browse'
@@ -30,8 +30,8 @@ function App() {
         <Route path="cookies" element={<LegalPage document="cookies" />} />
       </Route>
       <Route element={<PublicAuthLayout />}>
-        <Route path="login" element={<Auth />} />
-        <Route path="register" element={<Auth register />} />
+        <Route path="login" element={<AuthScreen />} />
+        <Route path="register" element={<AuthScreen mode="register" />} />
         <Route path="auth/callback" element={<AuthCallback />} />
         <Route path="auth/forgot-password" element={<ForgotPassword />} />
         <Route path="forgot-password" element={<ForgotPassword />} />

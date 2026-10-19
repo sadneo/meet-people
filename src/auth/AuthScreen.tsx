@@ -117,6 +117,18 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
     if (error) throw new AuthMessage('Google sign-in did not complete. Please try again or continue with email.')
     if (native && data.url) await Browser.open({ url: data.url })
   })
+  const development = () => void run('development', async () => {
+    const local = () => import.meta.env.DEV && isLocalDevelopment(getLocalDevelopmentEnvironment()) && currentPage.current === page
+    if (!local() || !ready || session || !authMode) return
+    try {
+      if (!import.meta.env.DEV) return
+      const { signInDevelopmentUser } = await import('./developmentLogin')
+      await signInDevelopmentUser(supabase!, local)
+      // Session/account hydration owns navigation and mandatory onboarding.
+    } catch {
+      throw new AuthMessage('The development account is not ready or sign-in could not be verified. Ask the operator to finish provisioning, then retry.')
+    }
+  })
   const resend = () => void run('resend', async () => {
     const { error } = await supabase!.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: redirectTo } })
     if (currentPage.current !== page) return
@@ -161,8 +173,8 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
     })
   }
 
-  if (session && ready && account?.loaded && !callbackFailed && authMode) {
-    return <Navigate replace to={account.account.completed.length < 4 ? link('/onboarding') : returnTo} />
+  if (session && ready && (!account || account.loaded) && !callbackFailed && authMode) {
+    return <Navigate replace to={account && account.account.completed.length < 4 ? link('/onboarding') : returnTo} />
   }
   const title = mode === 'forgot' ? recoverySent ? 'Check your email' : 'Reset your password'
     : mode === 'reset' ? resetDone ? 'Password updated' : 'Choose a new password'
@@ -176,7 +188,7 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
   </>
   const google = <><div className="pt-auth-divider">or</div><Button secondary className="pt-wide" disabled={busy} onClick={oauth}>{pending === 'google' ? <><span className="pt-auth-spinner" aria-hidden="true" />Connecting to Google…</> : 'Continue with Google'}</Button></>
 
-  return <section className="pt-auth"><Brand /><div ref={form} className="pt-auth-form"><h1 tabIndex={-1}>{title}</h1>
+  return <section className="pt-auth pt-auth-email-first"><Brand /><div ref={form} className="pt-auth-form"><h1 tabIndex={-1}>{title}</h1>
     {!supabase ? <p role="status">Sign-in service is not configured.</p> : !ready ? <p role="status">Loading session…</p>
       : session && authMode && !callbackFailed ? <><p role="status">{account?.error ? 'Could not load your account. Please try again.' : 'Loading your account…'}</p>{account?.error && <Button secondary onClick={() => void account.reload()}>Retry account</Button>}</>
       : mode === 'reset' && (!session || callbackFailed) ? <><p role="status">This recovery link is invalid or expired. Request a new link to reset your password.</p><Link to={link('/forgot-password')} state={{ email }}>Request another link</Link></>
@@ -194,11 +206,11 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
         </fieldset></form>
         {confirmEmail && <Button secondary disabled={busy} onClick={resend}>{pending === 'resend' ? 'Sending…' : 'Resend confirmation'}</Button>}
         {authMode && google}
-        {emailStep && <p className="pt-auth-account">New to Pebble? <Link to={link('/register')} state={{ email }}>Create an account</Link></p>}
         {registerStep && <Button secondary disabled={busy} onClick={() => go('password')}>Back to sign in</Button>}
         {mode === 'forgot' && <Link to={link('/login')} state={{ email, authStep: email ? 'password' : 'email' }}>Back to sign in</Link>}
       </>}
+    {pending === 'development' && <p role="status">Verifying development account…</p>}
     <Link className="pt-auth-home" to="/">Back to home</Link>
-    {import.meta.env.DEV && isLocalDevelopment(getLocalDevelopmentEnvironment()) && supabase && <aside className="pt-auth-dev"><span>Local development</span><a href="http://127.0.0.1:54324" target="_blank" rel="noreferrer">Open Supabase email viewer</a></aside>}
+    {import.meta.env.DEV && isLocalDevelopment(getLocalDevelopmentEnvironment()) && supabase && <aside className="pt-auth-dev"><span>Local development</span>{ready && !session && authMode && <Button secondary disabled={busy} onClick={development}>{pending === 'development' ? 'Signing in as development user…' : 'Sign in as development user'}</Button>}<a href="http://127.0.0.1:54324" target="_blank" rel="noreferrer">Open Supabase email viewer</a></aside>}
   </div></section>
 }
