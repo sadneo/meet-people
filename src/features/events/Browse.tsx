@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { EventSchema, EventsResponseSchema, type LiveEvent } from '../../../shared/events'
 import { eventDate, eventImagePlaceholder, eventRequest, safeImage, sourceLink } from './client'
@@ -29,24 +29,39 @@ function EventsFeed() {
   const [retry, setRetry] = useState(0)
   const [origin, setOrigin] = useState<{ latitude: number; longitude: number } | null>(null)
   const [geoError, setGeoError] = useState('')
-  const query = new URLSearchParams({ page: String(page), ...(category !== 'All' ? { category } : {}), ...(origin ? { latitude: String(origin.latitude), longitude: String(origin.longitude) } : {}) }).toString()
+  
+  const query = useMemo(() => {
+    return new URLSearchParams({ 
+      page: String(page), 
+      ...(category !== 'All' ? { category } : {}), 
+      ...(origin ? { latitude: String(origin.latitude), longitude: String(origin.longitude) } : {}) 
+    }).toString()
+  }, [page, category, origin])
+
   const result = loaded?.query === query ? loaded.data : null
+  
   useEffect(() => {
     const controller = new AbortController()
     void eventRequest(`?${query}`, EventsResponseSchema, { signal: controller.signal }).then(data => {
       if (!controller.signal.aborted) { setLoaded({ query, data }); setError('') }
     }).catch((failure: unknown) => { if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'Could not load events.') })
     return () => controller.abort()
-  }, [query, retry])
+  }, [query, retry, search.toString()]) // Added search.toString() to force updates on URL changes
+
   // Keep responses tied to the requested filter rather than displaying stale cards.
   const visible = result?.page === page ? result.events : []
   const previewId = visible.find(event => event.id === selected)?.id ?? visible[0]?.id
+  
   function changeCategory(value: string) {
-    setLoaded(null); setError(''); setSearch(value === 'All' ? {} : { category: value })
+    setError('')
+    setSearch(value === 'All' ? {} : { category: value })
   }
+  
   function goPage(next: number) {
-    setLoaded(null); setError(''); setSearch({ ...(category !== 'All' ? { category } : {}), page: String(next) })
+    setError('')
+    setSearch({ ...(category !== 'All' ? { category } : {}), page: String(next) })
   }
+
   return <div className={`ev-events-workspace ${!visible.length ? 'is-empty' : ''}`}><section className="ev-events-feed">
     <Header title="Events" />
     <Chips label="Event category" options={[...new Set(['All', 'Music', 'Food', 'Outdoors', ...(result?.categories ?? []), category])]} values={[category]} onChange={([value]) => changeCategory(value)} />
@@ -55,7 +70,7 @@ function EventsFeed() {
       navigator.geolocation.getCurrentPosition(position => { setOrigin({ latitude: position.coords.latitude, longitude: position.coords.longitude }); setGeoError('') }, () => setGeoError('Could not access your location. Allow location access and try again.'), { timeout: 10000 })
     }}><Icon name="pin" size={24} /></button>
     {geoError && <p role="alert">{geoError}</p>}
-    {error ? <div className="ev-empty ev-calm-empty" role="alert"><Icon name="events" size={72} /><h2>Events unavailable</h2><Button secondary onClick={() => setRetry(value => value + 1)}>Retry</Button></div> : !result ? <p role="status">Loading events…</p> : !visible.length ? <div className="ev-empty ev-calm-empty"><Icon name="events" size={72} /><h2>A quiet calendar</h2><Button onClick={() => changeCategory('All')}>Show all events</Button></div> : <div className="ev-event-grid">{visible.map(event => {
+    {error ? <div className="ev-empty ev-calm-empty" role="alert"><Icon name="events" size={72} /><h2>Events unavailable</h2><Button secondary onClick={() => setRetry(value => value + 1)}>Retry</Button></div> : !result ? <p role="status">Loading events…</p> : !visible.length ? <div className="ev-empty ev-calm-empty"><Icon name="events" size={72} /><h2>A quiet calendar</h2><Button onClick={() => { changeCategory('All'); setRetry(r => r + 1); }}>Show all events</Button></div> : <div className="ev-event-grid">{visible.map(event => {
       const open = (click: React.MouseEvent<HTMLAnchorElement>) => {
         if (click.button === 0 && !click.ctrlKey && !click.metaKey && !click.shiftKey && !click.altKey && window.matchMedia('(min-width: 1800px)').matches) {
           click.preventDefault(); const next = new URLSearchParams(search); next.set('selected', event.id); setSearch(next, { replace: true })
@@ -88,13 +103,17 @@ function EventDetailContent({ id, preview }: { id: string; preview: boolean }) {
   const [failedImage, setFailedImage] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
+  
   useEffect(() => {
     const controller = new AbortController()
-    void eventRequest(`/${id}`, EventSchema, { signal: controller.signal }).then(data => { if (!controller.signal.aborted) { setEvent(data); setError('') } }).catch((failure: unknown) => {
+    void eventRequest(`/${id}`, EventSchema, { signal: controller.signal }).then(data => {
+      if (!controller.signal.aborted) { setEvent(data); setError('') }
+    }).catch((failure: unknown) => {
       if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'Could not load this event.')
     })
     return () => controller.abort()
   }, [id, retry])
+  
   const url = sourceLink(event?.source_url ?? null)
   return <>
     {!preview && <Link className="ev-text-button" to={eventsPath}><Icon name="back" />Back to events</Link>}
