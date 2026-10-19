@@ -15,6 +15,8 @@ import MatchmakingHome from './features/prototype/MatchmakingHome'
 import DowntimeMatchmaking from './features/prototype/DowntimeMatchmaking'
 import { HomeEntry, MemberShell, PublicLayout, PublicOrAppLayout } from './features/public/PublicLayout'
 import { LegalPage } from './features/public/LegalPage'
+import { GuestEventDetail, GuestEvents } from './features/public/GuestEvents'
+import { publicEventsPath } from './features/public/links'
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
         <Route path="terms" element={<LegalPage document="terms" />} />
         <Route path="privacy" element={<LegalPage document="privacy" />} />
         <Route path="cookies" element={<LegalPage document="cookies" />} />
+        <Route path={publicEventsPath} element={<GuestEvents />} />
+        <Route path={`${publicEventsPath}/:id`} element={<GuestEventDetail />} />
       </Route>
       <Route element={<PublicOrAppLayout />}>
         <Route element={<MemberShell />}>
