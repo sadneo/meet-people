@@ -1,2 +1,0 @@
-{"id":"AUTH-01","width":390,"recoveredSignIn":true,"localSessionCleared":true,"expected":"Account 401 after other device global logout","statuses":[{"status":401,"path":"/api/matchmaking/account"},{"status":401,"path":"/api/matchmaking/account"}],"pageErrors":[]}
-{"id":"AUTH-01","width":1280,"recoveredSignIn":true,"localSessionCleared":true,"expected":"Account 401 after other device global logout","statuses":[{"status":401,"path":"/api/matchmaking/account"},{"status":401,"path":"/api/matchmaking/account"}],"pageErrors":[]}
