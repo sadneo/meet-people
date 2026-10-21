@@ -91,7 +91,7 @@ CLIs through `nix develop`. Supabase CLI is already a pinned dev dependency.
 | Location | Values |
 | --- | --- |
 | GitHub variables | `GCP_PROJECT_ID`, `GAR_REPOSITORY`, `GCP_DEPLOY_SA_EMAIL`, `GCP_WIF_PROVIDER`, `FIREBASE_HOSTING_SITE_ID`, `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
-| GitHub secrets | `SUPABASE_DB_URL`, `SUPABASE_ACCESS_TOKEN` |
+| GitHub secrets | `SUPABASE_ACCESS_TOKEN` (production environment) |
 | Cloud Run environment | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` |
 | Secret Manager | `pebble-supabase-service-role` (runtime identity alone needs secret access) |
 | Supabase Vault | `pebble_project_url`, `pebble_ingest_token`, `pebble_embed_secret` |
@@ -214,6 +214,10 @@ GitHub OIDC diagnostics print only the repository ID, ref, environment and
 workflow ref, never the identity token. A release needs no Google JSON key or
 Resend key in GitHub. Use a new version tag for each release; rerunning an old
 tag checks out and deploys that old commit.
+Migrations use `supabase link` and CLI-managed temporary database credentials
+through the discovered session pooler. The old `SUPABASE_DB_URL` secret is no
+longer consumed: its direct IPv6 endpoint is unsuitable for GitHub runners and
+its stored password failed authentication. No database password reset is needed.
 
 ```sh
 pnpm verify
