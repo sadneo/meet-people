@@ -81,8 +81,18 @@ jobs:
       - run: gcloud auth configure-docker us-east4-docker.pkg.dev --quiet
       - name: Validate Supabase release credentials
         run: |
-          pnpm exec supabase projects list --output json > /dev/null
-          pnpm exec supabase db push --db-url "$SUPABASE_DB_URL" --dry-run
+          node --input-type=module <<'JS'
+          import { appendFileSync } from 'node:fs'
+          import assert from 'node:assert/strict'
+          const password = decodeURIComponent(new URL(process.env.SUPABASE_DB_URL).password)
+          assert.ok(password && !/[\r\n]/.test(password), 'Database password must be set and single-line')
+          console.log(`::add-mask::${password}`)
+          appendFileSync(process.env.GITHUB_ENV, `SUPABASE_DB_PASSWORD=${password}\n`)
+          JS
+      - name: Link production database through its session pooler
+        run: |
+          pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          pnpm exec supabase db push --linked --dry-run
       - name: Build immutable API image
         run: |
           IMAGE="us-east4-docker.pkg.dev/$GCP_PROJECT_ID/${{ vars.GAR_REPOSITORY }}/pebble-api:$RELEASE_SHA"
@@ -95,7 +105,7 @@ jobs:
         run: |
           pnpm exec supabase functions deploy embed-interest --project-ref "$SUPABASE_PROJECT_REF" --use-api
           pnpm exec supabase functions deploy ingest-sbengaged --project-ref "$SUPABASE_PROJECT_REF" --use-api
-      - run: pnpm exec supabase db push --db-url "$SUPABASE_DB_URL" --yes
+      - run: pnpm exec supabase db push --linked --yes
       - run: pnpm hosting:configure
       - run: sh scripts/deploy-api.sh
       - name: Deploy event worker job (no execution)
