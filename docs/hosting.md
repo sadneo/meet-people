@@ -196,13 +196,24 @@ bundle by intercepting `/src/supabase.ts`. Existing guest-avatar assertions in
 hosting smoke suite and need updating with that UI's tests.
 
 To release, push a `v*` version tag after committing the intended changes.
-`release.yml` runs those same checks on the tagged commit before it can deploy.
+`release.yml` requires typechecking and the API contract tests on the tagged
+commit before deployment, then runs `pnpm test:hosted` against the deployed site,
+including the database-backed email lookup. The full reusable `checks.yml` job
+remains disabled: the current baseline has failing UI tests and lint errors;
+it is not a release gate until that baseline is repaired.
 The release authenticates with OIDC, pushes a commit-SHA image, resolves its
 digest, deploys Edge Functions, applies migrations without seeds, synchronizes
 service configuration, deploys Cloud Run, then Firebase with the pinned API.
 The final smoke check and workflow summary record the deployed version.
 Concurrent releases are serialized. Migrations must remain compatible with
 the preceding API revision; use additive changes and forward fixes.
+
+The hosted auth config enables public signup and requires email confirmation.
+SMTP credentials are configured separately in Supabase; releases preserve them.
+GitHub OIDC diagnostics print only the repository ID, ref, environment and
+workflow ref, never the identity token. A release needs no Google JSON key or
+Resend key in GitHub. Use a new version tag for each release; rerunning an old
+tag checks out and deploys that old commit.
 
 ```sh
 pnpm verify
