@@ -22,3 +22,5 @@ hosting/supabase/.temp/
 qa/.sessions/
 # QA screenshots stay local; reports reference them by path.
 qa/**/*.png
+# Generated QA run snapshots stay local.
+qa/runs/**/*.json
