@@ -8,7 +8,35 @@ callback and recovery routes sit outside the private shell. After verified Auth,
 profiles require `/onboarding`; errors block with read-only retry/logout. Internal
 return path/query/hash is preserved and validated. `/complete-profile` is a legacy
 redirect. Native links and `/reset-password` use the same scrub-and-verify callback,
-not a second AuthScreen or automatic grant exchange. Google is not activated.
+not a second AuthScreen or automatic grant exchange.
+
+### Google sign-in
+
+Local Google authentication is enabled in `supabase/config.toml`. Put
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in ignored `supabase/.env`
+(see `supabase/.env.example`). Supabase CLI loads this file; Vite/API use
+`.env.local`, which `pnpm env:local` regenerates. Never expose the secret through
+a `VITE_` variable.
+
+Register a Google OAuth **Web application** client with authorized JavaScript
+origin `http://127.0.0.1:3000` and authorized redirect URI
+`http://127.0.0.1:54321/auth/v1/callback`. Add your account as a test user if the
+Google consent screen is External and in Testing. After changing credentials or
+provider configuration, run `pnpm supabase:stop` then `pnpm supabase:start`
+(no database reset), followed by `pnpm dev`. Use the Google button at `/login`.
+The existing callback verifies the session and routes incomplete accounts through
+onboarding.
+
+For deployment, configure the Google provider in the **hosted Supabase dashboard**;
+the local CLI configuration does not configure hosted Auth. Register the hosted
+callback `https://<project-ref>.supabase.co/auth/v1/callback` in Google, add the
+production origin to the OAuth client, and set Supabase's Site URL to the deployed
+origin. Allow `https://<app-domain>/auth/callback` (including the app's `returnTo`
+query variants) in Supabase Redirect URLs. Use a separate production OAuth client
+to keep local and deployed credentials independent. Set the deployed frontend's
+Supabase URL/publishable key to the hosted project; the app derives its callback
+origin automatically. If hosted signup is disabled, pre-provision permitted users
+before expecting first-time Google sign-in to succeed.
 
 `/` and `/home` remain private product routes. Only `/welcome` and the separate
 legal routes are public marketing/legal pages; they never mount the private shell.
