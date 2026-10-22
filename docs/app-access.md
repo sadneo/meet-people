@@ -41,8 +41,10 @@ they are not independent canonical writers.
   or prototype-onboarding escape. Identity uses the shared explicit username and
   display-name form, optional bio and null avatar; ordinary users receive no
   prototype, email, metadata, example-interest, birthdate or location defaults.
-- **Read failure or malformed data:** blocking Profile-unavailable state with
-  read-only retry and logout, not a signed-out/login misclassification.
+- **Startup read failure or malformed data:** retry network/server failures once;
+  rejected sessions skip retry. A persistent failure signs out locally and returns
+  to login with an explanation. Failed signout offers a retry without private access.
+  Save/reconciliation failures still retain drafts rather than signing out.
 - **Ready persisted profile:** ordinary app access. Readiness requires valid
   canonical identity, at least three unique interests, valid birthdate, nonempty
    city/campus area, at least one valid non-overlapping availability window, social
@@ -82,6 +84,12 @@ Already-issued requests cannot be undone by an SPA; server authorization remains
 responsible for every API call. Same-owner authoritative matching refresh can
 replace the private tree; Preferences focus is restored to its current opener only
 on the same route/owner, never to a detached old button. There is no new polling.
+Password recovery uses the shared branded sign-in layout and preserves the entered
+email. After explicit callback exchange and authoritative user verification, the
+callback renders the new-password form directly, without reading the profile or
+entering Settings/onboarding. Expired/reused grants offer another recovery link.
+Recovery confirmation includes a resend action with a 60-second cooldown.
+
 
 ## Verification and parent browser handoff
 

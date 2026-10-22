@@ -110,11 +110,11 @@ it('complete users, including valid no-marker accounts, never repeat onboarding 
   expect(screen.getByLabelText('Onboarding URL').textContent).toBe('/?from=legacy')
   expect(calls.every(call => call.method === 'GET')).toBe(true)
 })
-it('read failure blocks and retries without signup misclassification or writes', async () => {
-  readFails = true; mount(); await screen.findByRole('heading', { name: 'Profile unavailable', exact: true })
+it('startup read failure blocks private access and offers signout retry if Auth is unavailable', async () => {
+  readFails = true; mount(); await screen.findByRole('button', { name: 'Return to sign in', exact: true })
   expect(screen.queryByLabelText('Username')).toBeNull()
-  readFails = false; fireEvent.click(button('Retry account'))
-  await screen.findByRole('heading', { name: 'Complete onboarding', exact: true })
+  expect(screen.queryByRole('heading', { name: 'Ready app fixture' })).toBeNull()
+  expect(calls).toHaveLength(2)
   expect(calls.every(call => call.method === 'GET')).toBe(true)
 })
 it('identity-only interruption and failed interests retain the draft, never resubmit identity, and refresh resumes the persisted chapter', async () => {

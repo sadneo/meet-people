@@ -8,6 +8,7 @@ import { safeReturnTo } from './returnTo'
 import { getLocalDevelopmentEnvironment, isLocalDevelopment } from './localDevelopment'
 import { apiUrl, authRedirect, isNative } from '../platform/native'
 import { Browser } from '@capacitor/browser'
+import { authCallbackUrl, validPassword } from './credential-policy'
 
 type Mode = 'login' | 'register' | 'forgot' | 'reset' | 'callback'
 type Step = 'email' | 'password' | 'register' | 'confirmation'
@@ -58,6 +59,7 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
   const [failed, setFailed] = useState(false)
   const [confirmEmail, setConfirmEmail] = useState(false)
   const [recoverySent, setRecoverySent] = useState(false)
+  const [resendSeconds, setResendSeconds] = useState(0)
   const [resetDone, setResetDone] = useState(false)
   const [callbackFailed, setCallbackFailed] = useState(() => {
     const params = new URLSearchParams(window.location.hash.slice(1))
@@ -81,11 +83,19 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
   }
 
   useEffect(() => {
+    if (!resendSeconds) return
+    const timer = window.setTimeout(() => setResendSeconds(value => value - 1), 1000)
+    return () => window.clearTimeout(timer)
+  }, [resendSeconds])
+  useEffect(() => {
     currentPage.current = page
     form.current?.querySelector<HTMLElement>('h1')?.focus()
     // History contains only the email and step, never passwords or tokens.
     return () => { currentPage.current = null }
   }, [page])
+  useEffect(() => {
+    form.current?.querySelector<HTMLElement>('h1')?.focus()
+  }, [recoverySent, resetDone])
   useEffect(() => {
     if (!callbackFailed) return
     const params = new URLSearchParams(location.search)
@@ -142,12 +152,14 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
         const exists = await emailExists(email.trim())
         go(exists ? 'password' : 'register')
       } else if (mode === 'forgot') {
-        const { error } = await supabase!.auth.resetPasswordForEmail(email.trim(), { redirectTo: authRedirect(link('/reset-password')) })
+        if (resendSeconds) return
+        const { error } = await supabase!.auth.resetPasswordForEmail(email.trim(), { redirectTo: authCallbackUrl(returnTo, true) })
         if (currentPage.current !== page) return
         if (error) throw new AuthMessage(authError(error, 'Could not send the reset link. Please try again.'))
         setRecoverySent(true)
+        setResendSeconds(60)
       } else if (mode === 'reset' || registerStep) {
-        if (password.length < 8) throw new AuthMessage('Use at least 8 characters for your password.')
+        if (!validPassword(password)) throw new AuthMessage('Use 8–128 characters for your password.')
         if (password !== confirmation) throw new AuthMessage('Passwords do not match. Please check both fields.')
         if (mode === 'reset') {
           const { error } = await supabase!.auth.updateUser({ password })
@@ -193,7 +205,7 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
       : session && authMode && !callbackFailed ? <><p role="status">{account?.error ? 'Could not load your account. Please try again.' : 'Loading your account…'}</p>{account?.error && <Button secondary onClick={() => void account.reload()}>Retry account</Button>}</>
       : mode === 'reset' && (!session || callbackFailed) ? <><p role="status">This recovery link is invalid or expired. Request a new link to reset your password.</p><Link to={link('/forgot-password')} state={{ email }}>Request another link</Link></>
       : resetDone ? <><p role="status">Your password has been updated.</p><Link to={returnTo}>Continue to Pebble</Link></>
-      : recoverySent ? <><p role="status">If {email} has an account, a password-reset link is on its way. Check your inbox and follow the link to choose a new password.</p><Button secondary onClick={() => { setRecoverySent(false); setMessage(''); form.current?.querySelector<HTMLElement>('h1')?.focus() }}>Change email</Button><Link to={link('/login')} state={{ email, authStep: 'password' }}>Back to sign in</Link></>
+      : recoverySent ? <><p role="status">If {email} has an account, a password-reset link is on its way. Check your inbox and follow the link to choose a new password.</p>{status}<form onSubmit={submit}><Button type="submit" className="pt-wide" disabled={busy || resendSeconds > 0}>{busy ? 'Sending…' : resendSeconds ? `Resend link in ${resendSeconds}s` : 'Resend link'}</Button></form><Button secondary disabled={busy} onClick={() => { setRecoverySent(false); setMessage(''); setResendSeconds(0) }}>Change email</Button><Link to={link('/login')} state={{ email, authStep: 'password' }}>Back to sign in</Link></>
       : authMode && step === 'confirmation' ? <><p role="status">Check your email to confirm your account. Follow the link sent to {email}, then return to sign in. If you already have an account, sign in instead.</p>{status}<Button secondary disabled={busy} onClick={resend}>{pending === 'resend' ? 'Sending…' : 'Resend confirmation'}</Button><Button secondary disabled={busy} onClick={() => go('password')}>Back to sign in</Button><Button secondary disabled={busy} onClick={() => go('email')}>Change email</Button></>
       : <>
         {(callbackFailed || (mode === 'callback' && !session)) && <p className="pt-auth-error" role="status">Sign-in did not complete. The request may have been canceled or the link expired. Please try again.</p>}
@@ -209,6 +221,7 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
         {registerStep && <Button secondary disabled={busy} onClick={() => go('password')}>Back to sign in</Button>}
         {mode === 'forgot' && <Link to={link('/login')} state={{ email, authStep: email ? 'password' : 'email' }}>Back to sign in</Link>}
       </>}
+    {new URLSearchParams(location.search).get('reason') === 'account-unavailable' && <p role="status">We couldn’t load your account. Please sign in again.</p>}
     {pending === 'development' && <p role="status">Verifying development account…</p>}
     <Link className="pt-auth-home" to="/">Back to home</Link>
     {import.meta.env.DEV && isLocalDevelopment(getLocalDevelopmentEnvironment()) && supabase && <aside className="pt-auth-dev"><span>Local development</span>{ready && !session && authMode && <Button secondary disabled={busy} onClick={development}>{pending === 'development' ? 'Signing in as development user…' : 'Sign in as development user'}</Button>}<a href="http://127.0.0.1:54324" target="_blank" rel="noreferrer">Open Supabase email viewer</a></aside>}

@@ -7,6 +7,7 @@ import { AuthCallback, ForgotPassword } from '../src/auth/CredentialRoutes'
 
 const auth = vi.hoisted(() => ({ signInWithPassword: vi.fn(), signInWithOtp: vi.fn(), resetPasswordForEmail: vi.fn(), getSession: vi.fn(), getUser: vi.fn(), exchangeCodeForSession: vi.fn(), setSession: vi.fn(), verifyOtp: vi.fn() }))
 vi.mock('../src/supabase', () => ({ supabase: { auth } }))
+vi.mock('../src/auth/useSession', () => ({ useSession: () => ({ ready: true, session: { access_token: 'fixture-access', user: { id: 'fixture-actor' } } }) }))
 const actor = { id: 'fixture-actor', email: 'one@example.test' }
 function Path() { return <output aria-label="Path">{useLocation().pathname}{useLocation().search}</output> }
 beforeEach(() => {
@@ -35,9 +36,9 @@ it('password sign-in coexists with email links and clears submitted password eve
 it('recovery uses the local callback and enumeration-neutral success copy', async () => {
   render(<MemoryRouter><ForgotPassword /></MemoryRouter>)
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'one@example.test' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Send recovery link' }))
-  await screen.findByText('If this email has an account, check its inbox for a recovery link.')
-  expect(auth.resetPasswordForEmail).toHaveBeenCalledWith('one@example.test', { redirectTo: `${window.location.origin}/auth/callback?returnTo=%2Fsettings&flow=recovery` })
+  fireEvent.click(screen.getByRole('button', { name: 'Send reset link' }))
+  await screen.findByRole('heading', { name: 'Check your email' })
+  expect(auth.resetPasswordForEmail).toHaveBeenCalledWith('one@example.test', { redirectTo: `${window.location.origin}/auth/callback?returnTo=%2F&flow=recovery` })
 })
 it('PKCE callback validates with getUser, strips URL secrets, and rejects external returnTo', async () => {
   window.history.replaceState({}, '', '/auth/callback?code=fixture-code&returnTo=https%3A%2F%2Fevil.test')
@@ -51,7 +52,7 @@ it('PKCE callback validates with getUser, strips URL secrets, and rejects extern
 it('implicit recovery validates server identity before returning to the one credential form', async () => {
   window.history.replaceState({}, '', '/auth/callback?flow=recovery#access_token=fixture-access&refresh_token=fixture-refresh&type=recovery')
   render(<MemoryRouter><AuthCallback /><Path /></MemoryRouter>)
-  await waitFor(() => expect(screen.getByLabelText('Path').textContent).toBe('/settings?credentials=recovery'))
+  await screen.findByRole('heading', { name: 'Choose a new password' })
   expect(auth.getUser).toHaveBeenCalled()
   expect(window.location.hash).toBe('')
 })
@@ -64,7 +65,7 @@ it('the public reset-password code alias is scrubbed and verified as recovery, e
   expect(window.location.pathname + window.location.search + window.location.hash).toBe('/auth/callback')
   expect(screen.getByLabelText('Path').textContent).toBe('/reset-password')
   await act(async () => { finish({ data: { user: actor }, error: null }) })
-  await waitFor(() => expect(screen.getByLabelText('Path').textContent).toBe('/settings?credentials=recovery'))
+  await screen.findByRole('heading', { name: 'Choose a new password' })
   expect(auth.exchangeCodeForSession).toHaveBeenCalledExactlyOnceWith('reset-alias-code')
 })
 it('callback errors never fall back to an existing session or expose URL diagnostics', async () => {
@@ -110,8 +111,8 @@ it('recovery request failure stays honest and does not expose provider diagnosti
   auth.resetPasswordForEmail.mockRejectedValue(new Error('private recovery diagnostic'))
   render(<MemoryRouter><ForgotPassword /></MemoryRouter>)
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'one@example.test' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Send recovery link' }))
-  await screen.findByRole('alert')
+  fireEvent.click(screen.getByRole('button', { name: 'Send reset link' }))
+  await screen.findByText('Could not connect to sign-in. Please try again.')
   expect(screen.queryByText('If this email has an account, check its inbox for a recovery link.')).toBeNull()
   expect(document.body.textContent).not.toContain('private recovery diagnostic')
 })
@@ -139,7 +140,7 @@ for (const form of ['login', 'recovery']) {
     if (form === 'login') fireEvent.click(screen.getByRole('button', { name: 'Use password' }))
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'one@example.test' } })
     if (form === 'login') fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Fixture-password-1!' } })
-    fireEvent.click(screen.getByRole('button', { name: form === 'login' ? 'Sign in with password' : 'Send recovery link' }))
+    fireEvent.click(screen.getByRole('button', { name: form === 'login' ? 'Sign in with password' : 'Send reset link' }))
     fireEvent.click(screen.getByRole('button', { name: 'Leave form' }))
     await act(async () => { finish({ error: null }) })
     expect(screen.getByRole('heading', { name: 'Left the form' })).toBeTruthy()
@@ -241,7 +242,7 @@ it('a reused recovery form discards stale completion and clears its draft on rou
   auth.resetPasswordForEmail.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
   render(<MemoryRouter><ForgotPassword /><Leave /></MemoryRouter>)
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'one@example.test' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Send recovery link' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send reset link' }))
   fireEvent.click(screen.getByRole('button', { name: 'Leave form' }))
   await act(async () => { finish({ error: null }) })
   expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('')

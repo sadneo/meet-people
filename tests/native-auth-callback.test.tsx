@@ -10,6 +10,7 @@ vi.mock('@capacitor/app', () => ({ App: { addListener: async (_name: string, lis
 vi.mock('@capacitor/browser', () => ({ Browser: { open: fixture.open } }))
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => fixture.native } }))
 vi.mock('../src/supabase', () => ({ supabase: { auth: { exchangeCodeForSession: fixture.exchange, setSession: fixture.setSession, getUser: fixture.getUser } } }))
+vi.mock('../src/auth/useSession', () => ({ useSession: () => ({ ready: true, session: { access_token: 'native-access', user: { id: 'native-fixture' } } }) }))
 const user = { id: 'native-fixture' }
 beforeEach(() => {
   fixture.native = true; fixture.listener = null
@@ -31,8 +32,9 @@ it('public mounted bridge routes an Android recovery session grant through scrub
   expect(fixture.setSession).toHaveBeenCalledTimes(1); expect(fixture.exchange).not.toHaveBeenCalled()
   expect(screen.queryByRole('heading', { name: 'Verified settings fixture' })).toBeNull()
   await act(async () => { finish({ data: { user }, error: null }) })
-  await screen.findByRole('heading', { name: 'Verified settings fixture' })
-  expect(window.location.search).toBe('?credentials=recovery')
+  await screen.findByRole('heading', { name: 'Choose a new password' })
+  expect(window.location.search).toBe('')
+  expect(screen.queryByRole('heading', { name: 'Verified settings fixture' })).toBeNull()
 })
 it('cold launch code is exchanged and verified once, including duplicate appUrlOpen delivery', async () => {
   const url = 'com.cse416.meetpeople://app/auth/callback?code=native-cold-code&returnTo=%2Fsettings'

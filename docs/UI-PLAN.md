@@ -58,7 +58,7 @@ This supersedes warm-tan page-canvas/navigation guidance without changing layout
 | `/login`, `/register`, `/auth/callback`, `/auth/forgot-password` | Public sign-in/verification/recovery entry only |
 | `/complete-profile` | Signed-in legacy redirect to `/onboarding`, preserving validated return destination |
 | `*` | Protected not-found experience |
-| `/forgot-password`, `/reset-password` | Public recovery aliases using the same verified lifecycle |
+| `/forgot-password`, `/reset-password` | Branded public recovery request and verified new-password form; independent of profile/onboarding availability |
 
 Home, Matchmaking, Events, Messages, and Profile are the five icon-first navigation
 destinations. Community is a supporting route entered from Home. Settings appears in desktop account navigation and is reachable
