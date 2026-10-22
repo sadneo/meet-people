@@ -38,8 +38,9 @@ This supersedes warm-tan page-canvas/navigation guidance without changing layout
 
 | Route | Purpose |
 | --- | --- |
-| `/`, `/home` | Signed-in Home; persisted onboarding required, no guest preview |
-| `/welcome` | Separate public marketing page; never replaces private Home |
+| `/` | Public welcome when signed out; signed-in Home after persisted onboarding |
+| `/home` | Protected signed-in Home; no guest preview |
+| `/welcome` | Public marketing page, also available directly |
 | `/terms`, `/privacy`, `/cookies` | Public legal drafts |
 | `/community` | Village and weekly activity, balance/upgrades, local drag placement |
 | `/matchmaking` | Authenticated active queue, single-person result and profile preferences |

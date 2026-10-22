@@ -20,6 +20,12 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async () => Response.json({ code: 'provider', error: 'Unavailable' }, { status: 503 })))
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.history.replaceState({}, '', '/'); localStorage.clear() })
+it('shows public welcome at signed-out root without reading private data', async () => {
+  const view = mount('/')
+  expect(view.container.querySelector('.public-site')).toBeTruthy()
+  expect(screen.queryByText('Private home fixture')).toBeNull()
+  expect(fetch).not.toHaveBeenCalled()
+})
 it('retries a failed startup read once then signs out locally with an explanation', async () => {
   state.session = { access_token: 'fixture', user: { id: 'owner' } }
   mount('/')
