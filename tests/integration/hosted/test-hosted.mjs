@@ -26,10 +26,17 @@ const health = await fetch(new URL('/api/health', origin), { signal: AbortSignal
 assert.equal(health.status, 200)
 assert.deepEqual(await health.json(), { status: 'ok' })
 assert.match(health.headers.get('cache-control') ?? '', /no-store/)
+const lookup = await fetch(new URL('/api/auth/email', origin), {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'pebble-release-check@example.com' }),
+  signal: AbortSignal.timeout(60000),
+})
+assert.equal(lookup.status, 200, 'Email lookup must reach the hosted authentication database.')
+assert.equal(typeof (await lookup.json()).exists, 'boolean')
 const events = await fetch(new URL('/api/events?limit=1', origin), { signal: AbortSignal.timeout(60000) })
 assert.equal(events.status, 200, 'Events must reach the configured database, not just a live process.')
 assert.ok(Array.isArray((await events.json()).events))
 const account = await fetch(new URL('/api/matchmaking/account', origin), { signal: AbortSignal.timeout(60000) })
 assert.equal(account.status, 401, 'Anonymous requests must not read private accounts.')
 assert.match(account.headers.get('cache-control') ?? '', /no-store/)
-console.info(`Hosted smoke passed: SPA deep links, immutable assets, API/database access and anonymous account denial at ${origin.origin}`)
+console.info(`Hosted smoke passed: SPA deep links, immutable assets, email lookup, API/database access and anonymous account denial at ${origin.origin}`)

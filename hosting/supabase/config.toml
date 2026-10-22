@@ -5,7 +5,7 @@ project_id = "meet-people"
 [auth]
 site_url = "https://cse416-meet-people.web.app"
 additional_redirect_urls = ["https://cse416-meet-people.web.app/auth/callback**", "https://cse416-meet-people.web.app/reset-password**"]
-enable_signup = false
+enable_signup = true
 minimum_password_length = 8
 
 [auth.email]
