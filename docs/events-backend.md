@@ -64,19 +64,19 @@ No browser policies or service keys are added to the client.
 
 ```bash
 pnpm verify
-pnpm test:e2e
+pnpm test:browser
 ```
 
 With the app API on port 3101, run the real authenticated integration check:
 
 ```bash
-node --env-file=.env.local scripts/test-events-live.mjs
+node --env-file=.env.local tests/integration/local/test-events-live.mjs
 ```
 
 For the normal development port, prefix that command with
 `EVENTS_TEST_API_URL=http://127.0.0.1:3001`. The check only accepts a local Supabase
 URL, creates a disposable event and two confirmed test accounts, then deletes
-them. `tests/event-company.sql` also checks group capacity, idempotency, leaving,
+them. `tests/integration/sql/event-company.sql` also checks group capacity, idempotency, leaving,
 cleanup, cancellations, and permissions inside a transaction that rolls back.
 
 ## Later merge

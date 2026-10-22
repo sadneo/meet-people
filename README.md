@@ -398,16 +398,22 @@ The current local activation and real-account evidence are described above. Sour
 checks or disposable DB tests alone do not establish readiness for a different target.
 
 ```bash
-pnpm test
+pnpm test:unit
 pnpm typecheck
 pnpm lint
 pnpm build
 git diff --check
 ```
 
-Parent runs isolated mocked browser suites and reviews screenshots. Real Auth
-scripts (`pnpm test:auth`), services, resets, schema installation and provider calls
-are separate operations requiring approval, not part of these source-only checks.
+| Directory | Command | Scope |
+| --- | --- | --- |
+| `tests/unit/` | `pnpm test:unit` | Logic, components, hooks and mocked API tests |
+| `tests/browser/` | `pnpm test:browser` | Source-mocked Playwright UI journeys |
+| `tests/integration/` | `pnpm test:integration` | Local Supabase Auth/account checks and disposable database replay |
+
+`pnpm test` aliases `test:unit`. `pnpm verify` runs typecheck, lint, unit tests
+and build; browser and integration suites run separately. Hosted checks remain
+opt-in. See [testing commands and prerequisites](tests/README.md).
 
 Install a browser once when Playwright has not already provisioned one:
 
@@ -420,7 +426,7 @@ For example, in PowerShell:
 
 ```powershell
 $env:PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
-pnpm test:e2e
+pnpm test:browser
 ```
 
 ## Production-Style Local Check
@@ -434,12 +440,11 @@ docker run --rm --publish 8080:8080 --env PORT=8080 meet-people-api:local
 
 Check the API with `curl http://127.0.0.1:8080/api/health`.
 
-To run browser smoke tests against the built web artifact, start the compiled API on port `3101`, then preview the web build with its API proxy:
+Build and run the production-artifact smoke suite, starting and stopping the
+compiled API and preview server automatically:
 
 ```bash
-PORT=3101 pnpm start:api
-API_PORT=3101 VITE_PREVIEW_PORT=3100 pnpm preview
-PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e
+pnpm test:browser:built
 ```
 
 ## Hosted Environments

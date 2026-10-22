@@ -100,8 +100,8 @@ on the same route/owner, never to a detached old button. There is no new polling
 
 ## Verification and parent browser handoff
 
-Real `App` access/verification is covered in `tests/app-access.test.tsx` and
-`tests/app-access-auth-lifecycle.test.tsx`. Lower-level Profile/editor and matching
+Real `App` access/verification is covered in `tests/unit/app-access.test.tsx` and
+`tests/unit/app-access-auth-lifecycle.test.tsx`. Lower-level Profile/editor and matching
 component tests may compose private components with explicit mocked session/network
 fixtures; those are not app-route authorization tests or production bypass flags.
 

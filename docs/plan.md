@@ -195,7 +195,7 @@ pnpm dev
 pnpm typecheck
 pnpm lint
 pnpm test
-pnpm test:e2e
+pnpm test:browser
 pnpm build
 pnpm start:api
 pnpm verify

@@ -1,5 +1,10 @@
 # Local credential validation — parent execution only
 
+> Historical validation report. The legacy email-link/password-toggle browser
+> runner and its helper-only tests have been removed. Use the current
+> [testing guide](../tests/README.md) for runnable suites; commands and evidence
+> below describe the earlier implementation.
+
 The frontend uses the existing **public Supabase client → Supabase Auth** for
 `getUser`, `updateUser`, `reauthenticate`, password/email-link sign-in, recovery,
 and callback verification. Passwords/nonces stay in the mounted form and are
@@ -98,11 +103,8 @@ implement table deletes, reset, seed, list-all-and-delete, or domain-wide cleanu
 If cleanup cannot be confirmed, the script reports a cleanup failure category
 and exits nonzero; parent retains the seam's private run ledger for followup.
 
-After review, parent may invoke with the above runtime values and:
-
-```text
-pnpm exec node scripts/validate-local-credentials.mjs
-```
+The retired runner previously used the runtime values above. Its entrypoint is
+no longer available; the historical flow is described below.
 
 The script creates unique `example.test` accounts and random passwords, changes
 email through Settings, confirms both old/new captured local emails, reads Auth
