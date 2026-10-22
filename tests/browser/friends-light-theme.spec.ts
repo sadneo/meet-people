@@ -1,0 +1,190 @@
+import { expect, test } from '@playwright/test'
+import { browserProfile, browserAccount, mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
+import { DatingAggregateSchema, emptyDatingProfile, adultOn } from '../../shared/dating'
+
+const palette = { canvas: 'rgb(250, 251, 247)', panel: 'rgb(255, 255, 255)', line: 'rgb(228, 233, 220)', heading: 'rgb(52, 88, 62)' }
+for (const width of [320, 390, 800, 801, 1440]) {
+  test(`Friends light palette and interaction states at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    const external: string[] = [], mutations: string[] = []
+    await page.route('**/*', route => {
+      const url = new URL(route.request().url())
+      if (url.origin !== 'http://127.0.0.1:3194') { external.push(url.origin); return route.abort() }
+      return route.continue()
+    })
+    page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/') && request.method() !== 'GET') mutations.push(`${request.method()} ${new URL(request.url()).pathname}`) })
+    await mockMatchingSession(page); await mockMatchingApi(page)
+    const profile = { ...browserProfile, availability: [{ dow: 1, start_time: '09:15:00', end_time: '10:30:00' }] }
+    await page.route('**/api/matchmaking/profile', route => route.fulfill({ json: { profile } }))
+    await page.route('**/api/matchmaking/account', route => route.fulfill({ json: browserAccount(profile) }))
+    // Explicit synthetic persisted Dating choices, independent of Friends. The
+    // generic queue fixture's {mode} is not a Dating capability response, and
+    // revision-zero/null search must not manufacture a saved minimum age of 23.
+    const dating = DatingAggregateSchema.parse({ profileRevision: 1, searchRevision: 1,
+      profile: emptyDatingProfile(), search: { ageMin: 23, ageMax: 30, radiusMiles: 15, searchArea: { source: 'home', resolvedLocationRef: null } },
+      eligibility: { asOf: '2026-10-19', adult: adultOn(profile.birthdate, '2026-10-19'), locationResolved: false }, effectiveEnabled: false })
+    let datingReads = 0
+    await page.route('**/api/matchmaking/dating-preferences', route => {
+      expect(route.request().method()).toBe('GET')
+      expect(route.request().headers().authorization).toBe('Bearer browser-user-jwt')
+      datingReads++
+      return route.fulfill({ json: dating })
+    })
+    await page.goto('/matchmaking')
+    const start = page.getByRole('button', { name: 'Find Friends', exact: true })
+    await expect(start).toBeEnabled()
+    await expect(page.locator('.friends-page')).toHaveCSS('background-color', palette.canvas)
+    await expect(page.locator('.friends-page')).toHaveCSS('background-image', 'none')
+    await expect(page.locator('.match-dashboard-heading h2')).toHaveCSS('color', palette.heading)
+    const navbar = page.locator(width <= 800 ? '.pt-bottom-nav' : '.pt-app-header')
+    const chrome = () => navbar.evaluate(element => {
+      const style = getComputedStyle(element)
+      return { html: element.outerHTML, background: style.backgroundColor, height: element.getBoundingClientRect().height }
+    })
+    const originalChrome = await chrome()
+    await expect(navbar).toHaveCSS('background-color', palette.panel)
+    const primaryNav = width <= 800 ? navbar : navbar.locator('.pt-desktop-nav')
+    await expect(primaryNav.getByRole('link', { name: 'Matchmaking', exact: true })).toHaveCSS('background-color', 'rgb(234, 245, 217)')
+    await expect(primaryNav.getByRole('link', { name: 'Matchmaking', exact: true })).toHaveCSS('color', 'rgb(31, 90, 60)')
+    const panel = page.locator('.friends-interests')
+    await expect(panel).toHaveCSS('background-color', palette.panel)
+    await expect(panel).toHaveCSS('border-color', palette.line)
+    const selected = page.getByRole('button', { name: 'Coffee', exact: true })
+    const unselected = page.getByRole('button', { name: 'Art', exact: true })
+    await expect(selected).toHaveCSS('background-color', 'rgb(228, 239, 213)')
+    await expect(selected).toHaveCSS('border-color', 'rgb(201, 218, 180)')
+    await expect(selected).toHaveCSS('color', 'rgb(65, 101, 53)')
+    await expect(unselected).toHaveCSS('background-color', 'rgb(250, 252, 246)')
+    await expect(unselected).toHaveCSS('border-color', 'rgb(224, 231, 214)')
+    await unselected.hover()
+    await expect(unselected).toHaveCSS('box-shadow', 'rgb(163, 193, 134) 0px 0px 0px 1px inset')
+    await unselected.focus()
+    await expect(unselected).toHaveCSS('outline-color', 'rgb(49, 95, 155)')
+    await expect(unselected).toHaveCSS('outline-style', 'solid')
+    const partial = page.getByRole('button', { name: 'Monday morning, partially available', exact: true })
+    await expect(partial).toHaveAttribute('aria-pressed', 'mixed')
+    await expect(partial).toHaveCSS('color', 'rgb(68, 110, 50)')
+    expect(await partial.evaluate(element => getComputedStyle(element).backgroundImage)).toContain('repeating-linear-gradient')
+    await partial.click()
+    const available = page.getByRole('button', { name: 'Monday morning, available', exact: true })
+    await expect(available).toHaveCSS('background-color', 'rgb(220, 234, 204)')
+    await expect(available).toHaveCSS('border-color', 'rgb(163, 193, 134)')
+    const empty = page.getByRole('button', { name: 'Tuesday morning, not available', exact: true })
+    await expect(empty).toHaveCSS('background-color', 'rgb(250, 251, 246)')
+    await expect(empty).toHaveCSS('border-color', 'rgb(224, 231, 213)')
+    await empty.focus(); await page.keyboard.press('Space')
+    await expect(page.getByRole('button', { name: 'Tuesday morning, available', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(start).toHaveCSS('background-color', 'rgb(65, 106, 69)')
+    await expect(start).toHaveCSS('color', 'rgb(255, 254, 248)')
+    const filters = page.getByRole('button', { name: 'Preferences', exact: true })
+    await expect(filters).toHaveCSS('background-color', palette.panel)
+    await expect(filters).toHaveCSS('color', palette.heading)
+    const tabs = page.getByRole('navigation', { name: 'Matching views' })
+    await expect(tabs).toHaveCSS('background-color', 'rgb(237, 241, 229)')
+    await expect(tabs.getByRole('link', { name: 'Friends', exact: true })).toHaveCSS('background-color', palette.panel)
+    await expect(page.locator('.friends-scene')).toHaveCSS('background-color', 'rgb(223, 203, 189)')
+    // Readable text in every active presentation state, including both stripe colors.
+    const contrast = await page.evaluate(() => {
+      const luminance = (hex: string) => {
+        const values = hex.match(/\w\w/g)!.map(value => parseInt(value, 16) / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+        return values[0] * .2126 + values[1] * .7152 + values[2] * .0722
+      }
+      return [['596d50','fafbf7'], ['596d50','ffffff'], ['416535','e4efd5'], ['446e32','dceacc'], ['446e32','fafbf6'], ['fffef8','416a45'], ['34583e','e8eedf']].map(([ink, surface]) => {
+        const values = [luminance(ink), luminance(surface)].sort((a,b) => b-a)
+        return (values[0] + .05) / (values[1] + .05)
+      })
+    })
+    for (const ratio of contrast) expect(ratio).toBeGreaterThanOrEqual(4.5)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+    await page.evaluate(() => window.scrollTo(0,0))
+    await page.screenshot({ path: testInfo.outputPath('setup.png'), fullPage: true })
+    // Exercise disabled presentation without introducing any runtime state or writes.
+    await unselected.evaluate((element: HTMLButtonElement) => { element.disabled = true })
+    await expect(unselected).toHaveCSS('opacity', '0.6')
+    await expect(unselected).toHaveCSS('border-style', 'dashed')
+    await expect(unselected).toHaveCSS('cursor', 'not-allowed')
+    await unselected.evaluate((element: HTMLButtonElement) => { element.disabled = false })
+    await filters.click()
+    const friendsSheet = page.getByRole('dialog')
+    await expect(friendsSheet.getByRole('slider', { name: 'Minimum age', exact: true })).toHaveValue('18')
+    await expect(friendsSheet.getByRole('slider', { name: 'Maximum age', exact: true })).toHaveValue('35')
+    await page.keyboard.press('Escape')
+    await page.getByRole('link', { name: 'Dating', exact: true }).click()
+    await expect(page.locator('.friends-page')).toHaveCount(0)
+    await expect(page.locator('.pt-app')).toHaveCSS('background-color', palette.panel)
+    await expect(page.getByText('Local prototype recommendations — not live Dating matches.', { exact: true })).toBeVisible()
+    expect(await chrome()).toEqual(originalChrome)
+    await page.getByRole('button', { name: 'Prototype preferences', exact: true }).click()
+    await expect(page.getByRole('dialog')).toHaveCSS('background-color', 'rgb(250, 248, 240)')
+    await expect(page.getByRole('slider', { name: 'Minimum age', exact: true })).toHaveValue('23')
+    await expect(page.getByRole('slider', { name: 'Maximum age', exact: true })).toHaveValue('30')
+    expect(datingReads).toBeGreaterThan(0)
+    await page.keyboard.press('Escape')
+    await page.getByRole('link', { name: 'Friends', exact: true }).click()
+    await page.getByRole('button', { name: 'Preferences', exact: true }).click()
+    await expect(page.getByRole('slider', { name: 'Minimum age', exact: true })).toHaveValue('18')
+    await expect(page.getByRole('slider', { name: 'Maximum age', exact: true })).toHaveValue('35')
+    await page.keyboard.press('Escape')
+    expect(mutations).toEqual([])
+    expect(external).toEqual([])
+  })
+}
+
+for (const size of [{ width: 390, height: 844 }, { width: 800, height: 1568 }, { width: 800, height: 2000 }]) {
+  test(`Friends mobile reference fills available height ${size.width}x${size.height}`, async ({ page }, testInfo) => {
+    await page.setViewportSize(size)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.route('**/*', route => new URL(route.request().url()).origin === 'http://127.0.0.1:3194' ? route.continue() : route.abort())
+    await mockMatchingSession(page); await mockMatchingApi(page)
+    await page.goto('/matchmaking')
+    const start = page.getByRole('button', { name: 'Find Friends', exact: true })
+    await expect(start).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Refresh status' })).toHaveCount(0)
+    await expect(page.getByText('On this device', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Edit location and birthdate on Profile' })).toHaveCount(0)
+    await expect(start.locator('svg')).toHaveCount(1)
+    await expect(page.locator('.match-setup-footer')).toHaveCSS('background-color', 'rgb(240, 245, 231)')
+    await expect(page.getByRole('button', { name: '2 friends', exact: true })).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    await expect(page.locator('.friends-section-number')).toHaveText(['01', '02'])
+    await expect(page.getByText('New York time', { exact: true })).toBeVisible()
+    await expect(page.getByText('Exact times', { exact: true })).toBeAttached()
+    await expect(page.locator('.friends-availability .match-setup-exact')).toHaveCount(1)
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    const navigation = (await page.locator('.pt-bottom-nav').boundingBox())!
+    const footer = (await page.locator('.match-setup-footer').boundingBox())!
+    expect(footer.y + footer.height).toBeLessThanOrEqual(navigation.y)
+    expect(navigation.y - footer.y - footer.height).toBeLessThan(65)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(size.width)
+    if (size.height >= 1500) {
+      expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(size.height + 1)
+      expect((await page.locator('.friends-setup .friends-scene').boundingBox())!.height).toBeGreaterThan(400)
+    }
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page.screenshot({ path: testInfo.outputPath('mobile-reference.png'), fullPage: true })
+  })
+}
+
+test('Friends mobile filters dismiss on long pull and preserve drafts on short pull', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.route('**/*', route => new URL(route.request().url()).origin === 'http://127.0.0.1:3194' ? route.continue() : route.abort())
+  await mockMatchingSession(page); await mockMatchingApi(page)
+  await page.goto('/matchmaking')
+  const opener = page.getByRole('button', { name: 'Preferences', exact: true })
+  await opener.click()
+  const sheet = page.getByRole('dialog', { name: 'Your kind of connection.' })
+  const distance = sheet.getByRole('slider', { name: 'Maximum distance in miles' })
+  await distance.focus(); await page.keyboard.press('End')
+  const pull = async (amount: number) => {
+    await sheet.evaluate(element => { element.scrollTop = 0 })
+    await expect(sheet).toHaveCSS('transform', 'none')
+    const box = (await sheet.locator('.mfs-header h2').boundingBox())!
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down(); await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + amount, { steps: 8 })
+    await expect(sheet).toHaveAttribute('data-dragging', 'true'); await page.mouse.up()
+  }
+  await pull(60); await expect(sheet).toBeVisible(); await expect(distance).toHaveValue('100')
+  await expect(sheet.getByRole('button', { name: 'Save Friends filters' })).toBeEnabled()
+  await pull(120); await expect(sheet).toHaveCount(0); await expect(opener).toBeFocused()
+  await opener.click(); await expect(distance).toHaveValue('15')
+  await expect(sheet.getByRole('combobox')).toHaveCount(0)
+})

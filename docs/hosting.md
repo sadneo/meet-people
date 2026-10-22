@@ -206,7 +206,7 @@ the preceding API revision; use additive changes and forward fixes.
 
 ```sh
 pnpm verify
-pnpm test:auth
+pnpm test:integration:auth
 pnpm test:hosted https://cse416-meet-people.web.app
 ```
 

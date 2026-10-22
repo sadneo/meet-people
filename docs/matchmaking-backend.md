@@ -191,7 +191,7 @@ fields elsewhere also remain display-only.
 
 ## Verification and remaining activation work
 
-Run `pnpm verify`, `pnpm test`, and `pnpm test:e2e` (existing scripts, no install).
+Run `pnpm verify`, `pnpm test:unit`, and `pnpm test:browser`.
 Focused suites: `tests/matchmaking-contracts.test.ts` exercises the actual
 Express router in memory (no listening service) and the real SDK transport
 with injected mock fetch;
@@ -251,7 +251,7 @@ are removed. Any applied-environment rollback remains a separate approval gate.
 Run from this worktree while UI3000/API3001 and local Supabase54321 are active:
 
 ```sh
-PEBBLE_LOCAL_DOWNTIME_TEST=1 node scripts/test-downtime-local.mjs
+PEBBLE_LOCAL_DOWNTIME_TEST=1 node tests/integration/local/test-downtime-local.mjs
 ```
 
 This opt-in harness creates one disposable local Auth account through supported

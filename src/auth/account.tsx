@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import type { Session } from '@supabase/supabase-js'
-import { emptyAccount, type Account } from '../../shared/account'
+import { completedAccountChapters, emptyAccount, type Account } from '../../shared/account'
 import { MatchmakingClientError, matchmakingClient } from '../features/matchmaking/client'
 import { useSession } from './useSession'
 import { centralSignInPath, safeReturnTo } from './returnTo'
@@ -88,7 +88,7 @@ function AccountLoader({ session, children }: { session: Session | null; childre
   // Auth/recovery pages must remain reachable even if account data is unavailable.
   const authPage = ['/login', '/register', '/auth/callback', '/forgot-password', '/reset-password'].includes(pathname)
   if (session && !loaded && !authPage) return <main className="pt-auth"><p role={error ? 'alert' : 'status'}>{error || 'Loading your account…'}</p>{error && <button onClick={() => void reload()}>Retry</button>}</main>
-  if (session && loaded && account.completed.length < 4 && !authPage && pathname !== '/onboarding') {
+  if (session && loaded && completedAccountChapters(account).length < 4 && !authPage && pathname !== '/onboarding') {
     return <Navigate replace to={`/onboarding?${new URLSearchParams({ returnTo: safeReturnTo(pathname + search) ?? '/' })}`} />
   }
   return <AccountContext.Provider value={{ session, account, loaded, busy, error, save, reload }}>

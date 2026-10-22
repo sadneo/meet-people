@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router'
+import { Navigate, Outlet, Route, Routes } from 'react-router'
 import NotFound from './routes/NotFound'
 import Community from './routes/Community'
 import PebbleApp, { ImmersiveLayout, IntroScreen } from './routes/PebbleApp'
@@ -16,11 +16,18 @@ import MatchmakingHome from './features/prototype/MatchmakingHome'
 import DowntimeMatchmaking from './features/prototype/DowntimeMatchmaking'
 import { AuthCallback, ForgotPassword } from './auth/CredentialRoutes'
 import { PublicAuthLayout, SessionRequired } from './auth/AppAccess'
-import { PublicLayout } from './features/public/PublicLayout'
+import { PublicLayout, PublicOrAppLayout, MemberShell, HomeEntry } from './features/public/PublicLayout'
 import { MarketingPage } from './features/public/MarketingPage'
 import { LegalPage } from './features/public/LegalPage'
 import { GuestEventDetail, GuestEvents } from './features/public/GuestEvents'
 import { publicEventsPath } from './features/public/links'
+import { useSession } from './auth/useSession'
+
+function RootEntry() {
+  const { ready, session } = useSession()
+  if (!ready) return <p role="status">Loading session…</p>
+  return session ? <SessionRequired /> : <Outlet />
+}
 
 function App() {
   return (
@@ -41,12 +48,16 @@ function App() {
         <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="reset-password" element={<AuthCallback />} />
       </Route>
+      <Route path="/" element={<RootEntry />}>
+        <Route element={<PublicOrAppLayout />}>
+          <Route element={<MemberShell />}><Route index element={<HomeEntry />} /></Route>
+        </Route>
+      </Route>
       <Route element={<SessionRequired />}>
       <Route path="complete-profile" element={null} />
       <Route path="onboarding" element={null} />
       <Route element={<PebbleApp />}>
         <Route element={<AppShell />}>
-          <Route index element={<Home />} />
           <Route path="home" element={<Home />} />
           <Route path="community" element={<PebbleGarden />} />
           <Route path="matchmaking" element={<MatchmakingHome />} />

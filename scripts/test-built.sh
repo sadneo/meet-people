@@ -11,4 +11,4 @@ until curl --fail --silent http://127.0.0.1:3100/api/health >/dev/null; do
   [ "$attempt" -lt 60 ] || exit 1
   sleep 1
 done
-PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e "$@"
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm exec playwright test --config playwright.built.config.ts "$@"

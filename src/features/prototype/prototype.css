@@ -1,7 +1,7 @@
 /* Shared meadow palette. Feature namespaces alias these tokens; no local themes. */
 :root {
   --pt-page-canvas: #ffffff;
-  --pt-cream: #DDCABC;
+  --pt-cream: #fffdf4;
   --pt-surface: #fffef9;
   --pt-soft: #f4f9e8;
   --pt-ink: #1f5a3c;

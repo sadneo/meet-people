@@ -22,9 +22,17 @@ export function useUnifiedAccount(token: string | null) {
   useEffect(() => {
     const epoch = ++fence.current
     active.current = client; pending.current = false
-    if (client) void client.account().then(account => {
+    const read = async () => {
+      try { return await client!.account() }
+      catch (failure) {
+        if (epoch !== fence.current || failure instanceof MatchmakingClientError && failure.status < 500) throw failure
+        return client!.account()
+      }
+    }
+    if (client) void read().then(account => {
       if (epoch === fence.current) setState({ token, account, loading: false, busy: false, available: true, error: '' })
-    }).catch(() => {
+    }).catch(failure => {
+      if (epoch === fence.current) console.error('Account read failed', failure instanceof MatchmakingClientError ? { code: failure.code, status: failure.status } : { code: 'network' })
       if (epoch === fence.current) setState(previous => ({ ...previous, token, loading: false, busy: false, available: false, error: 'Your saved account could not be read. Retry before continuing.' }))
     })
     return () => { fence.current = epoch + 1; active.current = null }

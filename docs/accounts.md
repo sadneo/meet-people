@@ -88,7 +88,7 @@ server-owned; SPA gating does not protect static bundle downloads.
 
 ### Local Auth acceptance script
 
-`scripts/test-local-auth.mjs` is a separately authorized **live local acceptance
+`tests/integration/local/test-local-auth.mjs` is a **live local acceptance
 check**, not a unit test. It obtains local status through the existing wrapper,
 requires a plain HTTP `127.0.0.1` origin, and creates only two disposable users via
 signup, out-of-band local email confirmation and password login. Passwords and
@@ -111,7 +111,7 @@ reported generically and suppress the success message. A server/network failure
 can still prevent deletion, so success is never claimed in that case. There is no
 user enumeration, bulk cleanup, schema change, environment/config rewrite or reset.
 
-`tests/local-auth-script.test.ts` executes the script with mocked status/client
+`tests/unit/local-auth-script.test.ts` executes the script with mocked status/client
 boundaries, SQL-sorted synthetic readbacks and injected failures. These tests need
 no local services, credentials or real users. They do **not** establish live Auth,
 RPC/RLS installation, recovery delivery or optional-embedding/provider readiness.
