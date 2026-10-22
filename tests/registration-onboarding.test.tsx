@@ -117,6 +117,17 @@ it('startup read failure blocks private access and offers signout retry if Auth 
   expect(calls).toHaveLength(2)
   expect(calls.every(call => call.method === 'GET')).toBe(true)
 })
+it('legacy full completion markers can collect missing final facts and enter Home without replaying earlier chapters', async () => {
+  stored = { ...accountFixture(complete), profile: { ...complete, birthdate: null, location_city: null }, completed: [0, 1, 2, 3] }
+  mount('/')
+  await screen.findByRole('heading', { name: 'Availability & preferences', exact: true })
+  fireEvent.change(screen.getByLabelText('City or campus area'), { target: { value: complete.location_city } })
+  fireEvent.change(screen.getByLabelText('Birthdate'), { target: { value: complete.birthdate } })
+  fireEvent.click(button('Finish onboarding'))
+  await screen.findByRole('heading', { name: 'Ready app fixture', exact: true })
+  expect(calls.filter(call => call.method === 'PUT')).toHaveLength(1)
+  expect(stored.profile).toEqual(complete)
+})
 it('identity-only interruption and failed interests retain the draft, never resubmit identity, and refresh resumes the persisted chapter', async () => {
   stored = { ...emptyAccount, profile: partial(), completed: [0] }; saveFails = true
   const view = mount('/onboarding?returnTo=%2F'); await screen.findByRole('button', { name: 'Save interests and continue', exact: true })

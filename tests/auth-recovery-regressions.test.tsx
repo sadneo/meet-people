@@ -36,6 +36,17 @@ it('a transient startup failure recovers without logging out', async () => {
   await screen.findByRole('heading', { name: 'Private home fixture' })
   expect(state.signOut).not.toHaveBeenCalled()
 })
+it('legacy completed markers with missing birthdate/campus resume onboarding instead of logging out', async () => {
+  state.session = { access_token: 'fixture', user: { id: 'owner' } }
+  const legacy = accountFixture({ username: 'fixture', display_name: 'Fixture', bio: null, avatar_url: null, ...requiredPreferences })
+  legacy.profile = { ...legacy.profile!, birthdate: null, location_city: null }
+  vi.mocked(fetch).mockImplementation(async () => Response.json(legacy))
+  mount('/')
+  await screen.findByRole('heading', { name: 'Complete onboarding' })
+  expect(screen.getByRole('heading', { name: 'Availability & preferences' })).toBeTruthy()
+  expect(state.signOut).not.toHaveBeenCalled()
+  expect(screen.queryByText('Private home fixture')).toBeNull()
+})
 it('prefills recovery email and provides a branded confirmation with resend cooldown', async () => {
   const view = render(<MemoryRouter initialEntries={[{ pathname: '/forgot-password', state: { email: 'fixture@example.test' } }]}><App /></MemoryRouter>)
   expect(screen.getByLabelText('Email')).toHaveProperty('value', 'fixture@example.test')

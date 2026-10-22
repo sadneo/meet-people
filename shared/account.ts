@@ -25,7 +25,11 @@ export function completedAccountChapters(value: AccountData): number[] {
   if (!value.preferences.distance || !value.preferences.group || !ReadyPreferencesSchema.safeParse(value.profile).success) return [0, 1, 2]
   return [0, 1, 2, 3]
 }
-export const AccountSchema = AccountDataSchema.refine(value => value.completed.length <= completedAccountChapters(value).length, 'Completed chapters must have valid persisted required fields.')
-export const SaveAccountSchema = AccountSchema.refine(value => value.profile !== null, 'Profile is required.')
+// Stored completion markers can predate today's required fields. Read the account
+// so onboarding can collect missing facts; never use those markers to grant access.
+export const AccountSchema = AccountDataSchema
+export const SaveAccountSchema = AccountSchema
+  .refine(value => value.completed.length <= completedAccountChapters(value).length, 'Completed chapters must have valid persisted required fields.')
+  .refine(value => value.profile !== null, 'Profile is required.')
 export type Account = z.infer<typeof AccountSchema>
 export const emptyAccount: Account = { profile: null, preferences: { intents: [], usual: [], distance: '', group: '' }, settings: { notifications: true, availability: true, discoverable: true, location: false }, completed: [] }

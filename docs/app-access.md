@@ -36,6 +36,12 @@ Compatibility identity/preferences endpoints project/delegate to this document;
 they are not independent canonical writers.
 
 - **Loading:** blocking status, no private context or feature requests.
+Historical `completed` markers may predate current required fields. Account reads
+validate the document shape without rejecting those markers; access and onboarding
+derive readiness from the actual saved fields. Saves still validate claimed
+completion. This lets older accounts supply missing birthdate/campus information
+instead of failing account loading and being logged out.
+
 - **Null or incomplete:** replace into `/onboarding?returnTo=…`. The legacy
   `/complete-profile` URL redirects here. There is no Cancel, skip, shell navigation
   or prototype-onboarding escape. Identity uses the shared explicit username and

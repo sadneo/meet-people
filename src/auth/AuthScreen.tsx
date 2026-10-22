@@ -9,6 +9,7 @@ import { getLocalDevelopmentEnvironment, isLocalDevelopment } from './localDevel
 import { apiUrl, authRedirect, isNative } from '../platform/native'
 import { Browser } from '@capacitor/browser'
 import { authCallbackUrl, validPassword } from './credential-policy'
+import { completedAccountChapters } from '../../shared/account'
 
 type Mode = 'login' | 'register' | 'forgot' | 'reset' | 'callback'
 type Step = 'email' | 'password' | 'register' | 'confirmation'
@@ -186,7 +187,7 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
   }
 
   if (session && ready && (!account || account.loaded) && !callbackFailed && authMode) {
-    return <Navigate replace to={account && account.account.completed.length < 4 ? link('/onboarding') : returnTo} />
+    return <Navigate replace to={account && completedAccountChapters(account.account).length < 4 ? link('/onboarding') : returnTo} />
   }
   const title = mode === 'forgot' ? recoverySent ? 'Check your email' : 'Reset your password'
     : mode === 'reset' ? resetDone ? 'Password updated' : 'Choose a new password'
