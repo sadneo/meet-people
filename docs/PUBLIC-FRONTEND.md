@@ -22,7 +22,7 @@ font stack and semantic product tokens. It does not mount the prototype store
 or developer panel for guests. A single member workspace stays mounted across
 signed-in product routes, preserving existing session state.
 
-Design plan: tan `#DDCABC`, forest `#1F5A3C`, muted forest `#425B49`, berry
+Design plan: cream `#fffdf4`, forest `#1F5A3C`, muted forest `#425B49`, berry
 `#D93467`, pale green `#EAF5D9`, and off-white `#FFFEF9`, all from existing tokens.
 Trebuchet/Segoe UI retain the product's typography. The large left-aligned
 headline faces a green pouch collecting different pixel Pebbles. A short story

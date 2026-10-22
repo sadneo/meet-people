@@ -30,7 +30,7 @@ contracts and disabled worker. No Company/compatibility consent is reused.
 and supporting pages. Friends uses its approved light #FAFBF7 canvas, white panels and original sand scene.
 Standard desktop header and compact bottom navigation are white too, including
 above/below Friends. Forest icons/text, pale-green selected tabs, active dots,
-focus and target sizes stay unchanged. The #DDCABC cream token stays on existing
+focus and target sizes stay unchanged. The #fffdf4 cream token stays on existing
 surfaces; off-white cards/dialogs/inputs and green/berry controls are preserved.
 This supersedes warm-tan page-canvas/navigation guidance without changing layouts.
 
