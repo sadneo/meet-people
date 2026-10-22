@@ -17,7 +17,7 @@ are already reproduced and approved by the user. You run in your own git worktre
 
 - Fix only the findings you were given. No drive-by refactors, renames or formatting changes.
 - Write code that reads like the surrounding code: same naming, comment density and idioms.
-- For each finding, add or extend a test that **fails before your fix and passes after** (prefer Vitest in `tests/`; use Playwright in `e2e/` only when the bug is about real browser layout). Prove the "fails before" part by running it first.
+- For each finding, add or extend a test that **fails before your fix and passes after** (prefer Vitest in `tests/unit/`; use Playwright in `tests/browser/` for browser-specific behaviour and `tests/integration/` for real-service checks). Prove the "fails before" part by running it first.
 - Run `pnpm typecheck`, `pnpm lint` and the relevant `pnpm vitest run <files>` before finishing.
 - Don't commit. Leave the changes in the worktree; the lead merges them.
 

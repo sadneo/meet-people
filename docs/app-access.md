@@ -2,9 +2,10 @@
 
 ## Product policy
 
-The app has no signed-out product preview. Public routes are `/login`, `/register`,
-`/auth/callback`, `/auth/forgot-password`, and the public `/forgot-password` and
-`/reset-password` aliases only. Home, Events, Community (including
+The app has no signed-out product preview. Signed-out `/` renders the public welcome
+page; signed-in `/` renders protected Home. Marketing, legal and guest-event pages
+remain public, as do `/login`, `/register`, `/auth/callback`, `/auth/forgot-password`,
+`/forgot-password` and `/reset-password`. Home, Events, Community (including
 `/prototype/yzcommunity`), Matchmaking/Friends/Dating, Messages, Profile, Settings,
 Intro, onboarding, planning and unknown routes are protected.
 
@@ -35,14 +36,22 @@ owns the unified profile, private preferences/settings and four-chapter progress
 Compatibility identity/preferences endpoints project/delegate to this document;
 they are not independent canonical writers.
 
+Historical `completed` markers may predate current required fields. Account reads
+validate the document shape without rejecting those markers; access and onboarding
+derive readiness from the actual saved fields. Saves still validate claimed
+completion. This lets older accounts supply missing birthdate/campus information
+instead of failing account loading and being logged out.
+
 - **Loading:** blocking status, no private context or feature requests.
 - **Null or incomplete:** replace into `/onboarding?returnTo=…`. The legacy
   `/complete-profile` URL redirects here. There is no Cancel, skip, shell navigation
   or prototype-onboarding escape. Identity uses the shared explicit username and
   display-name form, optional bio and null avatar; ordinary users receive no
   prototype, email, metadata, example-interest, birthdate or location defaults.
-- **Read failure or malformed data:** blocking Profile-unavailable state with
-  read-only retry and logout, not a signed-out/login misclassification.
+- **Startup read failure or malformed data:** retry network/server failures once;
+  rejected sessions skip retry. A persistent failure signs out locally and returns
+  to login with an explanation. Failed signout offers a retry without private access.
+  Save/reconciliation failures still retain drafts rather than signing out.
 - **Ready persisted profile:** ordinary app access. Readiness requires valid
   canonical identity, at least three unique interests, valid birthdate, nonempty
    city/campus area, at least one valid non-overlapping availability window, social
@@ -75,6 +84,12 @@ onboarding for a ready saved profile. Unsaved drafts are not persisted
 across a full page refresh. Minimal email/password recovery and logout controls are
 available during setup/error states without mounting Settings or the private shell.
 
+Password recovery uses the shared branded sign-in layout and preserves the entered
+email. After explicit callback exchange and authoritative user verification, the
+callback renders the new-password form directly, without reading the profile or
+entering Settings/onboarding. Expired/reused grants offer another recovery link.
+Recovery confirmation includes a resend action with a 60-second cooldown.
+
 The gate/private tree is keyed by owner ID and access token. Signout/expiry removes
 private access; owner/token changes close dialogs, discard old drafts and reread
 the account. Stale responses and completion callbacks cannot unlock a different owner.
@@ -85,8 +100,8 @@ on the same route/owner, never to a detached old button. There is no new polling
 
 ## Verification and parent browser handoff
 
-Real `App` access/verification is covered in `tests/app-access.test.tsx` and
-`tests/app-access-auth-lifecycle.test.tsx`. Lower-level Profile/editor and matching
+Real `App` access/verification is covered in `tests/unit/app-access.test.tsx` and
+`tests/unit/app-access-auth-lifecycle.test.tsx`. Lower-level Profile/editor and matching
 component tests may compose private components with explicit mocked session/network
 fixtures; those are not app-route authorization tests or production bypass flags.
 

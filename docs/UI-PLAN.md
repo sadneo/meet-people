@@ -30,7 +30,7 @@ contracts and disabled worker. No Company/compatibility consent is reused.
 and supporting pages. Friends uses its approved light #FAFBF7 canvas, white panels and original sand scene.
 Standard desktop header and compact bottom navigation are white too, including
 above/below Friends. Forest icons/text, pale-green selected tabs, active dots,
-focus and target sizes stay unchanged. The #DDCABC cream token stays on existing
+focus and target sizes stay unchanged. The #fffdf4 cream token stays on existing
 surfaces; off-white cards/dialogs/inputs and green/berry controls are preserved.
 This supersedes warm-tan page-canvas/navigation guidance without changing layouts.
 
@@ -38,8 +38,9 @@ This supersedes warm-tan page-canvas/navigation guidance without changing layout
 
 | Route | Purpose |
 | --- | --- |
-| `/`, `/home` | Signed-in Home; persisted onboarding required, no guest preview |
-| `/welcome` | Separate public marketing page; never replaces private Home |
+| `/` | Public welcome when signed out; signed-in Home after persisted onboarding |
+| `/home` | Protected signed-in Home; no guest preview |
+| `/welcome` | Public marketing page, also available directly |
 | `/terms`, `/privacy`, `/cookies` | Public legal drafts |
 | `/community` | Village and weekly activity, balance/upgrades, local drag placement |
 | `/matchmaking` | Authenticated active queue, single-person result and profile preferences |
@@ -58,7 +59,7 @@ This supersedes warm-tan page-canvas/navigation guidance without changing layout
 | `/login`, `/register`, `/auth/callback`, `/auth/forgot-password` | Public sign-in/verification/recovery entry only |
 | `/complete-profile` | Signed-in legacy redirect to `/onboarding`, preserving validated return destination |
 | `*` | Protected not-found experience |
-| `/forgot-password`, `/reset-password` | Public recovery aliases using the same verified lifecycle |
+| `/forgot-password`, `/reset-password` | Branded public recovery request and verified new-password form; independent of profile/onboarding availability |
 
 Home, Matchmaking, Events, Messages, and Profile are the five icon-first navigation
 destinations. Community is a supporting route entered from Home. Settings appears in desktop account navigation and is reachable

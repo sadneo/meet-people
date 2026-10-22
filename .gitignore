@@ -13,9 +13,14 @@ test-results/
 worktree/
 .firebase/
 firebase-debug*.log
+# Generated runtime and test logs stay local.
+*.log
+qa/**/log-*.txt
 gha-creds-*.json
 hosting/supabase/.temp/
 # QA browser helper caches local sign-in tokens here.
 qa/.sessions/
 # QA screenshots stay local; reports reference them by path.
 qa/**/*.png
+# Generated QA run snapshots stay local.
+qa/runs/**/*.json

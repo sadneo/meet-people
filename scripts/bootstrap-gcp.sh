@@ -49,6 +49,10 @@ if ! gcloud iam workload-identity-pools providers describe github-actions --work
     --attribute-mapping='google.subject=assertion.sub,attribute.repository_id=assertion.repository_id' \
     --attribute-condition="assertion.repository_id == '$GITHUB_REPOSITORY_ID' && assertion.ref.startsWith('refs/tags/v')" \
     --project="$GCP_PROJECT_ID" --quiet
+else
+  gcloud iam workload-identity-pools providers update-oidc github-actions --workload-identity-pool=github --location=global \
+    --attribute-condition="assertion.repository_id == '$GITHUB_REPOSITORY_ID' && assertion.ref.startsWith('refs/tags/v')" \
+    --project="$GCP_PROJECT_ID" --quiet
 fi
 gcloud iam service-accounts add-iam-policy-binding "$DEPLOYER" --project="$GCP_PROJECT_ID" \
   --member="principalSet://iam.googleapis.com/projects/$NUMBER/locations/global/workloadIdentityPools/github/attribute.repository_id/$GITHUB_REPOSITORY_ID" \

@@ -17,9 +17,9 @@ export function useLogout() {
     return () => { live.current = false }
   }, [])
 
-  async function logout() {
+  async function logout(reason?: 'account-unavailable') {
     if (!live.current || pending.current) return
-    const destination = centralSignInPath(`${pathname}${search}${hash}`)
+    const destination = centralSignInPath(`${pathname}${search}${hash}`) + (reason ? `&reason=${reason}` : '')
     pending.current = true
     setBusy(true); setError('')
     try {

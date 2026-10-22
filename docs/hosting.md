@@ -221,7 +221,7 @@ its stored password failed authentication. No database password reset is needed.
 
 ```sh
 pnpm verify
-pnpm test:auth
+pnpm test:integration:auth
 pnpm test:hosted https://cse416-meet-people.web.app
 ```
 

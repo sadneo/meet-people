@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { useSession } from './useSession'
 import { centralSignInPath, safeReturnTo } from './returnTo'
@@ -41,6 +41,7 @@ function CanonicalAccess({ session }: { session: NonNullable<ReturnType<typeof u
     const target = safeReturnTo(`${location.pathname}${location.search}${location.hash}`) ?? '/'
     return <Navigate replace to={`/onboarding?${new URLSearchParams({ returnTo: target })}`} />
   }
+  if (!started && data.error && !data.loading) return <AccountLoadFailure />
   return <main className="pt-main pt-immersive pt-access-root"><section className="pt-access-card">
     <h1>{started && completing ? 'Complete onboarding' : data.loading ? 'Your account' : 'Profile unavailable'}</h1>
     {data.loading && <p role="status">Checking your profile…</p>}
@@ -52,6 +53,17 @@ function CanonicalAccess({ session }: { session: NonNullable<ReturnType<typeof u
     {data.error && <button type="button" className="pt-button pt-secondary" disabled={data.busy || data.loading} onClick={data.reload}>Retry account</button>}
     <AccessAccountControls key={destination} session={session} recovery={new URL(destination, 'https://pebble.invalid').searchParams.get('credentials') === 'recovery'} />
   </section></main>
+}
+
+function AccountLoadFailure() {
+  const { logout, error } = useLogout()
+  const attempted = useRef(false)
+  useEffect(() => {
+    if (attempted.current) return
+    attempted.current = true
+    void logout('account-unavailable')
+  }, [logout])
+  return <main className="pt-main pt-immersive pt-access-root"><section className="pt-auth pt-auth-email-first"><p role={error ? 'alert' : 'status'}>{error || 'Returning to sign in…'}</p>{error && <button className="pt-button" onClick={() => void logout('account-unavailable')}>Return to sign in</button>}</section></main>
 }
 
 function AccessAccountControls({ session, recovery }: { session: NonNullable<ReturnType<typeof useSession>['session']>; recovery: boolean }) {

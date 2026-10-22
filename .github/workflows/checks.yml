@@ -26,16 +26,18 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm supabase:start
       - name: Verify seeded messaging
-        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/seed-messaging.sql
+        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/seed-messaging.sql
       - run: pnpm supabase:check
       - name: Verify SQL security contracts
-        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/hosted-services.sql
+        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/hosted-services.sql
       - run: pnpm env:local
-      - run: pnpm test:auth
+      - run: pnpm test:integration
       - run: pnpm verify
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Source-mocked browser journeys
+        run: pnpm test:browser --workers=2
       - name: Browser tests against production artifacts
-        run: pnpm test:built e2e/hosting.spec.ts e2e/auth.spec.ts e2e/events.spec.ts --workers=2
+        run: pnpm test:browser:built --workers=2
       - run: docker build --tag pebble-api:check .
       - uses: actions/upload-artifact@v4
         if: failure()

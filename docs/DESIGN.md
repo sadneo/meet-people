@@ -54,10 +54,10 @@ provides semantic aliases and focal sizing. Avoid another theme layer.
 | Token | Value | Role |
 | --- | --- | --- |
 | `--pt-page-canvas` | `#ffffff` | Default page canvas and standard desktop/mobile navigation, including above/below Friends |
-| `--pt-cream` | `#DDCABC` | Existing cream surfaces, not the page canvas or standard navigation |
+| `--pt-cream` | `#fffdf4` | Existing cream surfaces, not the page canvas or standard navigation |
 | `--pt-surface` / `--pt-soft` | `#fffef9` / `#f4f9e8` | Neutral and light green surfaces |
 | `--pt-ink` | `#1f5a3c` | Forest text and active icons |
-| `--pt-muted` | `#425b49` | Muted forest text/icons (4.69:1 on tan) |
+| `--pt-muted` | `#425b49` | Muted forest text/icons |
 | `--pt-green` / `--pt-leaf` | `#42783f` / `#4f8a4c` | Accessible filled controls / fresh nature accents |
 | `--pt-fresh` | `#9bcb63` | Grass, highlights and progression |
 | `--pt-pale` | `#eaf5d9` | Mint selection and quiet controls |
