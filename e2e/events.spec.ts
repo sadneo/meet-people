@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { mockMatchingSession } from './matchmaking-fixture'
 
 const id = 'e0000000-0000-4000-8000-000000000001'
-const event = { id, title: 'Acoustic afternoon', description: 'Live music from campus artists.', category: 'Music', starts_at: '2099-10-02T19:00:00Z', ends_at: null, location_name: 'Student Union courtyard', address: null, city: null, image_url: null, source: 'sbengaged', source_url: 'https://example.test/event', status: 'active', distance_miles: null, interested_count: 2 }
+const event = { id, title: 'Acoustic afternoon', description: 'Live music from campus artists.', category: 'Music', starts_at: '2099-10-02T19:00:00Z', ends_at: null, location_name: 'Student Union courtyard', address: null, city: null, image_url: null, source: 'sbengaged', source_url: 'https://example.test/event', status: 'active', distance_miles: null }
 
 for (const [width, expectedRows] of [[1440, [3]], [1920, [2, 1]], [390, [1, 1, 1]]] as const) {
   test(`event card actions align within actual rows at ${width}px without clipping copy`, async ({ page }) => {

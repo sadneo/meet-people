@@ -16,6 +16,9 @@ export const ApiEnvSchema = z
     SUPABASE_URL: z.string().url().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
     SUPABASE_PUBLISHABLE_KEY: z.string().refine(isPublicSupabaseKey, 'Must be a public publishable or anon key.').optional(),
+    // Proxies in front of the API that add an X-Forwarded-For entry; see docs/events-backend.md.
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).optional(),
+    LOG_CLIENT_IP: z.literal('1').optional(),
   })
   .refine(
      (env) => Boolean(env.SUPABASE_URL) === Boolean(env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_PUBLISHABLE_KEY),

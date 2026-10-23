@@ -20,8 +20,8 @@ Missing RPCs return an honest 503; there is no production fixture/fallback queue
 Background processing remains disabled. Joining does not claim a group was found.
 Mocked UI/transport tests are not live persistence, secure ranking or provider proof.
 
-Old Company source/API/data and legacy compatibility source/API remain intact,
-but neither panel is mounted on imported detail/preview. Company interest,
+Company was retired on 2026-10-22 (see [events-backend.md](events-backend.md));
+legacy compatibility source/API remain intact but unmounted. Past Company interest,
 Company membership and old compatibility opt-in **do not** enroll anyone into
 this new queue. No backfill, implicit migration or reinterpretation of consent.
 Ingestion, imported images/card alignment and existing Winso scoring are unchanged.

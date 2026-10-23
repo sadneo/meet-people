@@ -31,6 +31,8 @@ jobs:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       RELEASE_SHA: ${{ github.sha }}
       EVENT_GROUP_WORKER_ENABLED: ${{ vars.EVENT_GROUP_WORKER_ENABLED || 'false' }}
+      TRUST_PROXY_HOPS: ${{ vars.TRUST_PROXY_HOPS }}
+      LOG_CLIENT_IP: ${{ vars.LOG_CLIENT_IP }}
     steps:
       - uses: actions/checkout@v4
         with:

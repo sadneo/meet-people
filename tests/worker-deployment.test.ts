@@ -25,3 +25,21 @@ it('deploys a paused or enabled worker without executing it or retrying tasks', 
     expect(spawnSync('sh', ['scripts/deploy-worker.sh'], { env: { ...env, EVENT_GROUP_WORKER_ENABLED: 'typo' } }).status).not.toBe(0)
   } finally { rmSync(directory, { recursive: true, force: true }) }
 })
+
+it('deploys the API with a validated proxy hop count and optional client address logging', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'pebble-api-'))
+  try {
+    writeFileSync(join(directory, 'gcloud'), '#!/bin/sh\nprintf "%s\\n" "$@"\n', { mode: 0o700 })
+    const env = { ...process.env, PATH: `${directory}:${process.env.PATH}`, GCP_PROJECT_ID: 'test-project', API_IMAGE: 'image@sha256:test', SUPABASE_URL: 'https://example.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'public-test' }
+    const variables = (extra: Record<string, string>) => {
+      const result = spawnSync('sh', ['scripts/deploy-api.sh'], { env: { ...env, ...extra }, encoding: 'utf8' })
+      expect(result.status).toBe(0)
+      return result.stdout.trim().split('\n').find(arg => arg.startsWith('--set-env-vars='))
+    }
+    expect(variables({ TRUST_PROXY_HOPS: '', LOG_CLIENT_IP: '' })).toBe('--set-env-vars=SUPABASE_URL=https://example.supabase.co,SUPABASE_PUBLISHABLE_KEY=public-test,TRUST_PROXY_HOPS=1')
+    expect(variables({ TRUST_PROXY_HOPS: '2', LOG_CLIENT_IP: '1' })).toMatch(/,TRUST_PROXY_HOPS=2,LOG_CLIENT_IP=1$/)
+    for (const invalid of [{ TRUST_PROXY_HOPS: 'two' }, { TRUST_PROXY_HOPS: '9' }, { LOG_CLIENT_IP: 'yes' }]) {
+      expect(spawnSync('sh', ['scripts/deploy-api.sh'], { env: { ...env, ...invalid } }).status).not.toBe(0)
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }) }
+})

@@ -1,11 +1,11 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
-import type { SupabaseClient, User } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { EventQuerySchema, EventSchema, EventCompanySchema } from '../shared/events.js'
+import { EventQuerySchema, EventSchema } from '../shared/events.js'
 
-const columns = 'id,title,description,category,starts_at,ends_at,location_name,address,city,image_url,source,source_url,status,latitude,longitude'
 const uuid = z.string().uuid()
+type ListingRow = Record<string, unknown> & { id: string; latitude: number | null; longitude: number | null }
 
 export function distanceMiles(lat1: number, lon1: number, lat2: number, lon2: number) {
   const radians = (value: number) => value * Math.PI / 180
@@ -13,84 +13,75 @@ export function distanceMiles(lat1: number, lon1: number, lat2: number, lon2: nu
   return Math.round(3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a))) * 10) / 10
 }
 
-export function createEventsRouter(client: SupabaseClient | null) {
+// Public reads are identical for every viewer, so a short cache absorbs repeat page views.
+// Concurrent misses share one load; failed loads are dropped so the next request retries.
+function ttlCache<T>(ttlMs: number, now: () => number, maxEntries = 500) {
+  const entries = new Map<string, { expires: number; value: Promise<T> }>()
+  return (key: string, load: () => Promise<T>) => {
+    if (ttlMs <= 0) return load()
+    const hit = entries.get(key)
+    if (hit && hit.expires > now()) return hit.value
+    entries.delete(key)
+    if (entries.size >= maxEntries) entries.delete(entries.keys().next().value!)
+    const value = load()
+    entries.set(key, { expires: now() + ttlMs, value })
+    value.catch(() => { if (entries.get(key)?.value === value) entries.delete(key) })
+    return value
+  }
+}
+
+export function createEventsRouter(client: SupabaseClient | null, { cacheMs = 60_000, now = Date.now }: { cacheMs?: number; now?: () => number } = {}) {
   const router = Router()
+  const listCache = ttlCache<{ rows: ListingRow[]; categories: string[]; hasMore: boolean }>(cacheMs, now)
+  const detailCache = ttlCache<ListingRow | null>(cacheMs, now)
+  const cachePublicly = (response: Response) => {
+    if (cacheMs > 0) response.set('Cache-Control', `public, max-age=${Math.round(cacheMs / 1000)}`)
+  }
   router.use((_request, response, next) => {
     if (!client) { response.status(503).json({ error: 'Events service is not configured.' }); return }
     next()
   })
-  const live = () => client!.from('listings').select(columns)
-    .eq('listing_type', 'event').in('status', ['active', 'rescheduled'])
-    .or(`starts_at.gte.${new Date().toISOString()},ends_at.gte.${new Date().toISOString()}`)
-
-  async function authenticate(request: Request, response: Response): Promise<User | null> {
-    const token = request.headers.authorization?.match(/^Bearer (\S+)$/i)?.[1]
-    if (!token) { response.status(401).json({ error: 'Sign in to find company for this event.' }); return null }
-    const { data, error } = await client!.auth.getUser(token)
-    if (error || !data.user) { response.status(401).json({ error: 'Your session has expired. Sign in again.' }); return null }
-    return data.user
-  }
-  async function findEvent(request: Request, response: Response) {
-    const parsed = uuid.safeParse(request.params.id)
-    if (!parsed.success) { response.status(400).json({ error: 'Invalid event ID.' }); return null }
-    const { data, error } = await live().eq('id', parsed.data).maybeSingle()
-    if (error) throw error
-    if (!data) { response.status(404).json({ error: 'This event is no longer available.' }); return null }
-    return data
-  }
+  // The database function applies the live-event filter and bounds every page.
+  const live = (args: { category?: string; offset?: number; limit?: number; id?: string }) => client!.rpc('public_live_events', {
+    p_category: args.category ?? null, p_offset: args.offset ?? 0, p_limit: args.limit ?? 1, p_id: args.id ?? null,
+  })
 
   router.get('/', async (request, response) => {
     const parsed = EventQuerySchema.safeParse(request.query)
     if (!parsed.success) { response.status(400).json({ error: 'Invalid event filters.' }); return }
     const { category, page, limit, latitude, longitude } = parsed.data
-    let query = live().order('starts_at', { ascending: true }).order('id', { ascending: true })
-    if (category) query = query.eq('category', category)
-    // Read one extra row to determine whether another page exists.
-    const [list, categories] = await Promise.all([
-      query.range((page - 1) * limit, page * limit),
-      client!.rpc('event_categories'),
-    ])
-    if (list.error) throw list.error
-    if (categories.error) throw categories.error
-    const rows = (list.data ?? []).slice(0, limit)
-    const counts = await client!.rpc('event_interest_counts', { p_event_ids: rows.map(row => row.id) })
-    if (counts.error) throw counts.error
+    // Distance depends on the viewer, so it is computed after the shared lookup.
+    const { rows, categories, hasMore } = await listCache(JSON.stringify([category ?? null, page, limit]), async () => {
+      // Read one extra row to determine whether another page exists.
+      const [list, categories] = await Promise.all([
+        live({ category, offset: (page - 1) * limit, limit: limit + 1 }),
+        client!.rpc('event_categories'),
+      ])
+      if (list.error) throw list.error
+      if (categories.error) throw categories.error
+      const found: ListingRow[] = list.data ?? []
+      return { rows: found.slice(0, limit), categories: categories.data ?? [], hasMore: found.length > limit }
+    })
+    cachePublicly(response)
     response.json({
-      events: rows.map(row => EventSchema.parse({ ...row, interested_count: counts.data?.[row.id] ?? 0,
+      events: rows.map(row => EventSchema.parse({ ...row,
         distance_miles: latitude !== undefined && longitude !== undefined && row.latitude != null && row.longitude != null
           ? distanceMiles(latitude, longitude, row.latitude, row.longitude) : null,
       })),
-      categories: categories.data ?? [], page, hasMore: (list.data?.length ?? 0) > limit,
+      categories, page, hasMore,
     })
   })
   router.get('/:id', async (request, response) => {
-    const row = await findEvent(request, response)
-    if (row) {
-      const counts = await client!.rpc('event_interest_counts', { p_event_ids: [row.id] })
-      if (counts.error) throw counts.error
-      response.json(EventSchema.parse({ ...row, distance_miles: null, interested_count: counts.data?.[row.id] ?? 0 }))
-    }
-  })
-  router.get('/:id/company', async (request, response) => {
-    const user = await authenticate(request, response)
-    if (!user || !await findEvent(request, response)) return
-    const { data, error } = await client!.rpc('event_company_snapshot', { p_event_id: request.params.id, p_user_id: user.id })
-    if (error) throw error
-    response.json(EventCompanySchema.parse(data))
-  })
-  router.post('/:id/company', async (request, response) => {
-    const action = z.object({ action: z.enum(['interest', 'uninterest', 'join', 'leave']), name: z.string().trim().min(1).max(80).optional() }).strict().safeParse(request.body)
-    if (!action.success || !uuid.safeParse(request.params.id).success) { response.status(400).json({ error: 'Invalid event action.' }); return }
-    const user = await authenticate(request, response)
-    if (!user) return
-    const metadataName: unknown = user.user_metadata?.display_name ?? user.user_metadata?.name
-    const name = action.data.name ?? (typeof metadataName === 'string' && metadataName.trim() ? metadataName.trim().slice(0, 80) : 'Student')
-    const { error } = await client!.rpc('event_company_action', { p_event_id: request.params.id, p_user_id: user.id, p_name: name, p_action: action.data.action })
-    if (error?.code === 'P0002') { response.status(404).json({ error: 'This event is no longer available.' }); return }
-    if (error) throw error
-    const snapshot = await client!.rpc('event_company_snapshot', { p_event_id: request.params.id, p_user_id: user.id })
-    if (snapshot.error) throw snapshot.error
-    response.json(EventCompanySchema.parse(snapshot.data))
+    const parsed = uuid.safeParse(request.params.id)
+    if (!parsed.success) { response.status(400).json({ error: 'Invalid event ID.' }); return }
+    const row = await detailCache(parsed.data, async () => {
+      const { data, error } = await live({ id: parsed.data }).maybeSingle<ListingRow>()
+      if (error) throw error
+      return data
+    })
+    if (!row) { response.status(404).json({ error: 'This event is no longer available.' }); return }
+    cachePublicly(response)
+    response.json(EventSchema.parse({ ...row, distance_miles: null }))
   })
   router.use((error: unknown, _request: Request, response: Response, _next: (error?: unknown) => void) => {
     void _next

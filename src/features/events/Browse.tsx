@@ -51,11 +51,11 @@ function EventsFeed({ guest }: { guest: boolean }) {
 
   useEffect(() => {
     const controller = new AbortController()
-    void eventRequest(`?${query}`, EventsResponseSchema, { signal: controller.signal }).then(data => {
+    void eventRequest(`?${query}`, EventsResponseSchema, { signal: controller.signal, anonymous: true }).then(data => {
       if (!controller.signal.aborted) { setLoaded({ query, data }); setError('') }
     }).catch((failure: unknown) => { if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'Could not load events.') })
     return () => controller.abort()
-  }, [query, retry, search.toString()]) // Added search.toString() to force updates on URL changes
+  }, [query, retry])
 
   // Keep responses tied to the requested filter rather than displaying stale cards.
   const visible = result?.page === page ? result.events : []
@@ -92,7 +92,7 @@ function EventsFeed({ guest }: { guest: boolean }) {
         <div className="ev-event-copy"><span className="ev-eyebrow">{event.category ?? 'Other'}{event.distance_miles !== null ? ` · ${event.distance_miles} mi` : ''}</span>
           <Link className="ev-name-link" to={detailPath(event.id)} onClick={open}><h2>{event.title}</h2></Link>
           <p className="ev-event-date">{eventDate(event.starts_at, event.ends_at)}</p><p><Icon name="pin" size={16} />{event.location_name ?? event.city ?? 'Location to be announced'}</p>
-          <div className="ev-social-context"><Icon name="profile" /><span>{event.interested_count} people looking for company</span></div>
+          <div className="ev-social-context"><Icon name="profile" /><span>Find a group to go with</span></div>
           <Link className="ev-button ev-secondary ev-wide" to={detailPath(event.id)} onClick={open}>See event & people<Icon name="arrow" size={18} /></Link>
         </div>
       </article>
@@ -118,7 +118,7 @@ function EventDetailContent({ id, preview, guest }: { id: string; preview: boole
 
   useEffect(() => {
     const controller = new AbortController()
-    void eventRequest(`/${id}`, EventSchema, { signal: controller.signal }).then(data => {
+    void eventRequest(`/${id}`, EventSchema, { signal: controller.signal, anonymous: true }).then(data => {
       if (!controller.signal.aborted) { setEvent(data); setError('') }
     }).catch((failure: unknown) => {
       if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'Could not load this event.')

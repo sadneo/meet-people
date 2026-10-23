@@ -2,10 +2,10 @@
 
 **Legacy source/API compatibility:** event detail and wide preview now mount
 `EventGroupQueue` instead; see [event-group-queue.md](event-group-queue.md).
-The unmounted `EventCompatibility` and Company components remain available for
-compatibility and standalone tests. The existing Company API, Company interest, group
-formation and ingestion remain unchanged. Company interest/group membership does
-**not** grant compatibility consent. Compatibility never creates groups,
+The unmounted `EventCompatibility` component remains available for compatibility
+and standalone tests. Company was retired on 2026-10-22 (see
+[events-backend.md](events-backend.md)); its past interest/group records never
+grant compatibility consent. Compatibility never creates groups,
 invitations, connections or chats. Suggestions are not confirmed plans.
 
 The panel uses the real Supabase session and the existing public-key/user-JWT

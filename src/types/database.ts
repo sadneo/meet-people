@@ -1002,20 +1002,6 @@ export type Database = {
       }
       end_dating_match: { Args: { match_id: number }; Returns: undefined }
       event_categories: { Args: never; Returns: Json }
-      event_company_action: {
-        Args: {
-          p_action: string
-          p_event_id: string
-          p_name: string
-          p_user_id: string
-        }
-        Returns: undefined
-      }
-      event_company_snapshot: {
-        Args: { p_event_id: string; p_user_id: string }
-        Returns: Json
-      }
-      event_interest_counts: { Args: { p_event_ids: string[] }; Returns: Json }
       express_event_interest: {
         Args: { meetup_id_in: number; note_in?: string }
         Returns: undefined
@@ -1280,6 +1266,31 @@ export type Database = {
       }
       profile_embedding: { Args: { p_id: string }; Returns: number[] }
       profile_text: { Args: { p_id: string }; Returns: string }
+      public_live_events: {
+        Args: {
+          p_category?: string
+          p_id?: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          address: string
+          category: string
+          city: string
+          description: string
+          ends_at: string
+          id: string
+          image_url: string
+          latitude: number
+          location_name: string
+          longitude: number
+          source: string
+          source_url: string
+          starts_at: string
+          status: string
+          title: string
+        }[]
+      }
       reconcile_event_group_job: {
         Args: { job_id_in: string; lease_token_in: string }
         Returns: Json

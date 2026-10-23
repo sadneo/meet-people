@@ -2,13 +2,14 @@ import { supabase } from '../../supabase'
 import type { ZodType } from 'zod'
 import { apiUrl } from '../../platform/native'
 
-export async function eventRequest<T>(path: string, schema: ZodType<T>, options: { body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
+// Public reads omit the session so every viewer shares the same cached response.
+export async function eventRequest<T>(path: string, schema: ZodType<T>, options: { body?: unknown; signal?: AbortSignal; anonymous?: boolean } = {}): Promise<T> {
   const unavailable = 'Events are unavailable. Try again.'
   let response: Response, data: unknown
   try {
-    const session = supabase ? (await supabase.auth.getSession()).data.session : null
+    const session = supabase && !options.anonymous ? (await supabase.auth.getSession()).data.session : null
     response = await fetch(apiUrl(`/api/events${path}`), {
-      method: options.body ? 'POST' : 'GET', signal: options.signal, cache: 'no-store',
+      method: options.body ? 'POST' : 'GET', signal: options.signal, cache: options.anonymous ? 'default' : 'no-store',
       headers: { ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}), ...(options.body ? { 'Content-Type': 'application/json' } : {}) },
       body: options.body ? JSON.stringify(options.body) : undefined,
     })

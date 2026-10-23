@@ -4,7 +4,7 @@ import { browserAccount, browserProfile, mockMatchingSession } from './matchmaki
 const id = 'e0000000-0000-4000-8000-000000000001'
 const me = 'a0000000-0000-4000-8000-000000000001'
 const other = 'a0000000-0000-4000-8000-000000000002'
-const event = { id, title: 'Acoustic afternoon', description: 'Campus music.', category: 'Music', starts_at: '2099-10-02T19:00:00Z', ends_at: null, location_name: 'Student Union', address: null, city: null, image_url: null, source: 'sbengaged', source_url: null, status: 'active', distance_miles: null, interested_count: 7 }
+const event = { id, title: 'Acoustic afternoon', description: 'Campus music.', category: 'Music', starts_at: '2099-10-02T19:00:00Z', ends_at: null, location_name: 'Student Union', address: null, city: null, image_url: null, source: 'sbengaged', source_url: null, status: 'active', distance_miles: null }
 const proposal = { id: other, eventId: id, members: [{ id: me, name: 'Sam', avatar: null }, { id: other, name: 'Taylor', avatar: null }] }
 const notification = { id: other, eventId: id, proposalId: other, title: 'Group proposal to review', readAt: null as string | null, createdAt: '2026-10-09T01:00:00Z' }
 async function fixture(page: Page, signedIn = true) {
