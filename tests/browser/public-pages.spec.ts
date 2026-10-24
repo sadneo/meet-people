@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { mockMatchingApi, mockMatchingSession } from './matchmaking-fixture'
 import { mkdir } from 'node:fs/promises'
 
-const shots = '/home/Danuu/.cache/pebble-reconcile-browser/public-review'
+const shots = 'test-results/public-review'
 test.beforeAll(async () => { await mkdir(shots, { recursive: true }) })
 
 for (const width of [320, 390, 800, 1280, 1440, 2560]) {
@@ -34,7 +34,9 @@ for (const width of [320, 390, 800, 1280, 1440, 2560]) {
       await expect(page).toHaveURL(new RegExp(`${route}$`))
       await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
       await expect(page.getByRole('navigation', { name: 'Public navigation' }).getByRole('link', { name: 'Get started', exact: true })).toBeVisible()
-      await expect(page.getByText('[TO BE CONFIRMED BEFORE PUBLICATION]', { exact: true })).toHaveCount(2)
+      await expect(page.getByRole('link', { name: 'pebblesupport.help@gmail.com', exact: true })).toHaveAttribute('href', 'mailto:pebblesupport.help@gmail.com')
+      await expect(page.locator('.legal-copy')).toContainText('Pebble development team')
+      await expect(page.getByText('[TO BE CONFIRMED BEFORE PUBLICATION]', { exact: true })).toHaveCount(0)
       expect(await page.locator('.legal-copy').innerText()).not.toMatch(/\bdraft\b/i)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     }
