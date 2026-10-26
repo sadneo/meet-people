@@ -61,8 +61,9 @@ function PebbleWorkspace() {
 
   return <PrototypeContext.Provider value={{ state, dispatch, scene, go, empty, setEmpty, personId, setPersonId, eventId, setEventId, chatPerson, setChatPerson }}>
     <div className={`pt-app pt-scene-${sceneSlug(scene)}`}>
-      {import.meta.env.DEV && <div className="pt-dev-panel"><button className="pt-dev-tab" aria-label="Developer controls" title="Developer controls" aria-expanded={devOpen} aria-controls="pt-dev-controls" onClick={() => setDevOpen(value => !value)}><Icon name="code" size={16} /></button><aside id="pt-dev-controls" hidden={!devOpen} className="pt-review-tools" aria-label="Development scene switcher">
+      {(import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS === 'true') && <div className="pt-dev-panel"><button className="pt-dev-tab" aria-label="Developer controls" title="Developer controls" aria-expanded={devOpen} aria-controls="pt-dev-controls" onClick={() => setDevOpen(value => !value)}><Icon name="code" size={16} /></button><aside id="pt-dev-controls" hidden={!devOpen} className="pt-review-tools" aria-label="Development scene switcher">
         <strong>DEV · Design review</strong>
+        {import.meta.env.VITE_BUILD_SHA && <small>{import.meta.env.VITE_BUILD_BRANCH}@{import.meta.env.VITE_BUILD_SHA.slice(0, 7)}</small>}
         <label><span className="pt-sr-only">Review scene</span><select aria-label="Review scene" value={scene} onChange={event => go(event.target.value as Scene)}>{scenes.map(value => <option key={value}>{value}</option>)}</select></label>
         <label className="pt-empty-toggle"><input type="checkbox" checked={empty} onChange={event => setEmpty(event.target.checked)} />Empty states</label>
         <div className="pt-dev-economy">

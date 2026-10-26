@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+      - name: Verify deployment controls and both toolbar variants
+        run: pnpm test:deployment
+      - run: pnpm supabase:start
+      - run: pnpm supabase:check
+      - name: Verify seeded messaging
+        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/seed-messaging.sql
+      - name: Verify SQL security contracts
+        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/hosted-services.sql
+      - run: pnpm env:local
+      - run: pnpm test:integration
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Source-mocked browser journeys
+        run: pnpm test:browser --workers=2
+      - name: Browser tests against production artifacts
+        run: pnpm test:browser:built --workers=2
+      - run: docker build --tag pebble-api:check .
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

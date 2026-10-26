@@ -1,94 +1,143 @@
-name: Release
+name: Deploy
 
 on:
   push:
-    tags: ['v*']
+    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment destination
+        type: choice
+        options: [sandbox, production]
+        default: sandbox
+      source_ref:
+        description: 'Sandbox: branch name (default dev). Production: full commit SHA already on main.'
+        type: string
+        default: ''
+      skip_checks:
+        description: Skip pre-deployment checks (requires override reason)
+        type: boolean
+        default: false
+      override_reason:
+        description: Reason for bypassing checks
+        type: string
+        default: ''
 
 permissions:
   contents: read
 
+# Keep backend, migrations and both frontends in one serialized deployment.
+# Pending runs can be superseded; an active deployment is never cancelled.
 concurrency:
-  group: production-release
+  group: deploy-${{ github.event_name == 'push' && (github.ref_name == 'main' && 'production' || 'sandbox') || inputs.environment }}
   cancel-in-progress: false
 
 jobs:
-  release:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      branch: ${{ steps.source.outputs.branch }}
+      environment: ${{ steps.source.outputs.environment }}
+      skip_checks: ${{ steps.source.outputs.skip_checks }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Resolve and validate deployment source
+        id: source
+        env:
+          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          SKIP_CHECKS: ${{ inputs.skip_checks }}
+          OVERRIDE_REASON: ${{ inputs.override_reason }}
+        run: node scripts/resolve-deployment.mjs
+
+  checks:
+    name: Checks
+    needs: resolve
+    if: needs.resolve.outputs.skip_checks != 'true'
+    uses: ./.github/workflows/ci.yml
+    with:
+      source_sha: ${{ needs.resolve.outputs.sha }}
+
+  deploy:
+    needs: [resolve, checks]
+    if: >-
+      always() && !cancelled() && needs.resolve.result == 'success' &&
+      (needs.checks.result == 'success' ||
+       (needs.resolve.outputs.skip_checks == 'true' && needs.checks.result == 'skipped'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: production
+    environment: ${{ needs.resolve.outputs.environment }}
     permissions:
       contents: read
       id-token: write
     env:
+      DEPLOY_ENVIRONMENT: ${{ needs.resolve.outputs.environment }}
       GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ vars.GCP_REGION || 'us-east4' }}
+      GAR_REPOSITORY: ${{ vars.GAR_REPOSITORY }}
+      API_SERVICE: ${{ vars.API_SERVICE }}
+      API_RUNTIME_ACCOUNT: ${{ vars.API_RUNTIME_ACCOUNT }}
+      API_SECRET: ${{ vars.API_SECRET }}
+      WORKER_JOB: ${{ vars.WORKER_JOB }}
+      WORKER_RUNTIME_ACCOUNT: ${{ vars.WORKER_RUNTIME_ACCOUNT }}
+      FIREBASE_HOSTING_SITE_ID: ${{ vars.FIREBASE_HOSTING_SITE_ID }}
+      FIREBASE_DEVTOOLS_SITE_ID: ${{ vars.FIREBASE_DEVTOOLS_SITE_ID }}
       SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
       SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      RELEASE_SHA: ${{ github.sha }}
-      EVENT_GROUP_WORKER_ENABLED: ${{ vars.EVENT_GROUP_WORKER_ENABLED || 'false' }}
+      RELEASE_SHA: ${{ needs.resolve.outputs.sha }}
+      VITE_BUILD_SHA: ${{ needs.resolve.outputs.sha }}
+      VITE_BUILD_BRANCH: ${{ needs.resolve.outputs.branch }}
+      EVENT_GROUP_WORKER_ENABLED: 'false'
+      HOSTED_CONFIG_WORKDIR: hosting/deployment
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-      - name: Verify release belongs to a version tag
-        run: |
-          git tag --points-at "$RELEASE_SHA" --list 'v*' | python3 -c 'import sys; assert sys.stdin.read().strip(), "No version tag points at the checked commit"'
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - name: Verify API contracts
-        run: pnpm exec vitest run tests/unit/api.test.ts
-      - name: Validate deployment settings
-        run: |
-          : "${GCP_PROJECT_ID:?Missing GCP_PROJECT_ID}"
-          : "${SUPABASE_PROJECT_REF:?Missing SUPABASE_PROJECT_REF}"
-          : "${SUPABASE_URL:?Missing VITE_SUPABASE_URL}"
-          : "${SUPABASE_PUBLISHABLE_KEY:?Missing VITE_SUPABASE_PUBLISHABLE_KEY}"
-          : "${SUPABASE_ACCESS_TOKEN:?Missing SUPABASE_ACCESS_TOKEN}"
-      - name: Validate GitHub release identity
-        env:
-          OIDC_AUDIENCE: https://iam.googleapis.com/${{ vars.GCP_WIF_PROVIDER }}
-        run: |
-          node --input-type=module <<'JS'
-          import assert from 'node:assert/strict'
-          const url = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL)
-          url.searchParams.set('audience', process.env.OIDC_AUDIENCE)
-          const response = await fetch(url, { headers: { Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` } })
-          assert.equal(response.status, 200, 'GitHub OIDC token request failed')
-          const { value } = await response.json()
-          const claims = JSON.parse(Buffer.from(value.split('.')[1], 'base64url').toString())
-          const { repository_id, ref, environment, workflow_ref } = claims
-          console.log(JSON.stringify({ repository_id, ref, environment, workflow_ref }))
-          assert.equal(String(repository_id), process.env.GITHUB_REPOSITORY_ID)
-          assert.ok(ref.startsWith('refs/tags/v'), 'Only version tags can deploy')
-          assert.equal(environment, 'production')
-          JS
+      - name: Validate isolated deployment settings
+        run: node scripts/configure-deployment.mjs
       - uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOY_SA_EMAIL }}
       - uses: google-github-actions/setup-gcloud@v3
-      - run: gcloud auth configure-docker us-east4-docker.pkg.dev --quiet
-      - name: Link production database through its session pooler
+      - run: gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
+      - name: Link database and preview migrations
         run: |
           pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
           pnpm exec supabase db push --linked --dry-run
       - name: Build immutable API image
         run: |
-          IMAGE="us-east4-docker.pkg.dev/$GCP_PROJECT_ID/${{ vars.GAR_REPOSITORY }}/pebble-api:$RELEASE_SHA"
+          IMAGE="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPOSITORY/$API_SERVICE:$RELEASE_SHA"
           docker build --tag "$IMAGE" .
           docker push "$IMAGE"
           DIGEST=$(gcloud artifacts docker images describe "$IMAGE" --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)')
           echo "API_IMAGE=${IMAGE%:*}@$DIGEST" >> "$GITHUB_ENV"
-      - run: pnpm build:web
+      - name: Build normal frontend
+        run: VITE_DEV_TOOLS=false pnpm build:web
+      - name: Preserve normal build and build developer variant
+        if: env.DEPLOY_ENVIRONMENT == 'sandbox'
+        run: |
+          mv dist/web dist/web-standard
+          pnpm build:web:devtools
+          mv dist/web dist/web-devtools
+          mv dist/web-standard dist/web
       - name: Deploy authenticated Edge Functions
         run: |
           pnpm exec supabase functions deploy embed-interest --project-ref "$SUPABASE_PROJECT_REF" --use-api
@@ -98,20 +147,27 @@ jobs:
         run: node scripts/deploy-product-schema.mjs
       - run: pnpm hosting:configure
       - run: sh scripts/deploy-api.sh
-      - name: Deploy event worker job (no execution)
+      - name: Deploy disabled event worker (no execution or schedule)
         run: sh scripts/deploy-worker.sh
-      - name: Deploy web and pin API revision
-        run: pnpm dlx firebase-tools@15.28.2 deploy --only hosting --project "$GCP_PROJECT_ID" --non-interactive
-      - name: Verify production release
-        run: pnpm test:hosted "https://${{ vars.FIREBASE_HOSTING_SITE_ID }}.web.app"
-      - name: Release summary
+      - name: Deploy frontend sites and pin API revision
+        run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only hosting --project "$GCP_PROJECT_ID" --non-interactive
+      - name: Verify normal site
+        run: pnpm test:hosted "https://$FIREBASE_HOSTING_SITE_ID.web.app"
+      - name: Verify developer site
+        if: env.DEPLOY_ENVIRONMENT == 'sandbox'
+        run: pnpm test:hosted "https://$FIREBASE_DEVTOOLS_SITE_ID.web.app"
+      - name: Deployment summary
+        if: always()
+        env:
+          SOURCE_BRANCH: ${{ needs.resolve.outputs.branch }}
+          SKIPPED_CHECKS: ${{ needs.resolve.outputs.skip_checks }}
+          OVERRIDE_REASON: ${{ inputs.override_reason }}
+          DEPLOY_RESULT: ${{ job.status }}
         run: |
-          MIGRATION=$(node --input-type=module -e 'import { readdirSync } from "node:fs"; console.log(readdirSync("supabase/migrations").filter(name => name.endsWith(".sql")).sort().at(-1))')
-          {
-            echo "### Production release"
-            echo "- URL: https://${{ vars.FIREBASE_HOSTING_SITE_ID }}.web.app"
-            echo "- Commit: $RELEASE_SHA"
-            echo "- Image: $API_IMAGE"
-            echo "- Worker: pebble-event-group-worker (enabled=$EVENT_GROUP_WORKER_ENABLED; not executed or scheduled)"
-            echo "- Latest migration: $MIGRATION"
-          } >> "$GITHUB_STEP_SUMMARY"
+          node --input-type=module <<'JS'
+          import { appendFileSync } from 'node:fs'
+          const e = process.env
+          const lines = [`### ${e.DEPLOY_ENVIRONMENT} deployment: ${e.DEPLOY_RESULT}`, `- Actor: ${e.GITHUB_ACTOR}`, `- Branch: ${e.SOURCE_BRANCH}`, `- Commit: ${e.RELEASE_SHA}`, `- Checks skipped: ${e.SKIPPED_CHECKS}`, `- Override reason: ${JSON.stringify(e.OVERRIDE_REASON || '')}`, `- Site: https://${e.FIREBASE_HOSTING_SITE_ID}.web.app`, `- Image: ${e.API_IMAGE || 'not built'}`, '- Worker: disabled; not executed or scheduled']
+          if (e.DEPLOY_ENVIRONMENT === 'sandbox') lines.push(`- Developer site: https://${e.FIREBASE_DEVTOOLS_SITE_ID}.web.app`)
+          appendFileSync(e.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n')
+          JS
