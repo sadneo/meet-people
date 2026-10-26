@@ -14,7 +14,7 @@ This frontend-only design is now the main application. Primary screens use canon
 - The reducer checks ownership and balance before deducting once. Insufficient purchases are disabled with a readable shortfall; purchased items show Owned. Each purchase adds distinct SVG artwork with a brief build animation.
 - Completing a chapter adds 10 Pebbles once; it never builds or enlarges anything. Already-earned chapter receipts persist so replaying onboarding after refresh cannot earn the same reward again.
 - Browser localStorage key `pebble:full-ui:community:v1` stores only balance, upgrade IDs, and chapter-reward receipts. No profile, credentials, chat, or plan data is stored. Invalid storage falls back safely. If the browser disables storage, the economy remains session-only. It is a single-browser review save, not cross-device or concurrent-tab synchronization.
-- DEV controls **Add 100 demo Pebbles** and **Reset community/upgrades** are omitted from production builds. Reset clears the wallet and built items, preserving chapter reward receipts. Five clicks of Add 100 fund the entire 475-Pebble catalog, leaving 25.
+- DEV controls **Add 100 demo Pebbles** and **Reset community/upgrades** are omitted from normal production builds, and included in developer-tools builds. Reset clears the wallet and built items, preserving chapter reward receipts. Five clicks of Add 100 fund the entire 475-Pebble catalog, leaving 25.
 - The landscape uses a responsive viewBox, crisp vector pixel shapes, repeating ground details, extended trees, and repositioned landmarks. The cottage starts as scenery; all expansions are manual. Characters gather at several purchased landmarks. Tapping the main Pebble produces a short hop/emote.
 - Login/Register mascots use fixed viewport positioning, with small mobile characters and 140–220px desktop characters. Text/forms keep readable widths within the full canvas.
 
@@ -37,7 +37,14 @@ The sample clock is Saturday, September 26, 2026 at 3 PM. It intentionally stays
 
 ## Scenes and review controls
 
-The gray **DEV · Design review** toolbar is shown only by Vite development mode (`import.meta.env.DEV`); production builds omit it. It can open:
+The gray **DEV · Design review** toolbar is shown in local development and in optimized builds explicitly made with `VITE_DEV_TOOLS=true`:
+
+- `pnpm build:web`: normal hosted build, toolbar omitted by default.
+- `pnpm build:web:devtools`: developer sandbox build, toolbar included.
+
+Both commands write to `dist/web`; deploy/copy each output before building the other variant. Keep `VITE_DEV_TOOLS` unset or `false` for production and the normal sandbox. The flag controls only the review toolbar; it does not enable local-only development login helpers or change backend configuration/authentication. The two sandbox URLs can use the same sandbox backend and test data.
+
+It can open:
 
 - Intro, Login, Register, Onboarding
 - Home, Events, Event Detail
