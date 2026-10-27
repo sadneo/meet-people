@@ -37,11 +37,23 @@ the sandbox service-role key as a version of GCP secret
 `pebble-supabase-service-role-sandbox` (stdin, never source or logs). Do not
 copy the production Supabase ref/key into sandbox: deployment validation rejects it.
 
-The sandbox variables and service-role secret are configured. The first sandbox
-activation applied migrations and deployed its backend, but publishing both
-Hosting sites concurrently failed with a Cloud Run resource-version conflict.
-Hosting sites must deploy sequentially because each site's `pinTag` updates the
-same API service. Production is independent.
+The sandbox variables and service-role secret are configured. Both sandbox sites
+were activated successfully by [deployment 40552588686](https://github.com/sadneo/meet-people/actions/runs/40552588686)
+at source SHA `9d9b407` on 2026-10-27. Both hosted smoke checks passed; production
+also passed an independent smoke check. Live bundles verified the intended
+backend and toolbar variant, with local-login helpers absent from all three sites.
+The run used a recorded override for the existing baseline unit/lint failures.
+
+Hosting sites deploy sequentially because each site's `pinTag` updates the same
+API service. Concurrent publishing caused a confirmed Cloud Run resource-version
+conflict during the first activation attempt; PRs #27 and #28 contain the fix.
+
+Sandbox email authentication is enabled and callbacks cover both sites. Google
+authentication is not yet enabled in the new sandbox project (production Google
+authentication remains enabled). To enable sandbox Google login, configure its
+OAuth client in Supabase and authorize
+`https://wixdiotkntapwrbibaom.supabase.co/auth/v1/callback` in Google Cloud's OAuth
+client settings, then verify an interactive sign-in on both sandbox sites.
 
 ## Normal operation
 
