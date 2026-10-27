@@ -18,16 +18,18 @@ was denied by the university organization. Sandbox uses its own services,
 runtime/deployer identities, registry repository, secret and OIDC pool. This is
 resource/data separation, not a separate-project IAM or billing boundary.
 
-## Current provisioning blocker
+## Supabase provisioning
 
-The Hosting sites and sandbox GCP deployment resources exist. A separate
-sandbox Supabase project is still required. The organization has two active
-free projects, `meet-people` and `comfy-room`. Pausing `comfy-room` was approved,
-but the Management API refuses the pause as "currently hibernating" while
-listing it as `ACTIVE_HEALTHY`; restore also refuses because it is active.
-No project was deleted, upgraded or repurposed. Resolve this state in Supabase
-Dashboard/support, then create `pebble-sandbox` in organization
-`jlivefziweaonpchdcqm`, preferably region `ca-central-1`.
+Both projects are healthy in the school-owned `pebble` organization
+(`kjsmpfandyhaybltljbo`):
+
+| Environment | Project | Reference | Region |
+| --- | --- | --- | --- |
+| Production | `pebble-production` | `wacgxhsdhrqigrmqaonc` | `ca-central-1` |
+| Sandbox | `pebble-sandbox` | `wixdiotkntapwrbibaom` | `us-east-1` |
+
+Production was transferred and renamed, preserving its project reference and
+existing data. Both GitHub environments use a token with access to these projects.
 
 Set sandbox environment variables `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`
 and `VITE_SUPABASE_PUBLISHABLE_KEY`, and secret `SUPABASE_ACCESS_TOKEN`. Store
@@ -35,8 +37,11 @@ the sandbox service-role key as a version of GCP secret
 `pebble-supabase-service-role-sandbox` (stdin, never source or logs). Do not
 copy the production Supabase ref/key into sandbox: deployment validation rejects it.
 
-Until this is complete, sandbox deployment fails before making cloud/database
-changes, and its sites have no application release. Production is independent.
+The sandbox variables and service-role secret are configured. The first sandbox
+activation applied migrations and deployed its backend, but publishing both
+Hosting sites concurrently failed with a Cloud Run resource-version conflict.
+Hosting sites must deploy sequentially because each site's `pinTag` updates the
+same API service. Production is independent.
 
 ## Normal operation
 
