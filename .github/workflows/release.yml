@@ -149,8 +149,12 @@ jobs:
       - run: sh scripts/deploy-api.sh
       - name: Deploy disabled event worker (no execution or schedule)
         run: sh scripts/deploy-worker.sh
-      - name: Deploy frontend sites and pin API revision
-        run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only hosting --project "$GCP_PROJECT_ID" --non-interactive
+      # Each site's pinTag updates the shared Run service; publish sequentially.
+      - name: Deploy normal site and pin API revision
+        run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only "hosting:$FIREBASE_HOSTING_SITE_ID" --project "$GCP_PROJECT_ID" --non-interactive
+      - name: Deploy developer site and pin API revision
+        if: env.DEPLOY_ENVIRONMENT == 'sandbox'
+        run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only "hosting:$FIREBASE_DEVTOOLS_SITE_ID" --project "$GCP_PROJECT_ID" --non-interactive
       - name: Verify normal site
         run: pnpm test:hosted "https://$FIREBASE_HOSTING_SITE_ID.web.app"
       - name: Verify developer site
