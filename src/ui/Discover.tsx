@@ -219,9 +219,12 @@ function Friends({ token }: { token: string }) {
         )}
         <ActionButton
           secondary
-          disabled={matching.busy || !!matching.searchStage}
+          disabled={
+            matching.busy || matching.profileLoading || !!matching.searchStage
+          }
           onClick={() => {
             void matching.queue("refresh");
+            void matching.reloadProfile();
             runtime.reload();
           }}
         >

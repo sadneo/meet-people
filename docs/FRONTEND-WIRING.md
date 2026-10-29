@@ -48,7 +48,9 @@ device behavior still require the configured target environment.
 
 - TypeScript app/API checks and web/API builds passed.
 - Retained unit suite: 342 tests in 55 files passed.
-- Replacement frontend browser suite: 23 tests passed.
+- Replacement frontend browser suite: 33 tests passed, including concurrent
+  account edits, failed-save draft reconciliation, Friends profile retries and
+  normalized password recovery routes in `tests/browser/wiring-regressions.spec.ts`.
 - Production artifact smoke: one test passed, using a synthetic loopback API
   configuration and no real database credentials.
 - Focused lint for the new UI, safety client and browser tests passed;

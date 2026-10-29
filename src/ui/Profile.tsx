@@ -218,9 +218,17 @@ export function AccountForm({
   const current = useCurrent(),
     navigate = useNavigate(),
     [search] = useSearchParams();
-  const [draft, setDraft] = useState<Account>(() => structuredClone(initial)),
+  const [source, setSource] = useState(initial),
+    [draft, setDraft] = useState<Account>(() => structuredClone(initial)),
     [validation, setValidation] = useState(""),
     [saved, setSaved] = useState(false);
+  // Failed writes retain the same source and the user's draft. Confirmed
+  // saves or explicit reloads replace it with the authoritative account.
+  if (source !== initial) {
+    setSource(initial);
+    setDraft(structuredClone(initial));
+    setValidation("");
+  }
   const profile = draft.profile ?? {
     username: "",
     display_name: "",
@@ -440,7 +448,7 @@ export function AccountForm({
       <ErrorMessage>{validation || current.error}</ErrorMessage>
       {current.error && (
         <ActionButton secondary onClick={current.reload}>
-          Reload account before saving again
+          Reload account and replace draft before saving again
         </ActionButton>
       )}
       {saved && <p role="status">Profile saved.</p>}

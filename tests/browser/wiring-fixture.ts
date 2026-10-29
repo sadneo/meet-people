@@ -20,7 +20,7 @@ export async function wiringFixture(
     lostMessage?: boolean;
   } = {},
 ) {
-  let account = browserAccount(),
+  let account = structuredClone(browserAccount()),
     mode: string | null = options.queue ?? null;
   if (options.incomplete)
     account = {
