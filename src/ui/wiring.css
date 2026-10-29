@@ -721,3 +721,17 @@ legend {
     scroll-behavior: auto !important;
   }
 }
+
+/* Matching keeps the alternate frontend's existing cards and dialog controls. */
+.discovery-card-slot[hidden] { display: none !important; }
+.group-roster { list-style: none; padding: 0; margin: 16px 0; }
+.group-roster li { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-height: 48px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.group-roster li > span:first-child { flex: 1; min-width: 80px; overflow-wrap: anywhere; }
+.active-friends-flow .row, .group-controls .row, .matching-schedule .row { flex-wrap: wrap; }
+.active-friends-flow .check { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.active-friends-flow .check input { width: 20px; height: 20px; flex: none; }
+.group-controls { flex: none; max-height: 30dvh; overflow: auto; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+.group-controls summary, .matching-schedule summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+.group-controls .btn { margin: 6px 6px 6px 0; }
+.matching-schedule { margin-top: 16px; }
+.active-friends-flow input:not([type=checkbox]), .group-controls input { max-width: 100%; }

@@ -74,6 +74,7 @@ function SafetyForm({ id }: { id: string }) {
                 } finally {
                   setConfirm(false);
                   state.reload();
+                  window.dispatchEvent(new Event("pebble:matching-changed"));
                 }
               });
             }}

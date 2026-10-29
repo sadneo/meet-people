@@ -16,7 +16,6 @@
     "lint": "eslint .",
     "test": "pnpm test:unit",
     "test:unit": "vitest run --config vite.config.ts",
-    "test:deployment": "node --test tests/deployment.test.mjs",
     "test:browser": "playwright test --config playwright.config.ts",
     "test:browser:built": "pnpm build && sh scripts/test-built.sh",
     "test:integration": "node --test tests/integration/local-services.test.mjs",
@@ -42,7 +41,13 @@
     "build:android": "vite build --mode android && cap sync android",
     "android": "pnpm build:android && cap open android",
     "demo:queue": "tsx scripts/queue-local-demo.ts",
-    "demo:seed": "tsx scripts/seed-local-demo.ts"
+    "demo:seed": "tsx scripts/seed-local-demo.ts",
+    "matchmaking:active:once": "tsx --env-file-if-exists=.env.local api/active-friends-worker-main.ts",
+    "demo:active": "tsx scripts/active-local-demo.ts",
+    "demo:remove": "tsx scripts/active-local-demo.ts --action remove",
+    "supabase:start:matching": "python scripts/start-matching-supabase.py",
+    "test:integration:matching": "node tests/integration/local/test-matching-http.mjs",
+    "test:deployment": "node --test tests/deployment.test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

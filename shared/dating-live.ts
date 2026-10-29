@@ -8,6 +8,8 @@ export const DatingCandidateSchema=z.object({id:z.uuid(),name:MatchingProfileSch
  avatar:MatchingProfileSchema.shape.avatar_url,photoRevision:z.number().int().nonnegative().safe(),interests:MatchingProfileSchema.shape.interests,
  areaDistanceMiles:z.number().int().nonnegative().max(100),heightInches:z.number().int().min(24).max(107).nullable(),gender:z.string().max(120).nullable(),sexuality:z.string().max(120).nullable(),intent:z.string().max(120),style:z.string().max(120)}).strict()
 export const DatingCandidateResultSchema=z.object({candidate:DatingCandidateSchema.nullable()}).strict()
+export const DatingBatchRequestSchema=DatingCandidateRequestSchema.extend({limit:z.number().int().min(1).max(10).default(10)}).strict()
+export const DatingBatchResponseSchema=z.object({candidates:z.array(DatingCandidateSchema).max(10),algorithmVersion:z.literal('dating-rules-v1')}).strict().refine(value=>new Set(value.candidates.map(person=>person.id)).size===value.candidates.length)
 export type DatingCandidate=z.infer<typeof DatingCandidateSchema>
 export type DatingRuntime=z.infer<typeof DatingRuntimeSchema>
 export type DatingEnable=z.infer<typeof DatingEnableSchema>

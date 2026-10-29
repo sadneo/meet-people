@@ -14,7 +14,7 @@ export const MessageSchema = z.object({
   sender_id: z.string().uuid().nullable(),
   body: z.string(), created_at: z.string(),
 })
-export const ConversationKindSchema = z.enum(['direct', 'event_group'])
+export const ConversationKindSchema = z.enum(['direct', 'event_group', 'friends_group'])
 export const ConversationSchema = z.object({
   id: z.string().uuid(), kind: ConversationKindSchema, created_at: z.string(),
   participants: z.array(ParticipantSchema), latest_message: MessageSchema.nullable(), unread_count: seq,

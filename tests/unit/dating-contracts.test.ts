@@ -12,18 +12,20 @@ it('preserves exact Unicode/custom identities and zero height remainder, with vi
   for (const extra of [{ bio: 'global' }, { birthdate: '2000-01-01' }, { interests: [] }, { user_id: 'other' }]) expect(DatingProfileSchema.safeParse({ ...woman, ...extra }).success).toBe(false)
   expect(DatingProfileSchema.safeParse({ ...woman, gender: '\ud800' }).success).toBe(false)
 })
-it('resolves only clear mappings, requires exact reciprocal admission and invalidates clarification on identity changes', () => {
-  expect(datingTargets(woman)).toEqual(['Man']); expect(datingTargets(man)).toEqual(['Woman'])
-  expect(reciprocalDatingTargets(woman, man)).toBe(true)
-  expect(datingTargets({ ...woman, sexuality: 'Lesbian' })).toEqual(['Woman'])
-  expect(datingTargets({ ...man, sexuality: 'Gay' })).toEqual(['Man'])
-  for (const sexuality of ['Bisexual', 'Pansexual', 'Asexual', 'Queer', 'Questioning', 'Other', 'legacy']) expect(datingTargets({ ...woman, sexuality })).toBeNull()
+it('requires explicit targets for every sexuality and reciprocal admission', () => {
+  for (const sexuality of ['Straight', 'Gay', 'Lesbian', 'Bisexual', 'Pansexual', 'Asexual', 'Queer', 'Questioning', 'Other', 'legacy']) {
+    expect(datingTargets({ ...woman, sexuality })).toBeNull()
+    expect(datingTargets({ ...woman, sexuality, clarifiedTargets: ['Man'] })).toEqual(['Man'])
+  }
+  expect(reciprocalDatingTargets({ ...woman, clarifiedTargets: ['Man'] }, { ...man, clarifiedTargets: ['Woman'] })).toBe(true)
+  expect(reciprocalDatingTargets(woman, man)).toBe(false)
   const custom = { ...woman, gender: 'Legacy identity', sexuality: 'Queer', clarifiedTargets: ['Man'] }
-  expect(reciprocalDatingTargets(custom, man)).toBe(false) // no automatic Other/binary coercion
-  expect(reciprocalDatingTargets(custom, { ...man, sexuality: 'Queer', clarifiedTargets: ['Legacy identity'] })).toBe(true)
+  expect(reciprocalDatingTargets(custom, man)).toBe(false)
+  expect(reciprocalDatingTargets(custom, { ...man, clarifiedTargets: ['Legacy identity'] })).toBe(true)
   expect(validDatingTransition(custom, { ...custom, sexuality: 'Questioning' })).toBe(false)
   expect(validDatingTransition(custom, { ...custom, sexuality: 'Questioning', clarifiedTargets: [] })).toBe(true)
-  expect(DatingProfileSchema.safeParse({ ...woman, clarifiedTargets: ['Woman'] }).success).toBe(false)
+  expect(DatingProfileSchema.safeParse({ ...woman, clarifiedTargets: ['Woman'] }).success).toBe(true)
+  expect(DatingProfileSchema.safeParse({ ...woman, enabled: true }).success).toBe(false)
 })
 it('allows initial clarification but preserves invalidation for existing full and partial identities', () => {
   const next = { ...woman, sexuality: 'Queer', clarifiedTargets: ['Man'] }

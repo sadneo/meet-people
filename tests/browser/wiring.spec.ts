@@ -59,53 +59,21 @@ test("profile saves use canonical account API and read back persisted data", asy
   expect(writes[0].token).toBe("Bearer browser-user-jwt");
 });
 
-test("Friends uses one real candidate, manual checks and the connections endpoint", async ({
-  page,
-}) => {
-  const fixture = await wiringFixture(page);
-  await page.goto("/matchmaking");
-  await page.getByRole("button", { name: "Find Friends", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Check for a match" }),
-  ).toBeVisible();
-  expect(
-    fixture.calls.filter((call) => call.path.endsWith("/result")),
-  ).toHaveLength(0);
-  await page.getByRole("button", { name: "Check for a match" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Taylor", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Connect", exact: true }).click();
-  await expect(page.getByText("Connection request sent")).toBeVisible();
-  expect(
-    fixture.calls.some(
-      (call) =>
-        call.path === `/api/connections/${peer}` && call.method === "POST",
-    ),
-  ).toBe(true);
-  expect(
-    fixture.calls.some((call) => call.path.includes("/dating/requests/")),
-  ).toBe(false);
+test("Friends loads passive recommendations without joining an active queue", async ({page}) => {
+ const fixture=await wiringFixture(page);
+ await page.goto('/matchmaking');
+ await expect(page.getByRole('heading',{name:'Taylor, 23'})).toBeVisible();
+ await page.getByRole('button',{name:'Connect',exact:true}).click();
+ await expect(page.getByText('Request sent to Taylor.')).toBeVisible();
+ expect(fixture.calls.some(call=>call.path===`/api/matchmaking/friends/requests/${peer}`&&call.method==='POST')).toBe(true);
+ expect(fixture.calls.filter(call=>call.path.endsWith('/queue'))).toHaveLength(0);
 });
 
-test("starting Friends asks before replacing downtime", async ({ page }) => {
-  const fixture = await wiringFixture(page, { queue: "downtime" });
-  await page.goto("/matchmaking");
-  await page.getByRole("button", { name: "Find Friends", exact: true }).click();
-  await expect(
-    page.getByRole("dialog", { name: "Replace downtime matching?" }),
-  ).toBeVisible();
-  expect(
-    fixture.calls.filter(
-      (call) => call.path.endsWith("/queue") && call.method === "POST",
-    ),
-  ).toHaveLength(0);
-  await page
-    .getByRole("button", { name: "Start active search", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Check for a match" }),
-  ).toBeVisible();
+test("passive discovery leaves a legacy downtime queue alone", async ({page}) => {
+ const fixture=await wiringFixture(page,{queue:'downtime'});
+ await page.goto('/matchmaking');
+ await expect(page.getByRole('heading',{name:'Taylor, 23'})).toBeVisible();
+ expect(fixture.calls.filter(call=>call.path.endsWith('/queue'))).toHaveLength(0);
 });
 
 test("Friends preferences resolve a server-owned area and save revisioned filters", async ({
@@ -143,10 +111,9 @@ test("Dating starts with confirmed consent and uses the live Dating request endp
   await page.goto("/matchmaking");
   await page.getByRole("button", { name: "Dating", exact: true }).click();
   await page.getByRole("button", { name: "Start Dating discovery" }).click();
-  await page.getByRole("button", { name: "Find a date", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Taylor, 23" })).toBeVisible();
   await page.getByRole("button", { name: "Send Dating request" }).click();
-  await expect(page.getByText("Connection request sent")).toBeVisible();
+  await expect(page.getByText("Request sent to Taylor.")).toBeVisible();
   expect(
     fixture.calls.some(
       (call) => call.path.endsWith("/dating/enabled") && call.method === "PUT",
@@ -228,9 +195,7 @@ test("safety uses the real block API and confirms before writing", async ({
     ),
   ).toHaveLength(0);
   await page.getByRole("button", { name: "Confirm", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Unblock account", exact: true }),
-  ).toBeVisible();
+  await expect.poll(()=>fixture.calls.filter(call=>call.path.includes('/safety/blocks/')&&call.method==='PUT').length).toBe(1);
 });
 
 test("a backend outage shows a retry state without fixture matches", async ({
@@ -238,14 +203,12 @@ test("a backend outage shows a retry state without fixture matches", async ({
 }) => {
   await wiringFixture(page);
   await page.route(
-    "**/api/matchmaking/friends-search-preferences/runtime",
+    "**/api/matchmaking/friends/recommendations",
     (route) => route.fulfill({ status: 503, json: { error: "Unavailable" } }),
   );
   await page.goto("/matchmaking");
-  await expect(
-    page.getByRole("button", { name: "Find Friends", exact: true }),
-  ).toBeDisabled();
-  await expect(page.getByRole("alert")).toContainText("unavailable");
+  await expect(page.getByRole('button',{name:'Refresh recommendations'})).toBeEnabled();
+  await expect(page.getByRole("alert")).toContainText(/unavailable/i);
   await expect(
     page.getByRole("heading", { name: "Taylor", exact: true }),
   ).toHaveCount(0);

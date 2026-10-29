@@ -9,6 +9,9 @@ import cors from 'cors'
 import rateLimit from 'express-rate-limit'
 import { createSocialRouter } from './social.js'
 import { boundedMatchingBodyError } from './matching-body-errors.js'
+import { createDatingScoringTransport } from './matching/dating-recommendations.js'
+import { createFriendsScoringTransport } from './matching/friends-recommendations.js'
+import { createActiveFriendsWorker } from './matching/active-worker.js'
 
 export const app = express()
 app.set('trust proxy', 1);
@@ -43,7 +46,25 @@ app.use('/api/auth', createAuthRouter(eventsClient))
 const ownerTransport = env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY
   ? createUserContextTransport({ url: env.SUPABASE_URL, publicKey: env.SUPABASE_PUBLISHABLE_KEY, verificationKey: env.SUPABASE_SERVICE_ROLE_KEY })
   : null
-app.use('/api/matchmaking', boundedMatchingBodyError, createMatchmakingRouter(ownerTransport))
+if (env.DATING_RULES_ENABLED === 'true' && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !ownerTransport)) {
+  throw new Error('Dating rules require server scoring credentials and authenticated actor transport.')
+}
+const datingScoring = env.DATING_RULES_ENABLED === 'true'
+  ? createDatingScoringTransport(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!)
+  : null
+if (env.FRIENDS_RULES_ENABLED === 'true' && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !ownerTransport)) {
+  throw new Error('Friends rules require server scoring credentials and authenticated actor transport.')
+}
+const friendsScoring = env.FRIENDS_RULES_ENABLED === 'true'
+  ? createFriendsScoringTransport(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!)
+  : null
+if (env.ACTIVE_FRIENDS_ENABLED === 'true' && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !ownerTransport)) {
+  throw new Error('Active Friends requires server worker credentials and authenticated actor transport.')
+}
+const activeWorker = env.ACTIVE_FRIENDS_ENABLED === 'true'
+  ? createActiveFriendsWorker(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!)
+  : null
+app.use('/api/matchmaking', boundedMatchingBodyError, createMatchmakingRouter(ownerTransport, datingScoring, friendsScoring, activeWorker))
 app.use('/api/connections', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'connections'))
 app.use('/api/conversations', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'conversations'))
 

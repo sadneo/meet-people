@@ -447,17 +447,7 @@ function DatingForm({
           </p>
         ) : (
           <fieldset
-            disabled={
-              !profile.gender ||
-              !profile.sexuality ||
-              !!(
-                (profile.sexuality === "Straight" &&
-                  ["Man", "Woman"].includes(profile.gender)) ||
-                (profile.sexuality === "Gay" &&
-                  ["Man", "Woman"].includes(profile.gender)) ||
-                (profile.sexuality === "Lesbian" && profile.gender === "Woman")
-              )
-            }
+            disabled={!profile.gender || !profile.sexuality}
           >
             <legend>Who would you like to meet?</legend>
             {[

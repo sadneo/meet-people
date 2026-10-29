@@ -1,3 +1,5 @@
+import { ActiveFriends, GroupControls, type ActiveGroup } from './ActiveFriends';
+import { matchingClient } from './matching-client';
 import {
   useCallback,
   useEffect,
@@ -21,6 +23,7 @@ import {
   Empty,
   ErrorMessage,
   ResourceState,
+  Modal,
 } from "./common";
 import { useCurrent } from "./current";
 import { SafetyActions } from "./Safety";
@@ -28,7 +31,9 @@ import { SafetyActions } from "./Safety";
 export function Messages() {
   const current = useCurrent(),
     [search] = useSearchParams(),
-    selected = search.get("conversation"),
+    selectedGroup = search.get("group"),
+    selected = selectedGroup ?? search.get("conversation"),
+    [findGroup,setFindGroup] = useState(false),
     [page, setPage] = useState(1);
   const inbox = useLoad(
     useCallback(
@@ -37,21 +42,27 @@ export function Messages() {
       [page],
     ),
   );
+  const groups = useLoad(useCallback(signal=>matchingClient(current.session.access_token).groups(signal),[current.session.access_token]))
+  const reloadInbox=inbox.reload,reloadGroups=groups.reload
+  const changed=useCallback(()=>{reloadInbox();reloadGroups()},[reloadInbox,reloadGroups])
+  useEffect(()=>{window.addEventListener('pebble:matching-changed',changed);return()=>window.removeEventListener('pebble:matching-changed',changed)},[changed])
   return (
     <section className={`messaging-page ${selected ? "chat-selected" : ""}`}>
       <div className="pagehead">
         <h2>Messages</h2>
         <div className="row">
+          <ActionButton onClick={()=>setFindGroup(true)}>Find a group</ActionButton>
           <Link to="/activity">Activity</Link>
           <ActionButton
             secondary
-            onClick={inbox.reload}
+            onClick={changed}
             disabled={inbox.loading}
           >
             Refresh inbox
           </ActionButton>
         </div>
       </div>
+      {findGroup&&<Modal title="Find a group" close={()=>setFindGroup(false)}><ActiveFriends key={current.session.user.id} close={()=>setFindGroup(false)} changed={changed}/></Modal>}
       <div className="live-messages">
         <aside className="live-inbox">
           <ResourceState
@@ -59,7 +70,9 @@ export function Messages() {
             error={inbox.error}
             reload={inbox.reload}
           />
-          {inbox.value && !inbox.value.conversations.length && (
+          <ResourceState loading={groups.loading} error={groups.error} reload={groups.reload}/>
+          {groups.value?.groups.map(group=>{const title=group.name||group.members.filter(person=>person.id!==current.session.user.id).map(person=>person.display_name).join(', ')||'Friends group';return <Link className={`conversation-row ${selectedGroup===group.id?'selected':''}`} key={group.id} to={`/messages/chat?group=${encodeURIComponent(group.id)}`}><Avatar name={title}/><span><b>{title}</b><span className="message-preview">{group.latestMessage?.body??'Say hello'}</span></span>{group.unreadCount>0&&<span className="unread-count" aria-label={`${group.unreadCount} unread messages`}>{group.unreadCount}</span>}</Link>})}
+          {inbox.value && !inbox.value.conversations.length && !groups.value?.groups.length && (
             <Empty title="Your next conversation starts with a hello.">
               <Link to="/matchmaking">Find people</Link>
             </Empty>
@@ -115,7 +128,7 @@ export function Messages() {
           )}
         </aside>
         {selected ? (
-          <Chat key={selected} id={selected} changed={inbox.reload} />
+          <Chat key={`${current.session.user.id}:${selectedGroup?"group":"direct"}:${selected}`} id={selected} changed={changed} isGroup={!!selectedGroup} />
         ) : (
           <div className="chat-empty">
             <h3>Choose a conversation.</h3>
@@ -126,20 +139,21 @@ export function Messages() {
     </section>
   );
 }
-function Chat({ id, changed }: { id: string; changed: () => void }) {
-  const current = useCurrent(),
-    action = useAction(),
+function Chat({ id, changed, isGroup=false }: { id: string; changed: () => void; isGroup?: boolean }) {
+  const [group,setGroup]=useState<ActiveGroup|null>(null)
+  const current = useCurrent()
+  const token = current.session.access_token
+  const action = useAction(),
     history = useLoad(
-      useCallback(
-        (signal) =>
-          messagingRequest(
-            `/${encodeURIComponent(id)}/messages`,
-            HistorySchema,
-            { signal },
-          ),
-        [id],
-      ),
+      useCallback(async(signal)=>{
+        if(!isGroup)return messagingRequest(`/${encodeURIComponent(id)}/messages`,HistorySchema,{signal})
+        const [group,value]=await Promise.all([matchingClient(token).group(id,signal),matchingClient(token).history(id,undefined,signal)])
+        if(!signal.aborted)setGroup(group)
+        return {kind:'friends_group' as const,canSend:true,messages:value.messages,participants:group.members,nextCursor:value.nextCursor}
+      },[token,id,isGroup])
     );
+  const historyPage=async(before:number)=>isGroup?matchingClient(token).history(id,before):messagingRequest(`/${encodeURIComponent(id)}/messages?before=${before}`,HistorySchema)
+
   const [body, setBody] = useState(""),
     [older, setOlder] = useState<Message[]>([]),
     [cursor, setCursor] = useState<number | null>(null),
@@ -154,6 +168,8 @@ function Chat({ id, changed }: { id: string; changed: () => void }) {
       live.current = false;
     };
   }, []);
+  const reloadHistory=history.reload
+  useEffect(()=>{const refresh=()=>{setOlder([]);setConfirmed([]);reloadHistory()};window.addEventListener('pebble:matching-changed',refresh);return()=>window.removeEventListener('pebble:matching-changed',refresh)},[reloadHistory])
   const messages = [
     ...new Map(
       [...older, ...(history.value?.messages ?? []), ...confirmed].map(
@@ -165,10 +181,7 @@ function Chat({ id, changed }: { id: string; changed: () => void }) {
   useEffect(() => {
     if (!newest || document.visibilityState !== "visible") return;
     const controller = new AbortController();
-    void messagingRequest(`/${encodeURIComponent(id)}/read`, ReadStateSchema, {
-      body: { seq: newest },
-      signal: controller.signal,
-    })
+    void (isGroup?matchingClient(token).read(id,newest,controller.signal):messagingRequest(`/${encodeURIComponent(id)}/read`,ReadStateSchema,{body:{seq:newest},signal:controller.signal}))
       .then(() => {
         if (!controller.signal.aborted) {
           setReadError("");
@@ -183,7 +196,7 @@ function Chat({ id, changed }: { id: string; changed: () => void }) {
           );
       });
     return () => controller.abort();
-  }, [id, newest, changed]);
+  }, [id, newest, changed, token, isGroup]);
   async function send(event: FormEvent) {
     event.preventDefault();
     await action.run(async () => {
@@ -193,11 +206,7 @@ function Chat({ id, changed }: { id: string; changed: () => void }) {
         clientRequestId: crypto.randomUUID(),
       };
       setUncertain(true);
-      const saved = await messagingRequest(
-        `/${encodeURIComponent(id)}/messages`,
-        MessageSchema,
-        { body: retry.current },
-      );
+      const saved = isGroup?await matchingClient(token).send(id,retry.current):await messagingRequest(`/${encodeURIComponent(id)}/messages`,MessageSchema,{body:retry.current});
       if (!live.current) return;
       if (
         saved.conversation_id !== id ||
@@ -227,7 +236,7 @@ function Chat({ id, changed }: { id: string; changed: () => void }) {
           ‹ Inbox
         </Link>
         <h3>
-          {others.map((person) => person.display_name).join(", ") ||
+          {group?.name || others.map((person) => person.display_name).join(", ") ||
             "Conversation"}
         </h3>
         <ActionButton
@@ -244,6 +253,7 @@ function Chat({ id, changed }: { id: string; changed: () => void }) {
           <SafetyActions id={others[0].id} name={others[0].display_name} />
         )}
       </header>
+      {isGroup&&group&&<GroupControls group={group} changed={()=>{setOlder([]);setConfirmed([]);history.reload();changed()}}/>}
       <div className="chat-history" aria-label="Message history">
         <ResourceState
           loading={history.loading}
@@ -259,10 +269,7 @@ function Chat({ id, changed }: { id: string; changed: () => void }) {
               disabled={action.busy}
               onClick={() => {
                 void action.run(async () => {
-                  const value = await messagingRequest(
-                    `/${encodeURIComponent(id)}/messages?before=${olderCursor}`,
-                    HistorySchema,
-                  );
+                  const value = await historyPage(olderCursor);
                   if (!live.current) return;
                   setOlder((items) => [...value.messages, ...items]);
                   setCursor(value.nextCursor ?? -1);

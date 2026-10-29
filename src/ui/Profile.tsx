@@ -1,3 +1,4 @@
+import { MatchingSchedule } from './MatchingSchedule';
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import {
@@ -681,6 +682,7 @@ export function Profile() {
       <div className="profile-layout">
         <section className="card">
           <AccountForm initial={current.account!} />
+          <MatchingSchedule token={current.session.access_token} disabled={current.busy} onSaved={()=>window.dispatchEvent(new Event("pebble:matching-changed"))}/>
         </section>
         <div>
           <PhotoEditor />
