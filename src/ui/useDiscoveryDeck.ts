@@ -1,0 +1,67 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { DatingCandidate } from '../../shared/dating-live'
+import type { FriendsDiscoveryCandidate } from '../../shared/friends-discovery'
+import type { ConnectionState } from '../../shared/connections'
+import { matchingClient } from './matching-client'
+export type DiscoveryPerson = DatingCandidate | FriendsDiscoveryCandidate
+export function useDiscoveryDeck(token: string, mode: 'Friends' | 'Dating', enabled: boolean, revision: string) {
+  const client = useMemo(() => matchingClient(token), [token])
+  const [cards, setCards] = useState<DiscoveryPerson[]>([]), [loading, setLoading] = useState(false), [error, setError] = useState(''), [searched, setSearched] = useState(false)
+  const [outcomes, setOutcomes] = useState<{ person: DiscoveryPerson; state: 'saving' | 'uncertain' | 'confirmed'; result?: ConnectionState; error?: string }[]>([])
+  const outcomesRef = useRef(outcomes); outcomesRef.current = outcomes
+  const writes = useRef(new Set<string>())
+  const excluded = useRef(new Set<string>()), inFlight = useRef(false), generation = useRef(0), controller = useRef<AbortController | null>(null), live = useRef(true)
+  // Invalidate the latest request generation on unmount; this is not a DOM ref.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { live.current = true; return () => { live.current = false; generation.current++; controller.current?.abort() } }, [])
+  const fill = useCallback(async () => {
+    if (!enabled || inFlight.current || !live.current) return
+    const maximum = mode === 'Dating' ? 50 : 200
+    if (excluded.current.size >= maximum) return
+    const epoch = generation.current, abort = new AbortController(); controller.current = abort; inFlight.current = true; setLoading(true); setError('')
+    try {
+      const result = await client[mode === 'Friends' ? 'friends' : 'dating']([...excluded.current], abort.signal)
+      if (!live.current || abort.signal.aborted || epoch !== generation.current) return
+      const seen = excluded.current
+      const next = result.candidates.filter(person => !seen.has(person.id))
+      next.forEach(person => seen.add(person.id))
+      setCards(current => [...current, ...next]); setSearched(true)
+    } catch (failure) {
+      if (live.current && !abort.signal.aborted && epoch === generation.current) setError(failure instanceof Error ? failure.message : 'Recommendations are unavailable. Try again.')
+    } finally {
+      if (live.current && epoch === generation.current) { inFlight.current = false; setLoading(false) }
+    }
+  }, [client, enabled, mode])
+  const reset = useCallback(() => {
+    generation.current++; controller.current?.abort(); inFlight.current = false; excluded.current = new Set(); setCards([]); setSearched(false); setError(''); setLoading(false)
+    // Keep uncertain action feedback across preference and discovery refreshes.
+    for (const outcome of outcomesRef.current) if (outcome.state !== 'confirmed') excluded.current.add(outcome.person.id)
+    void fill()
+  }, [fill])
+  useEffect(() => { reset() }, [reset, revision])
+  useEffect(() => { const changed = () => reset(); window.addEventListener('pebble:matching-changed', changed); return () => window.removeEventListener('pebble:matching-changed', changed) }, [reset])
+  function advance(person: DiscoveryPerson) {
+    setCards(current => { const next = current.filter(card => card.id !== person.id); return next })
+  }
+  // Refill once at the threshold; an exhausted/error result does not cause a loop.
+  const size = cards.length, lastSize = useRef(-1)
+  useEffect(() => {
+    if (size <= 3 && size < lastSize.current) void fill()
+    lastSize.current = size
+  }, [size, fill])
+  async function connect(person: DiscoveryPerson) {
+    if (writes.current.has(person.id)) return
+    if (outcomesRef.current.some(item => item.person.id === person.id && item.state !== 'confirmed')) return
+    writes.current.add(person.id)
+    advance(person); setOutcomes(current => [...current.filter(item => item.person.id !== person.id), { person, state: 'saving' }])
+    try {
+      const result = await client.connect(mode, person.id)
+      if (!live.current) return
+      setOutcomes(current => current.map(item => item.person.id === person.id ? { person, state: 'confirmed', result } : item))
+      window.dispatchEvent(new Event('pebble:activity-changed'))
+    } catch (failure) {
+      if (live.current) setOutcomes(current => current.map(item => item.person.id === person.id ? { person, state: 'uncertain', error: failure instanceof Error ? failure.message : 'Request could not be confirmed.' } : item))
+    }
+  }
+  return { cards, loading, error, searched, advance, connect, outcomes, refill: fill, reset }
+}

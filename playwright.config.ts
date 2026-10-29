@@ -14,6 +14,6 @@ export default defineConfig({
   webServer: {
     command: 'pnpm exec vite --config vite.isolated.config.ts',
     url: 'http://127.0.0.1:3194',
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === '1',
   },
 })

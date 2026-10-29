@@ -103,10 +103,11 @@ configuration requires rebuilding and deploying the web app. Local ignored
 `.env.production.local` currently contains local settings: pass hosted public
 values explicitly when building a release, as CI does.
 
-`hosting/supabase/config.toml` declares only hosted auth settings; all other
-remote properties remain unchanged. Never push the development
-`supabase/config.toml` to production. Change the checked-in origin and Firebase
-rewrite together if moving the site or region.
+`scripts/configure-deployment.mjs` generates ignored `firebase.deploy.json` and
+`hosting/deployment/supabase/config.toml` from the selected GitHub environment.
+Both sandbox sites use the sandbox API and have their own Auth redirect entries.
+The manual production fallback remains `hosting/supabase/config.toml`. Never push
+the local development `supabase/config.toml` to a hosted project.
 
 ### Recreate Google deployment infrastructure
 
@@ -119,9 +120,11 @@ sh scripts/bootstrap-gcp.sh
 ```
 
 The bootstrap is repeatable: it enables APIs, creates missing resources,
-assigns deploy/runtime permissions and writes non-secret GitHub variables.
-Existing OIDC provider configuration is preserved; inspect it when changing
-repository ownership. It does not create a billing account or SMTP service.
+assigns deploy/runtime permissions and writes environment-scoped GitHub variables.
+Run again with `DEPLOY_ENVIRONMENT=sandbox` for sandbox resources. It updates
+OIDC conditions to the branch/environment deployment model below; sandbox has
+a separate identity pool so it cannot impersonate the production deployer.
+It does not create a billing account, Hosting sites, Supabase project or SMTP service.
 The runtime secret must have a version containing the project's service-role
 key before Cloud Run can start. Populate it from stdin, not command arguments.
 
@@ -182,11 +185,16 @@ expanding this beyond invited testers. See `accounts.md` for the privacy tradeof
 
 ## Checks and releases
 
-`.github/workflows/checks.yml` verifies types, lint, unit tests, a fresh local
-database reset/type check, SQL hosting permissions, real local auth and selected
-production-build browser flows, then builds the container. Report artifacts
-are uploaded only on failure. Require `Checks / check` on `main` once the
-workflow has run on GitHub.
+See [the CI/CD operating guide](deployment.md) for sites, manual deployment and
+the approved override procedure. `checks.yml` runs the reusable `ci.yml` suite
+on PRs into `main` and `dev`. `release.yml` calls the same suite for the exact
+resolved SHA on pushes, then deploys production (`main`) or both sandbox sites
+(`dev`) only after success. Required PR check: `Checks / CI`.
+
+The suite verifies types, lint, unit tests, deployment isolation/toolbar builds,
+a fresh local database reset/type check, SQL security, local auth, source and
+built browser journeys, and the container build. Messaging seed assertions run
+after the reset. Report artifacts are uploaded on failure.
 
 The production browser suite is `hosting.spec.ts`, `auth.spec.ts`, and
 `events.spec.ts`. Source-module-interception tests such as the mocked group
@@ -195,13 +203,12 @@ bundle by intercepting `/src/supabase.ts`. Existing guest-avatar assertions in
 `app.spec.ts` also predate the new signed-out header; these are outside the
 hosting smoke suite and need updating with that UI's tests.
 
-To release, push a `v*` version tag after committing the intended changes.
-`release.yml` requires typechecking and the API contract tests on the tagged
-commit before deployment, then runs `pnpm test:hosted` against the deployed site,
-including the database-backed email lookup. The full reusable `checks.yml` job
-remains disabled: the current baseline has failing UI tests and lint errors;
-it is not a release gate until that baseline is repaired.
-The release authenticates with OIDC, pushes a commit-SHA image, resolves its
+Version tags are labels, not deployment triggers. The existing baseline has
+failing unit tests and lint errors, so normal deployments remain blocked until
+those are repaired. An explicit manual override is available; checks are not
+globally disabled and failed checks are never changed to success.
+
+Deployment authenticates with OIDC, pushes a commit-SHA image, resolves its
 digest, deploys Edge Functions, applies migrations without seeds, synchronizes
 service configuration, deploys Cloud Run, then Firebase with the pinned API.
 The final smoke check and workflow summary record the deployed version.
@@ -210,10 +217,9 @@ the preceding API revision; use additive changes and forward fixes.
 
 The hosted auth config enables public signup and requires email confirmation.
 SMTP credentials are configured separately in Supabase; releases preserve them.
-GitHub OIDC diagnostics print only the repository ID, ref, environment and
-workflow ref, never the identity token. A release needs no Google JSON key or
-Resend key in GitHub. Use a new version tag for each release; rerunning an old
-tag checks out and deploys that old commit.
+GitHub OIDC is restricted to this repository's deployment workflow and selected
+environment. Production requires the workflow ref on `main`; sandbox accepts
+`dev` or `main`. A release needs no Google JSON key or Resend key in GitHub.
 Migrations use `supabase link` and CLI-managed temporary database credentials
 through the discovered session pooler. The old `SUPABASE_DB_URL` secret is no
 longer consumed: its direct IPv6 endpoint is unsuitable for GitHub runners and

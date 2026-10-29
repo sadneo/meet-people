@@ -1,0 +1,36 @@
+"""Exact historical/reconciled sources for isolated matching acceptance.
+Only provider I/O is replaced; profile, safety, location, PostGIS and lifecycle
+functions remain the repository definitions. Auth is explicitly synthetic.
+"""
+SOURCES = [
+    'supabase/migrations/20260925000000_init_schema.sql',
+    'supabase/migrations/20260925000001_rls_policies.sql',
+    'supabase/migrations/20260925000002_embeddings.sql',
+    'supabase/migrations/20260925000004_connection_logic.sql',
+    'supabase/migrations/20260925000005_queue_and_matching.sql',
+    'supabase/migrations/20260925000006_event_flow.sql',
+    'supabase/migrations/20260925000007_dating_track.sql',
+    'supabase/migrations/20260925000008_messaging.sql',
+    'supabase/migrations/20261008220000_matchmaking_profile_rpcs.sql',
+    'supabase/migrations/20261013120000_accounts.sql',
+    'supabase/migrations/20261018160000_account_profile_identity.sql',
+    'docs/dev-account-reconciliation.sql',
+    'docs/profile-details-migration.sql',
+    'docs/detailed-settings-migration.sql',
+    'docs/safety-contact-guards-migration.sql',
+    'docs/safety-owner-contact-migration.sql',
+    'docs/social-contact-migration.sql',
+    'docs/discovery-privacy-migration.sql',
+    'docs/friends-search-preferences-migration.sql',
+    'docs/dating-aggregate-migration.sql',
+    'docs/search-location-migration.sql',
+    'docs/active-nearby-migration.sql',
+    'docs/profile-photo-migration.sql',
+    'docs/dating-live-migration.sql',
+    'docs/real-account-boundary.sql',
+    'docs/friends-runtime-migration.sql',
+    'supabase/migrations/20261028000000_matching_signals.sql',
+    'supabase/migrations/20261028000100_dating_rules.sql',
+    'supabase/migrations/20261028000200_friends_discovery.sql',
+    'supabase/migrations/20261028000300_active_friends.sql',
+]

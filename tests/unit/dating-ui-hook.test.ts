@@ -2,7 +2,6 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { useLayoutEffect } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useDatingPreferences } from '../../src/features/matchmaking/useDatingPreferences'
-import { datingAggregateDraft, datingDraftWrite } from '../../src/features/matchmaking/dating-aggregate-draft'
 import { datingUiFixture, deferredDatingResponse, enabledDatingSnapshot } from './dating-ui-fixture'
 
 let fixture: ReturnType<typeof datingUiFixture>
@@ -13,10 +12,7 @@ async function load() {
   await waitFor(() => expect(hook.result.current.canWrite).toBe(true))
   return hook
 }
-function write() {
-  const draft = datingAggregateDraft(fixture.state.stored)
-  return datingDraftWrite(fixture.state.stored, draft.filters, { ...draft.profile, feet: '5', inches: '0' }, draft.options)
-}
+function write() { const value = fixture.state.stored; return { expectedProfileRevision: value.profileRevision, expectedSearchRevision: value.searchRevision, profile: { ...value.profile, heightInches: 60, enabled: false }, search: value.search ?? { ageMin: 18, ageMax: 99, radiusMiles: 15, searchArea: { source: 'home' as const, resolvedLocationRef: null } } } }
 it.each(['profile', 'search', 'disconnect', 'readback'])('retained callbacks cannot bypass %s conflict/uncertainty or failed reconciliation', async kind => {
   const hook = await load(), retained = hook.result.current.save, value = write()
   if (kind === 'profile' || kind === 'search') {

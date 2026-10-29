@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { DatingRuntimeSchema,DatingCandidateResultSchema,DatingEnableSchema,type DatingEnable } from '../../../shared/dating-live'
 import { ConnectionStateSchema } from '../../../shared/connections'
 import { apiUrl } from '../../platform/native'
+import { DatingScoringSettingsResponseSchema, SaveDatingScoringSettingsSchema, type SaveDatingScoringSettings } from '../../../shared/dating-scoring'
 export class DatingLiveError extends Error{constructor(readonly status:number,message:string){super(message)}}
 export function datingLiveClient(token:string){
  async function request<T>(path:string,schema:z.ZodType<T>,body?:unknown,method='POST',signal?:AbortSignal):Promise<T>{
@@ -17,6 +18,8 @@ export function datingLiveClient(token:string){
  }
  const status=(signal?:AbortSignal)=>request('/status',DatingRuntimeSchema,undefined,'GET',signal)
  return{status,
+  scoringSettings:(signal?:AbortSignal)=>request('/scoring-settings',DatingScoringSettingsResponseSchema,undefined,'GET',signal),
+  saveScoringSettings:(value:SaveDatingScoringSettings,signal?:AbortSignal)=>request('/scoring-settings',DatingScoringSettingsResponseSchema,SaveDatingScoringSettingsSchema.parse(value),'PUT',signal),
   candidate:(excludedIds:string[],signal?:AbortSignal)=>request('/candidate',DatingCandidateResultSchema,{excludedIds},'POST',signal),
   connect:(target:string,signal?:AbortSignal)=>request(`/requests/${encodeURIComponent(target)}`,ConnectionStateSchema,{},'POST',signal),
   async enable(value:DatingEnable,signal?:AbortSignal){

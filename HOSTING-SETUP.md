@@ -4,6 +4,12 @@
 This checklist covers the account access, credentials, and decisions still needed
 from you. You do not need to redeploy the app or recreate its infrastructure.
 
+**CI/CD update:** `main` now targets production and `dev` targets two sandbox
+sites. See [deployment operation and overrides](docs/deployment.md). Sandbox
+database provisioning is currently blocked by Supabase's free-project limit
+and `comfy-room`'s inconsistent pause/hibernation state. The sandbox sites and
+GCP identities are created; they must not use the production database as a fallback.
+
 ## Your checklist
 
 Do these first:
@@ -264,9 +270,8 @@ Once the required secrets are ready, I can:
 2. Resolve hosting/CI failures, merge when repository rules permit, and require the
    verified check on `main`. If GitHub requires another person's approval or
    restricts those settings, that person must approve/change them.
-3. Create a version tag to exercise the first automated release. A branch push
-   alone does not trigger production deployment; the release workflow uses `v*`
-   tags and runs checks before deploying.
+3. Push/merge into `main` for production or `dev` for both sandbox sites. These
+   run full CI before deployment; version tags no longer trigger deployment.
 4. Re-run hosted smoke tests, account isolation/onboarding checks, and any provider
    checks whose credentials you configured.
 
