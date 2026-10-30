@@ -8,7 +8,12 @@ for (const width of [320, 626]) test(`Dating preferences use the focused search 
   const dialog = page.getByRole('dialog', { name: 'Dating preferences', exact: true });
   await expect(dialog.getByRole('slider', { name: 'Minimum age', exact: true })).toBeVisible();
   await expect(dialog.getByRole('slider', { name: 'Distance', exact: true })).toBeVisible();
-  await expect(dialog.getByRole('combobox', { name: 'Interested in', exact: true })).toHaveValue('Woman');
+  const ageTrack = await dialog.locator('.friends-age-track').boundingBox();
+  const distanceTrack = await dialog.locator('.distance-track').boundingBox();
+  expect(Math.abs(ageTrack!.x - distanceTrack!.x)).toBeLessThan(1);
+  expect(Math.abs(ageTrack!.width - distanceTrack!.width)).toBeLessThan(1);
+  await expect(dialog.getByRole('combobox', { name: 'Interested in', exact: true })).toHaveCount(0);
+  await expect(dialog.getByText(/Preferences apply immediately/)).toHaveCount(0);
   await expect(dialog.getByRole('combobox', { name: 'Gender', exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('heading', { name: 'Your Dating profile', exact: true })).toBeVisible();
   await expect(dialog.getByText('Long-term relationship', { exact: true })).toBeVisible();
@@ -23,11 +28,8 @@ for (const width of [320, 626]) test(`Dating preferences use the focused search 
   await expect.poll(() => writes().length).toBe(2);
   await expect(dialog.locator('.dating-distance output')).toHaveText('100+ miles');
   await expect(dialog.getByRole('slider', { name: 'Distance', exact: true })).toHaveAttribute('aria-valuetext', '100+ miles');
-  await expect(dialog.getByRole('combobox', { name: 'Interested in', exact: true })).toBeEnabled();
-  await dialog.getByRole('combobox', { name: 'Interested in', exact: true }).selectOption('everyone');
-  await expect.poll(() => writes().length).toBe(3);
   await expect(dialog.getByRole('button', { name: 'Done', exact: true })).toBeEnabled();
-  expect(writes().at(-1)?.body).toMatchObject({ search: { radiusMiles: 100, ageMin: 19 }, profile: { enabled: false, gender: 'Man', sexuality: 'Straight', clarifiedTargets: ['Man', 'Woman', 'Nonbinary'] } });
+  expect(writes().at(-1)?.body).toMatchObject({ search: { radiusMiles: 100, ageMin: 19 }, profile: { enabled: false, gender: 'Man', sexuality: 'Straight', clarifiedTargets: [] } });
   expect(fixture.calls.filter(call => call.path.endsWith('/dating/enabled'))).toHaveLength(0);
   await dialog.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(dialog).toHaveCount(0);
@@ -47,12 +49,32 @@ test('Dating preferences require read-only recovery after a conflicting auto-sav
   });
   await page.goto('/matchmaking?mode=dating&preferences=true');
   const dialog = page.getByRole('dialog');
-  await dialog.getByRole('combobox', { name: 'Interested in', exact: true }).selectOption('everyone');
+  await dialog.getByRole('slider', { name: 'Distance', exact: true }).press('End');
   await expect(dialog.getByText(/Dating preferences changed/)).toBeVisible();
   await expect(dialog.getByRole('slider', { name: 'Distance', exact: true })).toBeDisabled();
   expect(writes).toBe(1);
   await dialog.getByRole('button', { name: 'Reload saved data', exact: true }).click();
-  await expect(dialog.getByRole('combobox', { name: 'Interested in', exact: true })).toHaveValue('Woman');
+  await expect(dialog.getByRole('slider', { name: 'Distance', exact: true })).toHaveValue('15');
   expect(writes).toBe(1);
   expect(fixture.calls.filter(call => call.path.endsWith('/dating/enabled'))).toHaveLength(0);
 });
+
+for (const identity of [{ gender: 'Nonbinary', sexuality: 'Bisexual' }, { gender: 'Woman', sexuality: 'Queer' }])
+  test(`Dating asks for clarification only for ${identity.gender} / ${identity.sexuality}`, async ({ page }) => {
+    const fixture = await wiringFixture(page);
+    await page.goto('/profile?section=dating');
+    await expect(page.getByRole('group', { name: 'Who would you like to meet?', exact: true })).toHaveCount(0);
+    await page.getByRole('combobox', { name: 'Gender', exact: true }).selectOption(identity.gender);
+    await page.getByRole('combobox', { name: 'Sexuality', exact: true }).selectOption(identity.sexuality);
+    await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+    await page.getByRole('button', { name: 'Dating Profile', exact: true }).click();
+    const clarification = page.getByRole('group', { name: 'Who would you like to meet?', exact: true });
+    await expect(clarification).toBeVisible();
+    await clarification.getByRole('checkbox', { name: 'Woman', exact: true }).check();
+    await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
+    const writes = fixture.calls.filter(call => call.method === 'PUT' && call.path.endsWith('/dating-preferences'));
+    expect(writes.at(-1)?.body).toMatchObject({ profile: { ...identity, clarifiedTargets: ['Woman'], enabled: false } });
+    expect(fixture.calls.filter(call => call.path.endsWith('/dating/enabled'))).toHaveLength(0);
+  });

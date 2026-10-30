@@ -1,20 +1,19 @@
-import { useId, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useId, useRef, useState, type CSSProperties } from "react";
 import { Link } from 'react-router';
 import type { FriendsPreferences } from "../../shared/friends-search-preferences";
 import {
   DatingProfileSchema,
+  automaticDatingTargets,
+  datingNeedsClarification,
   type DatingProfile,
   type DatingSearch,
 } from "../../shared/dating";
-import type { SearchLocationReceipt } from "../../shared/search-locations";
-import { searchLocationClient } from "../features/matchmaking/search-location-client";
 import { useFriendsPreferences } from "../features/matchmaking/useFriendsPreferences";
 import { useDatingPreferences } from "../features/matchmaking/useDatingPreferences";
-import { useAction } from "./hooks";
-import { ActionButton, ErrorMessage, Icon, ResourceState } from "./common";
+import { ErrorMessage, Icon, ResourceState } from "./common";
 import { useCurrent } from "./current";
+import { LocationPicker } from './SearchAreaPicker';
 
-type SearchArea = FriendsPreferences["searchArea"];
 type Bounds = Pick<FriendsPreferences, "ageMin" | "ageMax" | "radiusMiles">;
 export function BoundsFields({
   value,
@@ -71,173 +70,30 @@ export function BoundsFields({
     </>
   );
 }
-export function LocationPicker({
-  mode,
-  value,
-  change,
-}: {
-  mode: "friends" | "dating";
-  value: SearchArea;
-  change: (area: SearchArea) => void;
-}) {
-  const current = useCurrent(),
-    client = useMemo(
-      () => searchLocationClient(current.session.access_token),
-      [current.session.access_token],
-    ),
-    action = useAction();
-  const [query, setQuery] = useState(""),
-    [places, setPlaces] = useState<
-      { id: string; label: string; region: string }[]
-    >([]),
-    [label, setLabel] = useState("");
-  function selected(receipt: SearchLocationReceipt) {
-    setLabel(receipt.areaLabel);
-    change(
-      receipt.source === "home"
-        ? { source: "home", resolvedLocationRef: receipt.id }
-        : {
-            source: "temporary",
-            areaLabel: receipt.areaLabel,
-            resolvedLocationRef: receipt.id,
-          },
-    );
-    setPlaces([]);
-  }
-  return (
-    <fieldset className="search-area">
-      <legend>Search area</legend>
-      <details className="search-area-editor">
-      <summary className="account-area">{label || (value.source === 'home' ? current.account?.profile?.location_city || 'Choose a home area' : value.areaLabel || 'Choose an area')}<Icon name="ChevronRight"/></summary>
-      <label>
-        Use
-        <select
-          value={value.source}
-          disabled={action.busy}
-          onChange={(event) => {
-            setLabel("");
-            change(
-              event.target.value === "home"
-                ? { source: "home", resolvedLocationRef: null }
-                : {
-                    source: "temporary",
-                    areaLabel:
-                      current.account?.profile?.location_city ||
-                      "Choose an area",
-                    resolvedLocationRef: null,
-                  },
-            );
-          }}
-        >
-          <option value="home">Home area</option>
-          <option value="temporary">Temporary search area</option>
-        </select>
-      </label>
-      <p className="account-note">
-        {label ||
-          (value.source === "home"
-            ? current.account?.profile?.location_city
-            : value.areaLabel)}{" "}
-        ·{" "}
-        {value.resolvedLocationRef
-          ? "Selected area saved with these preferences"
-          : "Choose a search result to confirm this area"}
-      </p>
-      <label>
-        Find a city or campus
-        <input
-          value={query}
-          maxLength={120}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </label>
-      <ActionButton
-        secondary
-        disabled={query.trim().length < 2 || action.busy}
-        onClick={() => {
-          void action.run(async () => {
-            const data = await client.lookup(query.trim());
-            setPlaces(data.places);
-          });
-        }}
-      >
-        Find areas
-      </ActionButton>
-      <div className="area-results">
-        {places.map((place) => (
-          <ActionButton
-            key={place.id}
-            secondary
-            disabled={action.busy}
-            onClick={() => {
-              void action.run(async () =>
-                selected(
-                  await client.resolve({
-                    requestId: crypto.randomUUID(),
-                    mode,
-                    source: value.source,
-                    placeId: place.id,
-                  }),
-                ),
-              );
-            }}
-          >
-            {place.label} · {place.region}
-          </ActionButton>
-        ))}
-      </div>
-      <p className="account-note">
-        Use your device location only if you want to share it for this search.
-      </p>
-      <ActionButton
-        secondary
-        disabled={action.busy || !navigator.geolocation}
-        onClick={() => {
-          void action.run(async () => {
-            const position = await new Promise<GeolocationPosition>(
-              (resolve, reject) =>
-                navigator.geolocation.getCurrentPosition(resolve, reject, {
-                  enableHighAccuracy: false,
-                  timeout: 15000,
-                  maximumAge: 0,
-                }),
-            );
-            if (position.coords.accuracy > 1000)
-              throw new Error(
-                "Your location is too imprecise. Choose a city or campus instead.",
-              );
-            selected(
-              await client.browser({
-                requestId: crypto.randomUUID(),
-                mode,
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracyMeters: position.coords.accuracy,
-                observedAt: new Date(position.timestamp).toISOString(),
-                consent: true,
-              }),
-            );
-          });
-        }}
-      >
-        Use my current location
-      </ActionButton>
-      <ErrorMessage>{action.error}</ErrorMessage>
-      </details>
-    </fieldset>
-  );
-}
 const defaultBounds: Bounds = { ageMin: 18, ageMax: 99, radiusMiles: 15 };
 function AgeRange({ value, change, commit }: { value: Pick<Bounds, 'ageMin' | 'ageMax'>; change: (value: Pick<Bounds, 'ageMin' | 'ageMax'>) => void; commit: () => void }) {
   return <div className="friends-age-field">
     <div className="row between"><span>Age range</span><output aria-live="polite">{value.ageMin}–{value.ageMax}</output></div>
-    <div className="friends-age-slider" style={{ '--age-min': `${(value.ageMin - 18) / 81 * 100}%`, '--age-max': `${(value.ageMax - 18) / 81 * 100}%` } as CSSProperties}>
+    <div className="friends-age-slider preference-slider" style={{ '--age-min': `${(value.ageMin - 18) / 81 * 100}%`, '--age-max': `${(value.ageMax - 18) / 81 * 100}%` } as CSSProperties}>
       <div className="friends-age-track"/>
       {(['ageMin', 'ageMax'] as const).map(key => <input key={key} type="range" min={18} max={99} step={1} aria-label={key === 'ageMin' ? 'Minimum age' : 'Maximum age'} value={value[key]}
         onChange={event => change({ ...value, [key]: key === 'ageMin' ? Math.min(+event.target.value, value.ageMax) : Math.max(+event.target.value, value.ageMin) })}
         onPointerUp={commit} onKeyUp={event => { if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) commit(); }} onBlur={commit}/>)}
     </div>
     <div className="row between friends-age-limits"><span>18</span><span>99</span></div>
+  </div>;
+}
+function DistanceRange({ value, change, commit }: { value: number; change: (value: number) => void; commit: () => void }) {
+  const id = useId();
+  const distance = value === 100 ? '100+ miles' : `${value} ${value === 1 ? 'mile' : 'miles'}`;
+  return <div className="dating-distance" style={{ '--distance': `${(value - 1) / 99 * 100}%` } as CSSProperties}>
+    <div className="row between"><label htmlFor={id}>Distance</label><output>{distance}</output></div>
+    <div className="distance-slider preference-slider"><div className="distance-track"/>
+    <input id={id} type="range" min={1} max={100} value={value} aria-valuetext={distance}
+      onChange={event => change(+event.target.value)} onPointerUp={commit} onBlur={commit}
+      onKeyUp={event => { if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) commit(); }}/>
+    </div>
+    <div className="row between dating-distance-limits"><span>1 mile</span><span>100+ miles</span></div>
   </div>;
 }
 export function FriendsPreferencesPanel({ done, onSavingChange }: { done: () => void; onSavingChange?: (saving: boolean) => void }) {
@@ -322,14 +178,24 @@ function FriendsForm({
   const selectedGoal = value.goals.length > 1 ? '__multiple__' : value.goals[0] ?? '';
   return (
     <form className="friends-preferences-form" onSubmit={event => { event.preventDefault(); void commit().then(() => { if (!locked.current && JSON.stringify(latest.current) === JSON.stringify(confirmed.current)) done(); }); }}>
-      <p className="account-note">Preferences apply immediately. Shared Profile edits have their own Save action.</p>
       <fieldset disabled={disabled}>
         <h3>Who you’d like to meet</h3>
         <AgeRange value={value} change={bounds => change({ ...latest.current, ...bounds })} commit={() => void commit()}/>
+        <DistanceRange value={value.radiusMiles} change={radiusMiles => change({ ...latest.current, radiusMiles })} commit={() => void commit()}/>
         <LocationPicker
           mode="friends"
           value={value.searchArea}
-          change={(searchArea) => change({ ...latest.current, searchArea }, !!searchArea.resolvedLocationRef)}
+          radiusMiles={value.radiusMiles}
+          disabled={disabled || saving}
+          save={async searchArea => {
+            if (disabled || locked.current) return false;
+            const next = { ...latest.current, searchArea };
+            locked.current = true;
+            try {
+              if (!await save(next)) return false;
+              confirmed.current = next; latest.current = next; setValue(next); setValidation(''); return true;
+            } finally { locked.current = false; }
+          }}
         />
         <label className="friends-goal">Friendship goal
           <select value={selectedGoal} onChange={event => change({ ...latest.current, goals: event.target.value ? [event.target.value] : [] }, true)}>
@@ -358,7 +224,8 @@ export function DatingPreferencesPanel({ done, view = 'all', onSavingChange }: {
   async function savePreferences(profile: DatingProfile, search: DatingSearch) {
     if (!resource.snapshot) return false;
     onSavingChange?.(true);
-    try { return !!await resource.save({ expectedProfileRevision: resource.snapshot.profileRevision, expectedSearchRevision: resource.snapshot.searchRevision, profile, search }); }
+    const nextProfile = automaticDatingTargets(profile) !== null ? { ...profile, clarifiedTargets: [] } : profile;
+    try { return !!await resource.save({ expectedProfileRevision: resource.snapshot.profileRevision, expectedSearchRevision: resource.snapshot.searchRevision, profile: nextProfile, search }); }
     finally { onSavingChange?.(false); }
   }
   return (
@@ -386,9 +253,10 @@ export function DatingPreferencesPanel({ done, view = 'all', onSavingChange }: {
             }
           }
           disabled={!resource.canWrite}
-          save={async (profile, search) => {
-            if (await savePreferences(profile, search)) done();
-          }}
+            save={async (profile, search) => {
+              if (await savePreferences(profile, search)) { done(); return true; }
+              return false;
+            }}
         />
       )}
     </>
@@ -398,11 +266,10 @@ function DatingSearchForm({ initialProfile, initialSearch, disabled, saving, sav
   initialProfile: DatingProfile; initialSearch: DatingSearch; disabled: boolean; saving: boolean;
   save: (profile: DatingProfile, search: DatingSearch) => Promise<boolean>; done: () => void;
 }) {
-  const distanceId = useId();
-  const [profile, setProfile] = useState(initialProfile), [search, setSearch] = useState(initialSearch), [validation, setValidation] = useState('');
+  const profile = initialProfile;
+  const [search, setSearch] = useState(initialSearch), [validation, setValidation] = useState('');
   const latest = useRef({ profile: initialProfile, search: initialSearch }), confirmed = useRef({ profile: initialProfile, search: initialSearch }), locked = useRef(false);
-  async function commit() {
-    const next = latest.current;
+  async function commit(next = latest.current) {
     if (JSON.stringify(next) === JSON.stringify(confirmed.current)) return true;
     if (disabled || locked.current) return false;
     if (!next.search.searchArea.resolvedLocationRef) { setValidation('Choose a search result to confirm your area before preferences can apply.'); return false; }
@@ -411,34 +278,18 @@ function DatingSearchForm({ initialProfile, initialSearch, disabled, saving, sav
     finally { locked.current = false; }
   }
   function changeSearch(next: DatingSearch, apply = false) { latest.current = { ...latest.current, search: next }; setSearch(next); if (apply) void commit(); }
-  const targets = profile.clarifiedTargets;
-  const interested = targets.length === 3 && ['Man', 'Woman', 'Nonbinary'].every(target => targets.includes(target)) ? 'everyone' : targets.length === 1 && ['Man', 'Woman', 'Nonbinary'].includes(targets[0]) ? targets[0] : targets.length ? 'saved' : '';
-  const distance = search.radiusMiles === 100 ? '100+ miles' : `${search.radiusMiles} ${search.radiusMiles === 1 ? 'mile' : 'miles'}`;
   return <form className="dating-search-form" onSubmit={event => { event.preventDefault(); void commit().then(ok => { if (ok) done(); }); }}>
     <fieldset disabled={disabled}>
       <h3>Who you’d like to meet</h3>
       <AgeRange value={search} change={bounds => changeSearch({ ...latest.current.search, ...bounds })} commit={() => void commit()}/>
-      <div className="dating-distance" style={{ '--distance': `${(search.radiusMiles - 1) / 99 * 100}%` } as CSSProperties}>
-        <div className="row between"><label htmlFor={distanceId}>Distance</label><output>{distance}</output></div>
-        <input id={distanceId} type="range" min={1} max={100} value={search.radiusMiles} aria-valuetext={distance}
-          onChange={event => changeSearch({ ...latest.current.search, radiusMiles: +event.target.value })} onPointerUp={() => void commit()} onBlur={() => void commit()}
-          onKeyUp={event => { if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) void commit(); }}/>
-        <div className="row between dating-distance-limits"><span>1 mile</span><span>100+ miles</span></div>
-      </div>
-      <LocationPicker mode="dating" value={search.searchArea} change={searchArea => changeSearch({ ...latest.current.search, searchArea }, !!searchArea.resolvedLocationRef)}/>
-      <label className="dating-interested">Interested in
-        <select value={interested} disabled={!profile.gender || !profile.sexuality} onChange={event => {
-          const next = { ...latest.current.profile, clarifiedTargets: event.target.value === 'everyone' ? ['Man', 'Woman', 'Nonbinary'] : [event.target.value] };
-          latest.current = { ...latest.current, profile: next }; setProfile(next); void commit();
-        }}>
-          <option value="" disabled>Choose who you’d like to meet</option>
-          <option value="everyone">Everyone</option><option value="Man">Men</option><option value="Woman">Women</option><option value="Nonbinary">Nonbinary people</option>
-          {interested === 'saved' && <option value="saved">{targets.join(' · ')}</option>}
-        </select>
-      </label>
+      <DistanceRange value={search.radiusMiles} change={radiusMiles => changeSearch({ ...latest.current.search, radiusMiles })} commit={() => void commit()}/>
+      <LocationPicker mode="dating" value={search.searchArea} radiusMiles={search.radiusMiles} disabled={disabled || saving}
+        save={async searchArea => {
+          const next = { ...latest.current, search: { ...latest.current.search, searchArea } };
+          if (!await commit(next)) return false;
+          latest.current = next; setSearch(next.search); return true;
+        }}/>
     </fieldset>
-    {(!profile.gender || !profile.sexuality) && <p className="account-note">Add your Dating identity in Edit profile before choosing who you’d like to meet.</p>}
-    <p className="account-note">Preferences apply immediately. Dating participation stays unchanged.</p>
     <ErrorMessage>{validation}</ErrorMessage>
     {saving && <p className="account-note" role="status">Saving preferences…</p>}
     <section className="dating-preference-summary"><h3>Your Dating profile</h3><dl>
@@ -459,7 +310,7 @@ function DatingForm({
   initialProfile: DatingProfile;
   initialSearch: DatingSearch;
   disabled: boolean;
-  save: (profile: DatingProfile, search: DatingSearch) => Promise<void>;
+  save: (profile: DatingProfile, search: DatingSearch) => Promise<boolean>;
   view?: 'all' | 'profile';
   cancel?: () => void;
   saving?: boolean;
@@ -481,7 +332,7 @@ function DatingForm({
       }}
     >
       <fieldset disabled={disabled}>
-        {view === 'profile' ? <p className="account-note">These describe you. Who you want to meet is set in Dating preferences.</p> : <h3>Your Dating profile</h3>}
+        {view === 'all' && <h3>Your Dating profile</h3>}
         {(["gender", "sexuality"] as const).map((key) => {
           const options =
             key === "gender"
@@ -517,12 +368,12 @@ function DatingForm({
             </label>{view === 'profile' && <label className="account-check"><input type="checkbox" checked={profile.visibility[key]} onChange={event => setProfile({ ...profile, visibility: { ...profile.visibility, [key]: event.target.checked } })}/>Show {key} in Dating</label>}</div>
           );
         })}
-        {establishedIdentityChanged ? (
+        {establishedIdentityChanged && datingNeedsClarification(profile) ? (
           <p className="account-note">
             Save your identity change first, then reopen preferences to confirm
             who you’d like to meet.
           </p>
-        ) : view === 'all' ? (
+        ) : datingNeedsClarification(profile) ? (
           <fieldset
             disabled={!profile.gender || !profile.sexuality}
           >
@@ -635,12 +486,14 @@ function DatingForm({
         <LocationPicker
           mode="dating"
           value={search.searchArea}
-          change={(searchArea) => setSearch({ ...search, searchArea })}
+          radiusMiles={search.radiusMiles}
+          disabled={disabled || saving}
+          save={async searchArea => {
+            const next = { ...search, searchArea };
+            if (!await save(profile, next)) return false;
+            setSearch(next); return true;
+          }}
         /></>}
-        <p className="account-note">
-          Saving preferences keeps Dating paused. Start discovery separately
-          when you’re ready.
-        </p>
         {view === 'all' && <button className="btn">Save Dating preferences</button>}
       </fieldset>
       {view === 'profile' && <div className="profile-save-bar"><button type="button" className="btn light" disabled={saving} onClick={cancel}>Cancel</button><button className="btn" disabled={disabled}>{saving ? 'Saving…' : 'Save changes'}</button></div>}

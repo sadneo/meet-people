@@ -18,19 +18,20 @@
 .friends-preferences-form legend,
 .friends-age-field > .row:first-child { font-size: 13px; font-weight: 600; }
 .friends-age-field output { font-size: 14px; }
-.friends-age-slider { position: relative; height: 44px; margin: 12px 12px 0; }
-.friends-age-track { position: absolute; top: 20px; left: 0; right: 0; height: 4px; border-radius: 4px; background: linear-gradient(to right, #e3d8cc 0 var(--age-min), var(--green) var(--age-min) var(--age-max), #e3d8cc var(--age-max) 100%); }
-.friends-age-slider input[type=range] { appearance: none; -webkit-appearance: none; position: absolute; inset: 0; width: 100%; height: 44px; min-height: 0; margin: 0; padding: 0; border: 0; background: transparent; pointer-events: none; }
-.friends-age-slider input[type=range]::-webkit-slider-runnable-track { height: 4px; background: transparent; border: 0; }
-.friends-age-slider input[type=range]::-moz-range-track { height: 4px; background: transparent; border: 0; }
-.friends-age-slider input[type=range]::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border: 1px solid #d9bca6; border-radius: 50%; background: #fffdf9; box-shadow: 0 2px 5px #302b2820; pointer-events: auto; cursor: grab; }
-.friends-age-slider input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border: 1px solid #d9bca6; border-radius: 50%; background: #fffdf9; box-shadow: 0 2px 5px #302b2820; pointer-events: auto; cursor: grab; }
-.friends-age-slider input:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 4px; }
-.friends-age-limits { margin: 0 12px 20px; color: var(--muted); font-size: 13px; font-weight: 400; }
+.preference-slider { position: relative; height: 44px; margin: 12px 0 0; }
+.friends-age-track, .distance-track { position: absolute; top: 20px; left: 10px; right: 10px; height: 4px; border-radius: 4px; }
+.friends-age-track { background: linear-gradient(to right, #e3d8cc 0 var(--age-min), var(--green) var(--age-min) var(--age-max), #e3d8cc var(--age-max) 100%); }
+.distance-track { background: linear-gradient(to right, var(--green) var(--distance), #e3d8cc var(--distance)); }
+.preference-slider input[type=range] { appearance: none; -webkit-appearance: none; position: absolute; inset: 0; width: 100%; height: 44px; min-height: 0; margin: 0; padding: 0; border: 0; background: transparent; pointer-events: none; }
+.preference-slider input[type=range]::-webkit-slider-runnable-track { height: 4px; background: transparent; border: 0; }
+.preference-slider input[type=range]::-moz-range-track { height: 4px; background: transparent; border: 0; }
+.preference-slider input[type=range]::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border: 1px solid #d9bca6; border-radius: 50%; background: #fffdf9; box-shadow: 0 2px 5px #302b2820; pointer-events: auto; cursor: grab; }
+.preference-slider input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border: 1px solid #d9bca6; border-radius: 50%; background: #fffdf9; box-shadow: 0 2px 5px #302b2820; pointer-events: auto; cursor: grab; }
+.preference-slider input:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 4px; }
+.distance-slider input[type=range] { pointer-events: auto; }
+.friends-age-limits { margin: 0 10px 20px; color: var(--muted); font-size: 13px; font-weight: 400; }
 .friends-preferences-form .search-area { margin-bottom: 12px; }
-.friends-preferences-form .search-area legend { margin-bottom: 6px; }
-.friends-preferences-form .search-area-editor > summary { display: inline-flex; width: fit-content; max-width: 100%; min-height: 50px; padding: 10px 23px; border: 1px solid var(--line); border-radius: 15px; background: #fffdf9; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
-.friends-preferences-form .search-area-editor > summary .ui-icon { display: none; }
+.friends-preferences-form .dating-distance { margin-bottom: 22px; }
 .friends-preferences-form .friends-goal { display: grid; gap: 7px; margin: 0; }
 .friends-preferences-form .friends-goal select { width: 100%; min-height: 48px; margin: 0; border: 1px solid var(--line); border-radius: 13px; background: #fcfaf7; padding: 10px 13px; font-size: 15px; font-weight: 400; }
 .friends-shared-interests { margin-top: 30px; }
@@ -45,18 +46,10 @@
 .dating-search-form h3 { margin: 0 0 24px; font-size: 17px; letter-spacing: -.5px; }
 .dating-search-form label, .dating-search-form legend { font-size: 13px; font-weight: 600; }
 .dating-search-form .search-area { margin: 22px 0; }
-.dating-search-form .search-area legend { margin-bottom: 7px; }
-.dating-search-form .search-area-editor > summary { display: inline-flex; width: fit-content; max-width: 100%; min-height: 50px; padding: 10px 23px; border: 1px solid var(--line); border-radius: 15px; background: #fffdf9; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
-.dating-search-form .search-area-editor > summary .ui-icon { display: none; }
-.dating-search-form .dating-interested { display: grid; gap: 8px; margin: 0; }
-.dating-search-form .dating-interested select { width: 100%; min-height: 48px; margin: 0; padding: 10px 13px; border: 1px solid var(--line); border-radius: 13px; background: #fcfaf7; font-size: 15px; font-weight: 400; }
 .dating-search-form > .account-note { margin: 14px 0 28px; font-size: 12px; color: #897563; line-height: 1.7; }
 .dating-distance .row > label { margin: 0; }
 .dating-distance output { font-size: 14px; font-weight: 600; }
-.dating-distance input[type=range] { display: block; width: 100%; }
-.dating-distance input[type=range]::-webkit-slider-runnable-track { background: linear-gradient(to right, var(--green) var(--distance), #e3d8cc var(--distance)); }
-.dating-distance input[type=range]::-moz-range-track { background: linear-gradient(to right, var(--green) var(--distance), #e3d8cc var(--distance)); }
-.dating-distance-limits { color: var(--muted); font-size: 12px; padding-inline: 10px; }
+.dating-distance-limits { color: var(--muted); font-size: 13px; padding-inline: 10px; }
 .dating-preference-summary { margin-top: 26px; padding-top: 28px; border-top: 1px solid var(--line); }
 .dating-preference-summary dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 26px 0; }
 .dating-preference-summary dt { margin-bottom: 8px; font-size: 12px; color: #897563; }

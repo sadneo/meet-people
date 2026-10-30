@@ -20,6 +20,14 @@ for (const width of [320, 390]) {
     }
     await page.getByLabel('Display name', { exact: true }).fill('Unsaved name');
     await page.getByRole('button', { name: 'Interests & Availability', exact: true }).click();
+    const from = await page.getByLabel('From', { exact: true }).first().boundingBox();
+    const until = await page.getByLabel('Until', { exact: true }).first().boundingBox();
+    const day = await page.getByRole('combobox', { name: 'Day', exact: true }).first().boundingBox();
+    expect(Math.abs(from!.y - until!.y)).toBeLessThan(2);
+    expect(from!.x + from!.width).toBeLessThanOrEqual(until!.x);
+    expect(day!.y + day!.height).toBeLessThanOrEqual(from!.y);
+    await page.locator('.availability-inputs').first().evaluate(element => window.scrollBy(0, element.getBoundingClientRect().top - 150));
+    await page.screenshot({ path: testInfo.outputPath('availability-row.png') });
     await page.getByRole('button', { name: 'About You', exact: true }).click();
     await expect(page.getByLabel('Display name', { exact: true })).toHaveValue('Unsaved name');
     await expect(page.getByRole('complementary', { name: 'Development navigation' })).toBeVisible();

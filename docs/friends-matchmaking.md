@@ -79,8 +79,9 @@ version, even if the owner has enabled summary visibility.
 ## API contract
 
 All paths below are under `/api/matchmaking/friends`, require a bearer token, and
-return `Cache-Control: no-store`. The rollout flag is `FRIENDS_RULES_ENABLED`,
-default false, independent of `DATING_RULES_ENABLED`.
+return `Cache-Control: no-store`. Friends recommendations are enabled by default
+with configured server credentials and authenticated actor transport; there is
+no environment rollout flag. Missing configuration remains an unavailable state.
 
 ### POST `/recommendations`
 
@@ -188,7 +189,7 @@ prove live Supabase/Auth/PostgREST behavior. No browser/device verification is
 claimed because frontend hookup is deferred.
 
 Focused tests cover scoring, aliases, missing data, bounded batches, projection
-withdrawal/order/privacy, verified actor binding, disabled flags, request vs
+withdrawal/order/privacy, verified actor binding, missing configuration, request vs
 acceptance, uncertain readbacks, and separate service/actor SDK calls. Dating's
 existing scorer tests also cover the extracted common interval implementation.
 
@@ -200,9 +201,9 @@ queries/provider calls. This is CPU-only at concurrency 1, not a claim about API
 latency, SQL load, production capacity or a dollar operating cost. No new paid
 provider, dependency, service or worker is introduced.
 
-Rollback API ranking with `FRIENDS_RULES_ENABLED=false`; preserve all additive
-schedule metadata, connections and chat history. This is an API rollout flag,
-not a replacement for database ACLs. Do not drop user data to roll back ranking.
+Rollback API ranking through a reviewed application deployment; preserve all
+additive schedule metadata, connections and chat history. Database ACLs remain
+authoritative. Do not drop user data to roll back ranking.
 
 ## Follow-on work
 

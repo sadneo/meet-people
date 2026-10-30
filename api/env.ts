@@ -16,9 +16,10 @@ export const ApiEnvSchema = z
     SUPABASE_URL: z.string().url().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
     SUPABASE_PUBLISHABLE_KEY: z.string().refine(isPublicSupabaseKey, 'Must be a public publishable or anon key.').optional(),
-    DATING_RULES_ENABLED: z.enum(['true', 'false']).default('false'),
-    FRIENDS_RULES_ENABLED: z.enum(['true', 'false']).default('false'),
-    ACTIVE_FRIENDS_ENABLED: z.enum(['true', 'false']).default('false'),
+    GOOGLE_MAPS_SERVER_API_KEY: z.string().min(1).optional(),
+    SEARCH_LOCATION_SIGNING_KEY: z.string().regex(/^[a-f0-9]{64}$/i).optional(),
+    GOOGLE_MAPS_STORAGE_APPROVED: z.enum(['true', 'false']).default('false'),
+    GOOGLE_MAPS_REQUESTS_PER_DAY: z.coerce.number().int().min(1).max(100000).default(2000),
   })
   .refine(
      (env) => Boolean(env.SUPABASE_URL) === Boolean(env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_PUBLISHABLE_KEY),

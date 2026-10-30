@@ -41,7 +41,7 @@ export async function provisionDevelopmentAccount(existing?: { accountId: string
   if (current.error) throw current.error
   if (!current.data?.profile || (current.data.completed?.length ?? 0) < 4) {
     const account = SaveAccountSchema.parse({ ...emptyAccount,
-      profile: { username: 'pebble_development', display_name: 'Development User', bio: 'Local development account', avatar_url: null, interests: ['Coffee', 'Books', 'Games'], birthdate: '2000-01-01', location_city: 'Stony Brook', availability: [{ dow: 1, start_time: '09:00:00', end_time: '17:00:00' }] },
+      profile: { username: 'pebble_development', display_name: 'Development User', bio: 'Local development account', avatar_url: null, interests: ['Coffee', 'Art', 'Music'], birthdate: '2000-01-01', location_city: 'Stony Brook', availability: [{ dow: 1, start_time: '09:00:00', end_time: '17:00:00' }] },
       preferences: { intents: ['Make friends'], usual: ['Afternoons'], distance: 'Nearby', group: 'Either' }, completed: [0, 1, 2, 3],
     })
     const count = Math.min(4, (current.data?.completed?.length ?? 0) + 1)

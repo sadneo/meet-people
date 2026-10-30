@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { ModalLayerContext } from './modal-layer';
 import { Link } from "react-router";
 import { useProfilePhoto } from "../features/account/useProfilePhoto";
 
@@ -189,6 +190,18 @@ export function Modal({
   className?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+  const [layerBack, setLayerBack] = useState<(() => void) | null>(null);
+  const layerOpener = useRef<HTMLElement | null>(null);
+  const activate = useCallback((back: () => void) => {
+    layerOpener.current = document.activeElement as HTMLElement | null;
+    setLayerBack(() => back);
+    return () => setLayerBack(null);
+  }, []);
+  useLayoutEffect(() => {
+    if (!layerBack && layerOpener.current) { layerOpener.current.focus(); layerOpener.current = null; }
+  }, [layerBack]);
+  const goBack = layerBack ?? close;
   const titleId = useId();
   useEffect(() => {
     const element = dialog.current!,
@@ -202,7 +215,7 @@ export function Modal({
   return (
     <dialog
       ref={dialog}
-      className={`account-modal ${className}`}
+      className={`account-modal ${className} ${layerBack ? 'has-modal-layer' : ''}`}
       aria-labelledby={titleId}
       onKeyDown={(event) => {
         if (event.key !== 'Tab') return;
@@ -218,19 +231,22 @@ export function Modal({
       }}
       onCancel={(event) => {
         event.preventDefault();
-        close();
+        goBack();
       }}
       onClick={(event) => {
-        if (event.target === dialog.current) close();
+        if (event.target === dialog.current) goBack();
       }}
     >
-      <header className="row between">
+      <header className="row between" hidden={!!layerBack}>
         <h2 id={titleId}>{title}</h2>
         <button className="round" onClick={close} aria-label="Close">
           ×
         </button>
       </header>
-      {children}
+      <ModalLayerContext.Provider value={{ host, activate }}>
+        <div className="modal-content" hidden={!!layerBack}>{children}</div>
+        <div ref={setHost} className="modal-layer-host" hidden={!layerBack}/>
+      </ModalLayerContext.Provider>
     </dialog>
   );
 }

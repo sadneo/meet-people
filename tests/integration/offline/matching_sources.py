@@ -36,4 +36,7 @@ SOURCES = [
     'supabase/migrations/20261029000000_discovery_profile_details.sql',
     'supabase/migrations/20261029000100_relationship_modes.sql',
     'supabase/migrations/20261029000200_friends_discovery_default.sql',
+    'supabase/migrations/20261029000300_dating_automatic_targets.sql',
+    'supabase/migrations/20261029000400_profile_interest_limits.sql',
+    'supabase/migrations/20261030000000_google_search_locations.sql',
 ]

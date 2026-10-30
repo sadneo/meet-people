@@ -12,6 +12,7 @@ import type { ProfileDetails } from "../../shared/profile-details";
 import { ProfileFactsSchema } from '../../shared/profile-details';
 import { safeReturnTo } from "../auth/returnTo";
 import { globalInterestChoices } from "../features/account/global-interests";
+import { customInterestLimit, interestAdditionProblem, interestCounts, interestLimit } from '../../shared/interests';
 import { useProfileDetails } from "../features/account/useProfileDetails";
 import {
   photoChangedEvent,
@@ -53,19 +54,20 @@ export function Interests({
   const [custom, setCustom] = useState("");
   return (
     <fieldset>
-      <legend className={compact ? 'sr-only' : undefined}>Interests · choose at least three</legend>
+      <legend className={compact ? 'sr-only' : undefined}>Interests · choose at least three from the provided list</legend>
       <div className="interest-chips">
         {[...new Set([...suggestions, ...value])].map((label) => (
           <button
             type="button"
             key={label}
             className={`chip ${value.includes(label) ? "selected" : ""}`}
-            aria-pressed={value.includes(label)}
+             aria-pressed={value.includes(label)}
+            disabled={!value.includes(label) && value.length >= interestLimit}
             onClick={() =>
               change(
                 value.includes(label)
                   ? value.filter((item) => item !== label)
-                  : value.length < 30
+                  : value.length < interestLimit
                     ? [...value, label]
                     : value,
               )
@@ -80,15 +82,16 @@ export function Interests({
           {compact ? 'Add your own' : 'Custom interest'}
           <input
             maxLength={120}
+            disabled={value.length >= interestLimit || interestCounts(value).custom >= customInterestLimit}
             value={custom}
             onChange={(event) => setCustom(event.target.value)}
           />
         </label>
         <ActionButton
           secondary
-          disabled={!custom.trim() || value.length >= 30}
+          disabled={!!interestAdditionProblem(custom, value)}
           onClick={() => {
-            if (!value.includes(custom.trim()))
+            if (!interestAdditionProblem(custom, value))
               change([...value, custom.trim()]);
             setCustom("");
           }}
@@ -715,8 +718,7 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
             <details className="profile-account-details"><summary>Account username</summary><label>Username<input required maxLength={80} value={profile.username} onChange={event => update({ username: event.target.value })}/></label></details>
           </div>
           <div hidden={section !== 'interests'}>
-            <h3 className="account-section-label">Interests <span>{profile.interests.length}/30</span></h3>
-            <p className="account-note">Shared across your Profile and Friends.</p>
+            <h3 className="account-section-label">Interests <span>{profile.interests.length}/{interestLimit}</span></h3>
             <Interests compact value={profile.interests} change={interests => update({ interests })}/>
             <div className="account-divider"/>
             <h3 className="account-section-label">Weekly availability</h3>

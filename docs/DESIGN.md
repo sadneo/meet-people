@@ -64,6 +64,19 @@ does not enable participation. Device location requires an explicit action;
 Profile home and per-mode search areas stay separate. Interests and weekly
 availability use one canonical Profile resource.
 
+Dating targets derive from clear gender/sexuality labels with reciprocal checks;
+only ambiguous/nonbinary combinations require clarification. Interests are capped
+at five, with at least three provided choices and at most two custom labels.
+Avoid persistent explanatory microcopy when labels suffice; show errors and required
+clarification only when relevant. Availability From/Until fields share a row on mobile.
+
+Search area uses one summary row and a Google map picker subview, full-screen on
+mobile. Search neighborhoods, optionally center with device location, then move the
+map beneath a fixed pin and explicitly confirm. No Home/Temporary selector, GPS on
+mount, background tracking, or public people/pins map. Keep map attribution visible;
+opening and canceling never change saved preferences. Missing configuration shows
+an unavailable state, never a synthetic production map.
+
 Garden remains a local creative scene. It does not claim real meetings, attendance,
 account rewards or another person’s garden history. Its local balance and
 purchases reset on refresh or sign-out. Unsupported planning, group growth,

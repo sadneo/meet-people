@@ -18,4 +18,11 @@ describe('environment validation', () => {
     expect(() => parseBrowserEnv({ VITE_SUPABASE_URL: 'https://example.supabase.co' })).toThrow()
     expect(() => parseApiEnv({ SUPABASE_SERVICE_ROLE_KEY: 'server-key' })).toThrow()
   })
+
+  it('has no matchmaking feature flags to configure or default off', () => {
+    const env = parseApiEnv({})
+    expect(env).not.toHaveProperty('DATING_RULES_ENABLED')
+    expect(env).not.toHaveProperty('FRIENDS_RULES_ENABLED')
+    expect(env).not.toHaveProperty('ACTIVE_FRIENDS_ENABLED')
+  })
 })

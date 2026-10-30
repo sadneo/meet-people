@@ -21,6 +21,11 @@ for (const width of [320, 626]) test(`Friends preferences match the reference an
   const dialog = page.getByRole('dialog', { name: 'Friends preferences' });
   await expect(dialog.getByRole('slider', { name: 'Minimum age', exact: true })).toHaveValue('18');
   await expect(dialog.getByRole('slider', { name: 'Maximum age', exact: true })).toHaveValue('26');
+  await expect(dialog.getByRole('slider', { name: 'Distance', exact: true })).toHaveValue('15');
+  const ageTrack = await dialog.locator('.friends-age-track').boundingBox();
+  const distanceTrack = await dialog.locator('.distance-track').boundingBox();
+  expect(Math.abs(ageTrack!.x - distanceTrack!.x)).toBeLessThan(1);
+  expect(Math.abs(ageTrack!.width - distanceTrack!.width)).toBeLessThan(1);
   await expect(dialog.getByRole('combobox', { name: 'Friendship goal', exact: true })).toHaveValue('New friends');
   await expect(dialog.getByRole('button', { name: 'Done', exact: true })).toBeVisible();
   expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
@@ -29,13 +34,22 @@ for (const width of [320, 626]) test(`Friends preferences match the reference an
   await expect.poll(() => writes.length).toBe(1);
   await expect(dialog.getByRole('button', { name: 'Done', exact: true })).toBeEnabled();
   expect(preferences.ageMax).toBe(27);
-  await dialog.getByRole('combobox', { name: 'Friendship goal', exact: true }).selectOption('Study buddies');
+  await dialog.getByRole('slider', { name: 'Distance', exact: true }).press('End');
   await expect.poll(() => writes.length).toBe(2);
+  await expect(dialog.getByRole('button', { name: 'Done', exact: true })).toBeEnabled();
+  expect(preferences.radiusMiles).toBe(100);
+  await expect(dialog.getByRole('slider', { name: 'Distance', exact: true })).toHaveAttribute('aria-valuetext', '100+ miles');
+  await expect(dialog.locator('.dating-distance output')).toHaveText('100+ miles');
+  await dialog.getByRole('combobox', { name: 'Friendship goal', exact: true }).selectOption('Study buddies');
+  await expect.poll(() => writes.length).toBe(3);
   await expect(dialog.getByRole('button', { name: 'Done', exact: true })).toBeEnabled();
   expect(preferences.goals).toEqual(['Study buddies']);
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(dialog).toHaveCount(0);
+  await page.getByRole('button', { name: 'Friends preferences', exact: true }).click();
+  await expect(dialog.getByRole('slider', { name: 'Distance', exact: true })).toHaveValue('100');
+  expect(fixture.calls.filter(call => call.path.endsWith('/dating-preferences') && call.method === 'PUT')).toHaveLength(0);
   expect(fixture.calls.filter(call => call.path.endsWith('/account') && call.method === 'PUT')).toHaveLength(0);
 });
 

@@ -103,6 +103,7 @@ export function Legal({ kind }: { kind: "terms" | "privacy" | "cookies" }) {
             ))}
           </section>
         ))}
+        {(kind === 'privacy' || kind === 'terms') && <p>Map features are subject to the <a href="https://maps.google.com/help/terms_maps/">Google Maps Terms of Service</a> and <a href="https://policies.google.com/privacy">Google Privacy Policy</a>.</p>}
         <p>
           Contact{" "}
           <a href={`mailto:${legalPublication.contactEmail}`}>

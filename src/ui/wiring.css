@@ -316,14 +316,17 @@ legend {
 }
 .availability-inputs {
   display: grid;
-  grid-template-columns: 1.1fr 1fr 1fr auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   align-items: end;
   margin-bottom: 12px;
 }
 .availability-inputs label {
   margin: 0;
+  min-width: 0;
 }
+.availability-inputs > label:first-child { grid-column: 1 / -1; }
+.availability-inputs input[type="time"], .availability-inputs select { width: 100%; min-width: 0; }
 .availability-inputs .btn {
   padding: 12px;
   font-size: 12px;
@@ -848,7 +851,7 @@ legend {
 }
 @media (max-width: 1000px) {
   .availability-inputs {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .profile-layout,
   .settings-layout {
@@ -1005,7 +1008,11 @@ legend {
     grid-template-columns: 1fr;
   }
   .availability-inputs {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .live-profile .account-edit-fields .availability-inputs input[type="time"] {
+    padding-inline: 8px;
+    font-size: 14px;
   }
   .live-message {
     max-width: 94%;

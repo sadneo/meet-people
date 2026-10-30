@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { conversationId, peer, wiringFixture } from "./wiring-fixture";
+import { mockLocationPicker } from './location-picker-fixture';
 
 test("public entry and private routes use the new frontend with real sign-in gates", async ({
   page,
@@ -79,19 +80,16 @@ test("Friends preferences resolve a server-owned area and save revisioned filter
   page,
 }) => {
   const fixture = await wiringFixture(page);
+  await mockLocationPicker(page);
   await page.goto("/matchmaking");
   await page
     .getByRole("button", { name: "Friends preferences", exact: true })
     .click();
-  await page.locator('.search-area-editor > summary').click();
-  await page.getByLabel("Find a city or campus").fill("Stony Brook");
-  await page.getByRole("button", { name: "Find areas", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Stony Brook University · New York" })
-    .click();
-  await expect(
-    page.getByText(/Selected area saved with these preferences/),
-  ).toBeVisible();
+  await page.getByRole('button', { name: /Search area.*Campus/ }).click();
+  await page.getByRole('combobox', { name: 'Search city or neighborhood' }).fill('Brooklyn');
+  await page.getByRole('button', { name: 'Brooklyn, NY', exact: true }).click();
+  await page.getByRole('button', { name: 'Set search area', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Search area Brooklyn, NY' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeEnabled();
   await page.getByRole('slider', { name: 'Minimum age', exact: true }).focus();
   await page.getByRole('slider', { name: 'Minimum age', exact: true }).press('ArrowRight');

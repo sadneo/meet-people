@@ -67,7 +67,7 @@ try:
     print('PASS: all historical/reconciled and new matching migrations installed with real PostGIS; synthetic Auth/provider boundary',flush=True)
     context=acceptance(check,rpc,sql,ROOT)
     races(check,rpc,sql,ROOT,base,env,database,context)
-    for acceptance_path in ['tests/integration/sql/dating-rules.sql','tests/integration/sql/friends-discovery.sql','tests/integration/sql/discovery-profile-details.sql']:
+    for acceptance_path in ['tests/integration/sql/dating-rules.sql','tests/integration/sql/friends-discovery.sql','tests/integration/sql/discovery-profile-details.sql','tests/integration/sql/profile-interest-limits.sql','tests/integration/sql/google-search-locations.sql']:
         sql("set pebble.safety_owner_test_target='network-none-safety-owner-v1';\n"+(ROOT/acceptance_path).read_text())
         print('PASS:',acceptance_path,flush=True)
     demo_tools(check,sql,ROOT,database)
