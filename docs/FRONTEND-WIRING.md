@@ -1,5 +1,10 @@
 # Alternate frontend integration
 
+For the October 29 local database activation and native UUID messaging adapters,
+see [local backend activation](local-backend-activation.md). That later work fixes
+missing live feature RPCs; the frontend merge verification below remains its own
+historical scope.
+
 `wiring` starts at `origin/main` (`bfbb2a8`) and includes the alternate frontend
 snapshot (`108e15a`, cherry-picked as `1df6aff`). The standalone fixture app has
 been replaced by React screens in `src/ui`. Normal `pnpm dev` and build commands
@@ -48,7 +53,9 @@ device behavior still require the configured target environment.
 
 - TypeScript app/API checks and web/API builds passed.
 - Retained unit suite: 342 tests in 55 files passed.
-- Replacement frontend browser suite: 23 tests passed.
+- Replacement frontend browser suite: 33 tests passed, including concurrent
+  account edits, failed-save draft reconciliation, Friends profile retries and
+  normalized password recovery routes in `tests/browser/wiring-regressions.spec.ts`.
 - Production artifact smoke: one test passed, using a synthetic loopback API
   configuration and no real database credentials.
 - Focused lint for the new UI, safety client and browser tests passed;

@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { EventsResponseSchema, EventSchema } from "../../shared/events";
+import type { EventGroupQueue } from "../../shared/matchmaking";
 import {
   eventRequest,
   eventDate,
@@ -103,7 +104,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
                 {[event.location_name, event.city].filter(Boolean).join(' · ') || 'Location to be announced'}
               </span></span>
               <div className="event-card-footer">
-                <span className="event-company"><Icon name="Friends" /><span>{event.interested_count} {event.interested_count === 1 ? 'person' : 'people'} looking for company</span></span>
+                <span className="event-company"><Icon name="Friends" /><span>Find people looking for company</span></span>
                 <span className="event-cta">See event &amp; people <Icon name="ArrowRight" /></span>
               </div>
               </div>
@@ -156,6 +157,20 @@ export function EventDetail({ publicView = false }: { publicView?: boolean }) {
     );
   const event = resource.value,
     source = event ? sourceLink(event.source_url) : null;
+  const [now, setNow] = useState(Date.now);
+  const startsAt = Date.parse(event?.starts_at ?? "");
+  useEffect(() => {
+    if (!Number.isFinite(startsAt) || startsAt <= now) return;
+    const timer = setTimeout(
+      () => setNow(Date.now()),
+      Math.min(Math.max(0, startsAt - Date.now()), 2_147_483_647),
+    );
+    return () => clearTimeout(timer);
+  }, [startsAt, now]);
+  const groupAvailable =
+    !!event &&
+    ["active", "rescheduled"].includes(event.status) &&
+    startsAt > now;
   return (
     <div className="event-detail">
       {!event && <Link className="account-back" to={publicView ? "/explore" : "/events"}>‹ Events</Link>}
@@ -185,7 +200,7 @@ export function EventDetail({ publicView = false }: { publicView?: boolean }) {
               .filter(Boolean)
               .join(" · ") || "Location to be announced"}
           </p>
-          <p className="event-company"><Icon name="Friends"/>{event.interested_count} {event.interested_count === 1 ? 'person' : 'people'} looking for company</p>
+          <p className="event-company"><Icon name="Friends"/>Find people looking for company</p>
           {source && (
             <a
               className="btn light"
@@ -196,7 +211,7 @@ export function EventDetail({ publicView = false }: { publicView?: boolean }) {
               View original listing
             </a>
           )}
-          {publicView ? (
+          {publicView ? groupAvailable ? (
             <p>
               <Link
                 className="btn"
@@ -206,24 +221,44 @@ export function EventDetail({ publicView = false }: { publicView?: boolean }) {
               </Link>
             </p>
           ) : (
-            <EventGroup id={event.id} />
+            <p>Group matching is closed for this event.</p>
+          ) : (
+            <EventGroup id={event.id} available={groupAvailable} />
           )}
         </>
       )}
     </div>
   );
 }
-function EventGroup({ id }: { id: string }) {
+function EventGroup({ id, available }: { id: string; available: boolean }) {
   const current = useCurrent(),
     client = useMemo(
       () => matchmakingClient(current.session.access_token),
       [current.session.access_token],
     ),
     action = useAction();
-  const state = useLoad(useCallback(() => client.groupQueue(id), [client, id]));
+  const shouldPoll = useCallback(
+    (value: EventGroupQueue) => available && !action.busy && value.state === "waiting",
+    [available, action.busy],
+  );
+  const state = useLoad(
+    useCallback((signal) => client.groupQueue(id, signal), [client, id]),
+    { intervalMs: 3000, shouldPoll },
+  );
   return (
     <section className="event-group-controls">
-      <h3>Find a group to go with</h3>
+      <h3 className="event-group-heading" aria-live="polite">
+        {available && state.value?.state === "waiting" && (
+          <span className="group-search-spinner" aria-hidden="true" />
+        )}
+        {state.value?.state === "proposal"
+          ? "Suggested group"
+          : !available
+            ? "Group matching closed"
+            : state.value?.state === "waiting"
+              ? "Waiting for a group"
+              : "Find a group to go with"}
+      </h3>
       <ResourceState
         loading={state.loading}
         error={state.error}
@@ -232,7 +267,7 @@ function EventGroup({ id }: { id: string }) {
       <ErrorMessage>{action.error}</ErrorMessage>
       {state.value?.state === "proposal" ? (
         <>
-          <p>Your group proposal is ready.</p>
+          <p>Here are the people in your suggested group for this event.</p>
           <div className="proposal-members">
             {state.value.proposal?.members.map((member) => (
               <div key={member.id}>
@@ -246,21 +281,32 @@ function EventGroup({ id }: { id: string }) {
             ))}
           </div>
           <p className="account-note">
-            A proposal doesn’t confirm attendance or create a group chat.
+            A suggested group doesn’t confirm attendance or create a group chat.
           </p>
         </>
       ) : (
         state.value && (
           <p>
-            {state.value.state === "waiting"
-              ? "You’re in this event’s group queue. Check back for a proposal."
-              : "Join the queue to find other people interested in going."}
+            {!available
+              ? "Group matching is closed for this event."
+              : state.value.state === "waiting"
+                ? "You’re in this event’s queue. Your group will appear here automatically when it’s ready."
+                : "Join the queue to find other people interested in going."}
           </p>
         )
       )}
       <div className="row wrap">
-        {state.value && (
+        {state.value && state.value.state !== "idle" && (
           <ActionButton
+            disabled={action.busy || state.loading}
+            onClick={state.reload}
+          >
+            Refresh group status
+          </ActionButton>
+        )}
+        {state.value && (state.value.state !== "idle" || available) && (
+          <ActionButton
+            secondary={state.value.state !== "idle"}
             disabled={action.busy || state.loading}
             onClick={() => {
               void action.run(async () => {
@@ -278,13 +324,6 @@ function EventGroup({ id }: { id: string }) {
               : "Leave group queue"}
           </ActionButton>
         )}
-        <ActionButton
-          secondary
-          disabled={action.busy || state.loading}
-          onClick={state.reload}
-        >
-          Check proposal
-        </ActionButton>
       </div>
     </section>
   );

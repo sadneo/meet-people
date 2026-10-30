@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.api.json",
   "compilerOptions": { "noEmit": true },
-  "include": ["scripts/seed-local-demo.ts", "scripts/queue-local-demo.ts", "scripts/demo-seed/**/*.ts"]
+  "include": ["scripts/seed-local-demo.ts", "scripts/queue-local-demo.ts", "scripts/queue-local-event-demo.ts", "scripts/run-local-event-groups.ts", "scripts/demo-seed/**/*.ts", "tests/integration/offline/demo-scenarios.ts"]
 }

@@ -237,9 +237,17 @@ export function AccountForm({
   const current = useCurrent(),
     navigate = useNavigate(),
     [search] = useSearchParams();
-  const [draft, setDraft] = useState<Account>(() => structuredClone(initial)),
+  const [source, setSource] = useState(initial),
+    [draft, setDraft] = useState<Account>(() => structuredClone(initial)),
     [validation, setValidation] = useState(""),
     [saved, setSaved] = useState(false);
+  // Failed writes retain the same source and the user's draft. Confirmed
+  // saves or explicit reloads replace it with the authoritative account.
+  if (source !== initial) {
+    setSource(initial);
+    setDraft(structuredClone(initial));
+    setValidation("");
+  }
   const profile = draft.profile ?? {
     username: "",
     display_name: "",
@@ -459,7 +467,7 @@ export function AccountForm({
       <ErrorMessage>{validation || current.error}</ErrorMessage>
       {current.error && (
         <ActionButton secondary onClick={current.reload}>
-          Reload account before saving again
+          Reload account and replace draft before saving again
         </ActionButton>
       )}
       {saved && <p role="status">Profile saved.</p>}
@@ -665,9 +673,15 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
   done: () => void;
 }) {
   const current = useCurrent(), formId = useId();
+  const [source, setSource] = useState(initial.profile);
   const [profile, setProfile] = useState(() => structuredClone(initial.profile!));
   const [facts, setFacts] = useState(() => structuredClone(initialFacts.facts));
   const [error, setError] = useState(''), [saving, setSaving] = useState(false);
+  if (source !== initial.profile) {
+    setSource(initial.profile);
+    setProfile(structuredClone(initial.profile!));
+    setError('');
+  }
   const update = (value: Partial<MatchingProfile>) => setProfile(before => ({ ...before, ...value }));
   const busy = saving || current.busy || factsResource.busy;
   async function save(event: FormEvent) {
@@ -729,7 +743,7 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
       </form>
       {section === 'interests' && <MatchingSchedule compact token={current.session.access_token} disabled={busy} onSaved={() => window.dispatchEvent(new Event('pebble:matching-changed'))}/>}
       <ErrorMessage>{error || current.error || factsResource.error}</ErrorMessage>
-      {current.error && <ActionButton secondary onClick={current.reload}>Reload account before saving again</ActionButton>}
+      {current.error && <ActionButton secondary onClick={current.reload}>Reload account and replace draft before saving again</ActionButton>}
       {!factsResource.canWrite && <ActionButton secondary disabled={busy} onClick={() => { void factsResource.reload().then(saved => { if (saved) { setFacts(structuredClone(saved.facts)); setError(''); } }); }}>Reload saved optional details to replace this draft</ActionButton>}
     </div>
     <div className="profile-save-bar"><button className="btn light" type="button" disabled={busy} onClick={done}>Cancel</button><button className="btn" form={formId} disabled={busy || !current.available}>{busy ? 'Saving…' : 'Save changes'}</button></div>

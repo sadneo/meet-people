@@ -13,8 +13,15 @@ import { settingsCategories } from './settings-navigation';
 
 function MasterSettings({ category }: { category: 'discovery' | 'notifications' | 'privacy' }) {
   const current = useCurrent(),
+    [source, setSource] = useState(current.account!.settings),
     [draft, setDraft] = useState(current.account!.settings),
     [notice, setNotice] = useState("");
+  // A confirmed save/read may include another tab's changes. Keep the form
+  // aligned with that snapshot so later edits cannot restore older choices.
+  if (source !== current.account!.settings) {
+    setSource(current.account!.settings);
+    setDraft(current.account!.settings);
+  }
   const labels: Record<keyof Account["settings"], string> = {
     notifications: "Notifications",
     discoverable: "Discovery",
@@ -54,7 +61,7 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
         <ErrorMessage>{current.error}</ErrorMessage>
         {current.error && (
           <ActionButton secondary onClick={current.reload}>
-            Reload account
+            Reload account and replace draft
           </ActionButton>
         )}
         {notice && <p role="status">{notice}</p>}

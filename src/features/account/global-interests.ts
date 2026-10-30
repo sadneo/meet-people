@@ -1,1 +1,1 @@
-export { globalInterestChoices, interestLimit, interestLabelLimit, interestAdditionProblem } from '../../../shared/interests';
+export { globalInterestChoices, interestLimit, interestLabelLimit, interestAdditionProblem } from '../../../shared/interests.js';

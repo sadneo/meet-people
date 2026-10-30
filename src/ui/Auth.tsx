@@ -345,7 +345,10 @@ export function AuthCallback() {
         verified.data.user?.id !== result.data.session.user.id
       )
         throw new Error("Invalid identity");
-      return parsed.recovery || incoming.pathname === "/reset-password"
+      const pathname = decodeURIComponent(incoming.pathname)
+        .replace(/\/+$/, "")
+        .toLowerCase();
+      return parsed.recovery || pathname === "/reset-password"
         ? "recovery"
         : (safeReturnTo(incoming.searchParams.get("returnTo")) ?? "/");
     })();

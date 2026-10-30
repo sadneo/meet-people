@@ -45,6 +45,26 @@ legend {
 .row {
   min-width: 0;
 }
+.event-group-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.group-search-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border: 2px solid var(--line);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: group-search-spin 0.8s linear infinite;
+}
+@keyframes group-search-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
 .sr-only {
   position: absolute;
   width: 1px;

@@ -21,7 +21,7 @@ export async function wiringFixture(
     conversationMode?: 'friends' | 'dating' | null;
   } = {},
 ) {
-  let account = browserAccount(),
+  let account = structuredClone(browserAccount()),
     mode: string | null = options.queue ?? null;
   if (options.incomplete)
     account = {

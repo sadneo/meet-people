@@ -57,9 +57,9 @@ Loading, empty, unavailable, conflict and unconfirmed-write states stay distinct
 A failed write never establishes success. Versioned resources retain their existing
 revision checks and explicit reconciliation requirements.
 
-Friends uses a manual queue check and at most one candidate. Starting active
-Friends matching requires confirmation before replacing downtime. Dating has its
-own explicit participation action and preference resource. Saving a Dating draft
+Friends and Dating use passive individual discovery. Active group matching lives
+in Messages and requires its own queue consent and proposal acceptance. Dating has
+its own explicit participation action and preference resource. Saving a Dating draft
 does not enable participation. Device location requires an explicit action;
 Profile home and per-mode search areas stay separate. Interests and weekly
 availability use one canonical Profile resource.

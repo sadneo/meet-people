@@ -34,6 +34,13 @@ export function demoPlan(count=50,year=new Date().getUTCFullYear()){
  })
 }
 export type DemoProfile=ReturnType<typeof demoPlan>[number]
+export function developmentDemoPlan(count=60,year=new Date().getUTCFullYear()):DemoProfile[]{
+ return demoPlan(count,year).map(profile=>{
+  const dating=Math.floor((profile.index-1)/2)%3===2?profile.dating:{...profile.dating,gender:profile.index%2?'Man':'Woman',sexuality:'Straight',clarifiedTargets:[]}
+  DatingProfileSchema.parse(dating)
+  return {...profile,dating,filters:{...profile.filters,ageMin:18,ageMax:99}}
+ })
+}
 export function onboardingChapters(account:Account):Account[]{
  if(!account.profile)throw new Error('Demo profile required')
  return [
