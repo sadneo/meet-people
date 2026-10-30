@@ -55,7 +55,8 @@
     "demo:populate": "tsx scripts/seed-local-demo.ts --scenarios --refresh-location --for-development-account",
     "test:demo-populate": "tsx tests/integration/offline/demo-scenarios.ts",
     "dev:groups": "tsx scripts/run-local-event-groups.ts --setup --watch",
-    "demo:event": "tsx scripts/queue-local-event-demo.ts"
+    "demo:event": "tsx scripts/queue-local-event-demo.ts",
+    "events:images": "tsx scripts/backfill-local-event-images.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
