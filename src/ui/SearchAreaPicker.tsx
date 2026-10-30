@@ -16,7 +16,9 @@ export function LocationPicker(props: Props) {
   // React keys can appear in diagnostics; never use the bearer token as a key.
   const binding = useMemo(() => ({ token: current.session.access_token, key: crypto.randomUUID() }), [current.session.access_token])
   const [open, setOpen] = useState(false)
-  const label = props.value.source === 'temporary' ? props.value.areaLabel : current.account?.profile?.location_city
+  const label = props.value.resolvedLocationRef
+    ? props.value.source === 'temporary' ? props.value.areaLabel : current.account?.profile?.location_city
+    : null
   return <div className="search-area">
     <button ref={trigger} type="button" className="account-area search-area-button" disabled={props.disabled || !layer} onClick={() => setOpen(true)}>
       <span><span className="search-area-label">Search area</span><span>{label || 'Choose an area'}</span></span><Icon name="ChevronRight"/>

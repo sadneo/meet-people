@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { Link } from 'react-router';
 import type { FriendsPreferences } from "../../shared/friends-search-preferences";
 import {
@@ -9,6 +9,7 @@ import {
   type DatingSearch,
 } from "../../shared/dating";
 import { useFriendsPreferences } from "../features/matchmaking/useFriendsPreferences";
+import { matchingClient } from "./matching-client";
 import { useDatingPreferences } from "../features/matchmaking/useDatingPreferences";
 import { ErrorMessage, Icon, ResourceState } from "./common";
 import { useCurrent } from "./current";
@@ -124,6 +125,17 @@ export function FriendsPreferencesPanel({ done, onSavingChange }: { done: () => 
           disabled={!resource.canWrite}
           saving={resource.busy}
           done={done}
+          verify={async () => {
+            onSavingChange?.(true);
+            try {
+              const status = await matchingClient(current.session.access_token).friendsStatus();
+              if (status.reason === 'preferences') return 'Confirm a search area before finishing Friends setup.';
+              if (status.reason === 'location') return 'Your saved search area has expired or changed. Confirm it again before finishing.';
+              return '';
+            } catch {
+              return 'Friends setup could not be confirmed. Your saved choices are kept. Try Done again to recheck.';
+            } finally { onSavingChange?.(false); }
+          }}
           save={async (preferences) => {
             onSavingChange?.(true);
             try {
@@ -144,27 +156,52 @@ function FriendsForm({
   save,
   saving,
   done,
+  verify,
 }: {
   initial: FriendsPreferences;
   disabled: boolean;
   save: (value: FriendsPreferences) => Promise<boolean>;
   saving: boolean;
   done: () => void;
+  verify: () => Promise<string>;
 }) {
   const current = useCurrent();
   const [value, setValue] = useState(initial),
-    [validation, setValidation] = useState("");
+    [validation, setValidation] = useState(""),
+    [finishing, setFinishing] = useState(false);
   const latest = useRef(initial), confirmed = useRef(initial), locked = useRef(false);
+  const finishingRef = useRef(false), alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   async function commit(next = latest.current) {
-    if (disabled || locked.current || JSON.stringify(next) === JSON.stringify(confirmed.current)) return;
+    if (disabled || locked.current) return false;
     if (!next.searchArea.resolvedLocationRef) {
-      setValidation('Choose a search result to confirm your area before preferences can apply.');
-      return;
+      setValidation('Confirm a search area before finishing Friends setup.');
+      return false;
     }
+    if (JSON.stringify(next) === JSON.stringify(confirmed.current)) return true;
     locked.current = true;
     setValidation('');
-    try { if (await save(next)) confirmed.current = next; }
+    try {
+      if (!await save(next)) return false;
+      confirmed.current = next;
+      return JSON.stringify(latest.current) === JSON.stringify(next);
+    }
     finally { locked.current = false; }
+  }
+  async function finish() {
+    if (disabled || locked.current || finishingRef.current) return;
+    finishingRef.current = true; setFinishing(true);
+    try {
+      if (!await commit() || !alive.current) return;
+      setValidation('');
+      const error = await verify();
+      if (!alive.current) return;
+      if (error) setValidation(error);
+      else done();
+    } finally {
+      finishingRef.current = false;
+      if (alive.current) setFinishing(false);
+    }
   }
   function change(next: FriendsPreferences, apply = false) {
     latest.current = next;
@@ -177,8 +214,8 @@ function FriendsForm({
   const goals = [...new Set(['New friends', 'Hangout crew', 'Study buddies', 'Activity partners', ...value.goals])];
   const selectedGoal = value.goals.length > 1 ? '__multiple__' : value.goals[0] ?? '';
   return (
-    <form className="friends-preferences-form" onSubmit={event => { event.preventDefault(); void commit().then(() => { if (!locked.current && JSON.stringify(latest.current) === JSON.stringify(confirmed.current)) done(); }); }}>
-      <fieldset disabled={disabled}>
+    <form className="friends-preferences-form" onSubmit={event => { event.preventDefault(); void finish(); }}>
+      <fieldset disabled={disabled || finishing}>
         <h3>Who you’d like to meet</h3>
         <AgeRange value={value} change={bounds => change({ ...latest.current, ...bounds })} commit={() => void commit()}/>
         <DistanceRange value={value.radiusMiles} change={radiusMiles => change({ ...latest.current, radiusMiles })} commit={() => void commit()}/>
@@ -186,7 +223,7 @@ function FriendsForm({
           mode="friends"
           value={value.searchArea}
           radiusMiles={value.radiusMiles}
-          disabled={disabled || saving}
+          disabled={disabled || saving || finishing}
           save={async searchArea => {
             if (disabled || locked.current) return false;
             const next = { ...latest.current, searchArea };
@@ -209,7 +246,7 @@ function FriendsForm({
       <section className="friends-shared-availability"><h4>Availability · shared with Profile</h4><div className="row between"><p className="account-note">{[...new Set(availability)].join(', ') || 'Add your availability'}</p><Link to="/profile?section=interests">Edit</Link></div></section>
       <ErrorMessage>{validation}</ErrorMessage>
       {saving && <p role="status" className="account-note">Saving preferences…</p>}
-      <button className="btn" disabled={disabled}>Done</button>
+      <button className="btn" disabled={disabled || saving || finishing}>{finishing ? 'Checking setup…' : 'Done'}</button>
     </form>
   );
 }

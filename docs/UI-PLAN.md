@@ -46,6 +46,10 @@ shows specific guidance for the supported age range (18–99), disabled discover
 missing preferences, or a search area that needs confirmation. Eligibility changes
 during scoring return a setup conflict and recheck status, rather than a generic
 server error. This requires `20261030000200_friends_discovery_status.sql`.
+Friends preferences require an explicitly confirmed search area before Done can
+finish setup. Done waits for confirmed saves and a fresh owner setup check;
+expired areas and unavailable checks keep the dialog open. An unconfirmed area
+shows “Choose an area” rather than the Profile home label.
 Dating uses its existing owner-only runtime for specific age (18+), discovery,
 profile, search-area and participation guidance. Recommendations wait until that
 runtime permits them; eligible users still explicitly start participation. Setup
