@@ -31,6 +31,8 @@ import { createActiveFriendsRouter } from './active-friends.js'
 import type { ActiveFriendsWorker } from './matching/active-worker.js'
 import type { ActiveCommand } from '../shared/active-friends.js'
 import { createMatchingScheduleRouter } from './matching-schedule.js'
+import type { MapTicket } from '../shared/location-picker.js'
+import type { MapLocationProvider } from './google-search-locations.js'
 
 type RpcResponse = { data: unknown; error: { code?: string } | null }
 export interface UserContextTransport {
@@ -81,6 +83,8 @@ export interface UserContextTransport {
     resolveSearchArea?(request: ResolveSearchArea): PromiseLike<RpcResponse>
     browserSearchLocation?(request: BrowserSearchLocation): PromiseLike<RpcResponse>
     searchLocationReceipt?(mode: 'friends' | 'dating', reference: string): PromiseLike<RpcResponse>
+    mapSearchLocation?(mode: 'friends' | 'dating', reference: string): PromiseLike<RpcResponse>
+    confirmMapSearchLocation?(ticket: MapTicket): PromiseLike<RpcResponse>
     socialConnection?(target: string, action: 'get' | 'request' | 'accept' | 'remove'): PromiseLike<RpcResponse>
     socialConnectionList?(): PromiseLike<RpcResponse>
     socialInbox?(page: number): PromiseLike<RpcResponse>
@@ -134,6 +138,8 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         resolveSearchArea: request => client.rpc('resolve_search_area', { resolution_in: request }),
         browserSearchLocation: request => client.rpc('issue_browser_search_location', { location_in: request }),
         searchLocationReceipt: (mode, reference) => client.rpc('get_search_location_receipt', { mode_in: mode, reference_in: reference }),
+        mapSearchLocation: (mode, reference) => client.rpc('get_search_location_map', { mode_in: mode, reference_in: reference }),
+        confirmMapSearchLocation: ticket => client.rpc('confirm_map_search_location', { ticket_in: ticket }),
         socialConnection: (target, action) => client.rpc('social_connection', { target_in: target, action_in: action }),
         socialConnectionList: () => client.rpc('social_connection_list'),
         socialInbox: page => client.rpc('social_inbox', { page_in: page }),
@@ -202,7 +208,7 @@ function validate<T>(schema: z.ZodType<T>, data: unknown): T {
   if (!parsed.success) throw new MatchingFailure(502, 'malformed', 'Matching service returned an invalid response.')
   return parsed.data
 }
-export function createMatchmakingRouter(transport: UserContextTransport | null, datingScoring: DatingScoringTransport | null = null, friendsScoring: FriendsScoringTransport | null = null, activeWorker: ActiveFriendsWorker | null = null) {
+export function createMatchmakingRouter(transport: UserContextTransport | null, datingScoring: DatingScoringTransport | null = null, friendsScoring: FriendsScoringTransport | null = null, activeWorker: ActiveFriendsWorker | null = null, mapLocations: MapLocationProvider | null = null, mapDailyLimit = 2000) {
   const router = Router()
   router.use(async (request, response, next) => {
     response.set('Cache-Control', 'no-store')
@@ -227,7 +233,7 @@ export function createMatchmakingRouter(transport: UserContextTransport | null, 
   router.use('/active-friends', createActiveFriendsRouter(activeWorker))
   router.use('/schedule', createMatchingScheduleRouter())
   router.use('/safety', createSafetyRouter())
-  router.use('/search-locations', createSearchLocationsRouter())
+  router.use('/search-locations', createSearchLocationsRouter(mapLocations, mapDailyLimit))
   router.use('/profile-photo', createProfilePhotoRouter())
   const readAccount = async (response: Response) => {
     const read = actor(response).account

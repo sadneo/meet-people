@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { conversationId, peer, wiringFixture } from "./wiring-fixture";
+import { mockLocationPicker } from './location-picker-fixture';
 
 test("public entry and private routes use the new frontend with real sign-in gates", async ({
   page,
@@ -12,7 +13,7 @@ test("public entry and private routes use the new frontend with real sign-in gat
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/login\?returnTo=/);
   await expect(
-    page.getByRole("button", { name: "Continue", exact: true }),
+    page.getByRole("button", { name: "Continue with email", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /sample|simulate/i }),
@@ -45,13 +46,12 @@ test("profile saves use canonical account API and read back persisted data", asy
 }) => {
   const fixture = await wiringFixture(page);
   await page.goto("/profile");
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await page.getByLabel("Display name", { exact: true }).fill("Jamie");
-  await page.getByRole("button", { name: "Save profile", exact: true }).click();
-  await expect(page.getByText("Profile saved.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel("Display name", { exact: true })).toHaveValue(
-    "Jamie",
-  );
+  await expect(page.locator('.profile-summary h3')).toHaveText('Jamie');
   const writes = fixture.calls.filter(
     (call) => call.path.endsWith("/account") && call.method === "PUT",
   );
@@ -80,20 +80,21 @@ test("Friends preferences resolve a server-owned area and save revisioned filter
   page,
 }) => {
   const fixture = await wiringFixture(page);
+  await mockLocationPicker(page);
   await page.goto("/matchmaking");
   await page
     .getByRole("button", { name: "Friends preferences", exact: true })
     .click();
-  await page.getByLabel("Minimum age", { exact: true }).fill("21");
-  await page.getByLabel("Find a city or campus").fill("Stony Brook");
-  await page.getByRole("button", { name: "Find areas", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Stony Brook University · New York" })
-    .click();
-  await expect(
-    page.getByText(/Selected area saved with these preferences/),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Save Friends preferences" }).click();
+  await page.getByRole('button', { name: /Search area.*Campus/ }).click();
+  await page.getByRole('combobox', { name: 'Search city or neighborhood' }).fill('Brooklyn');
+  await page.getByRole('button', { name: 'Brooklyn, NY', exact: true }).click();
+  await page.getByRole('button', { name: 'Set search area', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Search area Brooklyn, NY' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeEnabled();
+  await page.getByRole('slider', { name: 'Minimum age', exact: true }).focus();
+  await page.getByRole('slider', { name: 'Minimum age', exact: true }).press('ArrowRight');
+  await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(
     fixture.calls.some(
@@ -134,7 +135,7 @@ test("public events come from the API and private group controls require sign-in
   await expect(
     page.getByRole("heading", { name: "Campus coffee walk" }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "View event", exact: true }).click();
+  await page.getByRole("link", { name: "Campus coffee walk: see event and people", exact: true }).click();
   await expect(page.getByText("Meet at the library.")).toBeVisible();
   await page.getByRole("link", { name: "Sign in to find a group" }).click();
   await expect(page).toHaveURL(/\/login\?returnTo=/);
@@ -185,6 +186,7 @@ test("safety uses the real block API and confirms before writing", async ({
 }) => {
   const fixture = await wiringFixture(page);
   await page.goto(`/messages/chat?conversation=${conversationId}`);
+  await page.getByLabel('Conversation options and safety').click();
   await page.getByRole("button", { name: "Block or report" }).click();
   await page
     .getByRole("button", { name: "Block account", exact: true })
@@ -207,7 +209,7 @@ test("a backend outage shows a retry state without fixture matches", async ({
     (route) => route.fulfill({ status: 503, json: { error: "Unavailable" } }),
   );
   await page.goto("/matchmaking");
-  await expect(page.getByRole('button',{name:'Refresh recommendations'})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'Try again',exact:true})).toBeEnabled();
   await expect(page.getByRole("alert")).toContainText(/unavailable/i);
   await expect(
     page.getByRole("heading", { name: "Taylor", exact: true }),
@@ -222,7 +224,7 @@ for (const width of [320, 800, 1280])
     await wiringFixture(page);
     await page.goto("/profile");
     await expect(
-      page.getByRole("heading", { name: "Your profile", exact: true }),
+      page.getByRole("heading", { name: "Profile", exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole("navigation", { name: "Main navigation" }),
@@ -284,7 +286,7 @@ test("fresh accounts complete every onboarding chapter through persisted writes"
   await page.getByRole("button", { name: "Add a time window" }).click();
   await page.getByRole("button", { name: "Finish setup" }).click();
   await expect(
-    page.getByRole("heading", { name: "Your profile", exact: true }),
+    page.getByRole("heading", { name: "Profile", exact: true }),
   ).toBeVisible();
   expect(fixture.getAccount().completed).toEqual([0, 1, 2, 3]);
   expect(
@@ -302,7 +304,7 @@ test("email-first sign-in installs the real SDK session before entering the app"
   await page
     .getByLabel("Email", { exact: true })
     .fill("development-fixture@example.test");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Continue with email", exact: true }).click();
   await page
     .getByLabel("Password", { exact: true })
     .fill("Synthetic-fixture-password-1!");
@@ -315,16 +317,21 @@ test("email-first sign-in installs the real SDK session before entering the app"
   ).toBe(true);
 });
 
-test("optional facts save multiple languages without losing newlines during editing", async ({
+test("optional facts save selected language chips and restore them when editing", async ({
   page,
 }) => {
   const fixture = await wiringFixture(page);
   await page.goto("/profile");
-  await page.getByLabel("Languages · one per line").fill("English\nFrench");
-  await page.getByRole("button", { name: "Save details", exact: true }).click();
-  await expect(page.getByLabel("Languages · one per line")).toHaveValue(
-    "English\nFrench",
-  );
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Languages', exact: true }).fill('Eng');
+  await page.getByRole('option', { name: 'English', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Languages', exact: true }).fill('Fre');
+  await page.getByRole('option', { name: 'French', exact: true }).click();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remove English', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove French', exact: true })).toBeVisible();
   await expect
     .poll(
       () =>
@@ -341,6 +348,7 @@ test("profile photo uploads binary data through revisioned private storage", asy
 }) => {
   const fixture = await wiringFixture(page);
   await page.goto("/profile");
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await page
     .getByLabel("Choose a photo")
     .setInputFiles({
@@ -367,8 +375,9 @@ test("detailed settings persist to their own revisioned resource", async ({
 }) => {
   const fixture = await wiringFixture(page);
   await page.goto("/settings");
+  await page.getByRole('link', { name: /^Notifications Messages/ }).click();
   await page.getByRole("switch", { name: "Plan notifications" }).check();
-  await page.getByRole("button", { name: "Save detailed preferences" }).click();
+  await page.getByRole('heading', { name: 'Notifications preferences', exact: true }).locator('..').getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByText("Detailed preferences saved.", { exact: true }),
   ).toBeVisible();
@@ -414,6 +423,7 @@ test("garden purchases use the new renderer without calling an invented economy 
 test('reports submit to the real safety contract and show only a received receipt', async ({ page }) => {
   const fixture = await wiringFixture(page);
   await page.goto(`/messages/chat?conversation=${conversationId}`);
+  await page.getByLabel('Conversation options and safety').click();
   await page.getByRole('button', { name: 'Block or report' }).click();
   await page.getByLabel('Details (optional)').fill('Unwanted messages.');
   await page.getByRole('button', { name: 'Send report', exact: true }).click();

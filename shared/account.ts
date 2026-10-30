@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { MatchingProfileSchema } from './matchmaking.js'
 import { ReadyPreferencesSchema } from './profile-readiness.js'
+import { interestSelectionProblem } from './interests.js'
 
 export const AccountPreferencesSchema = z.object({
   intents: z.array(z.string().trim().min(1).max(120)).max(20).refine(values => new Set(values).size === values.length, 'Choose unique social intents.'),
@@ -20,7 +21,7 @@ type AccountData = z.infer<typeof AccountDataSchema>
 // legacy profiles lacking private choices resume at social intent, not identity.
 export function completedAccountChapters(value: AccountData): number[] {
   if (!value.profile) return []
-  if (new Set(value.profile.interests).size < 3) return [0]
+  if (interestSelectionProblem(value.profile.interests)) return [0]
   if (!value.preferences.intents.length) return [0, 1]
   if (!value.preferences.distance || !value.preferences.group || !ReadyPreferencesSchema.safeParse(value.profile).success) return [0, 1, 2]
   return [0, 1, 2, 3]
@@ -29,6 +30,11 @@ export function completedAccountChapters(value: AccountData): number[] {
 // so onboarding can collect missing facts; never use those markers to grant access.
 export const AccountSchema = AccountDataSchema
 export const SaveAccountSchema = AccountSchema
+  .superRefine((value, context) => {
+    if (!value.profile) return;
+    const message = interestSelectionProblem(value.profile.interests, value.completed.includes(1));
+    if (message) context.addIssue({ code: 'custom', path: ['profile', 'interests'], message });
+  })
   .refine(value => value.completed.length <= completedAccountChapters(value).length, 'Completed chapters must have valid persisted required fields.')
   .refine(value => value.profile !== null, 'Profile is required.')
 export type Account = z.infer<typeof AccountSchema>

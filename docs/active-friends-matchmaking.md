@@ -125,7 +125,7 @@ See [local demo instructions](matchmaking-demo.md) for queue population and remo
 
 | Setting | Default | Location |
 | --- | --- | --- |
-| API matching gate | false | ACTIVE_FRIENDS_ENABLED |
+| API matching services | enabled when server credentials are configured | api/index.ts |
 | Database matching gate | false | active_friends_private.policy.enabled |
 | Preferred-size grace | 30 seconds | policy.preferred_grace_seconds |
 | Proposal review | 300 seconds | policy.review_seconds |
@@ -137,8 +137,9 @@ See [local demo instructions](matchmaking-demo.md) for queue population and remo
 | Algorithm | active-friends-fifo-v1 | version checked between worker and SQL; recorded on proposals |
 
 Apply `20261028000300_active_friends.sql` after the reviewed product reconciliation
-and preceding matching migrations. Both API and DB gates start disabled. Verify
-in sandbox, configure scheduled processing, then enable both deliberately. Arrivals,
+and preceding matching migrations. API services are enabled by default with valid
+server configuration. The database policy gate remains an operational safety check:
+verify in sandbox, configure scheduled processing, then enable that policy. Arrivals,
 ready-up and manual checks trigger immediate bounded processing. Run
 `pnpm matchmaking:active:once` as a scheduled existing-infrastructure job for idle
 queue progress; a once-per-minute fallback may add up to a minute plus scheduling
@@ -146,7 +147,7 @@ latency. Increase cadence/batch capacity only after measurements. The migration
 registers one-minute expiry/retention maintenance if pg_cron is already installed;
 otherwise schedule the worker externally. No service or scheduler was deployed.
 
-Rollback: disable both matching gates. Cancel/decline/leave, group reads and chat
+Rollback: pause matching with the database policy gate. Cancel/decline/leave, group reads and chat
 remain available; do not drop group/message tables or restore prior consents.
 
 ## Verification

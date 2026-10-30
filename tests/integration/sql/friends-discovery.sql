@@ -40,8 +40,10 @@ do $$ declare n integer;owner uuid;receipt jsonb;begin
  for n in 1..4 loop
   owner:=('fc000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid;
   perform set_config('request.jwt.claim.sub',owner::text,true);
-  -- Dating stays explicitly off, and nobody joins any active queue.
-  perform public.save_detailed_settings('{"expectedRevision":0,"settings":{"messages":false,"plans":false,"matches":false,"friendsDiscovery":true,"datingDiscovery":false}}');
+   -- Friends works without a saved opt-in; Dating and active queues stay off.
+   assert public.get_detailed_settings()->>'revision'='0';
+   assert public.get_detailed_settings()->'effective'->>'friendsDiscovery'='true';
+   assert public.get_detailed_settings()->'effective'->>'datingDiscovery'='false';
   receipt:=public.resolve_search_area(jsonb_build_object('requestId','fc200000-0000-4000-8000-'||lpad(n::text,12,'0'),
    'mode','friends','source','home','placeId','fc100000-0000-4000-8000-'||lpad(n::text,12,'0')));
   perform public.save_friends_search_preferences(jsonb_build_object('expectedRevision',0,'preferences',jsonb_build_object(
@@ -52,8 +54,12 @@ do $$ declare n integer;owner uuid;receipt jsonb;begin
  perform set_config('request.jwt.claim.sub','fc000000-0000-4000-8000-000000000001',true);
  begin perform public.get_friends_scoring_pool('fc000000-0000-4000-8000-000000000001','[]');raise exception 'Private pool leaked';exception when insufficient_privilege then null;end;
  assert jsonb_array_length(public.project_friends_candidates('["fc000000-0000-4000-8000-000000000002","fc000000-0000-4000-8000-000000000003"]')->'candidates')=2;
- assert not (public.project_friends_candidates('["fc000000-0000-4000-8000-000000000002"]')->'candidates'->0)
-  ?| array['intervals','goals','birthdate','latitude','longitude','timeZone','score','components'];
+  assert not (public.project_friends_candidates('["fc000000-0000-4000-8000-000000000002"]')->'candidates'->0)
+   ?| array['intervals','goals','birthdate','latitude','longitude','timeZone','score','components'];
+  perform public.save_detailed_settings('{"expectedRevision":0,"settings":{"messages":false,"plans":false,"matches":false,"friendsDiscovery":false,"datingDiscovery":false}}');
+  assert public.get_detailed_settings()->'effective'->>'friendsDiscovery'='false','Saved opt-out ignored';
+  assert public.project_friends_candidates('["fc000000-0000-4000-8000-000000000002"]')='{"candidates":[]}'::jsonb,'Opted-out viewer received profiles';
+  perform public.save_detailed_settings('{"expectedRevision":1,"settings":{"messages":false,"plans":false,"matches":false,"friendsDiscovery":true,"datingDiscovery":false}}');
 end $$;
 reset role;
 set local role service_role;
@@ -110,12 +116,15 @@ select set_config('request.jwt.claim.sub','fc000000-0000-4000-8000-000000000001'
 do $$ begin
  assert public.project_friends_candidates('["fc000000-0000-4000-8000-000000000003"]')='{"candidates":[]}'::jsonb,'Reverse block bypassed';
  assert public.friends_discovery_connection('fc000000-0000-4000-8000-000000000002','request')->>'status'='sent';
- assert public.friends_discovery_connection('fc000000-0000-4000-8000-000000000002','request')->>'status'='sent','Repeated request not idempotent';
+  assert public.friends_discovery_connection('fc000000-0000-4000-8000-000000000002','request')->>'status'='sent','Repeated request not idempotent';
+  assert public.social_connection_list()->'sent'->0->>'mode'='friends','Outgoing origin missing';
  perform set_config('request.jwt.claim.sub','fc000000-0000-4000-8000-000000000002',true);
  begin perform public.friends_discovery_connection('fc000000-0000-4000-8000-000000000001','request');raise exception 'Reciprocal request silently accepted';exception when sqlstate 'FR409' then null;end;
- assert public.social_connection('fc000000-0000-4000-8000-000000000001','get')->>'status'='incoming';
+  assert public.social_connection('fc000000-0000-4000-8000-000000000001','get')->>'status'='incoming';
+  assert public.social_connection_list()->'incoming'->0->>'mode'='friends','Incoming origin missing';
  assert public.friends_discovery_connection('fc000000-0000-4000-8000-000000000001','accept')->>'status'='connected';
- assert public.friends_discovery_connection('fc000000-0000-4000-8000-000000000001','accept')->>'status'='connected','Repeated acceptance not idempotent';
+  assert public.friends_discovery_connection('fc000000-0000-4000-8000-000000000001','accept')->>'status'='connected','Repeated acceptance not idempotent';
+  assert public.social_inbox(1)->'conversations'->0->>'mode'='friends','Friends chat origin lost';
 end $$;
 reset role;
 do $$ begin
@@ -125,6 +134,13 @@ do $$ begin
   union all (select * from friends_queue_before except select profile_id,queue_type from public.queue_entries)),'Passive discovery mutated active queues';
  assert not exists(select 1 from public.detailed_settings where user_id::text like 'fc000000-%' and settings->>'datingDiscovery'='true'),'Friends enabled Dating';
  assert not has_function_privilege('authenticated','public.get_friends_scoring_pool(uuid,jsonb)','EXECUTE');
- assert not has_function_privilege('anon','public.project_friends_candidates(jsonb)','EXECUTE');
+  assert not has_function_privilege('anon','public.project_friends_candidates(jsonb)','EXECUTE');
+  assert not has_table_privilege('authenticated','social_private.relationship_modes','SELECT');
+  assert not has_function_privilege('authenticated','social_private.record_relationship_mode(uuid,uuid,text)','EXECUTE');
+  begin
+   perform social_private.record_relationship_mode('fc000000-0000-4000-8000-000000000001','fc000000-0000-4000-8000-000000000002','dating');
+   raise exception 'Existing Friends origin was overwritten';
+  exception when insufficient_privilege then null;end;
+  assert (select mode from social_private.relationship_modes where user_a='fc000000-0000-4000-8000-000000000001' and user_b='fc000000-0000-4000-8000-000000000002')='friends';
 end $$;
 rollback;

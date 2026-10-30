@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, Navigate, useSearchParams } from "react-router";
 import type { Account } from "../../shared/account";
 import type { DetailedSettings } from "../../shared/detailed-settings";
 import { supabase } from "../supabase";
 import { authCallbackUrl, validPassword } from "../auth/credential-policy";
 import { useDetailedSettings } from "../features/account/useDetailedSettings";
-import { useMatchmaking } from "../features/matchmaking/useMatchmaking";
 import { useAction } from "./hooks";
-import { ActionButton, ErrorMessage, ResourceState } from "./common";
+import { ActionButton, ErrorMessage, Icon, ResourceState } from "./common";
 import { useCurrent } from "./current";
 import { Blocklist } from "./Safety";
+import { settingsCategories } from './settings-navigation';
 
-function MasterSettings() {
+function MasterSettings({ category }: { category: 'discovery' | 'notifications' | 'privacy' }) {
   const current = useCurrent(),
     [draft, setDraft] = useState(current.account!.settings),
     [notice, setNotice] = useState("");
@@ -23,7 +23,7 @@ function MasterSettings() {
   };
   return (
     <section className="account-panel">
-      <h3>Your preferences</h3>
+      <h3>{category === 'notifications' ? 'Activity notifications' : category === 'privacy' ? 'Profile visibility' : 'Discovery & location'}</h3>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -33,7 +33,7 @@ function MasterSettings() {
         }}
       >
         <fieldset disabled={current.busy || !current.available}>
-          {(Object.keys(labels) as (keyof typeof labels)[]).map((key) => (
+          {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => category === 'notifications' ? key === 'notifications' : category === 'privacy' ? key === 'availability' : key === 'discoverable' || key === 'location').map((key) => (
             <label className="settings-switch" key={key}>
               <span>{labels[key]}</span>
               <input
@@ -47,10 +47,9 @@ function MasterSettings() {
             </label>
           ))}
           <p className="account-note">
-            The location preference doesn’t request device coordinates. Choose a
-            search area separately in Discover.
+            {category === 'discovery' ? 'The location preference doesn’t request device coordinates. Choose a search area separately in Discover.' : category === 'notifications' ? 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.' : 'Only coarse shared-time summaries can appear when both people choose to share. Your full schedule stays private.'}
           </p>
-          <button className="btn">Save preferences</button>
+          <button className="btn">Save</button>
         </fieldset>
         <ErrorMessage>{current.error}</ErrorMessage>
         {current.error && (
@@ -67,10 +66,12 @@ function DetailedForm({
   initial,
   disabled,
   save,
+  category,
 }: {
   initial: DetailedSettings;
   disabled: boolean;
   save: (value: DetailedSettings["settings"]) => Promise<void>;
+  category: 'discovery' | 'notifications';
 }) {
   const [value, setValue] = useState(initial.settings);
   const labels = {
@@ -88,7 +89,7 @@ function DetailedForm({
       }}
     >
       <fieldset disabled={disabled}>
-        {(Object.keys(labels) as (keyof typeof labels)[]).map((key) => (
+        {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => category === 'discovery' ? key === 'friendsDiscovery' || key === 'datingDiscovery' : key === 'messages' || key === 'plans' || key === 'matches').map((key) => (
           <label className="settings-switch" key={key}>
             <span>{labels[key]}</span>
             <input
@@ -102,78 +103,11 @@ function DetailedForm({
           </label>
         ))}
         <p className="account-note">
-          Global notification and discovery preferences take priority. Saving a
-          notification preference doesn’t verify delivery.
+          {category === 'discovery' ? 'Global discovery takes priority. Pausing a mode keeps existing chats available.' : 'Global notification preferences take priority. Saving a preference doesn’t verify delivery.'}
         </p>
-        <button className="btn">Save detailed preferences</button>
+        <button className="btn">Save</button>
       </fieldset>
     </form>
-  );
-}
-function Downtime() {
-  const current = useCurrent(),
-    matching = useMatchmaking(current.session.access_token),
-    action = useAction(),
-    [confirm, setConfirm] = useState(false);
-  return (
-    <section className="account-panel">
-      <h3>Downtime matching</h3>
-      <p>
-        Keep a Friends queue open when you’re away. An active search replaces it
-        and doesn’t restart downtime automatically.
-      </p>
-      <ErrorMessage>{matching.error || action.error}</ErrorMessage>
-      <p role="status">
-        {matching.known
-          ? matching.mode === "downtime"
-            ? "Downtime is on"
-            : matching.mode === "active"
-              ? "Active Friends search is on"
-              : "Downtime is off"
-          : "Checking saved status…"}
-      </p>
-      <div className="row wrap">
-        <ActionButton
-          disabled={matching.busy || !matching.known || !matching.canJoin}
-          onClick={() => {
-            if (matching.mode === "active") setConfirm(true);
-            else
-              void matching.queue(
-                matching.mode === "downtime" ? "leave" : "join",
-                "downtime",
-              );
-          }}
-        >
-          {matching.mode === "downtime"
-            ? "Turn off downtime"
-            : "Turn on downtime"}
-        </ActionButton>
-        <ActionButton
-          secondary
-          disabled={matching.busy}
-          onClick={() => void matching.queue("refresh")}
-        >
-          Refresh status
-        </ActionButton>
-      </div>
-      {confirm && (
-        <div className="notice">
-          <p>Replace your active Friends search with downtime matching?</p>
-          <ActionButton
-            disabled={matching.busy}
-            onClick={() => {
-              setConfirm(false);
-              void matching.queue("join", "downtime");
-            }}
-          >
-            Replace active search
-          </ActionButton>
-          <ActionButton secondary onClick={() => setConfirm(false)}>
-            Cancel
-          </ActionButton>
-        </div>
-      )}
-    </section>
   );
 }
 function Credentials() {
@@ -327,7 +261,17 @@ function Credentials() {
     </section>
   );
 }
+export function ProfileSettingsLinks() {
+  return <div className="account-group profile-settings-links">{settingsCategories.map(([id, title, detail, icon]) => <Link className="account-row" key={id} to={`/profile?section=${id}`}><span className="account-row-icon"><Icon name={icon}/></span><span className="account-row-copy"><b>{title}</b><small>{detail}</small></span><Icon name="ChevronRight"/></Link>)}</div>;
+}
+
 export function Settings() {
+  const [search] = useSearchParams();
+  const category = settingsCategories.find(item => item[0] === search.get('section'));
+  return <Navigate replace to={category ? `/profile?section=${category[0]}` : '/profile'}/>;
+}
+
+export function ProfileSettings({ section }: { section: string }) {
   const current = useCurrent(),
     detailed = useDetailedSettings(
       current.session.user.id,
@@ -335,21 +279,25 @@ export function Settings() {
       current.busy,
     ),
     [notice, setNotice] = useState("");
+  const category = settingsCategories.find(item => item[0] === section);
+  if (!category) return <Navigate replace to="/profile"/>;
   return (
-    <div className="account-page">
-      <h2>Settings</h2>
-      <div className="settings-layout">
-        <div>
-          <MasterSettings />
+    <div className="account-page settings-page">
+      <Link className="account-back" to="/profile"><Icon name="Back"/>Profile</Link>
+      <div className="pagehead"><h2>{category[1]}</h2></div>
+      <div className="settings-detail" key={category[0]}>
+          {(category[0] === 'discovery' || category[0] === 'notifications' || category[0] === 'privacy') && <MasterSettings category={category[0]}/>}
+          {(category[0] === 'discovery' || category[0] === 'notifications') && <>
           <section className="account-panel">
-            <h3>Discovery & notifications</h3>
+            <h3>{category[1]} preferences</h3>
             <ResourceState
               loading={detailed.loading}
               error={detailed.error}
               reload={() => void detailed.reload()}
             />
             {detailed.snapshot && (
-              <DetailedForm
+                <DetailedForm
+                  category={category[0]}
                 key={detailed.snapshot.revision}
                 initial={detailed.snapshot}
                 disabled={!detailed.canWrite}
@@ -366,12 +314,11 @@ export function Settings() {
             )}
             {notice && <p role="status">{notice}</p>}
           </section>
-          <Downtime />
-        </div>
-        <div>
-          <Credentials />
-          <Blocklist />
-          <section className="account-panel">
+          </>}
+          {category[0] === 'discovery' && <div className="account-group"><Link className="account-row" to="/matchmaking?mode=friends&preferences=true"><span><b>Friends preferences</b><small>Who you’d like to meet & search area</small></span><Icon name="ChevronRight"/></Link><Link className="account-row" to="/matchmaking?mode=dating&preferences=true"><span><b>Dating preferences</b><small>Who you’d like to date & search area</small></span><Icon name="ChevronRight"/></Link></div>}
+          {category[0] === 'account' && <Credentials/>}
+          {category[0] === 'safety' && <Blocklist/>}
+          {(category[0] === 'privacy' || category[0] === 'safety') && <section className="account-panel">
             <h3>Help & privacy</h3>
             <p>
               For support, account deletion or a data request, use the contact
@@ -382,8 +329,7 @@ export function Settings() {
               <Link to="/privacy">Privacy</Link>
               <Link to="/cookies">Cookies</Link>
             </div>
-          </section>
-        </div>
+          </section>}
       </div>
     </div>
   );

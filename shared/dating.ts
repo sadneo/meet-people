@@ -24,12 +24,26 @@ export type DatingSearch = z.infer<typeof DatingSearchSchema>
 export function emptyDatingProfile(): DatingProfile {
   return { gender: '', sexuality: '', intent: '', style: '', heightInches: null, visibility: { gender: false, sexuality: false, height: false }, clarifiedTargets: [], enabled: false }
 }
-// Targets are always explicitly selected. Sexuality never supplies defaults.
-export function datingTargets(value: DatingProfile): string[] | null {
-  return value.clarifiedTargets.length ? value.clarifiedTargets : null
+// Exact supported labels only: never infer gender from pronouns or custom text.
+// Nonbinary/custom identities and unclear sexuality labels require clarification.
+// "all" is an internal automatic result, not a stored clarification or gender.
+export function automaticDatingTargets(value: Pick<DatingProfile, 'gender' | 'sexuality'>): string[] | 'all' | null {
+  if (!['Man', 'Woman'].includes(value.gender)) return null
+  if (['Straight', 'Heterosexual'].includes(value.sexuality)) return [value.gender === 'Man' ? 'Woman' : 'Man']
+  if (['Gay', 'Lesbian', 'Homosexual'].includes(value.sexuality)) return [value.gender]
+  if (['Bisexual', 'Pansexual'].includes(value.sexuality)) return 'all'
+  return null
+}
+export function datingTargets(value: DatingProfile): string[] | 'all' | null {
+  if (!value.gender || !value.sexuality) return null
+  return automaticDatingTargets(value) ?? (value.clarifiedTargets.length ? value.clarifiedTargets : null)
+}
+export function datingNeedsClarification(value: Pick<DatingProfile, 'gender' | 'sexuality'>) {
+  return !!(value.gender && value.sexuality) && automaticDatingTargets(value) === null
 }
 export function reciprocalDatingTargets(a: DatingProfile, b: DatingProfile) {
-  return !!datingTargets(a)?.includes(b.gender) && !!datingTargets(b)?.includes(a.gender)
+  const mine = datingTargets(a), theirs = datingTargets(b)
+  return !!a.gender && !!b.gender && (mine === 'all' || !!mine?.includes(b.gender)) && (theirs === 'all' || !!theirs?.includes(a.gender))
 }
 export function validDatingTransition(previous: DatingProfile | null, next: DatingProfile) {
   // No stale clarification exists before any identity, including saved empty

@@ -12,6 +12,7 @@ import { boundedMatchingBodyError } from './matching-body-errors.js'
 import { createDatingScoringTransport } from './matching/dating-recommendations.js'
 import { createFriendsScoringTransport } from './matching/friends-recommendations.js'
 import { createActiveFriendsWorker } from './matching/active-worker.js'
+import { createGoogleSearchLocations } from './google-search-locations.js'
 
 export const app = express()
 app.set('trust proxy', 1);
@@ -46,25 +47,24 @@ app.use('/api/auth', createAuthRouter(eventsClient))
 const ownerTransport = env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY
   ? createUserContextTransport({ url: env.SUPABASE_URL, publicKey: env.SUPABASE_PUBLISHABLE_KEY, verificationKey: env.SUPABASE_SERVICE_ROLE_KEY })
   : null
-if (env.DATING_RULES_ENABLED === 'true' && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !ownerTransport)) {
-  throw new Error('Dating rules require server scoring credentials and authenticated actor transport.')
-}
-const datingScoring = env.DATING_RULES_ENABLED === 'true'
-  ? createDatingScoringTransport(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!)
+// Matching is standard functionality, not an opt-in deployment flag. Missing
+// credentials still fail closed; user consent and SQL eligibility stay authoritative.
+const matchingConfig = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY && ownerTransport
+  ? { url: env.SUPABASE_URL, serviceKey: env.SUPABASE_SERVICE_ROLE_KEY }
   : null
-if (env.FRIENDS_RULES_ENABLED === 'true' && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !ownerTransport)) {
-  throw new Error('Friends rules require server scoring credentials and authenticated actor transport.')
-}
-const friendsScoring = env.FRIENDS_RULES_ENABLED === 'true'
-  ? createFriendsScoringTransport(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!)
+const datingScoring = matchingConfig
+  ? createDatingScoringTransport(matchingConfig.url, matchingConfig.serviceKey)
   : null
-if (env.ACTIVE_FRIENDS_ENABLED === 'true' && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !ownerTransport)) {
-  throw new Error('Active Friends requires server worker credentials and authenticated actor transport.')
-}
-const activeWorker = env.ACTIVE_FRIENDS_ENABLED === 'true'
-  ? createActiveFriendsWorker(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!)
+const friendsScoring = matchingConfig
+  ? createFriendsScoringTransport(matchingConfig.url, matchingConfig.serviceKey)
   : null
-app.use('/api/matchmaking', boundedMatchingBodyError, createMatchmakingRouter(ownerTransport, datingScoring, friendsScoring, activeWorker))
+const activeWorker = matchingConfig
+  ? createActiveFriendsWorker(matchingConfig.url, matchingConfig.serviceKey)
+  : null
+const mapLocations = env.GOOGLE_MAPS_STORAGE_APPROVED === 'true' && env.GOOGLE_MAPS_SERVER_API_KEY && env.SEARCH_LOCATION_SIGNING_KEY
+  ? createGoogleSearchLocations({ apiKey: env.GOOGLE_MAPS_SERVER_API_KEY, signingKey: env.SEARCH_LOCATION_SIGNING_KEY })
+  : null
+app.use('/api/matchmaking', boundedMatchingBodyError, createMatchmakingRouter(ownerTransport, datingScoring, friendsScoring, activeWorker, mapLocations, env.GOOGLE_MAPS_REQUESTS_PER_DAY))
 app.use('/api/connections', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'connections'))
 app.use('/api/conversations', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'conversations'))
 

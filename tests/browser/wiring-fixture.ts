@@ -18,6 +18,7 @@ export async function wiringFixture(
     incomplete?: boolean;
     queue?: "downtime";
     lostMessage?: boolean;
+    conversationMode?: 'friends' | 'dating' | null;
   } = {},
 ) {
   let account = browserAccount(),
@@ -350,6 +351,7 @@ export async function wiringFixture(
           {
             id: conversationId,
             kind: "direct",
+            mode: options.conversationMode === undefined ? 'friends' : options.conversationMode,
             created_at: now,
             participants,
             latest_message: messages.at(-1),

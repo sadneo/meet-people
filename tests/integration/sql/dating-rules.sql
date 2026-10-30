@@ -42,7 +42,7 @@ do $$ declare n integer;owner uuid;receipt jsonb;profile jsonb;begin
    'mode','dating','source','home','placeId','ad100000-0000-4000-8000-'||lpad(n::text,12,'0')));
   profile:=(public.get_dating_preferences()->'profile')||jsonb_build_object(
    'gender',case when n=1 then 'Man' else 'Woman' end,'sexuality','Straight','intent','Long-term relationship','style','Monogamy',
-   'clarifiedTargets',case when n=1 then '["Woman"]'::jsonb else '["Man"]'::jsonb end);
+    'clarifiedTargets','[]'::jsonb);
   perform public.save_dating_preferences(jsonb_build_object('expectedProfileRevision',0,'expectedSearchRevision',0,'profile',profile,
    'search',jsonb_build_object('ageMin',18,'ageMax',99,'radiusMiles',15,'searchArea',jsonb_build_object('source','home','resolvedLocationRef',receipt->>'id'))));
   perform public.set_dating_enabled('{"expectedProfileRevision":1,"expectedSearchRevision":1,"enabled":true}');
@@ -69,7 +69,42 @@ do $$ declare value jsonb;begin
  assert jsonb_array_length(value->'candidates')=2,'Exclusions ignored';
 end $$;
 reset role;
+-- Automatic targets are enforced for projections and requests, including the
+-- recipient's orientation. Legacy clarification cannot override clear labels.
+update public.dating_owner_aggregates set profile=profile||'{"sexuality":"Lesbian","clarifiedTargets":["Man"]}' where user_id='ad000000-0000-4000-8000-000000000002';
+set local role authenticated;
+select set_config('request.jwt.claim.sub','ad000000-0000-4000-8000-000000000001',true);
+do $$ begin
+ assert public.project_dating_candidate('ad000000-0000-4000-8000-000000000002')='{"candidate":null}'::jsonb,'Recipient orientation ignored';
+ begin perform public.request_dating_connection('ad000000-0000-4000-8000-000000000002');raise exception 'One-way attraction allowed';exception when sqlstate 'DL409' then null;end;
+end $$;
+reset role;
+update public.dating_owner_aggregates set profile=profile||'{"sexuality":"Bisexual","clarifiedTargets":[]}' where user_id='ad000000-0000-4000-8000-000000000001';
+do $$ begin
+ assert not dating_private.rules_pair('ad000000-0000-4000-8000-000000000001','ad000000-0000-4000-8000-000000000002'),'All genders bypassed recipient preference';
+end $$;
+update public.dating_owner_aggregates set profile=profile||'{"gender":"Custom identity","sexuality":"Queer","clarifiedTargets":["Man"]}' where user_id='ad000000-0000-4000-8000-000000000002';
+do $$ begin
+ assert dating_private.rules_pair('ad000000-0000-4000-8000-000000000001','ad000000-0000-4000-8000-000000000002'),'Bisexual policy did not include custom gender with reciprocal clarification';
+end $$;
+update public.dating_owner_aggregates set profile=profile||'{"gender":"Woman","sexuality":"Straight","clarifiedTargets":[]}' where user_id='ad000000-0000-4000-8000-000000000002';
+update public.dating_owner_aggregates set profile=profile||'{"sexuality":"Straight","clarifiedTargets":[]}' where user_id='ad000000-0000-4000-8000-000000000001';
 select set_config('request.jwt.claim.role','authenticated',true);
+set local role authenticated;
+do $$ begin
+ perform set_config('request.jwt.claim.sub','ad000000-0000-4000-8000-000000000001',true);
+ assert public.request_dating_connection('ad000000-0000-4000-8000-000000000002')->>'status'='sent';
+ assert public.social_connection_list()->'sent'->0->>'mode'='dating','Dating request origin missing';
+ perform set_config('request.jwt.claim.sub','ad000000-0000-4000-8000-000000000002',true);
+ assert public.social_connection_list()->'incoming'->0->>'mode'='dating','Incoming Dating origin missing';
+ assert public.request_dating_connection('ad000000-0000-4000-8000-000000000001')->>'status'='connected';
+ assert public.social_inbox(1)->'conversations'->0->>'mode'='dating','Dating chat origin lost';
+ assert public.request_dating_connection('ad000000-0000-4000-8000-000000000001')->>'status'='connected','Repeated mutual like changed relationship';
+ perform public.social_connection('ad000000-0000-4000-8000-000000000001','remove');
+ assert public.social_inbox(1)->'conversations'->0->>'mode'='dating','Saved history lost origin after removal';
+ perform set_config('request.jwt.claim.sub','ad000000-0000-4000-8000-000000000001',true);
+end $$;
+reset role;
 -- Eligibility is repeated after the private pool has been read.
 set local role authenticated;
 select set_config('request.jwt.claim.sub','ad000000-0000-4000-8000-000000000002',true);
@@ -95,7 +130,15 @@ do $$ begin
  assert not has_function_privilege('anon','public.project_dating_candidate(uuid)','EXECUTE');
  assert not has_function_privilege('authenticated','public.get_dating_scoring_pool(uuid,jsonb)','EXECUTE');
  assert not has_table_privilege('authenticated','matching_private.scoring_settings','SELECT');
- assert public.dating_targets('{"gender":"Man","sexuality":"Straight","clarifiedTargets":[]}') is null,'Inferred targets survived';
+  assert public.dating_targets('{"gender":"Man","sexuality":"Straight","clarifiedTargets":[]}')='["Woman"]'::jsonb;
+  assert public.dating_targets('{"gender":"Woman","sexuality":"Heterosexual","clarifiedTargets":["Woman"]}')='["Man"]'::jsonb;
+  assert public.dating_targets('{"gender":"Man","sexuality":"Gay","clarifiedTargets":[]}')='["Man"]'::jsonb;
+  assert public.dating_targets('{"gender":"Woman","sexuality":"Lesbian","clarifiedTargets":[]}')='["Woman"]'::jsonb;
+  assert public.dating_targets('{"gender":"Man","sexuality":"Bisexual","clarifiedTargets":[]}')='"all"'::jsonb;
+  assert public.dating_targets('{"gender":"Woman","sexuality":"Pansexual","clarifiedTargets":[]}')='"all"'::jsonb;
+  assert public.dating_targets('{"gender":"Nonbinary","sexuality":"Pansexual","clarifiedTargets":[]}') is null;
+  assert public.dating_targets('{"gender":"Woman","sexuality":"Queer","clarifiedTargets":[]}') is null;
+  assert public.dating_targets('{"gender":"Woman","sexuality":"Asexual","clarifiedTargets":["Woman"]}')='["Woman"]'::jsonb;
  assert (timestamp '2026-11-01 01:30' at time zone 'America/New_York')=timestamptz '2026-11-01 06:30+00','Fall ambiguity policy changed';
  assert ((timestamp '2026-03-08 02:30' at time zone 'America/New_York') at time zone 'America/New_York')<>timestamp '2026-03-08 02:30','Spring gap policy changed';
 end $$;

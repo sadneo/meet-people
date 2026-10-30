@@ -16,8 +16,9 @@ React screens in `src/ui/` through `src/App.tsx`; there is no second demo server
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
 | `/explore`, `/explore/:id` | Public event reads; sign-in link for group participation |
 | `/messages`, `/messages/chat?conversation=…` | Saved inbox, history, read state and idempotent sends |
-| `/profile` | Canonical identity, interests, availability, optional facts and photo |
-| `/settings` | Masters, versioned detail preferences, downtime, credentials, blocklist |
+| `/messages/requests` | Standalone private requests view; live acceptance, decline and safety; Close returns to Messages |
+| `/profile` | Account hub with Edit profile, Discovery, Notifications, Account & security, Safety, Privacy & legal, and sign-out. Focused settings pages use `?section=…` and return to Profile. Profile editor retains identity/interests/Dating-details tabs. Search preferences live in Discover. |
+| `/settings` | Legacy redirect to Profile; existing `?section=…` links open the corresponding Profile settings section. Legacy downtime controls removed; active group matching remains in Messages. |
 | `/activity`, `/matches` | Real connection requests, connections and event proposal notifications |
 | `/terms`, `/privacy`, `/cookies` | Existing policy content in the new visual layout |
 | `/logout` | Confirmed local session sign-out |

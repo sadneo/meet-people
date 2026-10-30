@@ -1,5 +1,12 @@
 # Matchmaking frontend and local demos
 
+Friends discovery is opt-out: accounts without saved detailed settings default to
+Friends on. Apply `20261029000200_friends_discovery_default.sql` to existing canonical
+stacks. Saved Friends opt-outs and the global discovery switch remain authoritative;
+Dating and active matchmaking still require explicit opt-in. Discovery also needs
+valid Friends preferences and a trusted search area; enabling the default does not
+invent a location or overwrite an account's filters.
+
 Discover loads passive Friends and Dating batches (up to ten safe profiles),
 keeps the currently viewed card stable, and refills near the end of the buffer.
 Pass advances immediately. Requests save independently, with uncertain results
@@ -15,12 +22,29 @@ and leaving use the active-group endpoints. Direct conversations retain their
 existing endpoints. Group inboxes combine both sources; no historical message
 content is copied into a new group.
 
-Profile → Availability timezone saves the timezone for the existing weekly
+Profile → Timezone saves the timezone for the existing weekly
 schedule. Active matching requires it; passive matching handles missing schedules
-as missing data. Shared-time explanations are opt-in. Partner gender targets in
-Dating preferences are explicit for every sexuality.
+as missing data. Shared-time explanations are opt-in. Dating uses reciprocal
+automatic targets for clear binary gender/sexuality combinations: straight matches
+opposite gender, gay/lesbian matches the same gender, and bisexual/pansexual accepts
+all genders. Nonbinary/custom identities and unclear sexuality labels require
+clarification in Dating Profile; pronouns never determine gender. Apply
+`20261029000300_dating_automatic_targets.sql` to existing canonical stacks.
+
+Profiles allow at most five interests, including at least three from the provided
+catalogue and at most two custom interests. The picker and canonical save/readiness
+checks share this policy. `20261029000400_profile_interest_limits.sql` installs the
+database checks without deleting or replacing old labels; an older nonconforming
+profile must update its selection to complete onboarding or save again.
 
 ## Local prerequisites
+
+Search area now opens the shared Google map picker. See
+[`google-search-locations.md`](google-search-locations.md) for keys, the additive
+`20261030000000_google_search_locations.sql` migration, signing-key setup, retention
+review and the protected purge job. Maps remain explicitly unavailable without
+configuration. New selections are private, mode-specific manual search centers;
+using GPS is optional and never enables tracking or Dating participation.
 
 For a fresh canonical matchmaking test stack, run `pnpm supabase:start:matching`.
 This uses an ignored local work directory, installs the reviewed product SQL before
@@ -32,9 +56,10 @@ canonical backend yet; production schema reconciliation remains separate.
 For an existing canonical stack, apply the reviewed
 product migrations, then all four `20261028` matching migrations in order. Existing
 schema reconciliation instructions still apply; **do not reset a populated database**
-just to enable matching. In `.env.local`, set `DATING_RULES_ENABLED=true`,
-`FRIENDS_RULES_ENABLED=true`, `ACTIVE_FRIENDS_ENABLED=true`, and configure the existing
-Supabase URL/public key/service-role key. Keep service-role credentials server-only.
+just to enable matching. In `.env.local`, configure the existing Supabase URL,
+public key and service-role key. Friends/Dating recommendations and the active
+worker are enabled by default when those credentials are configured; there are
+no matchmaking environment feature switches. Keep service-role credentials server-only.
 Restart `pnpm dev`. Active matching also requires the DB policy gate; the explicit
 local-only `--enable-active` option below enables it.
 

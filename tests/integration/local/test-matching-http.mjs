@@ -17,7 +17,7 @@ for(const email of ['pebble-demo-001@example.test','pebble-demo-002@example.test
 }
 const secret=randomUUID()+'Aa1!',clients=[]
 let server,seeded=false
-const env={...process.env,SUPABASE_URL:status.API_URL,SUPABASE_PUBLISHABLE_KEY:status.ANON_KEY,SUPABASE_SERVICE_ROLE_KEY:status.SERVICE_ROLE_KEY,DATING_RULES_ENABLED:'true',FRIENDS_RULES_ENABLED:'true',ACTIVE_FRIENDS_ENABLED:'true'}
+const env={...process.env,SUPABASE_URL:status.API_URL,SUPABASE_PUBLISHABLE_KEY:status.ANON_KEY,SUPABASE_SERVICE_ROLE_KEY:status.SERVICE_ROLE_KEY}
 const run=(args,input)=>execFileSync('pnpm',args,{input,env,encoding:'utf8',stdio:[input===undefined?'ignore':'pipe','pipe','pipe'],timeout:120000})
 try {
  run(['demo:seed','--count','2','--password-stdin','--refresh-location'],secret+'\n');seeded=true

@@ -34,7 +34,7 @@ export function createActiveFriendsRouter(worker: ActiveFriendsWorker | null) {
     if (!id.safeParse(res.locals.actorId).success || !res.locals.actor) return next(new Failure(401, 'Sign in to find a group.'))
     const path = req.path ?? req.url.split('?')[0]
     const startsMatching = req.method === 'POST' && (path === '/queue' || path === '/check' || /\/proposals\/[^/]+\/(accept|smaller)$/.test(path) || path.endsWith('/ready') && req.body?.ready !== false)
-    if (!worker && startsMatching) return next(new Failure(503, 'Active Friends matching is not enabled.'))
+    if (!worker && startsMatching) return next(new Failure(503, 'Active Friends matching is not configured.'))
     if (!path.endsWith('/messages') && Object.keys(req.query ?? {}).length) return next(new Failure(400, 'Unexpected matching query fields.'))
     next()
   })

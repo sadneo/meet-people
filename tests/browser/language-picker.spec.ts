@@ -1,0 +1,34 @@
+import { expect, test } from '@playwright/test';
+import { wiringFixture } from './wiring-fixture';
+
+for (const width of [320, 390]) test(`language search, custom chips and visibility persist at ${width}px`, async ({ page }, testInfo) => {
+  const fixture = await wiringFixture(page);
+  await page.setViewportSize({ width, height: 844 });
+  await page.goto('/profile?section=basics');
+  const input = page.getByRole('combobox', { name: 'Languages', exact: true });
+  await input.fill('Span');
+  await input.press('Enter');
+  await expect(page.getByRole('button', { name: 'Remove Spanish', exact: true })).toBeVisible();
+  expect(fixture.calls.filter(call => call.method === 'PUT')).toHaveLength(0);
+  await input.fill('Lëtzebuergesch');
+  await page.getByRole('option', { name: 'Add “Lëtzebuergesch”', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remove Lëtzebuergesch', exact: true })).toBeVisible();
+  await input.fill('spanish');
+  await expect(page.getByRole('option')).toHaveCount(0);
+  await input.fill('French');
+  await page.getByRole('option', { name: 'French', exact: true }).click();
+  await page.getByRole('button', { name: 'Remove French', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Show languages', exact: true }).check();
+  await input.fill('Eng');
+  await expect(page.getByRole('option', { name: 'English', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('language-picker.png') });
+  await input.press('Escape');
+  await input.fill('');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remove Spanish', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove Lëtzebuergesch', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove French', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('checkbox', { name: 'Show languages', exact: true })).toBeChecked();
+});

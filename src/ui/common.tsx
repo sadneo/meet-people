@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { ModalLayerContext } from './modal-layer';
 import { Link } from "react-router";
 import { useProfilePhoto } from "../features/account/useProfilePhoto";
 
@@ -63,6 +64,24 @@ export function ActionButton({
 }
 export function Icon({ name }: { name: string }) {
   const paths: Record<string, ReactNode> = {
+    Back: <path d="m15 18-6-6 6-6" />,
+    ChevronRight: <path d="m9 6 6 6-6 6" />,
+    Send: <path d="m5 12 7-7 7 7M12 5v14" />,
+    Bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></>,
+    Clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+    More: <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></>,
+    Skip: <path d="m6 6 12 12M6 18 18 6" />,
+    Undo: <path d="M4 10h9a7 7 0 0 1 0 14M4 10l5-5M4 10l5 5" />,
+    AddFriend: <><circle cx="9" cy="8" r="3" /><path d="M3 21v-2a6 6 0 0 1 12 0v2M19 8v6M16 11h6" /></>,
+    Preferences: <path d="M4 7h16M4 17h16M9 4v6m6 4v6" />,
+    DiscoveryPreferences: <><path d="M3 7h3m6 0h9M3 17h9m6 0h3" /><circle cx="9" cy="7" r="3" /><circle cx="15" cy="17" r="3" /></>,
+    DiscoveryActivity: <><circle cx="12" cy="12" r="9" /><path d="M12 3v9h9" /></>,
+    Settings: <><path d="m9 3-.6 2.2-2 .9-2-.6L2 9.5 3.5 11v2L2 14.5l2.4 4 2-.6 2 .9L9 21h6l.6-2.2 2-.9 2 .6 2.4-4-1.5-1.5v-2L22 9.5l-2.4-4-2 .6-2-.9L15 3H9Z"/><circle cx="12" cy="12" r="3"/></>,
+    Activity: <><circle cx="12" cy="12" r="9" /><path d="M12 3v9h9M12 7v5l-3 3" /></>,
+    Filter: <path d="M4 7h16M7 12h10M10 17h4" />,
+    Check: <path d="m5 12 4 4L19 6" />,
+    ArrowRight: <path d="M4 12h16m-6-6 6 6-6 6" />,
+    Location: <><path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
     Garden: (
       <path d="M12 21v-9M12 16C5 16 3 12 3 6c6 0 9 3 9 8M12 12c0-6 3-9 9-9 0 6-3 9-9 9" />
     ),
@@ -163,12 +182,27 @@ export function Modal({
   title,
   children,
   close,
+  className = '',
 }: {
   title: string;
   children: ReactNode;
   close: () => void;
+  className?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+  const [layerBack, setLayerBack] = useState<(() => void) | null>(null);
+  const layerOpener = useRef<HTMLElement | null>(null);
+  const activate = useCallback((back: () => void) => {
+    layerOpener.current = document.activeElement as HTMLElement | null;
+    setLayerBack(() => back);
+    return () => setLayerBack(null);
+  }, []);
+  useLayoutEffect(() => {
+    if (!layerBack && layerOpener.current) { layerOpener.current.focus(); layerOpener.current = null; }
+  }, [layerBack]);
+  const goBack = layerBack ?? close;
+  const titleId = useId();
   useEffect(() => {
     const element = dialog.current!,
       opener = document.activeElement as HTMLElement | null;
@@ -181,23 +215,38 @@ export function Modal({
   return (
     <dialog
       ref={dialog}
-      className="account-modal"
-      aria-labelledby="dialog-title"
+      className={`account-modal ${className} ${layerBack ? 'has-modal-layer' : ''}`}
+      aria-labelledby={titleId}
+      onKeyDown={(event) => {
+        if (event.key !== 'Tab') return;
+        const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])'))
+          .filter(element => !element.matches(':disabled') && element.getClientRects().length > 0 && element.tabIndex >= 0);
+        const first = focusable[0], last = focusable.at(-1);
+        if (!first || !last) { event.preventDefault(); return; }
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) {
+          event.preventDefault(); last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault(); first.focus();
+        }
+      }}
       onCancel={(event) => {
         event.preventDefault();
-        close();
+        goBack();
       }}
       onClick={(event) => {
-        if (event.target === dialog.current) close();
+        if (event.target === dialog.current) goBack();
       }}
     >
-      <header className="row between">
-        <h2 id="dialog-title">{title}</h2>
+      <header className="row between" hidden={!!layerBack}>
+        <h2 id={titleId}>{title}</h2>
         <button className="round" onClick={close} aria-label="Close">
           ×
         </button>
       </header>
-      {children}
+      <ModalLayerContext.Provider value={{ host, activate }}>
+        <div className="modal-content" hidden={!!layerBack}>{children}</div>
+        <div ref={setHost} className="modal-layer-host" hidden={!layerBack}/>
+      </ModalLayerContext.Provider>
     </dialog>
   );
 }

@@ -12,9 +12,10 @@ compatibility, then an actor-JWT RPC locks and revalidates each selected person
 before constructing a separate public profile. At most three candidates are
 revalidated per request. Private inputs/scores are never returned by HTTP.
 
-`DATING_RULES_ENABLED=false` is the default. With it off, existing candidate lookup
-remains active. With it on, missing server credentials fail startup; unavailable
-SQL/scoring fails the request rather than silently using legacy ranking.
+Ranked Dating recommendations are enabled by default with the configured server
+credentials and authenticated actor transport. Missing configuration or unavailable
+SQL/scoring fails the ranked recommendation request rather than bypassing eligibility.
+There is no environment rollout switch. Individual Dating participation stays opt-in.
 
 The matching calculation makes no Gemini/LLM/embedding calls. Legacy interest-save
 triggers and the deployed embedding function are outside this slice and must be
@@ -38,9 +39,10 @@ explicit targets are paused with incremented revisions. No inferred preferences
 are backfilled, and no existing connection/message is removed.
 
 Shared owner-only schedule settings (`20261028000000_matching_signals.sql`) add a revision, nullable IANA timezone and
-`showAvailability` (default false). Availability visibility is stored for future
-truthful explanations; this slice exposes **no availability explanations or
-schedules**, even when true. The existing React Dating screen has a lazily loaded
+`showAvailability` (default false). The discovery-profile-details migration adds
+one coarse shared weekday/period only when both accounts opt in and have at least
+30 common minutes in the upcoming 14 days. It exposes no exact schedules, dates,
+or private interval bounds. The existing React Dating screen has a lazily loaded
 explicit timezone form. It never assumes the browser timezone, writes on mount,
 or copies profile home/device location into Dating search.
 
@@ -136,7 +138,7 @@ This migration must run **after** that product reconciliation; do not inject it
 into an earlier chronological bootstrap or edit applied historical migrations.
 The deployment pipeline is not changed to activate it automatically.
 
-1. Keep the flag off. Reproduce the reconciled product schema in an isolated,
+1. Before deployment, reproduce the reconciled product schema in an isolated,
    disposable Supabase/Postgres instance with PostGIS. Never point tests at live.
 2. Apply the migration there and execute `tests/integration/sql/dating-rules.sql`
    with its required disposable marker. Test old Dating read/request behavior too.
@@ -145,14 +147,13 @@ The deployment pipeline is not changed to activate it automatically.
 4. Resolve the product decisions below and finish remaining lifecycle/frontend
    work before presenting this as the handoff's full Dating system.
 5. Deploy the schema before the new explicit-target clients. Confirm saved legacy
-   users are paused without losing contacts. Enable the flag only in the sandbox
-   after acceptance, then expand gradually.
+   users are paused without losing contacts. Verify the configured services in the
+   sandbox after acceptance, then expand gradually.
 
-Rollback the ranking via `DATING_RULES_ENABLED=false`. Do not restore inferred
-sexuality defaults or re-enable paused users. Keep additive settings/schema and
-existing contacts. Do not drop tables or downgrade explicit consent to roll back
-an algorithm. The new explicit-target client requires the SQL target-policy
-change even when TypeScript ranking is off.
+Rollback ranking through a reviewed application deployment, not an environment
+flag. Do not restore inferred sexuality defaults or re-enable paused users. Keep
+additive settings/schema and existing contacts. Do not drop tables or downgrade
+explicit consent to roll back an algorithm. Preserve the SQL target-policy checks.
 
 ## Verification and cost evidence
 

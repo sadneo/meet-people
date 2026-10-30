@@ -28,7 +28,7 @@ export function createFriendsDiscoveryRouter(scoring: FriendsScoringTransport | 
     res.set('Cache-Control', 'no-store')
     if (!z.uuid().safeParse(res.locals.actorId).success || !res.locals.actor) return next(new Failure(401, 'Sign in to use Friends discovery.'))
     if (Object.keys(req.query ?? {}).length) return next(new Failure(400, 'Unexpected Friends request fields.'))
-    if (!scoring) return next(new Failure(503, 'Friends discovery rules are not enabled.'))
+    if (!scoring) return next(new Failure(503, 'Friends discovery is not configured.'))
     next()
   })
   router.post('/recommendations', async (req, res) => {
