@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DatingCandidate } from '../../shared/dating-live'
 import type { FriendsDiscoveryCandidate } from '../../shared/friends-discovery'
 import type { ConnectionState } from '../../shared/connections'
-import { matchingClient } from './matching-client'
+import { matchingClient, MatchingError } from './matching-client'
 export type DiscoveryPerson = DatingCandidate | FriendsDiscoveryCandidate
 export function useDiscoveryDeck(token: string, mode: 'Friends' | 'Dating', enabled: boolean, revision: string) {
   const client = useMemo(() => matchingClient(token), [token])
   const [cards, setCards] = useState<DiscoveryPerson[]>([]), [loading, setLoading] = useState(false), [error, setError] = useState(''), [searched, setSearched] = useState(false)
-  const [outcomes, setOutcomes] = useState<{ person: DiscoveryPerson; state: 'saving' | 'uncertain' | 'confirmed'; result?: ConnectionState; error?: string }[]>([])
+  const [outcomes, setOutcomes] = useState<{ person: DiscoveryPerson; state: 'saving' | 'uncertain' | 'rejected' | 'confirmed'; result?: ConnectionState; error?: string }[]>([])
   const [skipped, setSkipped] = useState<DiscoveryPerson | null>(null)
   const outcomesRef = useRef(outcomes); outcomesRef.current = outcomes
   const writes = useRef(new Set<string>())
@@ -67,7 +67,10 @@ export function useDiscoveryDeck(token: string, mode: 'Friends' | 'Dating', enab
       setOutcomes(current => current.map(item => item.person.id === person.id ? { person, state: 'confirmed', result } : item))
       window.dispatchEvent(new Event('pebble:activity-changed'))
     } catch (failure) {
-      if (live.current) setOutcomes(current => current.map(item => item.person.id === person.id ? { person, state: 'uncertain', error: failure instanceof Error ? failure.message : 'Request could not be confirmed.' } : item))
+      // A 429 rejects the request before saving; interrupted writes/readbacks
+      // still require reconciliation and must never be silently retried.
+      const rejected = failure instanceof MatchingError && failure.status === 429
+      if (live.current) setOutcomes(current => current.map(item => item.person.id === person.id ? { person, state: rejected ? 'rejected' : 'uncertain', error: failure instanceof Error ? failure.message : 'Request could not be confirmed.' } : item))
     }
   }
   return { cards, loading, error, searched, advance, connect, outcomes, refill: fill, reset, undo, canUndo: skipped !== null }

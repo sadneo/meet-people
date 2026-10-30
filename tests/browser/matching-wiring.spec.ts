@@ -2,6 +2,25 @@ import { expect,test } from '@playwright/test'
 import { wiringFixture,user,peer } from './wiring-fixture'
 const third='a0000000-0000-4000-8000-000000000003',proposalId='d0000000-0000-4000-8000-000000000001'
 
+for(const status of [429,503])test(`Discover distinguishes ${status===429?'rate-limited':'uncertain'} connection requests without resending`,async({page})=>{
+ await wiringFixture(page)
+ let writes=0
+ await page.route(`**/api/matchmaking/friends/requests/${peer}`,async route=>{
+  writes++
+  await route.fulfill({status,json:{error:status===429?'Daily request limit reached (10 per 24 hours). Try again later.':'Your Friends action may already be saved. Check Connections before retrying.'}})
+ })
+ await page.goto('/matchmaking')
+ await page.getByRole('button',{name:'Connect',exact:true}).click()
+ if(status===429){
+  await expect(page.getByText('Taylor: request not sent. Daily request limit reached (10 per 24 hours). Try again later.',{exact:true})).toBeVisible()
+  await expect(page.getByRole('link',{name:'Check Connections',exact:true})).toHaveCount(0)
+ }else{
+  await expect(page.getByText(/Taylor: request unconfirmed/)).toBeVisible()
+  await expect(page.getByRole('link',{name:'Check Connections',exact:true})).toBeVisible()
+ }
+ expect(writes).toBe(1)
+})
+
 test('buffered Discover profiles advance while the refill request is held',async({page})=>{
  await wiringFixture(page)
  let reads=0,release:()=>void=()=>{}

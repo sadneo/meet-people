@@ -12,7 +12,7 @@ function fixture() {
   const project = vi.fn(async (targets: string[]) => { void targets; return { data: { candidates: [person] }, error: null } })
   const queue = vi.fn(), dating = vi.fn()
   let connection: { status: 'sent' | 'connected'; conversationId: string | null } = { status: 'sent', conversationId: null }
-  const write = vi.fn(async (_target: string, action: 'request' | 'accept') => {
+  const write = vi.fn(async (_target: string, action: 'request' | 'accept'): Promise<{data:unknown;error:{code:string}|null}> => {
     connection = action === 'accept' ? { status: 'connected', conversationId: targetId } : { status: 'sent', conversationId: null }
     return { data: connection, error: null }
   })
@@ -25,7 +25,7 @@ function fixture() {
   })
   const transport = {
     verify: async (token: string) => token === 'valid' ? { id: actorId } : null,
-    actor: () => ({ projectFriendsCandidates: project, friendsDiscoveryConnection: write,
+    actor: () => ({ projectFriendsCandidates: project, friendsDiscoveryConnection: write, requestDatingConnection: (target:string) => write(target,'request'),
       socialConnection: readConnection, matchingScoringSettings: readSettings, saveMatchingScoringSettings: saveSettings,
       join: queue, datingCandidate: dating }),
   } as unknown as UserContextTransport
@@ -81,6 +81,14 @@ it('keeps request and explicit acceptance separate and confirms canonical connec
   expect(uncertain.status).toBe(503)
   expect(uncertain.data).toMatchObject({ error: expect.stringContaining('may already be saved') })
   expect(f.write).toHaveBeenCalledTimes(3)
+})
+it.each(['friends','dating'])('reports native request throttling as 429 in %s without retrying or claiming an uncertain save',async mode=>{
+  const f=fixture()
+  f.write.mockResolvedValueOnce({data:null,error:{code:'CON04'}})
+  const result=await request(f,{},`/${mode}/requests/${targetId}`)
+  expect(result).toMatchObject({status:429,data:{error:'Daily request limit reached (10 per 24 hours). Try again later.'}})
+  expect(f.write).toHaveBeenCalledOnce()
+  expect(f.readConnection).not.toHaveBeenCalled()
 })
 it('shares profile timezone settings, validates before writes and requires canonical readback', async () => {
   const f = fixture()
