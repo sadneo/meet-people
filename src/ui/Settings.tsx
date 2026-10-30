@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import type { Account } from "../../shared/account";
 import type { DetailedSettings } from "../../shared/detailed-settings";
 import { supabase } from "../supabase";
@@ -7,11 +7,12 @@ import { authCallbackUrl, validPassword } from "../auth/credential-policy";
 import { useDetailedSettings } from "../features/account/useDetailedSettings";
 import { useMatchmaking } from "../features/matchmaking/useMatchmaking";
 import { useAction } from "./hooks";
-import { ActionButton, ErrorMessage, ResourceState } from "./common";
+import { ActionButton, Avatar, ErrorMessage, Icon, ResourceState } from "./common";
+import { useProfilePhoto } from '../features/account/useProfilePhoto';
 import { useCurrent } from "./current";
 import { Blocklist } from "./Safety";
 
-function MasterSettings() {
+function MasterSettings({ category }: { category: 'discovery' | 'notifications' | 'privacy' }) {
   const current = useCurrent(),
     [draft, setDraft] = useState(current.account!.settings),
     [notice, setNotice] = useState("");
@@ -23,7 +24,7 @@ function MasterSettings() {
   };
   return (
     <section className="account-panel">
-      <h3>Your preferences</h3>
+      <h3>{category === 'notifications' ? 'Activity notifications' : category === 'privacy' ? 'Profile visibility' : 'Discovery & location'}</h3>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -33,7 +34,7 @@ function MasterSettings() {
         }}
       >
         <fieldset disabled={current.busy || !current.available}>
-          {(Object.keys(labels) as (keyof typeof labels)[]).map((key) => (
+          {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => category === 'notifications' ? key === 'notifications' : category === 'privacy' ? key === 'availability' : key === 'discoverable' || key === 'location').map((key) => (
             <label className="settings-switch" key={key}>
               <span>{labels[key]}</span>
               <input
@@ -47,8 +48,7 @@ function MasterSettings() {
             </label>
           ))}
           <p className="account-note">
-            The location preference doesn’t request device coordinates. Choose a
-            search area separately in Discover.
+            {category === 'discovery' ? 'The location preference doesn’t request device coordinates. Choose a search area separately in Discover.' : category === 'notifications' ? 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.' : 'Only coarse shared-time summaries can appear when both people choose to share. Your full schedule stays private.'}
           </p>
           <button className="btn">Save preferences</button>
         </fieldset>
@@ -67,10 +67,12 @@ function DetailedForm({
   initial,
   disabled,
   save,
+  category,
 }: {
   initial: DetailedSettings;
   disabled: boolean;
   save: (value: DetailedSettings["settings"]) => Promise<void>;
+  category: 'discovery' | 'notifications';
 }) {
   const [value, setValue] = useState(initial.settings);
   const labels = {
@@ -88,7 +90,7 @@ function DetailedForm({
       }}
     >
       <fieldset disabled={disabled}>
-        {(Object.keys(labels) as (keyof typeof labels)[]).map((key) => (
+        {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => category === 'discovery' ? key === 'friendsDiscovery' || key === 'datingDiscovery' : key === 'messages' || key === 'plans' || key === 'matches').map((key) => (
           <label className="settings-switch" key={key}>
             <span>{labels[key]}</span>
             <input
@@ -102,8 +104,7 @@ function DetailedForm({
           </label>
         ))}
         <p className="account-note">
-          Global notification and discovery preferences take priority. Saving a
-          notification preference doesn’t verify delivery.
+          {category === 'discovery' ? 'Global discovery takes priority. Pausing a mode keeps existing chats available.' : 'Global notification preferences take priority. Saving a preference doesn’t verify delivery.'}
         </p>
         <button className="btn">Save detailed preferences</button>
       </fieldset>
@@ -335,21 +336,37 @@ export function Settings() {
       current.busy,
     ),
     [notice, setNotice] = useState("");
+  const [search, setSearch] = useSearchParams();
+  const categories = [
+    ['discovery', 'Discovery', 'Friends, Dating & location', 'Discover'],
+    ['notifications', 'Notifications', 'Messages, connections, plans & events', 'Bell'],
+    ['account', 'Account & security', 'Email, sign-in methods & sessions', 'Profile'],
+    ['safety', 'Safety', 'Blocked accounts, reports & help', 'Settings'],
+    ['privacy', 'Privacy & legal', 'Your data, visibility & policies', 'Garden'],
+  ] as const;
+  const category = categories.find(item => item[0] === search.get('section'));
+  const photo = useProfilePhoto();
   return (
-    <div className="account-page">
-      <h2>Settings</h2>
-      <div className="settings-layout">
-        <div>
-          <MasterSettings />
+    <div className="account-page settings-page">
+      {category && <button className="account-back" onClick={() => setSearch({})}><Icon name="Back"/>Settings</button>}
+      <div className="pagehead"><h2>{category?.[1] ?? 'Settings'}</h2></div>
+      {!category ? <>
+        <div className="settings-profile-summary"><Avatar name={current.account?.profile?.display_name ?? ''} url={photo.url}/><div><b>{current.account?.profile?.display_name}</b><p>{current.session.user.email}</p></div></div>
+        <div className="account-group">{categories.map(([id, title, detail, icon]) => <button className="account-row" key={id} onClick={() => setSearch({ section: id })}><span className="account-row-icon"><Icon name={icon}/></span><span><b>{title}</b><small>{detail}</small></span><Icon name="ChevronRight"/></button>)}</div>
+        <Link className="account-logout" to="/logout">Sign out of Pebble</Link>
+      </> : <div className="settings-detail" key={category[0]}>
+          {(category[0] === 'discovery' || category[0] === 'notifications' || category[0] === 'privacy') && <MasterSettings category={category[0]}/>}
+          {(category[0] === 'discovery' || category[0] === 'notifications') && <>
           <section className="account-panel">
-            <h3>Discovery & notifications</h3>
+            <h3>{category[1]} preferences</h3>
             <ResourceState
               loading={detailed.loading}
               error={detailed.error}
               reload={() => void detailed.reload()}
             />
             {detailed.snapshot && (
-              <DetailedForm
+                <DetailedForm
+                  category={category[0]}
                 key={detailed.snapshot.revision}
                 initial={detailed.snapshot}
                 disabled={!detailed.canWrite}
@@ -366,12 +383,11 @@ export function Settings() {
             )}
             {notice && <p role="status">{notice}</p>}
           </section>
-          <Downtime />
-        </div>
-        <div>
-          <Credentials />
-          <Blocklist />
-          <section className="account-panel">
+          </>}
+          {category[0] === 'discovery' && <><div className="account-group"><Link className="account-row" to="/profile?section=friends-preferences"><span><b>Friends preferences</b><small>Who you’d like to meet & search area</small></span><Icon name="ChevronRight"/></Link><Link className="account-row" to="/profile?section=dating-preferences"><span><b>Dating preferences</b><small>Who you’d like to date & search area</small></span><Icon name="ChevronRight"/></Link></div><Downtime/></>}
+          {category[0] === 'account' && <Credentials/>}
+          {category[0] === 'safety' && <Blocklist/>}
+          {(category[0] === 'privacy' || category[0] === 'safety') && <section className="account-panel">
             <h3>Help & privacy</h3>
             <p>
               For support, account deletion or a data request, use the contact
@@ -382,9 +398,8 @@ export function Settings() {
               <Link to="/privacy">Privacy</Link>
               <Link to="/cookies">Cookies</Link>
             </div>
-          </section>
-        </div>
-      </div>
+          </section>}
+      </div>}
     </div>
   );
 }

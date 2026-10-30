@@ -19,7 +19,16 @@ export function useProfilePhoto(peer?:{owner:string;revision?:number}){
    try{
     const snapshot=revision===undefined?(peerMode?await client.reference(target,controller.signal):await client.state(controller.signal)):null
     if(!live||controller.signal.aborted)return
-    if(snapshot?.hasPhoto||revision!==undefined&&revision>0){const blob=await client.image(target,revision??snapshot!.revision,controller.signal);if(!live||controller.signal.aborted)return;url=URL.createObjectURL(blob)}
+     if(snapshot?.hasPhoto||revision!==undefined&&revision>0){
+      const blob=await client.image(target,revision??snapshot!.revision,controller.signal)
+      if(!live||controller.signal.aborted)return
+      url=URL.createObjectURL(blob)
+      // Warm the decoded image cache while buffered profiles are still hidden.
+      // Revealing the next card should not paint an undecoded portrait first.
+      const image=new Image();image.src=url
+      if(typeof image.decode==='function')await image.decode()
+      if(!live||controller.signal.aborted)return
+     }
     if(live)setState({scope,snapshot,url,error:'',loading:false})
    }catch(failure){if(live&&!controller.signal.aborted)setState(previous=>({scope,snapshot:previous.scope===scope?previous.snapshot:null,url:null,error:failure instanceof Error?failure.message:'Photo unavailable.',loading:false}))}
   })()

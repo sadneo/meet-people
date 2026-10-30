@@ -33,4 +33,6 @@ SOURCES = [
     'supabase/migrations/20261028000100_dating_rules.sql',
     'supabase/migrations/20261028000200_friends_discovery.sql',
     'supabase/migrations/20261028000300_active_friends.sql',
+    'supabase/migrations/20261029000000_discovery_profile_details.sql',
+    'supabase/migrations/20261029000100_relationship_modes.sql',
 ]

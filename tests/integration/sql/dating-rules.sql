@@ -70,6 +70,21 @@ do $$ declare value jsonb;begin
 end $$;
 reset role;
 select set_config('request.jwt.claim.role','authenticated',true);
+set local role authenticated;
+do $$ begin
+ perform set_config('request.jwt.claim.sub','ad000000-0000-4000-8000-000000000001',true);
+ assert public.request_dating_connection('ad000000-0000-4000-8000-000000000002')->>'status'='sent';
+ assert public.social_connection_list()->'sent'->0->>'mode'='dating','Dating request origin missing';
+ perform set_config('request.jwt.claim.sub','ad000000-0000-4000-8000-000000000002',true);
+ assert public.social_connection_list()->'incoming'->0->>'mode'='dating','Incoming Dating origin missing';
+ assert public.request_dating_connection('ad000000-0000-4000-8000-000000000001')->>'status'='connected';
+ assert public.social_inbox(1)->'conversations'->0->>'mode'='dating','Dating chat origin lost';
+ assert public.request_dating_connection('ad000000-0000-4000-8000-000000000001')->>'status'='connected','Repeated mutual like changed relationship';
+ perform public.social_connection('ad000000-0000-4000-8000-000000000001','remove');
+ assert public.social_inbox(1)->'conversations'->0->>'mode'='dating','Saved history lost origin after removal';
+ perform set_config('request.jwt.claim.sub','ad000000-0000-4000-8000-000000000001',true);
+end $$;
+reset role;
 -- Eligibility is repeated after the private pool has been read.
 set local role authenticated;
 select set_config('request.jwt.claim.sub','ad000000-0000-4000-8000-000000000002',true);

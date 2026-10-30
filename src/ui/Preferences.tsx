@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { Link } from 'react-router';
 import type { FriendsPreferences } from "../../shared/friends-search-preferences";
 import {
   DatingProfileSchema,
@@ -10,7 +11,7 @@ import { searchLocationClient } from "../features/matchmaking/search-location-cl
 import { useFriendsPreferences } from "../features/matchmaking/useFriendsPreferences";
 import { useDatingPreferences } from "../features/matchmaking/useDatingPreferences";
 import { useAction } from "./hooks";
-import { ActionButton, ErrorMessage, ResourceState } from "./common";
+import { ActionButton, ErrorMessage, Icon, ResourceState } from "./common";
 import { useCurrent } from "./current";
 
 type SearchArea = FriendsPreferences["searchArea"];
@@ -24,7 +25,7 @@ export function BoundsFields({
 }) {
   return (
     <>
-      <fieldset>
+      <fieldset className="preference-bounds">
         <legend>Who you’d like to meet</legend>
         <div className="formgrid">
           <label>
@@ -106,6 +107,8 @@ export function LocationPicker({
   return (
     <fieldset className="search-area">
       <legend>Search area</legend>
+      <details className="search-area-editor">
+      <summary className="account-area">{label || (value.source === 'home' ? current.account?.profile?.location_city || 'Choose a home area' : value.areaLabel || 'Choose an area')}<Icon name="ChevronRight"/></summary>
       <label>
         Use
         <select
@@ -220,6 +223,7 @@ export function LocationPicker({
         Use my current location
       </ActionButton>
       <ErrorMessage>{action.error}</ErrorMessage>
+      </details>
     </fieldset>
   );
 }
@@ -285,6 +289,7 @@ function FriendsForm({
   }
   return (
     <form onSubmit={submit}>
+      <p className="account-note">Changes apply when you save. Shared Profile edits have their own Save action.</p>
       <fieldset disabled={disabled}>
         <BoundsFields
           value={value}
@@ -292,6 +297,7 @@ function FriendsForm({
         />
         <fieldset>
           <legend>Friendship goals</legend>
+          <div className="preference-choices">
           {[
             ...new Set([
               "Hangout crew",
@@ -300,8 +306,9 @@ function FriendsForm({
               ...value.goals,
             ]),
           ].map((goal) => (
-            <label className="check-row" key={goal}>
+            <label className={`chip preference-choice ${value.goals.includes(goal) ? 'selected' : ''}`} key={goal}>
               <input
+                className="sr-only"
                 type="checkbox"
                 checked={value.goals.includes(goal)}
                 onChange={(event) =>
@@ -316,6 +323,7 @@ function FriendsForm({
               {goal}
             </label>
           ))}
+          </div>
         </fieldset>
         <LocationPicker
           mode="friends"
@@ -332,7 +340,7 @@ function FriendsForm({
     </form>
   );
 }
-export function DatingPreferencesPanel({ done }: { done: () => void }) {
+export function DatingPreferencesPanel({ done, view = 'all' }: { done: () => void; view?: 'all' | 'profile' }) {
   const current = useCurrent(),
     resource = useDatingPreferences(
       current.session.user.id,
@@ -347,10 +355,13 @@ export function DatingPreferencesPanel({ done }: { done: () => void }) {
         reload={() => void resource.reload()}
       />
       {resource.snapshot?.profile.enabled && (
-        <p>Pause Dating discovery before editing your preferences.</p>
+        <p className="account-note">Pause Dating discovery before editing your preferences. <Link to="/matchmaking">Open Discover</Link></p>
       )}
       {resource.snapshot && (
         <DatingForm
+          view={view}
+          cancel={done}
+          saving={resource.phase === 'saving'}
           key={`${resource.snapshot.profileRevision}:${resource.snapshot.searchRevision}`}
           initialProfile={resource.snapshot.profile}
           initialSearch={
@@ -381,11 +392,17 @@ function DatingForm({
   initialSearch,
   disabled,
   save,
+  view = 'all',
+  cancel,
+  saving = false,
 }: {
   initialProfile: DatingProfile;
   initialSearch: DatingSearch;
   disabled: boolean;
   save: (profile: DatingProfile, search: DatingSearch) => Promise<void>;
+  view?: 'all' | 'profile';
+  cancel?: () => void;
+  saving?: boolean;
 }) {
   const [profile, setProfile] = useState(initialProfile),
     [search, setSearch] = useState(initialSearch);
@@ -397,14 +414,14 @@ function DatingForm({
     setProfile({ ...profile, [key]: value, clarifiedTargets: [] });
   }
   return (
-    <form
+    <form className={view === 'profile' ? 'profile-editor' : undefined}
       onSubmit={(event) => {
         event.preventDefault();
         void save(profile, search);
       }}
     >
       <fieldset disabled={disabled}>
-        <h3>Your Dating profile</h3>
+        {view === 'profile' ? <p className="account-note">These describe you. Who you want to meet is set in Dating preferences.</p> : <h3>Your Dating profile</h3>}
         {(["gender", "sexuality"] as const).map((key) => {
           const options =
             key === "gender"
@@ -421,7 +438,7 @@ function DatingForm({
                   "Prefer not to say",
                 ];
           return (
-            <label key={key}>
+            <div key={key}><label>
               {key === "gender" ? "Gender" : "Sexuality"}
               <select
                 value={profile[key]}
@@ -437,7 +454,7 @@ function DatingForm({
                   <option key={option}>{option}</option>
                 ))}
               </select>
-            </label>
+            </label>{view === 'profile' && <label className="account-check"><input type="checkbox" checked={profile.visibility[key]} onChange={event => setProfile({ ...profile, visibility: { ...profile.visibility, [key]: event.target.checked } })}/>Show {key} in Dating</label>}</div>
           );
         })}
         {establishedIdentityChanged ? (
@@ -445,7 +462,7 @@ function DatingForm({
             Save your identity change first, then reopen preferences to confirm
             who you’d like to meet.
           </p>
-        ) : (
+        ) : view === 'all' ? (
           <fieldset
             disabled={!profile.gender || !profile.sexuality}
           >
@@ -477,7 +494,8 @@ function DatingForm({
               </label>
             ))}
           </fieldset>
-        )}
+        ) : null}
+        {view === 'profile' && <><label>Height · inches (optional)<input type="number" min={24} max={107} value={profile.heightInches ?? ''} onChange={event => setProfile({ ...profile, heightInches: event.target.value ? +event.target.value : null })}/></label><label className="account-check"><input type="checkbox" checked={profile.visibility.height} onChange={event => setProfile({ ...profile, visibility: { ...profile.visibility, height: event.target.checked } })}/>Show height in Dating</label></>}
         <label>
           Looking for
           <select
@@ -514,7 +532,7 @@ function DatingForm({
             ))}
           </select>
         </label>
-        <label>
+        {view === 'all' && <><label>
           Height · inches (optional)
           <input
             type="number"
@@ -549,8 +567,8 @@ function DatingForm({
               {key}
             </label>
           ))}
-        </fieldset>
-        <BoundsFields
+        </fieldset></>}
+        {view === 'all' && <><BoundsFields
           value={search}
           change={(bounds) => setSearch({ ...search, ...bounds })}
         />
@@ -558,13 +576,14 @@ function DatingForm({
           mode="dating"
           value={search.searchArea}
           change={(searchArea) => setSearch({ ...search, searchArea })}
-        />
+        /></>}
         <p className="account-note">
           Saving preferences keeps Dating paused. Start discovery separately
           when you’re ready.
         </p>
-        <button className="btn">Save Dating preferences</button>
+        {view === 'all' && <button className="btn">Save Dating preferences</button>}
       </fieldset>
+      {view === 'profile' && <div className="profile-save-bar"><button type="button" className="btn light" disabled={saving} onClick={cancel}>Cancel</button><button className="btn" disabled={disabled}>{saving ? 'Saving…' : 'Save changes'}</button></div>}
     </form>
   );
 }

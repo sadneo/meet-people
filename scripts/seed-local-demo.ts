@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { execFileSync,spawnSync } from 'node:child_process'
 import { createClient,type SupabaseClient } from '@supabase/supabase-js'
-import sharp from 'sharp'
+import { demoInitialsPhoto } from './demo-seed/photos.js'
 import { demoPlan,seedContainer,seedMarker } from './demo-seed/plan.js'
 import { seedSql } from './demo-seed/sql.js'
 const url='http://127.0.0.1:54321'
@@ -72,9 +72,7 @@ async function main(){
   if(signed.error||signed.data.user?.id!==p.id||signed.data.user.is_anonymous!==false)throw new Error(`Cannot sign in demo account ${p.index}; use its existing seed password. No password was overwritten.`)
   actors.push(actor)
   if(!options['no-photos']){
-   const initials=p.account.profile!.display_name.split(' ')[1].slice(0,2).toUpperCase(),color=['#dceacc','#dfcbbd','#d8e7e5','#efd9d7','#e5dfed'][p.index%5]
-   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="${color}"/><circle cx="128" cy="112" r="74" fill="#fafbf7"/><text x="128" y="130" text-anchor="middle" font-family="sans-serif" font-size="48" fill="#34583e">${initials}</text><text x="128" y="225" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#34583e">DEMO ${p.index}</text></svg>`
-   photos.set(p.id,(await sharp(Buffer.from(svg)).jpeg({quality:80,progressive:false}).toBuffer()).toString('base64'))
+    photos.set(p.id,(await demoInitialsPhoto(p)).toString('base64'))
   }
  }
  pg(seedSql(plan,photos,!!options['reset-profiles']))

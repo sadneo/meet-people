@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { supabase } from "../supabase";
 import { apiUrl } from "../platform/native";
+import { legalPublication } from "../features/public/legal-content";
 import { safeReturnTo } from "../auth/returnTo";
 import { parseCallbackGrant } from "../auth/callback-grant";
 import { authCallbackUrl, validPassword } from "../auth/credential-policy";
@@ -126,24 +127,33 @@ export function Auth({
   const developer =
     import.meta.env.DEV && isLocalDevelopment(getLocalDevelopmentEnvironment());
   return (
-    <main className="auth-screen">
-      <Brand />
-      <div className="auth-card">
-        <h1>
+    <div className="auth-page auth-centered">
+    <main className="auth-main">
+      <section className="auth-form-section" aria-labelledby="auth-title">
+      <div className="auth-form-wrap">
+        <Link className="auth-centered-logo" to="/" aria-label="Pebble home">
+          <img src="/pebble/pebble-wordmark.svg" alt="Pebble" width="170" height="76" />
+        </Link>
+        <h1 id="auth-title">
           {reset
             ? "Set a new password"
             : forgot
               ? "Forgot your password?"
               : register
                 ? "Find your people."
-                : "Welcome to Pebble."}
+                 : "Welcome to Pebble"}
         </h1>
         <form onSubmit={(event) => void submit(event)}>
           {!reset && (
-            <label>
-              Email
+            <>
+              <label htmlFor="auth-email">Email</label>
               <input
+                id="auth-email"
                 type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="you@example.com"
                 autoComplete="email"
                 required
                 value={email || (register ? (search.get("email") ?? "") : "")}
@@ -152,13 +162,13 @@ export function Auth({
                   action.busy || (mode === "login" && stage === "password")
                 }
               />
-            </label>
+            </>
           )}
           {!forgot && (stage === "password" || register || reset) && (
             <>
-              <label>
-                Password
+              <label htmlFor="auth-password">Password</label>
                 <input
+                  id="auth-password"
                   type="password"
                   autoComplete={
                     register || reset ? "new-password" : "current-password"
@@ -169,18 +179,18 @@ export function Auth({
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
-              </label>
               {(register || reset) && (
-                <label>
-                  Confirm password
+                <>
+                  <label htmlFor="auth-confirm">Confirm password</label>
                   <input
+                    id="auth-confirm"
                     type="password"
                     autoComplete="new-password"
                     required
                     value={confirm}
                     onChange={(event) => setConfirm(event.target.value)}
                   />
-                </label>
+                </>
               )}
             </>
           )}
@@ -189,7 +199,7 @@ export function Auth({
               (!supabase ? "Sign-in is unavailable. Try again later." : "")}
           </ErrorMessage>
           {notice && <p role="status">{notice}</p>}
-          <button className="btn" disabled={action.busy || !supabase}>
+           <button className="auth-submit" disabled={action.busy || !supabase}>
             {action.busy
               ? "Please wait…"
               : reset
@@ -199,14 +209,15 @@ export function Auth({
                   : register
                     ? "Create account"
                     : stage === "email"
-                      ? "Continue"
+                       ? "Continue with email"
                       : "Sign in"}
           </button>
         </form>
         {mode === "login" && (
           <>
+            <div className="auth-or" aria-hidden="true">or</div>
             <button
-              className="text-link"
+              className="auth-google"
               disabled={action.busy || !supabase}
               onClick={() => {
                 void action.run(async () => {
@@ -221,6 +232,7 @@ export function Auth({
             >
               Continue with Google
             </button>
+            {stage === "password" && <>
             <button
               className="text-link"
               disabled={action.busy || !supabase || !email}
@@ -257,9 +269,14 @@ export function Auth({
                 Use a different email
               </ActionButton>
             )}
+            </>}
+            <Link className="auth-home-link" to="/">Back to home</Link>
             {developer && (
-              <ActionButton
-                secondary
+              <div className="auth-dev-section">
+              <p className="auth-dev-label">Local development</p>
+              <button
+                type="button"
+                className="auth-dev-button"
                 disabled={action.busy || !supabase}
                 onClick={() => {
                   void action.run(async () => {
@@ -270,18 +287,27 @@ export function Auth({
                   });
                 }}
               >
-                Sign in as development user
-              </ActionButton>
+                 Sign in as dev
+              </button>
+              <p className="auth-demo-note">Local development account. No hosted accounts are changed.</p>
+              </div>
             )}
           </>
         )}
-        <Link to="/login">{register || forgot ? "Back to sign in" : ""}</Link>
-        <p className="account-note">
+        {(register || forgot) && <Link className="auth-home-link" to="/login">Back to sign in</Link>}
+        {mode !== "login" && <p className="account-note">
           By continuing, you agree to our <Link to="/terms">Terms</Link> and{" "}
           <Link to="/privacy">Privacy Policy</Link>.
-        </p>
+        </p>}
+        <footer className="auth-footer">
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/terms">Terms</Link>
+          <a href={`mailto:${legalPublication.contactEmail}`}>Safety</a>
+        </footer>
       </div>
+      </section>
     </main>
+    </div>
   );
 }
 

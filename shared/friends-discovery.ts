@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { MatchingProfileSchema } from './matchmaking.js'
+import { discoveryDetailFields } from './discovery-details.js'
 const id = z.uuid().transform(value => value.toLowerCase())
 
 export const FriendsBatchRequestSchema = z.object({
@@ -7,6 +8,7 @@ export const FriendsBatchRequestSchema = z.object({
   limit: z.number().int().min(1).max(10).default(10),
 }).strict()
 export const FriendsDiscoveryCandidateSchema = z.object({
+  ...discoveryDetailFields,
   id, name: MatchingProfileSchema.shape.display_name,
   age: z.number().int().min(18).max(99),
   city: MatchingProfileSchema.shape.location_city, bio: MatchingProfileSchema.shape.bio,

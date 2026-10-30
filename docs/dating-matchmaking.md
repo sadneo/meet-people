@@ -38,9 +38,10 @@ explicit targets are paused with incremented revisions. No inferred preferences
 are backfilled, and no existing connection/message is removed.
 
 Shared owner-only schedule settings (`20261028000000_matching_signals.sql`) add a revision, nullable IANA timezone and
-`showAvailability` (default false). Availability visibility is stored for future
-truthful explanations; this slice exposes **no availability explanations or
-schedules**, even when true. The existing React Dating screen has a lazily loaded
+`showAvailability` (default false). The discovery-profile-details migration adds
+one coarse shared weekday/period only when both accounts opt in and have at least
+30 common minutes in the upcoming 14 days. It exposes no exact schedules, dates,
+or private interval bounds. The existing React Dating screen has a lazily loaded
 explicit timezone form. It never assumes the browser timezone, writes on mount,
 or copies profile home/device location into Dating search.
 

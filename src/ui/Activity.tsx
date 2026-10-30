@@ -39,7 +39,7 @@ export function Activity() {
         </ActionButton>
       </div>
       <ErrorMessage>{action.error}</ErrorMessage>
-      <section className="card">
+      <section className="card" id="requests">
         <h3>Connection requests</h3>
         <ResourceState
           loading={people.loading}

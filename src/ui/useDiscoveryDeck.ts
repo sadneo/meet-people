@@ -8,6 +8,7 @@ export function useDiscoveryDeck(token: string, mode: 'Friends' | 'Dating', enab
   const client = useMemo(() => matchingClient(token), [token])
   const [cards, setCards] = useState<DiscoveryPerson[]>([]), [loading, setLoading] = useState(false), [error, setError] = useState(''), [searched, setSearched] = useState(false)
   const [outcomes, setOutcomes] = useState<{ person: DiscoveryPerson; state: 'saving' | 'uncertain' | 'confirmed'; result?: ConnectionState; error?: string }[]>([])
+  const [skipped, setSkipped] = useState<DiscoveryPerson | null>(null)
   const outcomesRef = useRef(outcomes); outcomesRef.current = outcomes
   const writes = useRef(new Set<string>())
   const excluded = useRef(new Set<string>()), inFlight = useRef(false), generation = useRef(0), controller = useRef<AbortController | null>(null), live = useRef(true)
@@ -33,15 +34,21 @@ export function useDiscoveryDeck(token: string, mode: 'Friends' | 'Dating', enab
     }
   }, [client, enabled, mode])
   const reset = useCallback(() => {
-    generation.current++; controller.current?.abort(); inFlight.current = false; excluded.current = new Set(); setCards([]); setSearched(false); setError(''); setLoading(false)
+    generation.current++; controller.current?.abort(); inFlight.current = false; excluded.current = new Set(); setCards([]); setSkipped(null); setSearched(false); setError(''); setLoading(false)
     // Keep uncertain action feedback across preference and discovery refreshes.
     for (const outcome of outcomesRef.current) if (outcome.state !== 'confirmed') excluded.current.add(outcome.person.id)
     void fill()
   }, [fill])
   useEffect(() => { reset() }, [reset, revision])
   useEffect(() => { const changed = () => reset(); window.addEventListener('pebble:matching-changed', changed); return () => window.removeEventListener('pebble:matching-changed', changed) }, [reset])
-  function advance(person: DiscoveryPerson) {
+  function advance(person: DiscoveryPerson, remember = true) {
+    setSkipped(remember ? person : null)
     setCards(current => { const next = current.filter(card => card.id !== person.id); return next })
+  }
+  function undo() {
+    if (!skipped) return
+    setCards(current => [skipped, ...current.filter(person => person.id !== skipped.id)])
+    setSkipped(null)
   }
   // Refill once at the threshold; an exhausted/error result does not cause a loop.
   const size = cards.length, lastSize = useRef(-1)
@@ -53,7 +60,7 @@ export function useDiscoveryDeck(token: string, mode: 'Friends' | 'Dating', enab
     if (writes.current.has(person.id)) return
     if (outcomesRef.current.some(item => item.person.id === person.id && item.state !== 'confirmed')) return
     writes.current.add(person.id)
-    advance(person); setOutcomes(current => [...current.filter(item => item.person.id !== person.id), { person, state: 'saving' }])
+    advance(person, false); setOutcomes(current => [...current.filter(item => item.person.id !== person.id), { person, state: 'saving' }])
     try {
       const result = await client.connect(mode, person.id)
       if (!live.current) return
@@ -63,5 +70,5 @@ export function useDiscoveryDeck(token: string, mode: 'Friends' | 'Dating', enab
       if (live.current) setOutcomes(current => current.map(item => item.person.id === person.id ? { person, state: 'uncertain', error: failure instanceof Error ? failure.message : 'Request could not be confirmed.' } : item))
     }
   }
-  return { cards, loading, error, searched, advance, connect, outcomes, refill: fill, reset }
+  return { cards, loading, error, searched, advance, connect, outcomes, refill: fill, reset, undo, canUndo: skipped !== null }
 }

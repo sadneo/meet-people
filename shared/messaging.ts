@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { RelationshipModeSchema } from './connections.js'
 
 export const MESSAGE_MAX_LENGTH = 2000
 const seq = z.number().int().nonnegative()
@@ -16,6 +17,7 @@ export const MessageSchema = z.object({
 })
 export const ConversationKindSchema = z.enum(['direct', 'event_group', 'friends_group'])
 export const ConversationSchema = z.object({
+  mode: RelationshipModeSchema.nullable().optional(),
   id: z.string().uuid(), kind: ConversationKindSchema, created_at: z.string(),
   participants: z.array(ParticipantSchema), latest_message: MessageSchema.nullable(), unread_count: seq,
 })

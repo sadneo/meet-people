@@ -5,7 +5,7 @@ import { matchingClient } from './matching-client'
 
 type Settings = z.infer<typeof DatingScoringSettingsResponseSchema>
 
-export function MatchingSchedule({ token, disabled, onSaved }: { token: string; disabled: boolean; onSaved: () => void }) {
+export function MatchingSchedule({ token, disabled, onSaved, compact = false }: { token: string; disabled: boolean; onSaved: () => void; compact?: boolean }) {
   const client = useMemo(() => matchingClient(token), [token]), id = useId()
   const [saved, setSaved] = useState<Settings | null>(null), [zone, setZone] = useState('')
   const [visible,setVisible]=useState(false)
@@ -42,7 +42,7 @@ export function MatchingSchedule({ token, disabled, onSaved }: { token: string; 
     } finally { if (active.current && !abort.signal.aborted) { locked.current = false; setBusy(false) } }
   }
   return <details className="matching-schedule" onToggle={event => { if (event.currentTarget.open && !saved && !busy) void load() }}>
-    <summary>Availability timezone</summary>
+    <summary className={compact ? 'account-area' : undefined}>{compact ? 'Timezone & shared availability' : 'Availability timezone'}</summary>
     <p>Choose the timezone for your saved weekly availability so we can calculate shared time. Your exact schedule stays private. Shared-time explanations require everyone’s permission.</p>
     {busy && <p role="status">Loading or saving Schedule settings…</p>}
     {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
