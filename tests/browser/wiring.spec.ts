@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { conversationId, peer, wiringFixture } from "./wiring-fixture";
+import { conversationId, eventId, peer, user, wiringFixture } from "./wiring-fixture";
 
 test("public entry and private routes use the new frontend with real sign-in gates", async ({
   page,
@@ -173,6 +173,49 @@ test("public events come from the API and private group controls require sign-in
   await expect(page).toHaveURL(/\/login\?returnTo=/);
 });
 
+test("event groups automatically show a suggested group without replaying the join", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.clock.install();
+  await wiringFixture(page);
+  let queued = false, groupReady = false;
+  const methods: string[] = [];
+  await page.route(`**/api/matchmaking/events/${eventId}/group-queue`, async route => {
+    const method = route.request().method();
+    methods.push(method);
+    if (method === "POST") queued = true;
+    if (method === "DELETE") queued = false;
+    await route.fulfill({ json: queued && groupReady ? {
+      state: "proposal", proposal: {
+        id: "b0000000-0000-4000-8000-000000000001", eventId,
+        members: [{ id: user, name: "Sam", avatar: null }, { id: peer, name: "Taylor", avatar: null }],
+      },
+    } : { state: queued ? "waiting" : "idle", proposal: null } });
+  });
+  await page.goto(`/events/${eventId}`);
+  await expect(page.getByRole("button", { name: "Join group queue", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Refresh group status", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Join group queue", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Waiting for a group", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Leave group queue", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Refresh group status", exact: true })).toBeVisible();
+  groupReady = true;
+  await page.clock.runFor(3001);
+  await expect(page.getByRole("heading", { name: "Suggested group", exact: true })).toBeVisible();
+  await expect(page.locator(".proposal-members").getByText("Taylor", { exact: true })).toBeVisible();
+  expect(methods.filter(method => method === "POST")).toHaveLength(1);
+  const readsAfterMatch = methods.filter(method => method === "GET").length;
+  await page.clock.fastForward(10000);
+  expect(methods.filter(method => method === "GET")).toHaveLength(readsAfterMatch);
+  await expect(page.getByRole("button", { name: /proposal/i })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "Leave group queue", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Join group queue", exact: true })).toBeVisible();
+  expect(methods.filter(method => method === "DELETE")).toHaveLength(1);
+  const readsAfterLeaving = methods.filter(method => method === "GET").length;
+  await page.clock.fastForward(10000);
+  expect(methods.filter(method => method === "GET")).toHaveLength(readsAfterLeaving);
+});
+
 test("messages load saved history and send with an idempotency key", async ({
   page,
 }) => {
@@ -211,6 +254,32 @@ test("uncertain message delivery retries the same key without a duplicate", asyn
     (call) => call.path.endsWith("/messages") && call.method === "POST",
   );
   expect(writes[0].body).toEqual(writes[1].body);
+});
+
+test("message keyboard shortcuts send once, preserve newlines and ignore composition", async ({ page }) => {
+  const fixture = await wiringFixture(page);
+  await page.goto(`/messages/chat?conversation=${conversationId}`);
+  const composer = page.getByLabel("Message", { exact: true });
+  await expect(composer).toBeEnabled();
+  await composer.fill("   ");
+  await composer.press("Enter");
+  expect(fixture.sent.size).toBe(0);
+  await composer.fill("First line");
+  await composer.press("Shift+Enter");
+  await composer.pressSequentially("Second line");
+  await expect(composer).toHaveValue("First line\nSecond line");
+  expect(fixture.sent.size).toBe(0);
+  await composer.dispatchEvent("keydown", { key: "Enter", code: "Enter", isComposing: true, bubbles: true });
+  await composer.dispatchEvent("keydown", { key: "Enter", code: "Enter", keyCode: 229, bubbles: true });
+  await composer.dispatchEvent("keydown", { key: "Enter", code: "Enter", repeat: true, bubbles: true });
+  expect(fixture.sent.size).toBe(0);
+  await composer.press("Enter");
+  await expect.poll(() => fixture.sent.size).toBe(1);
+  expect([...fixture.sent.values()][0].body).toBe("First line\nSecond line");
+  await expect(composer).toHaveValue("");
+  await expect(composer).toBeFocused();
+  const writes = fixture.calls.filter(call => call.path.endsWith("/messages") && call.method === "POST");
+  expect(writes).toHaveLength(1);
 });
 
 test("safety uses the real block API and confirms before writing", async ({

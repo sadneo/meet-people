@@ -36,6 +36,13 @@ it('maps admission denial, uncertainty and malformed responses without inventing
   }
   expect((await request('connections', 'POST', `/${b}`, {}, configured({ socialConnection: async () => ({ data: {}, error: null }) }))).status).toBe(502)
 })
+it.each([
+  ['MSG01', 403], ['MSG03', 403], ['MSG05', 403], ['CON02', 403],
+  ['MSG08', 400], ['MSG09', 400], ['MSG10', 409], ['MSG11', 429], ['CON04', 429],
+])('maps native UUID messaging error %s to HTTP %i', async (code, status) => {
+  const transport = configured({ socialHistory: async () => ({ data: null, error: { code } }) })
+  expect((await request('conversations', 'GET', `/${b}/messages`, undefined, transport)).status).toBe(status)
+})
 it('uses the actual SDK with only fixed RPC names and the actor JWT/public key', async () => {
   const calls: { name: string; body: unknown }[] = []
   const fetch: typeof globalThis.fetch = vi.fn(async (input, init) => {
