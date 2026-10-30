@@ -1,5 +1,10 @@
 # Alternate frontend integration
 
+For the October 29 local database activation and native UUID messaging adapters,
+see [local backend activation](local-backend-activation.md). That later work fixes
+missing live feature RPCs; the frontend merge verification below remains its own
+historical scope.
+
 `wiring` starts at `origin/main` (`bfbb2a8`) and includes the alternate frontend
 snapshot (`108e15a`, cherry-picked as `1df6aff`). The standalone fixture app has
 been replaced by React screens in `src/ui`. Normal `pnpm dev` and build commands

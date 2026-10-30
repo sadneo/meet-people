@@ -31,6 +31,8 @@ for private API calls; use no database tables or privileged keys in the browser.
 Versioned preference writes keep their compare-and-swap/readback behavior. Failed
 or uncertain mutations require read-only reconciliation before another write.
 Message retries reuse the same client request ID. Friends checks stay manual.
+Event group queues check for a result every three seconds while waiting, stopping
+after a group appears, leaving the queue, or the event becomes unavailable.
 
 The API/schema and deployment configuration are retained from `origin/main`.
 This frontend work does not install SQL, change provider configuration or deploy.

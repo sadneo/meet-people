@@ -1,6 +1,21 @@
 import { expect, test } from '@playwright/test'
 import { wiringFixture } from './wiring-fixture'
 
+test('Find Friends offers setup actions when discovery or the saved search area is incomplete', async ({ page }) => {
+  const fixture = await wiringFixture(page)
+  fixture.getAccount().settings.discoverable = false
+  await page.route('**/api/matchmaking/friends-search-preferences/runtime', route => route.fulfill({json:{available:true,policy:'nearby-first-v1',canJoin:false}}))
+  await page.goto('/matchmaking')
+  await page.getByRole('button', { name: 'Find Friends', exact: true }).click()
+  const setup=page.getByRole('dialog', { name:'Get ready to find friends',exact:true })
+  await expect(setup).toBeVisible()
+  await expect(setup.getByRole('link',{name:'Review discovery settings'})).toHaveAttribute('href','/settings')
+  await setup.getByRole('button',{name:'Review search area',exact:true}).click()
+  await expect(page.getByRole('dialog',{name:'Friends preferences',exact:true})).toBeVisible()
+  expect(fixture.getAccount().settings.discoverable).toBe(false)
+  expect(fixture.calls.filter(call=>call.method==='POST'||call.method==='PUT'||call.method==='DELETE')).toHaveLength(0)
+})
+
 test('later master-setting saves preserve concurrent privacy changes', async ({ page }) => {
   const fixture = await wiringFixture(page)
   await page.goto('/settings')

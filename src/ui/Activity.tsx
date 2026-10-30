@@ -115,24 +115,24 @@ export function Activity() {
         ))}
       </section>
       <section className="card section">
-        <h3>Event group proposals</h3>
+        <h3>Suggested event groups</h3>
         <ResourceState
           loading={updates.loading}
           error={updates.error}
           reload={updates.reload}
         />
         {updates.value && !updates.value.notifications.length && (
-          <Empty title="No new proposals yet." />
+          <Empty title="No suggested groups yet." />
         )}
         {updates.value?.notifications.map((item) => (
           <div className="item" key={item.id}>
-            <h3>{item.title}</h3>
+            <h3>Suggested group ready</h3>
             <time dateTime={item.createdAt}>
               {new Date(item.createdAt).toLocaleString()}
             </time>
             <div className="row wrap">
               <Link className="btn light" to={`/events/${item.eventId}`}>
-                View event proposal
+                View suggested group
               </Link>
               {!item.readAt && (
                 <ActionButton

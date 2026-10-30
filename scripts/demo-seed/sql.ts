@@ -1,6 +1,7 @@
 import { seedMarker,campusId,type DemoProfile,onboardingChapters } from './plan.js'
+import { developmentSetup,type DevelopmentAnchor } from './development.js'
 const literal=(value:unknown)=>`'${JSON.stringify(value).replaceAll("'","''")}'::jsonb`
-export function seedSql(profiles:DemoProfile[],photos:Map<string,string>,reset=false){
+export function seedSql(profiles:DemoProfile[],photos:Map<string,string>,reset=false,development?:DevelopmentAnchor){
  if(!profiles.length)throw new Error('No seed profiles')
  let sql=`\\set ON_ERROR_STOP on
 begin;
@@ -60,6 +61,7 @@ do $seed$ declare plan jsonb:=${literal(data)};a jsonb;d jsonb;settings jsonb;f 
 end $seed$;
 `
  }
+ if(development)sql+=developmentSetup(development)
  return sql+`reset role;
 alter table public.user_interests enable trigger trg_user_interests_embed;
 commit;

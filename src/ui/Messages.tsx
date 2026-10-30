@@ -147,6 +147,14 @@ function Chat({ id, changed }: { id: string; changed: () => void }) {
   const [confirmed, setConfirmed] = useState<Message[]>([]),
     retry = useRef<{ body: string; clientRequestId: string } | null>(null);
   const [uncertain, setUncertain] = useState(false);
+  const composer = useRef<HTMLTextAreaElement>(null),
+    focusAfterSend = useRef(false);
+  useEffect(() => {
+    if (focusAfterSend.current && !action.busy && !uncertain && history.value?.canSend) {
+      composer.current?.focus();
+      focusAfterSend.current = false;
+    }
+  }, [action.busy, uncertain, history.value?.canSend]);
   const live = useRef(true);
   useEffect(() => {
     live.current = true;
@@ -296,6 +304,7 @@ function Chat({ id, changed }: { id: string; changed: () => void }) {
           Message
         </label>
         <textarea
+          ref={composer}
           id="message"
           required
           maxLength={2000}
@@ -303,6 +312,14 @@ function Chat({ id, changed }: { id: string; changed: () => void }) {
           placeholder="Say a little hello…"
           value={body}
           onChange={(event) => setBody(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+            event.preventDefault();
+            if (event.repeat || !body.trim() || !history.value?.canSend || action.busy || uncertain) return;
+            focusAfterSend.current = true;
+            event.currentTarget.form?.requestSubmit();
+          }}
+          aria-describedby="message-keyboard-help"
           disabled={!history.value?.canSend || action.busy || uncertain}
         />
         <button
@@ -312,6 +329,9 @@ function Chat({ id, changed }: { id: string; changed: () => void }) {
           {action.busy ? "Sending…" : uncertain ? "Retry same message" : "Send"}
         </button>
       </form>
+      <p id="message-keyboard-help" className="account-note">
+        Enter to send · Shift+Enter for a new line.
+      </p>
       {uncertain && (
         <p className="account-note">
           Delivery is unconfirmed. Retrying uses the same request ID to avoid a

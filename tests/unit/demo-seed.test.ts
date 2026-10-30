@@ -1,7 +1,9 @@
 import { describe,expect,it } from 'vitest'
-import { demoPlan,onboardingChapters,seedIdentity } from '../../scripts/demo-seed/plan'
+import { demoPlan,developmentDemoPlan,onboardingChapters,seedIdentity } from '../../scripts/demo-seed/plan'
+import { developmentSetup } from '../../scripts/demo-seed/development'
 import { queueSelection,queueSql } from '../../scripts/demo-seed/queue'
 import { seedSql } from '../../scripts/demo-seed/sql'
+import { scenarioPlan,scenarioSql,scenarioMarker } from '../../scripts/demo-seed/scenarios'
 import { completedAccountChapters,SaveAccountSchema } from '../../shared/account'
 import { reciprocalDatingTargets } from '../../shared/dating'
 import { globalInterestChoices } from '../../src/features/account/global-interests'
@@ -58,6 +60,53 @@ describe('local demo population',()=>{
   expect(demoPlan(50,2026).map(p=>p.id)).toEqual(demoPlan(50,2027).map(p=>p.id))
   for(const count of [0,1,101,2.5,NaN])expect(()=>demoPlan(count)).toThrow()
   expect(()=>seedIdentity(0)).toThrow()
+ })
+ it('plans separate messaging, pending request, Friends, Dating and labeled event fixtures',()=>{
+  const scenarios=scenarioPlan(12)
+  expect(scenarios.users.map(user=>user.id)).toEqual(demoPlan(12).map(user=>user.id))
+  expect(scenarios.conversation).toMatchObject({first:1,second:2})
+  expect(scenarios.conversation.messages).toHaveLength(3)
+  expect(new Set(scenarios.conversation.messages.map(message=>message.requestId)).size).toBe(3)
+  expect(scenarios.pending).toEqual({from:3,to:1})
+  expect(scenarios.friends).toEqual([5,6])
+  expect(scenarios.events.every(event=>event.title.startsWith('[DEMO]')&&event.members.length>=2)).toBe(true)
+  expect(new Set(scenarios.events.map(event=>event.id)).size).toBe(3)
+  expect(scenarioPlan(6).events).toEqual(scenarios.events)
+  for(const count of [0,2,5,101,6.5,NaN])expect(()=>scenarioPlan(count)).toThrow()
+ })
+ it('uses marked ownership, existing actor RPCs, stable retry keys and explicit event renewal',()=>{
+  const sql=scenarioSql(6)
+  expect(sql.indexOf('raw_app_meta_data')).toBeLessThan(sql.indexOf('insert into public.listings'))
+  expect(sql).toContain(scenarioMarker)
+  expect(sql).toContain('public.social_send(chat,')
+  expect(sql).toContain(scenarioPlan(6).conversation.messages[0].requestId)
+  expect(sql).toContain('public.join_event_group_queue(')
+  expect(sql).toContain("public.join_queue('matchmaking')")
+  expect(sql).toContain('on conflict(source,external_id) do nothing')
+  expect(sql).toContain('if false then')
+  expect(scenarioSql(6,true)).toContain('if true then')
+  expect(sql).not.toMatch(/insert into public\.(messages|connections|conversations)|update auth\.users|delete from|disable trigger|complete_event_group_job|scoring_enabled/i)
+ })
+ it('centers a large pool and multiple conversations on the dedicated development account',()=>{
+  const primary={id:'d7300000-0000-4000-8000-000000000001',email:'development@example.test',username:'development_user'}
+  const profiles=developmentDemoPlan(),scenarios=scenarioPlan(profiles.length,primary)
+  expect(profiles).toHaveLength(60)
+  expect(profiles.every(profile=>profile.filters.ageMin===18&&profile.filters.ageMax===99)).toBe(true)
+  expect(profiles.filter(profile=>profile.dating.gender==='Woman'&&profile.dating.sexuality==='Straight').length).toBeGreaterThanOrEqual(20)
+  expect(scenarios.conversations).toHaveLength(6)
+  expect(scenarios.conversations.every(chat=>chat.first===0&&chat.messages.at(-1)!.sender!==0)).toBe(true)
+  expect(new Set(scenarios.conversations.flatMap(chat=>chat.messages.map(message=>message.requestId))).size).toBe(18)
+  expect(scenarios.pendingRequests).toEqual([{from:7,to:0},{from:8,to:0},{from:0,to:9}])
+  expect(scenarios.friends).toHaveLength(60)
+  expect(scenarios.friends).not.toContain(0)
+  expect(scenarios.events.every(event=>event.members[0]===0&&event.members.length===18)).toBe(true)
+  expect(scenarioPlan(60,primary).conversations).toEqual(scenarios.conversations)
+  expect(()=>scenarioPlan(6,primary)).toThrow()
+  const sql=scenarioSql(60,false,primary)
+  expect(sql).toContain('pebble_development')
+  expect(sql).toContain(primary.id)
+  expect(developmentSetup(primary)).toContain('wholly empty fictional development persona')
+  expect(()=>developmentSetup({...primary,id:"');drop table profiles;--"})).toThrow()
  })
  it('uses canonical RPCs and transactional provider-hook suppression while retaining all other guards',()=>{
   const sql=seedSql(demoPlan(2),new Map())

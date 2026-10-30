@@ -53,6 +53,14 @@ The built web app is in `dist/web`; the server is in `dist/api`.
 `pnpm start:api` starts the compiled API, and `pnpm preview` serves the built web app.
 For existing hosting setup, use [HOSTING-SETUP.md](HOSTING-SETUP.md).
 
+For labeled local test users, messaging, Dating and event-group queues, run
+`pnpm demo:populate --dry-run` to preview, then `pnpm demo:populate` to populate
+60 contacts around the existing development login and fill all upcoming event
+queues with labeled test contacts. Run `pnpm dev:groups` in a
+separate terminal to match event queues using saved interests and availability,
+without Gemini or external scoring. See [demo data](docs/demo-data.md) for
+scenario logins, reruns and the required activated local backend.
+
 ## Integration boundaries
 
 Accounts, profile facts/photos, preferences, Friends/Dating matching, events,

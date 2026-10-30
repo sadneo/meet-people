@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export function useLoad<T>(load: (signal: AbortSignal) => Promise<T>) {
+export function useLoad<T>(
+  load: (signal: AbortSignal) => Promise<T>,
+  polling?: { intervalMs: number; shouldPoll: (value: T) => boolean },
+) {
   const [version, setVersion] = useState(0);
   const [state, setState] = useState<{
     value: T | null;
@@ -31,6 +34,42 @@ export function useLoad<T>(load: (signal: AbortSignal) => Promise<T>) {
       });
     return () => controller.abort();
   }, [load, version]);
+  const intervalMs = polling?.intervalMs ?? 0;
+  const shouldPoll = polling?.shouldPoll;
+  useEffect(() => {
+    if (
+      intervalMs <= 0 ||
+      state.loading ||
+      state.error ||
+      state.value === null ||
+      state.loader !== load ||
+      state.version !== version ||
+      !shouldPoll?.(state.value)
+    ) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      // Background reads retain the current view while the request is pending.
+      void load(controller.signal)
+        .then((value) => {
+          if (!controller.signal.aborted)
+            setState({ value, error: "", loading: false, loader: load, version });
+        })
+        .catch((error) => {
+          if (!controller.signal.aborted)
+            setState({
+              value: null,
+              error: error instanceof Error ? error.message : "This service is unavailable. Try again.",
+              loading: false,
+              loader: load,
+              version,
+            });
+        });
+    }, intervalMs);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [intervalMs, shouldPoll, state, load, version]);
   const reload = useCallback(() => setVersion((value) => value + 1), []);
   return {
     ...(state.loader === load && state.version === version

@@ -131,11 +131,12 @@ function Candidate({
     </article>
   );
 }
-function Friends({ token }: { token: string }) {
+function Friends({ token, preferences }: { token: string; preferences: () => void }) {
   const matching = useMatchmaking(token),
     runtime = useLoad(
       useCallback((signal) => friendsRuntime(token, signal), [token]),
     );
+  const [needsSetup, setNeedsSetup] = useState(false);
   const candidate = matching.result?.candidate;
   const disabled =
     matching.busy ||
@@ -150,6 +151,28 @@ function Friends({ token }: { token: string }) {
         reload={runtime.reload}
       />
       <ErrorMessage>{matching.error || matching.profileError}</ErrorMessage>
+      {needsSetup && (
+        <Modal title="Get ready to find friends" close={() => setNeedsSetup(false)}>
+          <p>
+            Friends needs discovery enabled, a complete profile, and a confirmed
+            search area. Review these choices before starting your search.
+          </p>
+          <p>
+            In Settings, turn on Discovery and Friends discovery, then save both
+            sets of preferences.
+          </p>
+          <div className="row wrap">
+            <Link className="btn" to="/settings">Review discovery settings</Link>
+            <ActionButton secondary onClick={() => {
+              setNeedsSetup(false);
+              preferences();
+            }}>
+              Review search area
+            </ActionButton>
+            <Link className="text-link" to="/profile">Check your profile</Link>
+          </div>
+        </Modal>
+      )}
       {matching.confirmReplacement && (
         <Modal
           title="Replace downtime matching?"
@@ -211,8 +234,11 @@ function Friends({ token }: { token: string }) {
           </>
         ) : (
           <ActionButton
-            disabled={disabled || !matching.canJoin || !runtime.value?.canJoin}
-            onClick={() => void matching.findFriends()}
+            disabled={disabled || !matching.canJoin || runtime.loading || !!runtime.error || !runtime.value}
+            onClick={() => {
+              if (!runtime.value?.canJoin) setNeedsSetup(true);
+              else void matching.findFriends();
+            }}
           >
             {matching.searchStage ? "Starting search…" : "Find Friends"}
           </ActionButton>
@@ -411,6 +437,7 @@ export function Discover() {
         <Friends
           key={`friends:${epoch}`}
           token={current.session.access_token}
+          preferences={() => setPreferences(true)}
         />
       ) : (
         <Dating key={`dating:${epoch}`} token={current.session.access_token} />
