@@ -1,5 +1,12 @@
 # Matchmaking frontend and local demos
 
+Friends discovery is opt-out: accounts without saved detailed settings default to
+Friends on. Apply `20261029000200_friends_discovery_default.sql` to existing canonical
+stacks. Saved Friends opt-outs and the global discovery switch remain authoritative;
+Dating and active matchmaking still require explicit opt-in. Discovery also needs
+valid Friends preferences and a trusted search area; enabling the default does not
+invent a location or overwrite an account's filters.
+
 Discover loads passive Friends and Dating batches (up to ten safe profiles),
 keeps the currently viewed card stable, and refills near the end of the buffer.
 Pass advances immediately. Requests save independently, with uncertain results

@@ -2,24 +2,28 @@ import { expect, test } from '@playwright/test';
 import { wiringFixture } from './wiring-fixture';
 
 for (const width of [320, 390, 800]) {
-  test(`Settings follows the demo category hierarchy at ${width}px`, async ({ page }) => {
+  test(`Profile contains the account settings categories at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     const fixture = await wiringFixture(page);
     await page.goto('/settings');
-    await expect(page.locator('.settings-page .account-row')).toHaveCount(5);
+    await expect(page).toHaveURL(/\/profile$/);
+    await expect(page.locator('.profile-settings-links .account-row')).toHaveCount(5);
+    for (const row of await page.locator('.profile-settings-links .account-row').all())
+      await expect(row).toHaveCSS('text-decoration-line', 'none');
+    await expect(page.getByRole('link', { name: 'Settings', exact: true })).toHaveCount(0);
     await expect(page.getByLabel('New password', { exact: true })).toHaveCount(0);
-    await page.getByRole('button', { name: /^Discovery Friends/ }).click();
+    await page.getByRole('link', { name: /^Discovery Friends/ }).click();
     await expect(page.getByRole('heading', { name: 'Discovery', exact: true })).toBeVisible();
     await expect(page.getByRole('switch', { name: 'Friends discovery', exact: true })).toBeVisible();
     await expect(page.getByRole('switch', { name: 'Message notifications', exact: true })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
-    await page.getByRole('button', { name: /^Notifications Messages/ }).click();
+    await page.locator('.account-back').click();
+    await page.getByRole('link', { name: /^Notifications Messages/ }).click();
     await expect(page.getByRole('switch', { name: 'Message notifications', exact: true })).toBeVisible();
     await expect(page.getByRole('switch', { name: 'Friends discovery', exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(fixture.calls.filter(call => call.method === 'PUT')).toHaveLength(0);
     await page.goBack();
-    await expect(page.locator('.settings-page .account-row')).toHaveCount(5);
+    await expect(page.locator('.profile-settings-links .account-row')).toHaveCount(5);
   });
 }
 
@@ -27,8 +31,8 @@ test('profile tabs highlight their state and keep the demo save bar above mobile
   await page.setViewportSize({ width: 390, height: 844 });
   await wiringFixture(page);
   await page.goto('/profile');
-  await page.getByRole('button', { name: 'Edit', exact: true }).click();
-  const about = page.getByRole('button', { name: 'About you', exact: true });
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  const about = page.getByRole('button', { name: 'About You', exact: true });
   await expect(about).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Display name', { exact: true })).toBeVisible();
   const control = (await page.getByLabel('Display name', { exact: true }).boundingBox())!;
@@ -36,52 +40,73 @@ test('profile tabs highlight their state and keep the demo save bar above mobile
   const save = (await page.getByRole('button', { name: 'Save changes', exact: true }).boundingBox())!;
   const nav = (await page.getByRole('navigation', { name: 'Main navigation' }).boundingBox())!;
   expect(save.y + save.height).toBeLessThanOrEqual(nav.y);
-  const interests = page.getByRole('button', { name: 'Interests & time', exact: true });
+  const interests = page.getByRole('button', { name: 'Interests & Availability', exact: true });
   await interests.click();
   await expect(interests).toHaveAttribute('aria-pressed', 'true');
   await expect(about).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.getByLabel('From', { exact: true })).toBeHidden();
-  await page.getByText('Edit availability', { exact: true }).click();
+  await expect(page.getByText('Edit availability', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('From', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Timezone', { exact: true })).toBeVisible();
 });
 
-test('profile preview has mode controls, contains keyboard focus and restores its opener', async ({ page }) => {
+test('Profile and its editor omit Preview and the photo helper text', async ({ page }) => {
   await wiringFixture(page);
   await page.goto('/profile');
-  const opener = page.getByRole('button', { name: 'Preview', exact: true });
-  await opener.click();
-  const preview = page.getByRole('dialog', { name: 'Profile preview' });
-  await preview.getByRole('button', { name: 'Dating', exact: true }).click();
-  await expect(preview.getByRole('button', { name: 'Dating', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  for (let index = 0; index < 5; index++) {
-    await page.keyboard.press('Tab');
-    expect(await preview.evaluate(element => element.contains(document.activeElement))).toBe(true);
-  }
-  await page.keyboard.press('Escape');
-  await expect(preview).toHaveCount(0);
-  await expect(opener).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Preview', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Preview', exact: true })).toHaveCount(0);
+  await expect(page.getByText(/One photo · JPG, PNG or WebP/)).toHaveCount(0);
+  await expect(page.getByLabel('Choose a photo', { exact: false })).toBeAttached();
 });
 
 test('Profile Dating details stay separate from search preferences and do not change consent', async ({ page }) => {
   const fixture = await wiringFixture(page);
   await page.goto('/profile');
-  await page.getByRole('button', { name: /^Dating details/ }).click();
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Dating Profile', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Gender', exact: true })).toBeVisible();
   await expect(page.getByLabel('Minimum age', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Find a city or campus', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Dating', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Dating Profile', exact: true })).toHaveAttribute('aria-pressed', 'true');
   expect(fixture.calls.filter(call => call.method === 'PUT' || call.method === 'POST')).toHaveLength(0);
 });
 
-test('Settings preference shortcuts open the corresponding Profile editor', async ({ page }) => {
+test('Profile keeps personal details without duplicate search preference shortcuts', async ({ page }) => {
+  await wiringFixture(page);
+  await page.goto('/profile');
+  await expect(page.getByRole('button', { name: /^Friends preferences/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Dating preferences/ })).toHaveCount(0);
+  await expect(page.getByText('Profile details are shared. Your Friends and Dating search preferences stay separate.')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
+  await expect(page.locator('.profile-overview button.account-row')).toHaveCount(1);
+  await expect(page.locator('.profile-settings-links .account-row')).toHaveCount(5);
+});
+
+test('Discovery settings have no legacy downtime queue controls or queue requests', async ({ page }) => {
+  const fixture = await wiringFixture(page, { queue: 'downtime' });
+  await page.goto('/settings?section=discovery');
+  await expect(page.getByRole('switch', { name: 'Friends discovery', exact: true })).toBeVisible();
+  await expect(page.getByText(/downtime/i)).toHaveCount(0);
+  expect(fixture.calls.filter(call => /\/queue(?:\/|$)/.test(call.path))).toHaveLength(0);
+});
+
+for (const mode of ['Friends', 'Dating'] as const) test(`Settings ${mode} preferences open on Discover`, async ({ page }) => {
   await wiringFixture(page);
   await page.goto('/settings?section=discovery');
-  await page.getByRole('link', { name: /^Friends preferences/ }).click();
-  await expect(page.getByRole('heading', { name: 'Friends preferences', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save Friends preferences', exact: true })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Profile sections', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Back to profile', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: `${mode} preferences`, exact: false }).click();
+  await expect(page).toHaveURL(new RegExp(`/matchmaking\\?mode=${mode.toLowerCase()}&preferences=true`));
+  await expect(page.getByRole('dialog', { name: `${mode} preferences`, exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: mode, exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+for (const mode of ['friends', 'dating']) test(`legacy Profile ${mode} preference links redirect to Discover`, async ({ page }) => {
+  await wiringFixture(page);
+  await page.goto(`/profile?section=${mode}-preferences`);
+  await expect(page).toHaveURL(new RegExp(`/matchmaking\\?mode=${mode}&preferences=true`));
+  await expect(page.getByRole('dialog')).toBeVisible();
 });
 
 test('a partial Profile save stays open and requires optional-detail reconciliation', async ({ page }) => {
@@ -93,7 +118,7 @@ test('a partial Profile save stays open and requires optional-detail reconciliat
     return route.fulfill({ status: 503, json: { code: 'provider', error: 'Save interrupted.' } });
   });
   await page.goto('/profile');
-  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await page.getByLabel('Display name', { exact: true }).fill('Saved main profile');
   await page.getByLabel('Education (optional)', { exact: true }).fill('Unconfirmed education');
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();

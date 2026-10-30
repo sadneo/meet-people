@@ -31,15 +31,17 @@ Raster artwork stays crisp and keeps its original aspect ratio.
 
 Garden, Events, Discover, Messages and Profile are the primary destinations, in
 that order. Discover is the center tab on mobile, matching the complete demo.
-Activity and Settings are supporting destinations. Desktop uses the alternate
+Activity is a supporting destination; account settings live within Profile. Desktop uses the alternate
 frontend’s left navigation; at 800px and below it becomes bottom navigation.
-Compact screens reach Activity from Messages and Settings from Profile, without
+Compact screens reach Activity from Messages and settings categories directly on Profile, without
 an extra floating text toolbar over the page. Destination controls
 are real links and expose accessible names and current-page state.
 
-Profile and Settings use the demo’s focused 760px account layout. Profile opens
-with saved summaries and a segmented editor; Settings opens with category rows,
-not every form at once. Mobile profile Save/Cancel stays above bottom navigation.
+Profile and its settings sections use the demo’s focused 760px account layout.
+Profile opens with saved summaries, one Edit profile entry and the five account
+settings category rows, without a gear or separate Settings hub. Each settings
+section has a back link to Profile; the editor retains its tabs. Mobile profile
+Save/Cancel stays above bottom navigation.
 Messages uses inbox/chat columns on desktop and a single selected pane on mobile.
 The message history scrolls independently of its composer. Forms must fit 320px,
 short screens, large text and the bottom safe area. Dialogs scroll internally and

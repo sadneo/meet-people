@@ -51,3 +51,32 @@ it('requires a read after an uncertain save and does not automatically retry a w
   await waitFor(() => expect((screen.getByRole('button', { name: 'Save timezone' }) as HTMLButtonElement).disabled).toBe(false))
   expect(fetch.mock.calls.filter(call => call[1]?.method === 'PUT')).toHaveLength(1)
 })
+it('offers a compact timezone dropdown and saves only after an explicit selection', async () => {
+  const onSaved = vi.fn()
+  render(<MatchingSchedule compact token="owner-token" disabled={false} onSaved={onSaved}/> )
+  open()
+  const select = screen.getByRole('combobox', { name: 'Timezone' }) as HTMLSelectElement
+  await waitFor(() => expect(select.disabled).toBe(false))
+  expect(select.value).toBe('')
+  expect(fetch.mock.calls.filter(call => call[1]?.method === 'PUT')).toHaveLength(0)
+  expect(screen.queryByRole('button', { name: 'Save timezone' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Reload timezone' })).toBeNull()
+  fireEvent.change(select, { target: { value: 'America/New_York' } })
+  await screen.findByText('Weekly timezone saved.')
+  expect(stored).toEqual({ revision: 1, timeZone: 'America/New_York', showAvailability: false })
+  expect(onSaved).toHaveBeenCalledOnce()
+})
+it('offers recovery rather than automatically retrying a failed compact timezone save', async () => {
+  render(<MatchingSchedule compact token="owner-token" disabled={false} onSaved={vi.fn()}/> )
+  open()
+  const select = screen.getByRole('combobox', { name: 'Timezone' }) as HTMLSelectElement
+  await waitFor(() => expect(select.disabled).toBe(false))
+  failSave = true
+  fireEvent.change(select, { target: { value: 'Europe/London' } })
+  await screen.findByRole('alert')
+  expect(select.disabled).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: 'Reload timezone' }))
+  await waitFor(() => expect(select.disabled).toBe(false))
+  expect(select.value).toBe('')
+  expect(fetch.mock.calls.filter(call => call[1]?.method === 'PUT')).toHaveLength(1)
+})

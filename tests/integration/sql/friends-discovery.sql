@@ -40,8 +40,10 @@ do $$ declare n integer;owner uuid;receipt jsonb;begin
  for n in 1..4 loop
   owner:=('fc000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid;
   perform set_config('request.jwt.claim.sub',owner::text,true);
-  -- Dating stays explicitly off, and nobody joins any active queue.
-  perform public.save_detailed_settings('{"expectedRevision":0,"settings":{"messages":false,"plans":false,"matches":false,"friendsDiscovery":true,"datingDiscovery":false}}');
+   -- Friends works without a saved opt-in; Dating and active queues stay off.
+   assert public.get_detailed_settings()->>'revision'='0';
+   assert public.get_detailed_settings()->'effective'->>'friendsDiscovery'='true';
+   assert public.get_detailed_settings()->'effective'->>'datingDiscovery'='false';
   receipt:=public.resolve_search_area(jsonb_build_object('requestId','fc200000-0000-4000-8000-'||lpad(n::text,12,'0'),
    'mode','friends','source','home','placeId','fc100000-0000-4000-8000-'||lpad(n::text,12,'0')));
   perform public.save_friends_search_preferences(jsonb_build_object('expectedRevision',0,'preferences',jsonb_build_object(
@@ -52,8 +54,12 @@ do $$ declare n integer;owner uuid;receipt jsonb;begin
  perform set_config('request.jwt.claim.sub','fc000000-0000-4000-8000-000000000001',true);
  begin perform public.get_friends_scoring_pool('fc000000-0000-4000-8000-000000000001','[]');raise exception 'Private pool leaked';exception when insufficient_privilege then null;end;
  assert jsonb_array_length(public.project_friends_candidates('["fc000000-0000-4000-8000-000000000002","fc000000-0000-4000-8000-000000000003"]')->'candidates')=2;
- assert not (public.project_friends_candidates('["fc000000-0000-4000-8000-000000000002"]')->'candidates'->0)
-  ?| array['intervals','goals','birthdate','latitude','longitude','timeZone','score','components'];
+  assert not (public.project_friends_candidates('["fc000000-0000-4000-8000-000000000002"]')->'candidates'->0)
+   ?| array['intervals','goals','birthdate','latitude','longitude','timeZone','score','components'];
+  perform public.save_detailed_settings('{"expectedRevision":0,"settings":{"messages":false,"plans":false,"matches":false,"friendsDiscovery":false,"datingDiscovery":false}}');
+  assert public.get_detailed_settings()->'effective'->>'friendsDiscovery'='false','Saved opt-out ignored';
+  assert public.project_friends_candidates('["fc000000-0000-4000-8000-000000000002"]')='{"candidates":[]}'::jsonb,'Opted-out viewer received profiles';
+  perform public.save_detailed_settings('{"expectedRevision":1,"settings":{"messages":false,"plans":false,"matches":false,"friendsDiscovery":true,"datingDiscovery":false}}');
 end $$;
 reset role;
 set local role service_role;

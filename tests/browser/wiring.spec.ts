@@ -45,10 +45,10 @@ test("profile saves use canonical account API and read back persisted data", asy
 }) => {
   const fixture = await wiringFixture(page);
   await page.goto("/profile");
-  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await page.getByLabel("Display name", { exact: true }).fill("Jamie");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
   await page.reload();
   await expect(page.locator('.profile-summary h3')).toHaveText('Jamie');
   const writes = fixture.calls.filter(
@@ -83,7 +83,6 @@ test("Friends preferences resolve a server-owned area and save revisioned filter
   await page
     .getByRole("button", { name: "Friends preferences", exact: true })
     .click();
-  await page.getByLabel("Minimum age", { exact: true }).fill("21");
   await page.locator('.search-area-editor > summary').click();
   await page.getByLabel("Find a city or campus").fill("Stony Brook");
   await page.getByRole("button", { name: "Find areas", exact: true }).click();
@@ -93,7 +92,11 @@ test("Friends preferences resolve a server-owned area and save revisioned filter
   await expect(
     page.getByText(/Selected area saved with these preferences/),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Save Friends preferences" }).click();
+  await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeEnabled();
+  await page.getByRole('slider', { name: 'Minimum age', exact: true }).focus();
+  await page.getByRole('slider', { name: 'Minimum age', exact: true }).press('ArrowRight');
+  await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(
     fixture.calls.some(
@@ -316,19 +319,21 @@ test("email-first sign-in installs the real SDK session before entering the app"
   ).toBe(true);
 });
 
-test("optional facts save multiple languages without losing newlines during editing", async ({
+test("optional facts save selected language chips and restore them when editing", async ({
   page,
 }) => {
   const fixture = await wiringFixture(page);
   await page.goto("/profile");
-  await page.getByRole('button', { name: 'Edit', exact: true }).click();
-  await page.getByLabel("Languages · one per line").fill("English\nFrench");
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Languages', exact: true }).fill('Eng');
+  await page.getByRole('option', { name: 'English', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Languages', exact: true }).fill('Fre');
+  await page.getByRole('option', { name: 'French', exact: true }).click();
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Edit', exact: true }).click();
-  await expect(page.getByLabel("Languages · one per line")).toHaveValue(
-    "English\nFrench",
-  );
+  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remove English', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove French', exact: true })).toBeVisible();
   await expect
     .poll(
       () =>
@@ -345,7 +350,7 @@ test("profile photo uploads binary data through revisioned private storage", asy
 }) => {
   const fixture = await wiringFixture(page);
   await page.goto("/profile");
-  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await page
     .getByLabel("Choose a photo")
     .setInputFiles({
@@ -372,9 +377,9 @@ test("detailed settings persist to their own revisioned resource", async ({
 }) => {
   const fixture = await wiringFixture(page);
   await page.goto("/settings");
-  await page.getByRole('button', { name: /^Notifications Messages/ }).click();
+  await page.getByRole('link', { name: /^Notifications Messages/ }).click();
   await page.getByRole("switch", { name: "Plan notifications" }).check();
-  await page.getByRole("button", { name: "Save detailed preferences" }).click();
+  await page.getByRole('heading', { name: 'Notifications preferences', exact: true }).locator('..').getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByText("Detailed preferences saved.", { exact: true }),
   ).toBeVisible();

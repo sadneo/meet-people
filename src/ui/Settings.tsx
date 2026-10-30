@@ -1,16 +1,15 @@
 import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, Navigate, useSearchParams } from "react-router";
 import type { Account } from "../../shared/account";
 import type { DetailedSettings } from "../../shared/detailed-settings";
 import { supabase } from "../supabase";
 import { authCallbackUrl, validPassword } from "../auth/credential-policy";
 import { useDetailedSettings } from "../features/account/useDetailedSettings";
-import { useMatchmaking } from "../features/matchmaking/useMatchmaking";
 import { useAction } from "./hooks";
-import { ActionButton, Avatar, ErrorMessage, Icon, ResourceState } from "./common";
-import { useProfilePhoto } from '../features/account/useProfilePhoto';
+import { ActionButton, ErrorMessage, Icon, ResourceState } from "./common";
 import { useCurrent } from "./current";
 import { Blocklist } from "./Safety";
+import { settingsCategories } from './settings-navigation';
 
 function MasterSettings({ category }: { category: 'discovery' | 'notifications' | 'privacy' }) {
   const current = useCurrent(),
@@ -50,7 +49,7 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
           <p className="account-note">
             {category === 'discovery' ? 'The location preference doesn’t request device coordinates. Choose a search area separately in Discover.' : category === 'notifications' ? 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.' : 'Only coarse shared-time summaries can appear when both people choose to share. Your full schedule stays private.'}
           </p>
-          <button className="btn">Save preferences</button>
+          <button className="btn">Save</button>
         </fieldset>
         <ErrorMessage>{current.error}</ErrorMessage>
         {current.error && (
@@ -106,75 +105,9 @@ function DetailedForm({
         <p className="account-note">
           {category === 'discovery' ? 'Global discovery takes priority. Pausing a mode keeps existing chats available.' : 'Global notification preferences take priority. Saving a preference doesn’t verify delivery.'}
         </p>
-        <button className="btn">Save detailed preferences</button>
+        <button className="btn">Save</button>
       </fieldset>
     </form>
-  );
-}
-function Downtime() {
-  const current = useCurrent(),
-    matching = useMatchmaking(current.session.access_token),
-    action = useAction(),
-    [confirm, setConfirm] = useState(false);
-  return (
-    <section className="account-panel">
-      <h3>Downtime matching</h3>
-      <p>
-        Keep a Friends queue open when you’re away. An active search replaces it
-        and doesn’t restart downtime automatically.
-      </p>
-      <ErrorMessage>{matching.error || action.error}</ErrorMessage>
-      <p role="status">
-        {matching.known
-          ? matching.mode === "downtime"
-            ? "Downtime is on"
-            : matching.mode === "active"
-              ? "Active Friends search is on"
-              : "Downtime is off"
-          : "Checking saved status…"}
-      </p>
-      <div className="row wrap">
-        <ActionButton
-          disabled={matching.busy || !matching.known || !matching.canJoin}
-          onClick={() => {
-            if (matching.mode === "active") setConfirm(true);
-            else
-              void matching.queue(
-                matching.mode === "downtime" ? "leave" : "join",
-                "downtime",
-              );
-          }}
-        >
-          {matching.mode === "downtime"
-            ? "Turn off downtime"
-            : "Turn on downtime"}
-        </ActionButton>
-        <ActionButton
-          secondary
-          disabled={matching.busy}
-          onClick={() => void matching.queue("refresh")}
-        >
-          Refresh status
-        </ActionButton>
-      </div>
-      {confirm && (
-        <div className="notice">
-          <p>Replace your active Friends search with downtime matching?</p>
-          <ActionButton
-            disabled={matching.busy}
-            onClick={() => {
-              setConfirm(false);
-              void matching.queue("join", "downtime");
-            }}
-          >
-            Replace active search
-          </ActionButton>
-          <ActionButton secondary onClick={() => setConfirm(false)}>
-            Cancel
-          </ActionButton>
-        </div>
-      )}
-    </section>
   );
 }
 function Credentials() {
@@ -328,7 +261,17 @@ function Credentials() {
     </section>
   );
 }
+export function ProfileSettingsLinks() {
+  return <div className="account-group profile-settings-links">{settingsCategories.map(([id, title, detail, icon]) => <Link className="account-row" key={id} to={`/profile?section=${id}`}><span className="account-row-icon"><Icon name={icon}/></span><span className="account-row-copy"><b>{title}</b><small>{detail}</small></span><Icon name="ChevronRight"/></Link>)}</div>;
+}
+
 export function Settings() {
+  const [search] = useSearchParams();
+  const category = settingsCategories.find(item => item[0] === search.get('section'));
+  return <Navigate replace to={category ? `/profile?section=${category[0]}` : '/profile'}/>;
+}
+
+export function ProfileSettings({ section }: { section: string }) {
   const current = useCurrent(),
     detailed = useDetailedSettings(
       current.session.user.id,
@@ -336,25 +279,13 @@ export function Settings() {
       current.busy,
     ),
     [notice, setNotice] = useState("");
-  const [search, setSearch] = useSearchParams();
-  const categories = [
-    ['discovery', 'Discovery', 'Friends, Dating & location', 'Discover'],
-    ['notifications', 'Notifications', 'Messages, connections, plans & events', 'Bell'],
-    ['account', 'Account & security', 'Email, sign-in methods & sessions', 'Profile'],
-    ['safety', 'Safety', 'Blocked accounts, reports & help', 'Settings'],
-    ['privacy', 'Privacy & legal', 'Your data, visibility & policies', 'Garden'],
-  ] as const;
-  const category = categories.find(item => item[0] === search.get('section'));
-  const photo = useProfilePhoto();
+  const category = settingsCategories.find(item => item[0] === section);
+  if (!category) return <Navigate replace to="/profile"/>;
   return (
     <div className="account-page settings-page">
-      {category && <button className="account-back" onClick={() => setSearch({})}><Icon name="Back"/>Settings</button>}
-      <div className="pagehead"><h2>{category?.[1] ?? 'Settings'}</h2></div>
-      {!category ? <>
-        <div className="settings-profile-summary"><Avatar name={current.account?.profile?.display_name ?? ''} url={photo.url}/><div><b>{current.account?.profile?.display_name}</b><p>{current.session.user.email}</p></div></div>
-        <div className="account-group">{categories.map(([id, title, detail, icon]) => <button className="account-row" key={id} onClick={() => setSearch({ section: id })}><span className="account-row-icon"><Icon name={icon}/></span><span><b>{title}</b><small>{detail}</small></span><Icon name="ChevronRight"/></button>)}</div>
-        <Link className="account-logout" to="/logout">Sign out of Pebble</Link>
-      </> : <div className="settings-detail" key={category[0]}>
+      <Link className="account-back" to="/profile"><Icon name="Back"/>Profile</Link>
+      <div className="pagehead"><h2>{category[1]}</h2></div>
+      <div className="settings-detail" key={category[0]}>
           {(category[0] === 'discovery' || category[0] === 'notifications' || category[0] === 'privacy') && <MasterSettings category={category[0]}/>}
           {(category[0] === 'discovery' || category[0] === 'notifications') && <>
           <section className="account-panel">
@@ -384,7 +315,7 @@ export function Settings() {
             {notice && <p role="status">{notice}</p>}
           </section>
           </>}
-          {category[0] === 'discovery' && <><div className="account-group"><Link className="account-row" to="/profile?section=friends-preferences"><span><b>Friends preferences</b><small>Who you’d like to meet & search area</small></span><Icon name="ChevronRight"/></Link><Link className="account-row" to="/profile?section=dating-preferences"><span><b>Dating preferences</b><small>Who you’d like to date & search area</small></span><Icon name="ChevronRight"/></Link></div><Downtime/></>}
+          {category[0] === 'discovery' && <div className="account-group"><Link className="account-row" to="/matchmaking?mode=friends&preferences=true"><span><b>Friends preferences</b><small>Who you’d like to meet & search area</small></span><Icon name="ChevronRight"/></Link><Link className="account-row" to="/matchmaking?mode=dating&preferences=true"><span><b>Dating preferences</b><small>Who you’d like to date & search area</small></span><Icon name="ChevronRight"/></Link></div>}
           {category[0] === 'account' && <Credentials/>}
           {category[0] === 'safety' && <Blocklist/>}
           {(category[0] === 'privacy' || category[0] === 'safety') && <section className="account-panel">
@@ -399,7 +330,7 @@ export function Settings() {
               <Link to="/cookies">Cookies</Link>
             </div>
           </section>}
-      </div>}
+      </div>
     </div>
   );
 }

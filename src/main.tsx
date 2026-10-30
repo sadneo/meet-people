@@ -5,6 +5,7 @@ import App from './App'
 import './ui/style.css'
 import './ui/account-ui.css'
 import './ui/wiring.css'
+import './ui/friends-preferences.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

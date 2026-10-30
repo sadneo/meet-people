@@ -70,7 +70,7 @@ it.each(['interrupted', 'completed'])('preserves reconciliation across repeated 
 it('accepts canonical readback with independently changed masters but never divergent choices', async () => {
   const hook = await load()
   fixture.state.onRead = async () => { fixture.state.masters = { notifications: false, discoverable: false }; return Response.json(fixture.snapshot()) }
-  await act(async () => { expect(await hook.result.current.save({ expectedRevision: 0, settings: { ...emptyDetailedSettings(), messages: true } })).toMatchObject({ revision: 1, effective: emptyDetailedSettings() }) })
+  await act(async () => { expect(await hook.result.current.save({ expectedRevision: 0, settings: { ...emptyDetailedSettings(), messages: true } })).toMatchObject({ revision: 1, effective: { ...emptyDetailedSettings(), friendsDiscovery: false } }) })
   expect(hook.result.current.snapshot?.settings.messages).toBe(true)
   fixture.state.onRead = async () => Response.json({ ...fixture.snapshot(), settings: emptyDetailedSettings() })
   await act(async () => { expect(await hook.result.current.save({ expectedRevision: 1, settings: { ...emptyDetailedSettings(), plans: true } })).toBeNull() })

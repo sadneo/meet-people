@@ -85,7 +85,6 @@ function Shell() {
           ))}
           <div className="sub">
             <NavLink to="/activity">Activity</NavLink>
-            <NavLink to="/settings">Settings</NavLink>
           </div>
         </nav>
         <main id="main" className={garden ? "sky-garden-main" : ""}>

@@ -73,6 +73,8 @@ export function Icon({ name }: { name: string }) {
     Undo: <path d="M4 10h9a7 7 0 0 1 0 14M4 10l5-5M4 10l5 5" />,
     AddFriend: <><circle cx="9" cy="8" r="3" /><path d="M3 21v-2a6 6 0 0 1 12 0v2M19 8v6M16 11h6" /></>,
     Preferences: <path d="M4 7h16M4 17h16M9 4v6m6 4v6" />,
+    DiscoveryPreferences: <><path d="M3 7h3m6 0h9M3 17h9m6 0h3" /><circle cx="9" cy="7" r="3" /><circle cx="15" cy="17" r="3" /></>,
+    DiscoveryActivity: <><circle cx="12" cy="12" r="9" /><path d="M12 3v9h9" /></>,
     Settings: <><path d="m9 3-.6 2.2-2 .9-2-.6L2 9.5 3.5 11v2L2 14.5l2.4 4 2-.6 2 .9L9 21h6l.6-2.2 2-.9 2 .6 2.4-4-1.5-1.5v-2L22 9.5l-2.4-4-2 .6-2-.9L15 3H9Z"/><circle cx="12" cy="12" r="3"/></>,
     Activity: <><circle cx="12" cy="12" r="9" /><path d="M12 3v9h9M12 7v5l-3 3" /></>,
     Filter: <path d="M4 7h16M7 12h10M10 17h4" />,
@@ -179,10 +181,12 @@ export function Modal({
   title,
   children,
   close,
+  className = '',
 }: {
   title: string;
   children: ReactNode;
   close: () => void;
+  className?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -198,7 +202,7 @@ export function Modal({
   return (
     <dialog
       ref={dialog}
-      className="account-modal"
+      className={`account-modal ${className}`}
       aria-labelledby={titleId}
       onKeyDown={(event) => {
         if (event.key !== 'Tab') return;
