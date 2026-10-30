@@ -6,13 +6,14 @@ import { timezoneOptions } from '../features/account/timezones'
 
 type Settings = z.infer<typeof DatingScoringSettingsResponseSchema>
 
-export function MatchingSchedule({ token, disabled, onSaved, compact = false }: { token: string; disabled: boolean; onSaved: () => void; compact?: boolean }) {
+export function MatchingSchedule({ token, disabled, onSaved, compact = false, onBusyChange }: { token: string; disabled: boolean; onSaved: () => void; compact?: boolean; onBusyChange?: (busy: boolean) => void }) {
   const client = useMemo(() => matchingClient(token), [token]), id = useId()
   const [saved, setSaved] = useState<Settings | null>(null), [zone, setZone] = useState('')
   const [visible,setVisible]=useState(false)
   const [expanded, setExpanded] = useState(compact)
   const zones = useMemo(() => timezoneOptions(zone), [zone])
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('')
+  useEffect(() => { onBusyChange?.(busy) }, [busy, onBusyChange])
   const controller = useRef<AbortController | null>(null), active = useRef(true), locked = useRef(false)
   // A closed disclosure makes no request and never writes a guessed browser zone.
   const load = useCallback(async () => {

@@ -2,7 +2,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import type { Request, Response } from 'express'
 import { createMatchmakingRouter, createUserContextTransport, type UserContextTransport } from '../../api/matchmaking'
-import { createFriendsScoringTransport } from '../../api/matching/friends-recommendations'
+import { createFriendsScoringTransport, FriendsEligibilityError } from '../../api/matching/friends-recommendations'
 
 const actorId = 'd0000000-0000-4000-8000-000000000001', targetId = 'd0000000-0000-4000-8000-000000000002'
 const person = { id: targetId, name: 'Alex', age: 23, city: 'Campus', bio: null, avatar: null, photoRevision: 0, interests: ['Coffee'], areaDistanceMiles: 1 }
@@ -17,6 +17,7 @@ function fixture() {
     return { data: connection, error: null }
   })
   const readConnection = vi.fn(async () => ({ data: connection, error: null }))
+  const readStatus = vi.fn(async (): Promise<{data: unknown; error: null}> => ({ data: { available: true, eligible: true, reason: null }, error: null }))
   let settings: { revision: number; timeZone: string | null; showAvailability: boolean } = { revision: 0, timeZone: null, showAvailability: false }
   const readSettings = vi.fn(async () => ({ data: settings, error: null }))
   const saveSettings = vi.fn(async () => {
@@ -26,11 +27,11 @@ function fixture() {
   const transport = {
     verify: async (token: string) => token === 'valid' ? { id: actorId } : null,
     actor: () => ({ projectFriendsCandidates: project, friendsDiscoveryConnection: write, requestDatingConnection: (target:string) => write(target,'request'),
-      socialConnection: readConnection, matchingScoringSettings: readSettings, saveMatchingScoringSettings: saveSettings,
+      socialConnection: readConnection, friendsDiscoveryStatus: readStatus, matchingScoringSettings: readSettings, saveMatchingScoringSettings: saveSettings,
       join: queue, datingCandidate: dating }),
   } as unknown as UserContextTransport
   const pool = vi.fn(async (actor: string, excluded: string[]) => { void actor; void excluded; return rawPool })
-  return { transport, scoring: { pool }, project, pool, queue, dating, write, readConnection, readSettings, saveSettings }
+  return { transport, scoring: { pool }, project, pool, queue, dating, write, readConnection, readStatus, readSettings, saveSettings }
 }
 function request(f: ReturnType<typeof fixture>, body: unknown, path = '/friends/recommendations', method = 'POST', token = 'valid', enabled = true) {
   return new Promise<{ status: number; data: unknown; cache: string }>((resolve, reject) => {
@@ -68,6 +69,30 @@ it('bounds errors and refuses fallback, partial private responses and mismatched
   expect(f.pool).toHaveBeenCalledTimes(2)
   expect(f.queue).not.toHaveBeenCalled()
 })
+it('preserves a real scoring eligibility rejection as setup guidance rather than a server failure', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ code: 'FR409', message: 'private database details' }, { status: 400 })))
+  const service = createFriendsScoringTransport('https://synthetic.supabase.test', 'server-only-test-key')
+  const failure = await service.pool(actorId, []).catch(error => error)
+  expect(failure).toBeInstanceOf(FriendsEligibilityError)
+  const f = fixture(); f.pool.mockRejectedValueOnce(failure)
+  const result = await request(f, { excludedIds: [] })
+  expect(result).toMatchObject({ status: 409, data: { code: 'friends_setup_required', error: expect.stringContaining('Friends preferences') } })
+  expect(JSON.stringify(result)).not.toContain('private database details')
+  expect(f.project).not.toHaveBeenCalled(); expect(f.queue).not.toHaveBeenCalled()
+})
+it('returns actor-scoped Friends setup status and rejects inconsistent eligibility or caller identity selectors', async () => {
+  const f = fixture()
+  for (const reason of [null, 'profile', 'age', 'discovery_off', 'preferences', 'location']) {
+    const data = { available: true, eligible: reason === null, reason }
+    f.readStatus.mockResolvedValueOnce({ data, error: null })
+    expect(await request(f, undefined, '/friends/status', 'GET')).toMatchObject({ status: 200, data })
+  }
+  expect(f.readStatus).toHaveBeenLastCalledWith()
+  expect((await request(f, undefined, `/friends/status?actor=${targetId}`, 'GET')).status).toBe(400)
+  f.readStatus.mockResolvedValueOnce({ data: { available: true, eligible: true, reason: 'age' }, error: null })
+  expect((await request(f, undefined, '/friends/status', 'GET')).status).toBe(502)
+  expect(f.pool).not.toHaveBeenCalled(); expect(f.queue).not.toHaveBeenCalled()
+})
 it('keeps request and explicit acceptance separate and confirms canonical connection readback', async () => {
   const f = fixture()
   expect((await request(f, {}, `/friends/requests/${targetId}`)).data).toEqual({ status: 'sent', conversationId: null })
@@ -86,7 +111,7 @@ it.each(['friends','dating'])('reports native request throttling as 429 in %s wi
   const f=fixture()
   f.write.mockResolvedValueOnce({data:null,error:{code:'CON04'}})
   const result=await request(f,{},`/${mode}/requests/${targetId}`)
-  expect(result).toMatchObject({status:429,data:{error:'Daily request limit reached (10 per 24 hours). Try again later.'}})
+  expect(result).toMatchObject({status:429,data:{code:'request_limit',error:'Daily request limit reached (10 per 24 hours). Try again later.'}})
   expect(f.write).toHaveBeenCalledOnce()
   expect(f.readConnection).not.toHaveBeenCalled()
 })

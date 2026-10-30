@@ -163,6 +163,40 @@ legend {
 .auth-card .btn {
   margin-top: 15px;
 }
+.auth-recovery-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  column-gap: 12px;
+  margin-top: 8px;
+}
+.auth-recovery-options > button,
+.auth-recovery-options > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  font-size: 13px;
+}
+.auth-recovery-options > button { color: var(--muted); }
+.auth-recovery-options + .auth-submit { margin-top: 8px; }
+.password-input-control { position: relative; }
+.password-field .password-input-control > input { padding-right: 52px; }
+.password-input-control > .password-visibility-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--muted);
+}
+.password-visibility-toggle:hover { color: var(--ink); }
+.password-visibility-toggle .ui-icon { width: 20px; height: 20px; }
 .auth-footer a {
   min-height: 44px;
   display: flex;
@@ -374,6 +408,10 @@ legend {
 .friends-waiting {
   text-align: center;
   padding: 48px 20px 30px;
+}
+.discovery-request-limit .row {
+  justify-content: center;
+  margin-top: 24px;
 }
 .friends-waiting > .ui-icon {
   width: 72px;
@@ -813,6 +851,16 @@ legend {
 .activity-page {
   max-width: 1000px;
   margin: auto;
+}
+.activity-page .item .portrait {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex: none;
+}
+.activity-page .item > .row > b {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .garden-status {
   position: absolute;

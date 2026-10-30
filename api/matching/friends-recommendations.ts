@@ -7,6 +7,9 @@ import { rankFriendsPool } from './friends-scoring.js'
 export interface FriendsScoringTransport {
   pool(actorId: string, excludedIds: string[]): Promise<unknown>
 }
+export class FriendsEligibilityError extends Error {
+  constructor() { super('Friends discovery requires an eligible adult profile and current search preferences. Review your profile and Friends preferences.') }
+}
 export function createFriendsScoringTransport(url: string, serviceKey: string): FriendsScoringTransport {
   const client = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
   return {
@@ -14,6 +17,7 @@ export function createFriendsScoringTransport(url: string, serviceKey: string): 
       const { data, error } = await client.rpc('get_friends_scoring_pool', {
         actor_in: z.uuid().parse(actorId), excluded_in: excludedIds,
       }).abortSignal(AbortSignal.timeout(5000)).retry(false)
+      if (error?.code === 'FR409') throw new FriendsEligibilityError()
       if (error) throw new Error('Friends scoring pool unavailable')
       return data
     },
@@ -31,6 +35,7 @@ export async function rankedFriendsBatch(
   // One actor-JWT transaction projects all candidates and rechecks current hard
   // constraints. Reject unrequested/duplicate/private fields, never spread raw SQL.
   const result = await project(targets)
+  if (result.error?.code === 'FR409') throw new FriendsEligibilityError()
   if (result.error) throw new Error('Friends eligibility could not be confirmed')
   const safe = FriendsProjectionSchema.parse(result.data)
   const allowed = new Set(targets)

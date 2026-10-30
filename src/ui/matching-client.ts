@@ -1,12 +1,12 @@
 import { z } from 'zod'
 import { apiUrl } from '../platform/native'
-import { FriendsBatchRequestSchema, FriendsBatchResponseSchema } from '../../shared/friends-discovery'
+import { FriendsBatchRequestSchema, FriendsBatchResponseSchema, FriendsDiscoveryStatusSchema } from '../../shared/friends-discovery'
 import { DatingBatchRequestSchema, DatingBatchResponseSchema } from '../../shared/dating-live'
 import { ActiveStatusSchema, ActiveGroupsSchema, ActiveGroupSchema, ActiveHistorySchema, type ActiveCommand } from '../../shared/active-friends'
 import { MatchingScoringSettingsResponseSchema, SaveMatchingScoringSettingsSchema, type SaveMatchingScoringSettings } from '../../shared/matching-scoring'
 import { ConnectionStateSchema } from '../../shared/connections'
 import { MessageSchema, ReadStateSchema } from '../../shared/messaging'
-export class MatchingError extends Error { constructor(readonly status: number, message: string) { super(message) } }
+export class MatchingError extends Error { constructor(readonly status: number, message: string, readonly code?: string) { super(message) } }
 export function matchingClient(token: string) {
   async function request<T>(path: string, schema: z.ZodType<T>, options: { body?: unknown; method?: string; signal?: AbortSignal } = {}): Promise<T> {
     const controller = new AbortController(), abort = () => controller.abort()
@@ -18,8 +18,8 @@ export function matchingClient(token: string) {
         body: options.body === undefined ? undefined : JSON.stringify(options.body), signal: controller.signal, cache: 'no-store' })
       const data: unknown = await response.json().catch(() => null)
       if (!response.ok) {
-        const error = z.object({ error: z.string().max(250) }).safeParse(data)
-        throw new MatchingError(response.status, error.success ? error.data.error : 'Matching could not be confirmed. Refresh before trying again.')
+        const error = z.object({ error: z.string().max(250), code: z.string().max(50).optional() }).safeParse(data)
+        throw new MatchingError(response.status, error.success ? error.data.error : 'Matching could not be confirmed. Refresh before trying again.', error.success ? error.data.code : undefined)
       }
       const parsed = schema.safeParse(data)
       if (!parsed.success) throw new MatchingError(502, 'The response could not be confirmed. Refresh before trying again.')
@@ -30,6 +30,7 @@ export function matchingClient(token: string) {
     } finally { clearTimeout(timer); options.signal?.removeEventListener('abort', abort) }
   }
   return {
+    friendsStatus: (signal?: AbortSignal) => request('/friends/status', FriendsDiscoveryStatusSchema, { signal }),
     friends: (excludedIds: string[], signal?: AbortSignal) => request('/friends/recommendations', FriendsBatchResponseSchema, { body: FriendsBatchRequestSchema.parse({ excludedIds, limit: 10 }), signal }),
     dating: (excludedIds: string[], signal?: AbortSignal) => request('/dating/recommendations', DatingBatchResponseSchema, { body: DatingBatchRequestSchema.parse({ excludedIds, limit: 10 }), signal }),
     connect: (mode: 'Friends' | 'Dating', target: string) => request(mode === 'Friends' ? `/friends/requests/${encodeURIComponent(target)}` : `/dating/requests/${encodeURIComponent(target)}`, ConnectionStateSchema, { body: {} }),

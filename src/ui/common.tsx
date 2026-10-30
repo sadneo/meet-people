@@ -66,6 +66,8 @@ export function Icon({ name }: { name: string }) {
   const paths: Record<string, ReactNode> = {
     Back: <path d="m15 18-6-6 6-6" />,
     ChevronRight: <path d="m9 6 6 6-6 6" />,
+    Eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></>,
+    EyeOff: <path d="m3 3 18 18M10.6 5.1A11 11 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3 3.8M6.5 6.5A18 18 0 0 0 2 12s3.5 7 10 7a12 12 0 0 0 5.5-1.5M10 10a3 3 0 0 0 4 4"/>,
     Send: <path d="m5 12 7-7 7 7M12 5v14" />,
     Bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></>,
     Clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,

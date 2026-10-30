@@ -18,7 +18,8 @@ import {
   type Message,
 } from "../../shared/messaging";
 import { messagingRequest } from "../features/messaging/client";
-import { useAction, useLoad } from "./hooks";
+import { useCachedLoad } from "../data/useCachedLoad";
+import { useAction } from "./hooks";
 import {
   ActionButton,
   Avatar,
@@ -51,15 +52,16 @@ export function Messages() {
     [drafts, setDrafts] = useState<Record<string, string>>({}),
     [findGroup,setFindGroup] = useState(false),
     [page, setPage] = useState(1);
-  const inbox = useLoad(
+  const inbox = useCachedLoad(
     useCallback(
       (signal) =>
         messagingRequest(`?page=${page}`, ConversationsSchema, { signal }),
       [page],
     ),
+    ["inbox", page], 5000,
   );
-  const groups = useLoad(useCallback(signal=>matchingClient(current.session.access_token).groups(signal),[current.session.access_token]))
-  const activity = useLoad(useCallback(signal => messagingRequest('/activity', MessagingActivitySchema, { signal }), []));
+  const groups = useCachedLoad(useCallback(signal=>matchingClient(current.session.access_token).groups(signal),[current.session.access_token]),["groups"],5000)
+  const activity = useCachedLoad(useCallback(signal => messagingRequest('/activity', MessagingActivitySchema, { signal }), []), ['activity'],2000);
   const reloadInbox=inbox.reload,reloadGroups=groups.reload,reloadActivity=activity.reload
   const changed=useCallback(()=>{reloadInbox();reloadGroups();reloadActivity()},[reloadInbox,reloadGroups,reloadActivity])
   useEffect(()=>{window.addEventListener('pebble:matching-changed',changed);return()=>window.removeEventListener('pebble:matching-changed',changed)},[changed])
@@ -170,13 +172,14 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
   const current = useCurrent()
   const token = current.session.access_token
   const action = useAction(),
-    history = useLoad(
+    history = useCachedLoad(
       useCallback(async(signal)=>{
         if(!isGroup)return messagingRequest(`/${encodeURIComponent(id)}/messages`,HistorySchema,{signal})
         const [group,value]=await Promise.all([matchingClient(token).group(id,signal),matchingClient(token).history(id,undefined,signal)])
         if(!signal.aborted)setGroup(group)
         return {kind:'friends_group' as const,canSend:true,messages:value.messages,participants:group.members,nextCursor:value.nextCursor}
-      },[token,id,isGroup])
+      },[token,id,isGroup]),
+      ["message-history", isGroup ? "group" : "direct", id], 0,
     );
   const historyPage=async(before:number)=>isGroup?matchingClient(token).history(id,before):messagingRequest(`/${encodeURIComponent(id)}/messages?before=${before}`,HistorySchema)
 
@@ -190,11 +193,11 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
   const composer = useRef<HTMLTextAreaElement>(null),
     focusAfterSend = useRef(false);
   useEffect(() => {
-    if (focusAfterSend.current && !action.busy && !uncertain && history.value?.canSend) {
+    if (focusAfterSend.current && !action.busy && !uncertain && !history.refreshing && history.value?.canSend) {
       composer.current?.focus();
       focusAfterSend.current = false;
     }
-  }, [action.busy, uncertain, history.value?.canSend]);
+  }, [action.busy, uncertain, history.refreshing, history.value?.canSend]);
   const live = useRef(true);
   useEffect(() => {
     live.current = true;
@@ -220,7 +223,7 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
     lastVisibleMessage.current = lastMessage.id;
   }, [lastMessage, current.session.user.id]);
   useEffect(() => {
-    if (!newest || document.visibilityState !== "visible") return;
+    if (history.refreshing || !newest || document.visibilityState !== "visible") return;
     const controller = new AbortController();
     void (isGroup?matchingClient(token).read(id,newest,controller.signal):messagingRequest(`/${encodeURIComponent(id)}/read`,ReadStateSchema,{body:{seq:newest},signal:controller.signal}))
       .then(() => {
@@ -237,11 +240,11 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
           );
       });
     return () => controller.abort();
-  }, [id, newest, changed, token, isGroup]);
+  }, [id, newest, changed, token, isGroup, history.refreshing]);
   async function send(event: FormEvent) {
     event.preventDefault();
     await action.run(async () => {
-      if (!history.value?.canSend || (!body.trim() && !retry.current)) return;
+      if (history.refreshing || !history.value?.canSend || (!body.trim() && !retry.current)) return;
       retry.current ??= {
         body: body.trim(),
         clientRequestId: crypto.randomUUID(),
@@ -382,17 +385,17 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
           onKeyDown={(event) => {
             if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             event.preventDefault();
-            if (event.repeat || !body.trim() || !history.value?.canSend || action.busy || uncertain) return;
+            if (event.repeat || !body.trim() || !history.value?.canSend || history.refreshing || action.busy || uncertain) return;
             focusAfterSend.current = true;
             event.currentTarget.form?.requestSubmit();
           }}
           aria-describedby="message-keyboard-help"
-          disabled={!history.value?.canSend || action.busy || uncertain}
+          disabled={!history.value?.canSend || history.refreshing || action.busy || uncertain}
         />
         <button
           className={`btn message-send ${uncertain ? 'retry' : ''}`}
           aria-label={action.busy ? 'Sending…' : uncertain ? 'Retry same message' : 'Send'}
-          disabled={!history.value?.canSend || action.busy || !body.trim()}
+          disabled={!history.value?.canSend || history.refreshing || action.busy || !body.trim()}
         >
           {action.busy ? "…" : uncertain ? "Retry same message" : <Icon name="Send" />}
         </button>

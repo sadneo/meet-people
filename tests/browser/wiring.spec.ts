@@ -26,11 +26,11 @@ test("incomplete accounts cannot enter private app screens", async ({
   const fixture = await wiringFixture(page, { incomplete: true });
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/onboarding/);
-  await expect(page.getByText("Step 2 of 4")).toBeVisible();
+  await expect(page.getByText("Chapter 2 of 4")).toBeVisible();
   await page.getByRole("button", { name: "Coffee", exact: true }).click();
   await page.getByRole("button", { name: "Art", exact: true }).click();
   await page.getByRole("button", { name: "Gaming", exact: true }).click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Save & continue", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "What brings you here?" }),
   ).toBeVisible();
@@ -334,26 +334,27 @@ test("fresh accounts complete every onboarding chapter through persisted writes"
 }) => {
   const fixture = await wiringFixture(page, { fresh: true });
   await page.goto("/profile");
+  await page.getByRole("button", { name: "Start my profile", exact: true }).click();
   await page.getByLabel("Username", { exact: true }).fill("jamie");
   await page.getByLabel("Display name", { exact: true }).fill("Jamie");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByLabel("Birthdate · private").fill("2001-01-02");
+  await page.getByLabel("City or campus area", { exact: true }).fill("Stony Brook");
+  await page.getByRole("button", { name: "Save & continue", exact: true }).click();
   for (const name of ["Coffee", "Art", "Gaming"])
     await page.getByRole("button", { name, exact: true }).click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Save & continue", exact: true }).click();
   await page.getByLabel("Make friends", { exact: true }).check();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByLabel("Birthdate · private").fill("2001-01-02");
+  await page.getByRole("button", { name: "Save & continue", exact: true }).click();
   await page
-    .getByLabel("City or campus area", { exact: true })
-    .fill("Stony Brook");
-  await page
-    .getByRole("combobox", { name: "Distance", exact: true })
+    .getByRole("combobox", { name: "Comfortable distance", exact: true })
     .selectOption("Nearby");
   await page
     .getByRole("combobox", { name: "Group preference", exact: true })
     .selectOption("One-on-one");
   await page.getByRole("button", { name: "Add a time window" }).click();
   await page.getByRole("button", { name: "Finish setup" }).click();
+  await expect(page.getByRole("heading", { name: "Your Pebble is ready." })).toBeVisible();
+  await page.getByRole("link", { name: "Enter Pebble" }).click();
   await expect(
     page.getByRole("heading", { name: "Profile", exact: true }),
   ).toBeVisible();

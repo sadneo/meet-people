@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod'
-import { ConnectionListSchema, ConnectionStateSchema } from '../shared/connections.js'
+import { ConnectionListSchema, ConnectionStateSchema, ConnectionRequestAllowanceSchema } from '../shared/connections.js'
 import { ConversationsSchema, HistorySchema, MarkReadSchema, MessageSchema, MessagingActivitySchema, ReadStateSchema, SendMessageSchema } from '../shared/messaging.js'
 import type { UserContextTransport } from './matchmaking.js'
 
@@ -50,6 +50,7 @@ export function createSocialRouter(transport: UserContextTransport | null, kind:
   const actor = (response: Response) => response.locals.actor as Actor
   const noQuery = (request: Request) => query(request, empty)
   if (kind === 'connections') {
+    router.get('/request-allowance', async (request, response) => { body(request); noQuery(request); response.json(await result(actor(response).connectionRequestAllowance, ConnectionRequestAllowanceSchema)) })
     router.get('/', async (request, response) => { body(request); noQuery(request); response.json(await result(actor(response).socialConnectionList, ConnectionListSchema)) })
     const connection = (action: 'get' | 'request' | 'accept' | 'remove') => async (request: Request, response: Response) => {
       body(request); noQuery(request); const target = id(request.params.targetId), call = actor(response).socialConnection

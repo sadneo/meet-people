@@ -11,7 +11,8 @@ import {
   isLocalDevelopment,
 } from "../auth/localDevelopment";
 import { useAction } from "./hooks";
-import { ActionButton, Brand, ErrorMessage } from "./common";
+import { Brand, ErrorMessage } from "./common";
+import { PasswordField } from './PasswordField';
 
 export function Auth({
   mode = "login",
@@ -21,7 +22,7 @@ export function Auth({
   const action = useAction(),
     navigate = useNavigate(),
     [search] = useSearchParams();
-  const [email, setEmail] = useState(""),
+  const [email, setEmail] = useState(() => search.get("email") ?? ""),
     [password, setPassword] = useState(""),
     [confirm, setConfirm] = useState(""),
     [stage, setStage] = useState<"email" | "password">("email"),
@@ -37,6 +38,17 @@ export function Auth({
     reset = mode === "reset",
     forgot = mode === "forgot",
     register = mode === "register";
+  function changeEmail(value: string) {
+    if (value === email) return;
+    setEmail(value);
+    setPassword("");
+    setConfirm("");
+    setNotice("");
+    action.clearError();
+    setStage("email");
+    if (register)
+      navigate(`/login?${new URLSearchParams({ email: value, returnTo })}`, { replace: true });
+  }
   async function submit(event: FormEvent) {
     event.preventDefault();
     setNotice("");
@@ -156,20 +168,17 @@ export function Auth({
                 placeholder="you@example.com"
                 autoComplete="email"
                 required
-                value={email || (register ? (search.get("email") ?? "") : "")}
-                onChange={(event) => setEmail(event.target.value)}
-                disabled={
-                  action.busy || (mode === "login" && stage === "password")
-                }
+                value={email}
+                onChange={(event) => changeEmail(event.target.value)}
+                disabled={action.busy}
               />
             </>
           )}
           {!forgot && (stage === "password" || register || reset) && (
             <>
-              <label htmlFor="auth-password">Password</label>
-                <input
+                <PasswordField
+                  label="Password"
                   id="auth-password"
-                  type="password"
                   autoComplete={
                     register || reset ? "new-password" : "current-password"
                   }
@@ -181,10 +190,9 @@ export function Auth({
                 />
               {(register || reset) && (
                 <>
-                  <label htmlFor="auth-confirm">Confirm password</label>
-                  <input
+                  <PasswordField
+                    label="Confirm password"
                     id="auth-confirm"
-                    type="password"
                     autoComplete="new-password"
                     required
                     value={confirm}
@@ -199,6 +207,34 @@ export function Auth({
               (!supabase ? "Sign-in is unavailable. Try again later." : "")}
           </ErrorMessage>
           {notice && <p role="status">{notice}</p>}
+          {mode === "login" && stage === "password" && <div className="auth-recovery-options">
+            <button
+              type="button"
+              className="text-link"
+              disabled={action.busy || !supabase || !email}
+              onClick={() => {
+                void action.run(async () => {
+                  const result = await supabase!.auth.signInWithOtp({
+                    email,
+                    options: {
+                      shouldCreateUser: false,
+                      emailRedirectTo: authCallbackUrl(returnTo),
+                    },
+                  });
+                  if (result.error)
+                    throw new Error("Could not send a sign-in link.");
+                  setNotice("Check your inbox for your sign-in link.");
+                });
+              }}
+            >
+              Email me a sign-in link
+            </button>
+            <Link
+              to={`/auth/forgot-password?${new URLSearchParams({ returnTo })}`}
+            >
+              Forgot password?
+            </Link>
+          </div>}
            <button className="auth-submit" disabled={action.busy || !supabase}>
             {action.busy
               ? "Please wait…"
@@ -232,44 +268,6 @@ export function Auth({
             >
               Continue with Google
             </button>
-            {stage === "password" && <>
-            <button
-              className="text-link"
-              disabled={action.busy || !supabase || !email}
-              onClick={() => {
-                void action.run(async () => {
-                  const result = await supabase!.auth.signInWithOtp({
-                    email,
-                    options: {
-                      shouldCreateUser: false,
-                      emailRedirectTo: authCallbackUrl(returnTo),
-                    },
-                  });
-                  if (result.error)
-                    throw new Error("Could not send a sign-in link.");
-                  setNotice("Check your inbox for your sign-in link.");
-                });
-              }}
-            >
-              Email me a sign-in link
-            </button>
-            <Link
-              to={`/auth/forgot-password?${new URLSearchParams({ returnTo })}`}
-            >
-              Forgot password?
-            </Link>
-            {stage === "password" && (
-              <ActionButton
-                secondary
-                onClick={() => {
-                  setStage("email");
-                  setPassword("");
-                }}
-              >
-                Use a different email
-              </ActionButton>
-            )}
-            </>}
             <Link className="auth-home-link" to="/">Back to home</Link>
             {developer && (
               <div className="auth-dev-section">

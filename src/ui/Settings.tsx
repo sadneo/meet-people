@@ -10,6 +10,7 @@ import { ActionButton, ErrorMessage, Icon, ResourceState } from "./common";
 import { useCurrent } from "./current";
 import { Blocklist } from "./Safety";
 import { settingsCategories } from './settings-navigation';
+import { PasswordField } from './PasswordField';
 
 function MasterSettings({ category }: { category: 'discovery' | 'notifications' | 'privacy' }) {
   const current = useCurrent(),
@@ -209,10 +210,8 @@ function Credentials() {
         }}
       >
         <fieldset disabled={action.busy}>
-          <label>
-            New password
-            <input
-              type="password"
+            <PasswordField
+              label="New password"
               autoComplete="new-password"
               minLength={8}
               maxLength={128}
@@ -220,17 +219,13 @@ function Credentials() {
               onChange={(event) => setPassword(event.target.value)}
               required
             />
-          </label>
-          <label>
-            Confirm password
-            <input
-              type="password"
+            <PasswordField
+              label="Confirm password"
               autoComplete="new-password"
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}
               required
             />
-          </label>
           {reauth && (
             <>
               <label>

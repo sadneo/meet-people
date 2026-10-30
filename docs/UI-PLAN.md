@@ -10,7 +10,7 @@ React screens in `src/ui/` through `src/App.tsx`; there is no second demo server
 | `/login`, `/register` | Supabase email/password, email link and Google sign-in |
 | `/auth/callback`, `/reset-password` | Explicit grant verification and URL scrubbing |
 | `/auth/forgot-password`, `/forgot-password` | Real recovery email request |
-| `/onboarding` | Four sequential persisted account chapters |
+| `/onboarding` | Guided four-stone journey from the original dev flow, with a welcome scene and confirmed completion screen. About you (identity, private birthdate, home area), interests (3–5, at least 3 provided), social intentions, then weekly availability, general plan preferences and an explicit saved timezone. Each chapter persists and resumes from confirmed account data. Dating and group/event queues retain separate opt-in. |
 | `/home`, `/community` | Local floating garden |
 | `/matchmaking` | Passive Friends/Dating recommendations, consent and search preferences |
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
@@ -26,6 +26,14 @@ React screens in `src/ui/` through `src/App.tsx`; there is no second demo server
 Private routes wait for session hydration and persisted account readiness. A
 signed-in account with missing chapters resumes onboarding; account read failures
 block entry with retry and sign-out. Unknown routes pass through the same gate.
+Garden and the other signed-in destinations share one account loader and shell.
+An account-scoped TanStack Query cache retains display reads and decoded private
+photos across navigation, with background refresh and short freshness windows.
+Events and inbox data warm after the shell becomes idle and on navigation intent.
+Changing accounts or signing out clears the cache and revokes private image URLs.
+Cached request lists and chat histories remain visible during refresh, while their
+write controls wait for fresh permissions. Editable settings, queue/consent actions,
+request allowances and mutation readbacks retain their canonical server checks.
 
 Keep the existing browser clients and shared schema validation. Use bearer tokens
 for private API calls; use no database tables or privileged keys in the browser.
@@ -33,6 +41,23 @@ Versioned preference writes keep their compare-and-swap/readback behavior. Faile
 or uncertain mutations require read-only reconciliation before another write.
 Message retries reuse the same client request ID. Passive recommendations never
 enroll someone in the separate Messages group queue.
+Friends reads an owner-only setup status before requesting recommendations. It
+shows specific guidance for the supported age range (18–99), disabled discovery,
+missing preferences, or a search area that needs confirmation. Eligibility changes
+during scoring return a setup conflict and recheck status, rather than a generic
+server error. This requires `20261030000200_friends_discovery_status.sql`.
+Dating uses its existing owner-only runtime for specific age (18+), discovery,
+profile, search-area and participation guidance. Recommendations wait until that
+runtime permits them; eligible users still explicitly start participation. Setup
+rejections retain their conflict category, and a definitively rejected opt-in is
+distinct from an unconfirmed write. Pause remains available after eligibility
+expires. Automatic setup rechecks are bounded to prevent recommendation loops.
+Discover checks the account's shared rolling allowance before showing request
+actions and after each request. At ten new requests in 24 hours, both modes show
+the limit screen with the next available time and links to Messages and incoming
+requests. Sending remains blocked while allowance reads are pending or failed;
+availability is checked again on focus and when the next slot opens. The read-only
+allowance API requires `20261030000100_connection_request_allowance.sql`.
 Event group queues check for a result every three seconds while waiting, stopping
 after a group appears, leaving the queue, or the event becomes unavailable.
 

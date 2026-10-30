@@ -59,6 +59,7 @@ export interface UserContextTransport {
     activeFriendsSend?(group: string, body: string, request: string): PromiseLike<RpcResponse>
     activeFriendsRead?(group: string, seq: number): PromiseLike<RpcResponse>
     projectFriendsCandidates?(targets: string[]): PromiseLike<RpcResponse>
+    friendsDiscoveryStatus?(): PromiseLike<RpcResponse>
     friendsDiscoveryConnection?(target: string, action: 'request' | 'accept'): PromiseLike<RpcResponse>
     matchingScoringSettings?(): PromiseLike<RpcResponse>
     saveMatchingScoringSettings?(value: SaveMatchingScoringSettings): PromiseLike<RpcResponse>
@@ -87,6 +88,7 @@ export interface UserContextTransport {
     confirmMapSearchLocation?(ticket: MapTicket): PromiseLike<RpcResponse>
     socialConnection?(target: string, action: 'get' | 'request' | 'accept' | 'remove'): PromiseLike<RpcResponse>
     socialConnectionList?(): PromiseLike<RpcResponse>
+    connectionRequestAllowance?(): PromiseLike<RpcResponse>
     socialInbox?(page: number): PromiseLike<RpcResponse>
     socialHistory?(conversation: string, before: number | null, after: number | null): PromiseLike<RpcResponse>
     socialSend?(conversation: string, body: string, requestId: string): PromiseLike<RpcResponse>
@@ -142,6 +144,7 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         confirmMapSearchLocation: ticket => client.rpc('confirm_map_search_location', { ticket_in: ticket }),
         socialConnection: (target, action) => client.rpc('social_connection', { target_in: target, action_in: action }),
         socialConnectionList: () => client.rpc('social_connection_list'),
+        connectionRequestAllowance: () => client.rpc('get_connection_request_allowance'),
         socialInbox: page => client.rpc('social_inbox', { page_in: page }),
         socialHistory: (conversation, before, after) => client.rpc('social_history', { conversation_in: conversation, before_in: before, after_in: after }),
         socialSend: (conversation, body, requestId) => client.rpc('social_send', { conversation_in: conversation, body_in: body, request_in: requestId }),
@@ -162,6 +165,7 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         activeFriendsSend: (group, body, request) => client.rpc('active_friends_send', { group_in: group, body_in: body, request_in: request }),
         activeFriendsRead: (group, seq) => client.rpc('active_friends_read', { group_in: group, seq_in: seq }),
         projectFriendsCandidates: targets => client.rpc('project_friends_candidates', { targets_in: targets }),
+        friendsDiscoveryStatus: () => client.rpc('get_friends_discovery_status'),
         friendsDiscoveryConnection: (target, action) => client.rpc('friends_discovery_connection', { target_in: target, action_in: action }),
         matchingScoringSettings: () => client.rpc('get_matching_scoring_settings'),
         saveMatchingScoringSettings: value => client.rpc('save_matching_scoring_settings', { settings_in: value }),

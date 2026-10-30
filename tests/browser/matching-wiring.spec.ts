@@ -7,12 +7,14 @@ for(const status of [429,503])test(`Discover distinguishes ${status===429?'rate-
  let writes=0
  await page.route(`**/api/matchmaking/friends/requests/${peer}`,async route=>{
   writes++
-  await route.fulfill({status,json:{error:status===429?'Daily request limit reached (10 per 24 hours). Try again later.':'Your Friends action may already be saved. Check Connections before retrying.'}})
+  await route.fulfill({status,json:{...(status===429?{code:'request_limit'}:{}),error:status===429?'Daily request limit reached (10 per 24 hours). Try again later.':'Your Friends action may already be saved. Check Connections before retrying.'}})
  })
+ if(status===429)await page.route('**/api/connections/request-allowance',route=>route.fulfill({json:writes?{limit:10,used:10,remaining:0,availableAt:new Date(Date.now()+3600000).toISOString()}:{limit:10,used:9,remaining:1,availableAt:null}}))
  await page.goto('/matchmaking')
  await page.getByRole('button',{name:'Connect',exact:true}).click()
  if(status===429){
-  await expect(page.getByText('Taylor: request not sent. Daily request limit reached (10 per 24 hours). Try again later.',{exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'You’ve reached today’s request limit.'})).toBeVisible()
+  await expect(page.getByRole('button',{name:'Connect',exact:true})).toHaveCount(0)
   await expect(page.getByRole('link',{name:'Check Connections',exact:true})).toHaveCount(0)
  }else{
   await expect(page.getByText(/Taylor: request unconfirmed/)).toBeVisible()
