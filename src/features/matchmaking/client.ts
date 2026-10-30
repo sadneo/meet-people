@@ -9,8 +9,11 @@ export class MatchmakingClientError extends Error {
   constructor(readonly code: string, readonly status: number, message: string) { super(message) }
 }
 export function matchmakingClient(token: string) {
-  async function request<T>(path: string, schema: z.ZodType<T>, method = 'GET', body?: unknown): Promise<T> {
+  async function request<T>(path: string, schema: z.ZodType<T>, method = 'GET', body?: unknown, signal?: AbortSignal): Promise<T> {
     const controller = new AbortController()
+    const abort = () => controller.abort()
+    signal?.addEventListener('abort', abort, { once: true })
+    if (signal?.aborted) controller.abort()
     // Keep the deadline alive through JSON/body consumption, not just headers.
     const timer = setTimeout(() => controller.abort(), 15000)
     try {
@@ -28,7 +31,7 @@ export function matchmakingClient(token: string) {
       // Aborting local transport does not prove a write was rolled back.
       if (controller.signal.aborted) throw new MatchmakingClientError('provider', 503, 'Matching request timed out. Its outcome may be uncertain; refresh to confirm.')
       throw failure
-    } finally { clearTimeout(timer) }
+    } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort) }
   }
   return {
     accountProfile: () => request('account-profile', AccountProfileResponseSchema),
@@ -45,7 +48,7 @@ export function matchmakingClient(token: string) {
     eventInterest: (listingId: string) => request(`events/${ListingIdSchema.parse(listingId)}/interest`, ListingMatchmakingStatusSchema, 'POST', {}),
     eventWithdraw: (listingId: string) => request(`events/${ListingIdSchema.parse(listingId)}/interest`, ListingMatchmakingStatusSchema, 'DELETE'),
     eventMatches: (listingId: string) => request(`events/${ListingIdSchema.parse(listingId)}/matches`, EventCompatibilityResponseSchema),
-    groupQueue: (listingId: string) => request(`events/${ListingIdSchema.parse(listingId)}/group-queue`, EventGroupQueueSchema),
+    groupQueue: (listingId: string, signal?: AbortSignal) => request(`events/${ListingIdSchema.parse(listingId)}/group-queue`, EventGroupQueueSchema, 'GET', undefined, signal),
     groupJoin: (listingId: string) => request(`events/${ListingIdSchema.parse(listingId)}/group-queue`, EventGroupQueueSchema, 'POST', {}),
     groupLeave: (listingId: string) => request(`events/${ListingIdSchema.parse(listingId)}/group-queue`, EventGroupQueueSchema, 'DELETE'),
     notifications: () => request('notifications', MatchingNotificationsSchema),

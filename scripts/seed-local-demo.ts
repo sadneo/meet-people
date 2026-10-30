@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { execFileSync,spawnSync } from 'node:child_process'
 import { createClient,type SupabaseClient } from '@supabase/supabase-js'
-import sharp from 'sharp'
+import { demoInitialsPhoto } from './demo-seed/photos.js'
 import { demoPlan,seedContainer,seedMarker } from './demo-seed/plan.js'
 import { seedSql } from './demo-seed/sql.js'
 const url='http://127.0.0.1:54321'
@@ -48,7 +48,7 @@ async function main(){
  if(target.protocol!=='http:'||!['127.0.0.1','localhost'].includes(target.hostname)||target.port!=='54321'||target.username||target.password||!status.SERVICE_ROLE_KEY||!status.ANON_KEY)throw new Error('Refusing nonlocal or incomplete Supabase configuration')
  if(options['refresh-location'])pg(readFileSync(new URL('../docs/stony-brook-demo-location.sql',import.meta.url),'utf8'))
  // Check safety prerequisites BEFORE creating any Auth fixtures.
- pg(`begin read only;do $$ begin if to_regprocedure('public.get_dating_runtime()') is null or to_regprocedure('public.get_friends_runtime()') is null or not exists(select 1 from location_private.places where id='b641ad29-9f92-4e66-9490-0b616f8fd85c' and enabled and verified_until>statement_timestamp()+interval '1 hour') then raise exception 'Local demo prerequisites missing/expired';end if;end $$;rollback;`)
+ pg(`begin read only;do $$ begin if to_regprocedure('public.get_matching_scoring_settings()') is null or to_regprocedure('public.get_dating_runtime()') is null or to_regprocedure('public.get_friends_runtime()') is null or not exists(select 1 from location_private.places where id='b641ad29-9f92-4e66-9490-0b616f8fd85c' and enabled and verified_until>statement_timestamp()+interval '1 hour') then raise exception 'Local demo prerequisites missing/expired';end if;end $$;rollback;`)
  const password=await passwordInput();if(password.length<8||password.length>128)throw new Error('Use a password with8–128 characters')
  const boundedFetch:typeof fetch=(input,init)=>{
   const target=new URL(String(input));if(target.origin!==url||!['/auth/v1/','/rest/v1/rpc/'].some(prefix=>target.pathname.startsWith(prefix)))throw new Error('Nonlocal seed request refused')
@@ -72,9 +72,7 @@ async function main(){
   if(signed.error||signed.data.user?.id!==p.id||signed.data.user.is_anonymous!==false)throw new Error(`Cannot sign in demo account ${p.index}; use its existing seed password. No password was overwritten.`)
   actors.push(actor)
   if(!options['no-photos']){
-   const initials=p.account.profile!.display_name.split(' ')[1].slice(0,2).toUpperCase(),color=['#dceacc','#dfcbbd','#d8e7e5','#efd9d7','#e5dfed'][p.index%5]
-   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="${color}"/><circle cx="128" cy="112" r="74" fill="#fafbf7"/><text x="128" y="130" text-anchor="middle" font-family="sans-serif" font-size="48" fill="#34583e">${initials}</text><text x="128" y="225" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#34583e">DEMO ${p.index}</text></svg>`
-   photos.set(p.id,(await sharp(Buffer.from(svg)).jpeg({quality:80,progressive:false}).toBuffer()).toString('base64'))
+    photos.set(p.id,(await demoInitialsPhoto(p)).toString('base64'))
   }
  }
  pg(seedSql(plan,photos,!!options['reset-profiles']))
@@ -85,7 +83,7 @@ async function main(){
  const dating=await actors[0].rpc('find_dating_candidate',{excluded_in:[]})
  if(dating.error)throw new Error('Seed saved, but actual matcher verification failed; inspect local services')
  console.log(`Ready: ${plan.length} onboarded demo accounts. New accounts are not queued; existing queue memberships are preserved. Dating opted in. Real Dating matcher readback: ${dating.data?.candidate?'candidate found':'no candidate'}.`)
- console.log('Run pnpm demo:queue --count 2 when ready to demo Friends. Matching still respects reciprocal filters and safety rules.')
+ console.log('Passive Friends and Dating need no queue. For Messages groups: pnpm demo:active --count 3 --enable-active, then pnpm matchmaking:active:once. Each member must accept their proposal.')
  console.log(`Logins: ${plan[0].email} through ${plan.at(-1)!.email}; use the password you entered. Fictional labelled avatars ${options['no-photos']?'omitted':'included'}. No messages/requests/rewards created; no credentials saved.`)
 }
 main().catch(error=>{console.error(error instanceof Error?error.message:'Local demo seeding failed; no secrets printed');process.exitCode=1})

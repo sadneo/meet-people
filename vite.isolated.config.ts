@@ -19,5 +19,5 @@ export default defineConfig({
       })
     },
   }],
-  server: { host: '127.0.0.1', port: 3194, strictPort: true },
+  server: { watch: { ignored: ['**/tmp/**', '**/Pebble-Garden-Asset-Work/**', '**/Pebble-Starter/**'] }, host: '127.0.0.1', port: 3194, strictPort: true },
 })

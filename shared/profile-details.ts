@@ -49,8 +49,8 @@ export const ProfileFactsSchema = z.object({
 const revision = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
 export const ProfileDetailsSchema = z.object({ revision, facts: ProfileFactsSchema }).strict()
 export const SaveProfileDetailsSchema = z.object({ expectedRevision: revision.max(Number.MAX_SAFE_INTEGER - 1), facts: ProfileFactsSchema }).strict()
-// Contract only. No public route/projection until bilateral blocks and discovery
-// can be enforced for every reader. Never serialize an owner snapshot as public.
+// Consumed only by eligible discovery projections with bilateral safety and
+// per-field visibility enforcement. Never serialize an owner snapshot as public.
 export const PublicProfileDetailsSchema = z.object({ education: text(120).optional(), occupation: text(120).optional(), languages: languages.optional() }).strict()
 export const ProfileDetailsErrorSchema = z.object({
   code: z.enum(['auth', 'invalid', 'conflict', 'unavailable', 'provider', 'malformed']),

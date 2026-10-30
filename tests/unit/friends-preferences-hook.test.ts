@@ -2,13 +2,12 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { useLayoutEffect } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useFriendsPreferences } from '../../src/features/matchmaking/useFriendsPreferences'
-import { friendsPreferenceDraft, friendsDraftWrite } from '../../src/features/matchmaking/friends-preferences-draft'
 import { friendsPreferencesFixture, deferredFriendsResponse } from './friends-preferences-fixture'
 
 let fixture: ReturnType<typeof friendsPreferencesFixture>
 beforeEach(() => { fixture = friendsPreferencesFixture() })
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
-function write() { const draft = friendsPreferenceDraft(fixture.state.stored); return friendsDraftWrite(fixture.state.stored, draft.filters, draft.options) }
+function write() { return { expectedRevision: fixture.state.stored.revision, preferences: fixture.state.stored.preferences ?? { ageMin: 18, ageMax: 35, radiusMiles: 15, goals: [], searchArea: { source: 'home' as const, resolvedLocationRef: null } } } }
 async function load() {
   const hook = renderHook(({ owner, token }) => useFriendsPreferences(owner, token), { initialProps: { owner: 'first', token: 'first-token' } })
   await waitFor(() => expect(hook.result.current.canWrite).toBe(true)); return hook

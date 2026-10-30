@@ -1,11 +1,18 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { z } from 'zod'
-import { eventRequest } from '../../src/features/events/client'
+import { eventRequest, safeImage, eventImagePlaceholder } from '../../src/features/events/client'
 
 vi.mock('../../src/supabase', () => ({ supabase: null }))
 afterEach(() => vi.unstubAllGlobals())
 const schema = z.object({ title: z.string() })
 const unavailable = 'Events are unavailable. Try again.'
+
+it('allows bundled event photos without accepting arbitrary local or script URLs', () => {
+  expect(safeImage('/pebble/event-picnic.jpg')).toBe('/pebble/event-picnic.jpg')
+  for (const value of ['/private/file', '//other.example/image.jpg', 'javascript:alert(1)', '/pebble/../private.jpg']) {
+    expect(safeImage(value)).toBe(eventImagePlaceholder)
+  }
+})
 
 it('replaces an HTML gateway response with an understandable events error', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response('<html><body>Bad gateway</body></html>', { status: 502, headers: { 'Content-Type': 'text/html' } })))
