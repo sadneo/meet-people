@@ -12,12 +12,13 @@ React screens in `src/ui/` through `src/App.tsx`; there is no second demo server
 | `/auth/forgot-password`, `/forgot-password` | Real recovery email request |
 | `/onboarding` | Four sequential persisted account chapters |
 | `/home`, `/community` | Local floating garden |
-| `/matchmaking` | Real Friends queue and capability-gated Dating |
+| `/matchmaking` | Passive Friends/Dating recommendations, consent and search preferences |
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
 | `/explore`, `/explore/:id` | Public event reads; sign-in link for group participation |
 | `/messages`, `/messages/chat?conversation=…` | Saved inbox, history, read state and idempotent sends |
-| `/profile` | Canonical identity, interests, availability, optional facts and photo |
-| `/settings` | Masters, versioned detail preferences, downtime, credentials, blocklist |
+| `/messages/requests` | Standalone private requests view; live acceptance, decline and safety; Close returns to Messages |
+| `/profile` | Account hub with Edit profile, Discovery, Notifications, Account & security, Safety, Privacy & legal, and sign-out. Focused settings pages use `?section=…` and return to Profile. Profile editor retains identity/interests/Dating-details tabs. Search preferences live in Discover. |
+| `/settings` | Legacy redirect to Profile; existing `?section=…` links open the corresponding Profile settings section. Legacy downtime controls removed; active group matching remains in Messages. |
 | `/activity`, `/matches` | Real connection requests, connections and event proposal notifications |
 | `/terms`, `/privacy`, `/cookies` | Existing policy content in the new visual layout |
 | `/logout` | Confirmed local session sign-out |
@@ -30,7 +31,8 @@ Keep the existing browser clients and shared schema validation. Use bearer token
 for private API calls; use no database tables or privileged keys in the browser.
 Versioned preference writes keep their compare-and-swap/readback behavior. Failed
 or uncertain mutations require read-only reconciliation before another write.
-Message retries reuse the same client request ID. Friends checks stay manual.
+Message retries reuse the same client request ID. Passive recommendations never
+enroll someone in the separate Messages group queue.
 Event group queues check for a result every three seconds while waiting, stopping
 after a group appears, leaving the queue, or the event becomes unavailable.
 

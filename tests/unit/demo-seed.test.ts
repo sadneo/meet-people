@@ -97,7 +97,7 @@ describe('local demo population',()=>{
   expect(scenarios.conversations.every(chat=>chat.first===0&&chat.messages.at(-1)!.sender!==0)).toBe(true)
   expect(new Set(scenarios.conversations.flatMap(chat=>chat.messages.map(message=>message.requestId))).size).toBe(18)
   expect(scenarios.pendingRequests).toEqual([{from:7,to:0},{from:8,to:0},{from:0,to:9}])
-  expect(scenarios.friends).toHaveLength(60)
+  expect(scenarios.friends).toHaveLength(0)
   expect(scenarios.friends).not.toContain(0)
   expect(scenarios.events.every(event=>event.members[0]===0&&event.members.length===18)).toBe(true)
   expect(scenarioPlan(60,primary).conversations).toEqual(scenarios.conversations)

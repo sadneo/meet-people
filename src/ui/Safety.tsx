@@ -5,14 +5,14 @@ import {
 } from "../../shared/safety";
 import { safetyClient } from "../features/account/safety-client";
 import { useAction, useLoad } from "./hooks";
-import { ActionButton, ErrorMessage, Modal, ResourceState } from "./common";
+import { ActionButton, ErrorMessage, Icon, Modal, ResourceState } from "./common";
 
-export function SafetyActions({ id, name }: { id: string; name: string }) {
+export function SafetyActions({ id, name, iconOnly = false }: { id: string; name: string; iconOnly?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button className="text-link" onClick={() => setOpen(true)}>
-        Block or report
+      <button type="button" className={iconOnly ? "photo-more round" : "text-link"} aria-label="Block or report" onClick={() => setOpen(true)}>
+        {iconOnly ? <Icon name="More" /> : 'Block or report'}
       </button>
       {open && (
         <Modal title={`Safety · ${name}`} close={() => setOpen(false)}>
@@ -74,6 +74,7 @@ function SafetyForm({ id }: { id: string }) {
                 } finally {
                   setConfirm(false);
                   state.reload();
+                  window.dispatchEvent(new Event("pebble:matching-changed"));
                 }
               });
             }}

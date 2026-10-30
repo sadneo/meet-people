@@ -1,11 +1,12 @@
 import { z } from 'zod'
+export const RelationshipModeSchema = z.enum(['friends', 'dating'])
 
 export const ConnectionStateSchema = z.object({
   status: z.enum(['none', 'sent', 'incoming', 'connected']),
   // The direct chat, once connected.
   conversationId: z.string().uuid().nullable(),
 })
-const PersonSchema = z.object({ id: z.string().uuid(), display_name: z.string(), avatar_url: z.string().nullable() })
+const PersonSchema = z.object({ id: z.string().uuid(), display_name: z.string(), avatar_url: z.string().nullable(), mode: RelationshipModeSchema.nullable().optional() })
 export const ConnectionRequestSchema = PersonSchema.extend({ requested_at: z.string() })
 export const ConnectionListSchema = z.object({
   incoming: z.array(ConnectionRequestSchema),

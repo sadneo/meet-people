@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { Link } from "react-router";
+import { matchingClient } from "./matching-client";
 import { connections } from "../features/connections/client";
 import { matchmakingClient } from "../features/matchmaking/client";
 import { useAction, useLoad } from "./hooks";
@@ -38,7 +39,7 @@ export function Activity() {
         </ActionButton>
       </div>
       <ErrorMessage>{action.error}</ErrorMessage>
-      <section className="card">
+      <section className="card" id="requests">
         <h3>Connection requests</h3>
         <ResourceState
           loading={people.loading}
@@ -60,7 +61,7 @@ export function Activity() {
                 onClick={() => {
                   void action.run(async () => {
                     try {
-                      await connections.accept(person.id);
+                      await matchingClient(current.session.access_token).acceptFriend(person.id);
                     } finally {
                       people.reload();
                       window.dispatchEvent(

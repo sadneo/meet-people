@@ -15,6 +15,8 @@ import {
   Brand,
   Empty,
   ErrorMessage,
+  Icon,
+  Modal,
   PersonPhoto,
   ResourceState,
 } from "./common";
@@ -22,7 +24,8 @@ import { useCurrent } from "./current";
 
 export function Events({ publicView = false }: { publicView?: boolean }) {
   const [category, setCategory] = useState(""),
-    [page, setPage] = useState(1);
+    [page, setPage] = useState(1),
+    [filtersOpen, setFiltersOpen] = useState(false);
   const resource = useLoad(
     useCallback(
       (signal) =>
@@ -34,38 +37,39 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
       [category, page],
     ),
   );
+  const availableCategories = resource.value?.categories ?? [];
+  const creativeCategory = availableCategories.includes('Arts') && !availableCategories.includes('Creative') ? 'Arts' : 'Creative';
+  const categories = [...new Set(['Music', 'Food', 'Outdoors', creativeCategory, 'Social', 'Workshops', ...availableCategories, ...(category ? [category] : [])])];
+  const categoryLabel = (value: string) => value === 'Arts' ? 'Creative' : value;
+  function selectCategory(value: string) {
+    setCategory(value);
+    setPage(1);
+  }
   const content = (
-    <>
+    <section className="events-page" aria-labelledby="events-title">
       <div className="pagehead">
-        <h2>Something to go to.</h2>
-        <ActionButton
-          secondary
-          onClick={resource.reload}
-          disabled={resource.loading}
-        >
-          Refresh events
-        </ActionButton>
+        <h2 id="events-title">Events</h2>
+        <button type="button" className="btn light event-filter-button" aria-label="Filter events" onClick={() => setFiltersOpen(true)}>
+          <Icon name="Filter" />
+        </button>
       </div>
-      <label className="event-category">
-        Category
-        <select
-          value={category}
-          onChange={(event) => {
-            setCategory(event.target.value);
-            setPage(1);
-          }}
-        >
+      {publicView && <p className="mini muted">Sign in for more events</p>}
+      <div className="event-categories" role="group" aria-label="Event categories">
+        {['', ...categories].map(item => <button key={item} type="button" aria-pressed={category === item} className={category === item ? 'selected' : ''} onClick={() => selectCategory(item)}>
+          {category === item && <Icon name="Check" />}{categoryLabel(item) || 'All'}
+        </button>)}
+      </div>
+      {filtersOpen && <Modal title="Filter events" close={() => setFiltersOpen(false)}>
+        <label htmlFor="event-category-filter">Category</label>
+        <select id="event-category-filter" value={category} onChange={event => selectCategory(event.target.value)}>
           <option value="">All events</option>
-          {[
-            ...new Set([
-              ...(resource.value?.categories ?? []),
-              ...(category ? [category] : []),
-            ]),
-          ].map((item) => (
-            <option key={item}>{item}</option>
-          ))}
+          {categories.map(item => <option key={item} value={item}>{categoryLabel(item)}</option>)}
         </select>
-      </label>
+        <div className="row wrap">
+          <ActionButton onClick={() => setFiltersOpen(false)}>Done</ActionButton>
+          <ActionButton secondary disabled={resource.loading} onClick={resource.reload}>Refresh events</ActionButton>
+        </div>
+      </Modal>}
       <ResourceState
         loading={resource.loading}
         error={resource.error}
@@ -76,12 +80,12 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
           <p>Try another category or check again later.</p>
         </Empty>
       )}
-      <div className="eventgrid">
+      <div className="eventgrid event-directory">
         {resource.value?.events.map((event) => (
-          <article className="card" key={event.id}>
-            <Link to={`${publicView ? "/explore" : "/events"}/${event.id}`}>
-              <div className="eventart">
+            <Link className="event-card" key={event.id} to={`${publicView ? "/explore" : "/events"}/${event.id}`} aria-label={`${event.title}: see event and people`}>
                 <img
+                  className="event-image"
+                  loading="lazy"
                   src={safeImage(event.image_url)}
                   onError={(e) => {
                     e.currentTarget.onerror = null;
@@ -90,24 +94,24 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
                   alt=""
                   referrerPolicy="no-referrer"
                 />
-              </div>
-              <span className="badge">{event.category ?? "Event"}</span>
+              <div className="event-card-body">
+              <span className="event-category">{categoryLabel(event.category ?? "Event")}</span>
               <h3>{event.title}</h3>
+              <span className="event-date">{event.starts_at && !Number.isNaN(Date.parse(event.starts_at))
+                ? `${new Date(event.starts_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · ${new Date(event.starts_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+                : 'Date to be announced'}</span>
+              <span className="event-location"><Icon name="Location" /><span>
+                {[event.location_name, event.city].filter(Boolean).join(' · ') || 'Location to be announced'}
+              </span></span>
+              <div className="event-card-footer">
+                <span className="event-company"><Icon name="Friends" /><span>Find people looking for company</span></span>
+                <span className="event-cta">See event &amp; people <Icon name="ArrowRight" /></span>
+              </div>
+              </div>
             </Link>
-            <p className="mini">{eventDate(event.starts_at, event.ends_at)}</p>
-            <p className="muted mini">
-              {event.location_name ?? event.city ?? "Location to be announced"}
-            </p>
-            <Link
-              className="text-link"
-              to={`${publicView ? "/explore" : "/events"}/${event.id}`}
-            >
-              View event
-            </Link>
-          </article>
         ))}
       </div>
-      {resource.value && (
+      {resource.value && (page > 1 || resource.value.hasMore) && (
         <div className="row pagination">
           <ActionButton
             secondary
@@ -126,7 +130,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
           </ActionButton>
         </div>
       )}
-    </>
+    </section>
   );
   return publicView ? (
     <div className="public-page">
@@ -169,7 +173,7 @@ export function EventDetail({ publicView = false }: { publicView?: boolean }) {
     startsAt > now;
   return (
     <div className="event-detail">
-      <Link to={publicView ? "/explore" : "/events"}>‹ Events</Link>
+      {!event && <Link className="account-back" to={publicView ? "/explore" : "/events"}>‹ Events</Link>}
       <ResourceState
         loading={resource.loading}
         error={resource.error}
@@ -177,6 +181,7 @@ export function EventDetail({ publicView = false }: { publicView?: boolean }) {
       />
       {event && (
         <>
+          <header className="event-detail-header"><h1>{event.title}</h1><Link className="round" aria-label="Close event" to={publicView ? '/explore' : '/events'}>×</Link></header>
           <img
             className="event-cover"
             src={safeImage(event.image_url)}
@@ -187,14 +192,15 @@ export function EventDetail({ publicView = false }: { publicView?: boolean }) {
               e.currentTarget.src = "/images/event-placeholder.svg";
             }}
           />
-          <h1>{event.title}</h1>
-          <p>{eventDate(event.starts_at, event.ends_at)}</p>
-          <p>
+          <p className="event-detail-category">{event.category}</p>
+          <p className="event-description">{event.description}</p>
+          <p className="event-detail-date">{eventDate(event.starts_at, event.ends_at)}</p>
+          <p className="event-detail-location">
             {[event.location_name, event.address, event.city]
               .filter(Boolean)
               .join(" · ") || "Location to be announced"}
           </p>
-          <p className="event-description">{event.description}</p>
+          <p className="event-company"><Icon name="Friends"/>Find people looking for company</p>
           {source && (
             <a
               className="btn light"
@@ -240,7 +246,7 @@ function EventGroup({ id, available }: { id: string; available: boolean }) {
     { intervalMs: 3000, shouldPoll },
   );
   return (
-    <section className="card section">
+    <section className="event-group-controls">
       <h3 className="event-group-heading" aria-live="polite">
         {available && state.value?.state === "waiting" && (
           <span className="group-search-spinner" aria-hidden="true" />

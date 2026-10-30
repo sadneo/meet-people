@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { lazy, Suspense, useCallback, useEffect } from "react";
 import {
   Link,
   Navigate,
@@ -21,6 +21,7 @@ import { Profile, Onboarding } from "./ui/Profile";
 import { Settings } from "./ui/Settings";
 import { Events, EventDetail } from "./ui/Events";
 import { Messages } from "./ui/Messages";
+import { Requests } from "./ui/Requests";
 import { Activity } from "./ui/Activity";
 import { Garden } from "./ui/Garden";
 import { retainGardenFor } from './ui/garden-state';
@@ -34,6 +35,10 @@ import {
   Icon,
   Loading,
 } from "./ui/common";
+
+const DevelopmentNavigator = import.meta.env.DEV
+  ? lazy(() => import('./ui/DevelopmentNavigator'))
+  : null;
 
 function Shell() {
   const location = useLocation(),
@@ -52,8 +57,8 @@ function Shell() {
   }, [activity.reload]);
   const links = [
     ["Garden", "/"],
-    ["Discover", "/matchmaking"],
     ["Events", "/events"],
+    ["Discover", "/matchmaking"],
     ["Messages", "/messages"],
     ["Profile", "/profile"],
   ];
@@ -80,20 +85,11 @@ function Shell() {
           ))}
           <div className="sub">
             <NavLink to="/activity">Activity</NavLink>
-            <NavLink to="/settings">Settings</NavLink>
           </div>
         </nav>
         <main id="main" className={garden ? "sky-garden-main" : ""}>
           <Outlet />
         </main>
-      </div>
-      <div className="mobile-utilities">
-        <Link to="/activity" aria-label="Activity">
-          Updates
-        </Link>
-        <Link to="/settings" aria-label="Settings">
-          Settings
-        </Link>
       </div>
     </>
   );
@@ -166,6 +162,7 @@ export default function App() {
         <Route path="/explore" element={<Events publicView />} />
         <Route path="/explore/:id" element={<EventDetail publicView />} />
         <Route element={<Private session={session} />}>
+          <Route path="/messages/requests" element={<Requests />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route element={<Shell />}>
             <Route path="/home" element={<Garden />} />
@@ -191,6 +188,7 @@ export default function App() {
           </Route>
         </Route>
       </Routes>
+      {DevelopmentNavigator && <Suspense fallback={null}><DevelopmentNavigator /></Suspense>}
     </>
   );
 }

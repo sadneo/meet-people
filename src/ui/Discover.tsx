@@ -1,24 +1,17 @@
-import { useCallback, useState } from "react";
-import { Link } from "react-router";
-import type { DatingCandidate } from "../../shared/dating-live";
-import { friendsRuntime } from "../features/matchmaking/friends-runtime-client";
-import { useMatchmaking } from "../features/matchmaking/useMatchmaking";
-import { datingLiveClient } from "../features/matchmaking/dating-live-client";
-import { connections } from "../features/connections/client";
-import { useAction, useLoad } from "./hooks";
-import {
-  ActionButton,
-  Empty,
-  ErrorMessage,
-  Icon,
-  Modal,
-  PersonPhoto,
-  ResourceState,
-} from "./common";
-import { useCurrent } from "./current";
-import { DatingPreferencesPanel, FriendsPreferencesPanel } from "./Preferences";
-import { SafetyActions } from "./Safety";
-
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
+import { connections } from '../features/connections/client'
+import { datingLiveClient } from '../features/matchmaking/dating-live-client'
+import { detailedSettingsClient } from '../features/account/detailed-settings-client'
+import { friendsPreferencesClient } from '../features/matchmaking/friends-preferences-client'
+import type { DiscoveryPerson } from './useDiscoveryDeck'
+import { useAction, useLoad } from './hooks'
+import { ActionButton, ErrorMessage, Icon, Modal, PersonPhoto, ResourceState } from './common'
+import { useCurrent } from './current'
+import { DatingPreferencesPanel, FriendsPreferencesPanel } from './Preferences'
+import { SafetyActions } from './Safety'
+import { matchingClient } from './matching-client'
+import { useDiscoveryDeck } from './useDiscoveryDeck'
 export function Connect({
   id,
   dating = false,
@@ -56,12 +49,12 @@ export function Connect({
             onClick={() => {
               void action.run(async () => {
                 try {
-                  if (value.status === "incoming") await connections.accept(id);
+                  if (value.status === "incoming") await matchingClient(current.session.access_token).acceptFriend(id);
                   else if (dating)
                     await datingLiveClient(
                       current.session.access_token,
                     ).connect(id);
-                  else await connections.request(id);
+                  else await matchingClient(current.session.access_token).connect('Friends', id);
                 } finally {
                   state.reload();
                 }
@@ -89,6 +82,14 @@ function Candidate({
   city,
   photoRevision,
   dating = false,
+  onConnect,
+  onSkip,
+  onUndo,
+  canUndo = false,
+  intent,
+  style,
+  details,
+  sharedAvailability,
 }: {
   id: string;
   name: string;
@@ -99,10 +100,54 @@ function Candidate({
   city?: string | null;
   photoRevision?: number;
   dating?: boolean;
+  onConnect?: () => void;
+  onSkip?: () => void;
+  onUndo?: () => void;
+  canUndo?: boolean;
+  intent?: string;
+  style?: string;
+  details?: DiscoveryPerson['details'];
+  sharedAvailability?: DiscoveryPerson['sharedAvailability'];
 }) {
+  const current = useCurrent();
+  const content = useRef<HTMLDivElement>(null), moving = useRef(false), live = useRef(true), animation = useRef<Animation | null>(null);
+  const [transitioning, setTransitioning] = useState(false);
+  useEffect(() => {
+    live.current = true;
+    return () => { live.current = false; animation.current?.cancel(); };
+  }, []);
+  async function decide(direction: 'pass' | 'connect') {
+    if (moving.current) return;
+    const action = direction === 'pass' ? onSkip : onConnect;
+    if (!action) return;
+    moving.current = true;
+    setTransitioning(true);
+    try {
+      if (content.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const offset = direction === 'pass' ? -10 : 10;
+        animation.current = content.current.animate([
+          { transform: 'translateX(0) rotate(0deg)' },
+          { transform: `translateX(${offset}px) rotate(${direction === 'pass' ? -.35 : .35}deg)` },
+        ], { duration: 150, easing: 'ease-in', fill: 'forwards' });
+        await animation.current.finished;
+      }
+      if (live.current) action();
+    } catch {
+      // Navigation/profile invalidation cancels the animation and pending action.
+    } finally {
+      animation.current?.cancel();
+      animation.current = null;
+      moving.current = false;
+      if (live.current) setTransitioning(false);
+    }
+  }
+  const shared = interests.filter(interest => current.account?.profile?.interests.includes(interest));
+  const sortedInterests = [...shared, ...interests.filter(interest => !shared.includes(interest))];
   return (
-    <article className="live-candidate card">
-      <div className="candidate-portrait">
+    <article className={`dating-focus discovery-profile ${dating ? 'dating-profile' : 'friends-focus'}`}>
+    <div className={`card dating-card ${dating ? '' : 'friends-card'}`}>
+      <div className="discovery-profile-content" ref={content}>
+      <div className="photo discovery-photo">
         <PersonPhoto
           id={id}
           name={name}
@@ -110,360 +155,100 @@ function Candidate({
           fallback={avatar}
           large
         />
-      </div>
-      <div className="candidate-body">
+        <div className="phototext">
         <h2>
           {name}
           {age !== undefined ? `, ${age}` : ""}
         </h2>
-        {city && <p className="muted">{city}</p>}
-        {bio && <p>{bio}</p>}
-        <div>
-          {interests.map((interest) => (
-            <span key={interest} className="chip">
-              {interest}
-            </span>
-          ))}
+          {(city || intent || details?.occupation) && <p>{[details?.occupation, city].filter(Boolean).join(' · ')}{(city || details?.occupation) && intent && <br />}{intent}</p>}
         </div>
-        <Connect id={id} dating={dating} />
-        <SafetyActions id={id} name={name} />
+        <SafetyActions id={id} name={name} iconOnly />
       </div>
+      <div className="dating-profile-body">
+        {bio && <section><h3>About {name}</h3><p>{bio}</p></section>}
+        <section>
+          <div className="dating-section-heading"><h3>Interests</h3>{shared.length > 0 && <span>{shared.length} in common</span>}</div>
+          <div className="dating-interest-list">{sortedInterests.map(interest => <span key={interest} className={`dating-interest ${shared.includes(interest) ? 'in-common' : ''}`}>
+            {shared.includes(interest) && <Icon name="Check" />}{interest}{shared.includes(interest) && <span className="sr-only"> · shared interest</span>}
+          </span>)}</div>
+        </section>
+        {sharedAvailability && <section className="dating-overlap" aria-label="Shared availability">
+          <Icon name="Clock" />
+          <div><h3>Time in common</h3><p>{['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][sharedAvailability.dayOfWeek]} {sharedAvailability.period} · Shared availability</p>
+          <span className="sr-only">Times shown in {sharedAvailability.timeZone}</span></div>
+        </section>}
+        {(intent || style || details?.education || details?.languages?.length) && <section className="dating-facts" aria-label={dating ? 'Dating details' : 'Profile details'}>
+          {intent && <div><span>Looking for</span><p>{intent}</p></div>}
+          {style && <div><span>Relationship style</span><p>{style}</p></div>}
+          {details?.education && <div><span>Education</span><p>{details.education}</p></div>}
+          {!!details?.languages?.length && <div><span>Languages</span><p>{details.languages.join(', ')}</p></div>}
+        </section>}
+      </div>
+      </div>
+      {onConnect ? <div className="dating-actions" aria-label="Profile actions">
+        <button type="button" className="photo-action undo" aria-label="Undo skip" title="Undo skip" disabled={!canUndo || transitioning} onClick={onUndo}><Icon name="Undo" /></button>
+        <button type="button" className="photo-action" aria-label="Pass" title="Skip profile" disabled={transitioning} onClick={() => void decide('pass')}><Icon name="Skip" /></button>
+        <button type="button" className="photo-action primary" aria-label={dating ? 'Send Dating request' : 'Connect'} title={dating ? 'Send Dating request' : 'Send friend request'} disabled={transitioning} onClick={() => void decide('connect')}><Icon name={dating ? 'Dating' : 'AddFriend'} /></button>
+      </div> : <Connect id={id} dating={dating} />}
+    </div>
     </article>
   );
 }
-function Friends({ token, preferences }: { token: string; preferences: () => void }) {
-  const matching = useMatchmaking(token),
-    runtime = useLoad(
-      useCallback((signal) => friendsRuntime(token, signal), [token]),
-    );
-  const [needsSetup, setNeedsSetup] = useState(false);
-  const candidate = matching.result?.candidate;
-  const disabled =
-    matching.busy ||
-    matching.checking ||
-    !!matching.searchStage ||
-    !matching.known;
-  return (
-    <>
-      <ResourceState
-        loading={runtime.loading}
-        error={runtime.error}
-        reload={runtime.reload}
-      />
-      <ErrorMessage>{matching.error || matching.profileError}</ErrorMessage>
-      {needsSetup && (
-        <Modal title="Get ready to find friends" close={() => setNeedsSetup(false)}>
-          <p>
-            Friends needs discovery enabled, a complete profile, and a confirmed
-            search area. Review these choices before starting your search.
-          </p>
-          <p>
-            In Settings, turn on Discovery and Friends discovery, then save both
-            sets of preferences.
-          </p>
-          <div className="row wrap">
-            <Link className="btn" to="/settings">Review discovery settings</Link>
-            <ActionButton secondary onClick={() => {
-              setNeedsSetup(false);
-              preferences();
-            }}>
-              Review search area
-            </ActionButton>
-            <Link className="text-link" to="/profile">Check your profile</Link>
-          </div>
-        </Modal>
-      )}
-      {matching.confirmReplacement && (
-        <Modal
-          title="Replace downtime matching?"
-          close={matching.cancelReplacement}
-        >
-          <p>
-            Starting an active search turns downtime matching off. It won’t
-            resume automatically.
-          </p>
-          <ActionButton
-            disabled={!!matching.searchStage}
-            onClick={() => void matching.confirmSearch()}
-          >
-            Start active search
-          </ActionButton>
-          <ActionButton secondary onClick={matching.cancelReplacement}>
-            Cancel
-          </ActionButton>
-        </Modal>
-      )}
-      {candidate ? (
-        <Candidate {...candidate} />
-      ) : (
-        <div className="friends-waiting">
-          <img src="/pebble/pebble.png" className="matching-pebble" alt="" />
-          <h2>
-            {matching.mode === "active"
-              ? "Your next hello is out there."
-              : "Find your kind of people."}
-          </h2>
-          <p className="muted">
-            {matching.mode === "active"
-              ? "Check when you’re ready. Friends matching finds one person at a time."
-              : matching.mode === "downtime"
-                ? "Downtime matching is on. Start an active search to replace it."
-                : "Shared interests. A little free time. A new friend."}
-          </p>
-          {matching.result && !candidate && (
-            <p role="status">No match yet. You can check again later.</p>
-          )}
-        </div>
-      )}
-      <div className="match-actions">
-        {matching.mode === "active" ? (
-          <>
-            <ActionButton
-              disabled={disabled}
-              onClick={() => void matching.check()}
-            >
-              {matching.checking ? "Checking…" : "Check for a match"}
-            </ActionButton>
-            <ActionButton
-              secondary
-              disabled={disabled}
-              onClick={() => void matching.queue("leave")}
-            >
-              Cancel search
-            </ActionButton>
-          </>
-        ) : (
-          <ActionButton
-            disabled={disabled || !matching.canJoin || runtime.loading || !!runtime.error || !runtime.value}
-            onClick={() => {
-              if (!runtime.value?.canJoin) setNeedsSetup(true);
-              else void matching.findFriends();
-            }}
-          >
-            {matching.searchStage ? "Starting search…" : "Find Friends"}
-          </ActionButton>
-        )}
-        <ActionButton
-          secondary
-          disabled={
-            matching.busy || matching.profileLoading || !!matching.searchStage
-          }
-          onClick={() => {
-            void matching.queue("refresh");
-            void matching.reloadProfile();
-            runtime.reload();
-          }}
-        >
-          Refresh search status
-        </ActionButton>
-      </div>
-      {runtime.value &&
-        !runtime.value.canJoin &&
-        matching.mode !== "active" && (
-          <p className="account-note">
-            Save your profile, enable Friends discovery in Settings, and confirm
-            a search area in preferences before searching.
-          </p>
-        )}
-    </>
-  );
+
+function Feed({token,mode,enabled,revision}:{token:string;mode:'Friends'|'Dating';enabled:boolean;revision:string}){
+ const deck=useDiscoveryDeck(token,mode,enabled,revision)
+ if(!enabled)return null
+ const notices=[...deck.outcomes.filter(item=>item.state!=='confirmed'),...deck.outcomes.filter(item=>item.state==='confirmed').slice(-1)]
+ return <>
+   {deck.loading&&<p role="status" className={deck.cards.length ? 'sr-only' : undefined}>{deck.cards.length?'Loading more people…':'Finding people…'}</p>}
+   <ErrorMessage>{deck.error}</ErrorMessage>
+   {deck.error && <ActionButton secondary disabled={deck.loading} onClick={deck.reset}>Try again</ActionButton>}
+  {deck.cards.slice(0,10).map((person,index)=><div className="discovery-card-slot" hidden={index!==0} key={person.id}><Candidate {...person} dating={mode==='Dating'} onConnect={()=>void deck.connect(person)} onSkip={()=>deck.advance(person)} onUndo={deck.undo} canUndo={deck.canUndo}/></div>)}
+  {!deck.cards.length&&!deck.loading&&<div className="friends-waiting"><Icon name={mode}/><h2>{deck.searched?'You’re all caught up.':'Your next connection starts here.'}</h2><p className="muted">Check again as more people join.</p></div>}
+  {notices.map(item=><div key={item.person.id} className="account-note" role="status">
+   {item.state==='saving'?`Sending a request to ${item.person.name}…`:item.state==='uncertain'?<>{item.person.name}: request unconfirmed. <Link to="/activity">Check Connections</Link> before sending again. {item.error}</>:item.result?.status==='connected'?<>Connected with {item.person.name}. <Link to={`/messages/chat?conversation=${encodeURIComponent(item.result.conversationId??'')}`}>Open conversation</Link></>:`Request sent to ${item.person.name}.`}
+  </div>)}
+  {!deck.cards.length && deck.canUndo && <ActionButton secondary onClick={deck.undo}>Undo skip</ActionButton>}
+ </>
 }
-function Dating({ token }: { token: string }) {
-  const runtime = useLoad(
-      useCallback((signal) => datingLiveClient(token).status(signal), [token]),
-    ),
-    action = useAction();
-  const [excluded, setExcluded] = useState<string[]>([]),
-    [candidate, setCandidate] = useState<{
-      candidate: DatingCandidate | null;
-    } | null>(null);
-  const [uncertain, setUncertain] = useState(false);
-  const value = runtime.value;
-  async function enable(enabled: boolean) {
-    await action.run(async () => {
-      if (!value || uncertain) return;
-      setUncertain(true);
-      setCandidate(null);
-      try {
-        await datingLiveClient(token).enable({
-          expectedProfileRevision: value.aggregate.profileRevision,
-          expectedSearchRevision: value.aggregate.searchRevision,
-          enabled,
-        });
-        setUncertain(false);
-      } finally {
-        runtime.reload();
-      }
-    });
-  }
-  async function next(skip = false) {
-    await action.run(async () => {
-      const ids =
-        skip && candidate?.candidate
-          ? [...excluded, candidate.candidate.id]
-          : excluded;
-      if (ids.length > 50) return;
-      setCandidate(null);
-      const response = await datingLiveClient(token).candidate(ids);
-      setExcluded(ids);
-      setCandidate(response);
-    });
-  }
-  return (
-    <>
-      <ResourceState
-        loading={runtime.loading}
-        error={runtime.error}
-        reload={runtime.reload}
-      />
-      <ErrorMessage>{action.error}</ErrorMessage>
-      {candidate?.candidate && value?.aggregate.effectiveEnabled ? (
-        <Candidate
-          {...candidate.candidate}
-          photoRevision={candidate.candidate.photoRevision}
-          dating
-        />
-      ) : (
-        <div className="friends-waiting">
-          <Icon name="Dating" />
-          <h2>
-            {value?.aggregate.profile.enabled
-              ? "A little chemistry starts here."
-              : "Dating, at your pace."}
-          </h2>
-          <p className="muted">
-            {candidate
-              ? "You’re all caught up. Check again later."
-              : "Complete your Dating preferences, then choose when to be discovered."}
-          </p>
-        </div>
-      )}
-      <div className="match-actions">
-        {value && !value.aggregate.profile.enabled ? (
-          <ActionButton
-            disabled={action.busy || uncertain || !value.canStart}
-            onClick={() => void enable(true)}
-          >
-            Start Dating discovery
-          </ActionButton>
-        ) : (
-          value && (
-            <>
-              <ActionButton
-                disabled={action.busy || !value.aggregate.effectiveEnabled}
-                onClick={() => void next(!!candidate?.candidate)}
-              >
-                {candidate?.candidate ? "Pass and see next" : "Find a date"}
-              </ActionButton>
-              <ActionButton
-                secondary
-                disabled={action.busy || uncertain}
-                onClick={() => void enable(false)}
-              >
-                Pause Dating
-              </ActionButton>
-            </>
-          )
-        )}
-        <ActionButton
-          secondary
-          disabled={action.busy}
-          onClick={() => {
-            setUncertain(false);
-            setCandidate(null);
-            runtime.reload();
-          }}
-        >
-          Refresh Dating status
-        </ActionButton>
-      </div>
-      {value && (!value.globalDiscovery || !value.datingDiscovery) && (
-        <p className="account-note">
-          Enable discovery and Dating discovery in{" "}
-          <Link to="/settings">Settings</Link>.
-        </p>
-      )}
-      {value?.aggregate.profile.enabled &&
-        !value.aggregate.effectiveEnabled && (
-          <p className="account-note">
-            Dating is paused by your current eligibility or search area. Pause
-            Dating, update your preferences, and start again.
-          </p>
-        )}
-      {excluded.length >= 50 && <Empty title="You’re all caught up." />}
-    </>
-  );
+function Friends({token,revision}:{token:string;revision:string}){
+ const settings=useLoad(useCallback(signal=>{void revision;return detailedSettingsClient(token).read(signal)},[token,revision]))
+ return <><ResourceState loading={settings.loading} error={settings.error} reload={settings.reload}/>
+  {settings.value&&!settings.value.effective.friendsDiscovery&&<div className="friends-waiting"><Icon name="Friends"/><h2>Friends, at your pace.</h2><p>Turn on Friend recommendations in <Link to="/profile?section=discovery">Discovery settings</Link> when you’re ready.</p></div>}
+ <Feed token={token} mode="Friends" enabled={settings.value?.effective.friendsDiscovery===true} revision={revision}/></>
 }
-export function Discover() {
-  const current = useCurrent(),
-    [mode, setMode] = useState<"Friends" | "Dating">("Friends"),
-    [preferences, setPreferences] = useState(false),
-    [epoch, setEpoch] = useState(0);
-  return (
-    <div className="discovery-page">
-      <div className="discoverhead">
-        <h2>Discover</h2>
-        <button className="area-link" onClick={() => setPreferences(true)}>
-          ⌖ Search area & preferences
-        </button>
-      </div>
-      <div className="discovertools">
-        <div className="mode-toggle" role="group" aria-label="Matchmaking mode">
-          <span
-            className={`mode-toggle-indicator ${mode === "Dating" ? "dating" : ""}`}
-            aria-hidden="true"
-          />
-          {(["Friends", "Dating"] as const).map((item) => (
-            <button
-              key={item}
-              className={mode === item ? "selected" : ""}
-              aria-pressed={mode === item}
-              onClick={() => setMode(item)}
-            >
-              <Icon name={item} />
-              {item}
-            </button>
-          ))}
-        </div>
-        <button
-          className="round"
-          aria-label={`${mode} preferences`}
-          onClick={() => setPreferences(true)}
-        >
-          <Icon name="preferences" />
-        </button>
-      </div>
-      {mode === "Friends" ? (
-        <Friends
-          key={`friends:${epoch}`}
-          token={current.session.access_token}
-          preferences={() => setPreferences(true)}
-        />
-      ) : (
-        <Dating key={`dating:${epoch}`} token={current.session.access_token} />
-      )}
-      {preferences && (
-        <Modal
-          title={`${mode} preferences`}
-          close={() => setPreferences(false)}
-        >
-          {mode === "Friends" ? (
-            <FriendsPreferencesPanel
-              done={() => {
-                setPreferences(false);
-                setEpoch((value) => value + 1);
-              }}
-            />
-          ) : (
-            <DatingPreferencesPanel
-              done={() => {
-                setPreferences(false);
-                setEpoch((value) => value + 1);
-              }}
-            />
-          )}
-        </Modal>
-      )}
-    </div>
-  );
+function Dating({token,revision}:{token:string;revision:string}){
+ const runtime=useLoad(useCallback(signal=>{void revision;return datingLiveClient(token).status(signal)},[token,revision])), action=useAction()
+ const [uncertain,setUncertain]=useState(false),manual=useRef(false)
+ useEffect(()=>{if(manual.current&&runtime.value){manual.current=false;setUncertain(false)}},[runtime.value])
+ async function toggle(){await action.run(async()=>{if(!runtime.value||uncertain)return;setUncertain(true);try{await datingLiveClient(token).enable({expectedProfileRevision:runtime.value.aggregate.profileRevision,expectedSearchRevision:runtime.value.aggregate.searchRevision,enabled:!runtime.value.aggregate.profile.enabled});setUncertain(false)}finally{runtime.reload()}})}
+ const value=runtime.value
+ return <><ResourceState loading={runtime.loading} error={runtime.error} reload={runtime.reload}/><ErrorMessage>{action.error}</ErrorMessage>
+  {value&&!value.aggregate.effectiveEnabled&&<div className="friends-waiting"><Icon name="Dating"/><h2>Dating, at your pace.</h2><p>Save your preferences and choose when to be discovered.</p>{(!value.globalDiscovery||!value.datingDiscovery)&&<Link to="/profile?section=discovery">Enable Dating discovery in Discovery settings</Link>}</div>}
+ <Feed token={token} mode="Dating" enabled={value?.aggregate.effectiveEnabled===true&&!uncertain} revision={`${revision}:${value?.aggregate.profileRevision??0}:${value?.aggregate.searchRevision??0}`}/>
+ <div className="match-actions">{value&&<ActionButton disabled={action.busy||uncertain||(!value.aggregate.profile.enabled&&!value.canStart)} onClick={()=>void toggle()}>{value.aggregate.profile.enabled?'Pause Dating':'Start Dating discovery'}</ActionButton>}
+ <ActionButton secondary disabled={action.busy} onClick={()=>{manual.current=true;runtime.reload()}}>Refresh Dating status</ActionButton></div>
+ {uncertain&&<p role="status">Participation is unconfirmed. Refresh Dating status before another change.</p>}</>
+}
+export function Discover(){
+  const current=useCurrent(),[epoch,setEpoch]=useState(0),[preferencesBusy,setPreferencesBusy]=useState(false)
+  const [search,setSearch]=useSearchParams()
+  const mode=search.get('mode')==='dating'?'Dating':'Friends', preferences=search.get('preferences')==='true'
+  function setMode(value:'Friends'|'Dating'){setSearch(before=>{const next=new URLSearchParams(before);next.set('mode',value.toLowerCase());return next},{replace:true})}
+  function setPreferences(open:boolean){setSearch(before=>{const next=new URLSearchParams(before);if(open)next.set('preferences','true');else next.delete('preferences');return next},{replace:true})}
+  const token = current.session.access_token, home = current.account?.profile?.location_city;
+  const area = useLoad(useCallback(async signal => {
+    void epoch;
+    const saved = mode === 'Friends'
+      ? (await friendsPreferencesClient(token).read(signal)).preferences?.searchArea
+      : (await datingLiveClient(token).status(signal)).aggregate.search?.searchArea;
+    return saved?.source === 'temporary' ? saved.areaLabel : saved?.source === 'home' ? home : null;
+  }, [mode, token, epoch, home]));
+  const revision=JSON.stringify([epoch,current.account?.profile])
+  return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className="area-link" aria-label="Search area & preferences" onClick={()=>setPreferences(true)}>⌖ {area.loading || area.error ? 'Search area' : area.value || 'Search area'} <span aria-hidden="true">⌄</span></button></div>
+  <div className="discovertools"><div className="mode-toggle" role="group" aria-label="Matchmaking mode"><span className={`mode-toggle-indicator ${mode==='Dating'?'dating':''}`} aria-hidden="true"/>{(['Friends','Dating'] as const).map(item=><button key={item} data-mode={item} className={mode===item?'selected':''} aria-pressed={mode===item} onClick={()=>setMode(item)}><Icon name={item}/>{item}</button>)}</div><div className="row"><button className="round" aria-label={`${mode} preferences`} onClick={()=>setPreferences(true)}><Icon name="DiscoveryPreferences"/></button><Link className="round discovery-activity" to="/matches" aria-label="Matches and activity"><Icon name="DiscoveryActivity" /></Link></div></div>
+ <div hidden={mode!=='Friends'}><Friends key={current.session.user.id} token={current.session.access_token} revision={revision}/></div>
+ <div hidden={mode!=='Dating'}><Dating key={current.session.user.id} token={current.session.access_token} revision={revision}/></div>
+  {preferences&&<Modal className={mode==='Friends'?'friends-preferences-modal':'dating-preferences-modal'} title={`${mode} preferences`} close={()=>{if(!preferencesBusy){setPreferences(false);setEpoch(value=>value+1)}}}>{mode==='Friends'?<FriendsPreferencesPanel onSavingChange={setPreferencesBusy} done={()=>{setPreferences(false);setEpoch(value=>value+1)}}/>:<DatingPreferencesPanel onSavingChange={setPreferencesBusy} done={()=>{setPreferences(false);setEpoch(value=>value+1)}}/>}</Modal>}
+ </div>
 }

@@ -18,6 +18,7 @@ export async function wiringFixture(
     incomplete?: boolean;
     queue?: "downtime";
     lostMessage?: boolean;
+    conversationMode?: 'friends' | 'dating' | null;
   } = {},
 ) {
   let account = structuredClone(browserAccount()),
@@ -68,6 +69,7 @@ export async function wiringFixture(
       ...emptyDatingProfile(),
       gender: "Man",
       sexuality: "Straight",
+      clarifiedTargets: ["Woman"],
       intent: "Long-term relationship",
       style: "Monogamy",
     },
@@ -233,6 +235,17 @@ export async function wiringFixture(
         datingDiscovery: true,
       });
     }
+    if (path.endsWith('/schedule')) return reply({revision:1,timeZone:'America/New_York',showAvailability:false});
+    if (path.endsWith('/active-friends/groups')) return reply({groups:[]});
+    if (path.endsWith('/active-friends/status')) return reply({enabled:true,state:'idle',entryId:null,queuedAt:null,proposal:null,groupId:null});
+    if (path.endsWith('/friends/recommendations') || path.endsWith('/dating/recommendations')) {
+      const isDating=path.includes('/dating/');
+      return reply({algorithmVersion:isDating?'dating-rules-v1':'friends-rules-v1',candidates:body.excludedIds.includes(peer)?[]:[{
+        id:peer,name:'Taylor',age:23,city:'Stony Brook',bio:'Coffee after class?',avatar:null,photoRevision:0,interests:['Coffee'],areaDistanceMiles:2,
+        ...(isDating?{heightInches:null,gender:null,sexuality:null,intent:'Long-term relationship',style:'Monogamy'}:{})
+      }]});
+    }
+    if (path.includes('/friends/requests/')) return reply({status:'sent',conversationId:null});
     if (path.endsWith("/dating/candidate"))
       return reply({
         candidate: {
@@ -338,6 +351,7 @@ export async function wiringFixture(
           {
             id: conversationId,
             kind: "direct",
+            mode: options.conversationMode === undefined ? 'friends' : options.conversationMode,
             created_at: now,
             participants,
             latest_message: messages.at(-1),

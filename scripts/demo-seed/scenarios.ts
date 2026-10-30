@@ -37,7 +37,9 @@ export function scenarioPlan(count: number, development?:DevelopmentAnchor) {
     {sender:i+1,requestId:stableId(`${primary.id}:chat:${i+1}:3`),body:'[DEMO] Try replying, checking unread badges, and reopening this chat.'},
   ]})): [plan.conversation]
   const pendingRequests=primary?[{from:7,to:0},{from:8,to:0},{from:0,to:9}]:[plan.pending]
-  const friends=primary?plan.users.map(person=>person.index):plan.friends
+  // Current Friends discovery is passive; only the legacy standalone scenario
+  // exercises the historical queue. Never enqueue the development pool there.
+  const friends=primary?[]:plan.friends
   const groupPool=plan.users.filter(person=>person.index>=10).map(person=>person.index)
   const events=primary?plan.events.map((event,i)=>({...event,members:[0,...groupPool.filter((_,index)=>index%3===i)]})):plan.events
   return {...plan,primary,conversations,pendingRequests,friends,events,profileShowcase:primary?[10,11,12]:[4,5,6]}

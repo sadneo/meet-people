@@ -1,4 +1,18 @@
 /* Profile and Settings: warm surfaces, focused editors, and touch-sized rows. */
+.language-picker { margin-top: 16px; }
+.live-profile .profile-draft textarea { resize: none; }
+.availability-error { grid-column: 1 / -1; margin: 0; }
+.language-picker > label { display: block; margin-bottom: 8px; }
+.language-chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0 0 10px; padding: 0; }
+.language-chips li { display: inline-flex; align-items: center; max-width: 100%; padding-left: 14px; border: 1px solid var(--line); border-radius: 24px; background: #f4ece1; font-size: 14px; }
+.language-chips li span { overflow-wrap: anywhere; }
+.language-chips button { flex: none; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--ink); font-size: 20px; border-radius: 50%; }
+.language-search { position: relative; }
+.language-search input { width: 100%; margin: 0; }
+.language-options { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; right: 0; max-height: 240px; overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: 5px; list-style: none; border: 1px solid var(--line); border-radius: 14px; background: #fffdf9; box-shadow: 0 8px 24px #302b2814; }
+.language-options button { display: block; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 9px; background: transparent; text-align: left; color: var(--ink); font-size: 14px; overflow-wrap: anywhere; }
+.language-options button[aria-selected=true] { background: #f1e7da; }
+.language-picker .account-note { margin-top: 9px; }
 .account-page {
   max-width: 760px;
   margin: 0 auto;
@@ -71,6 +85,9 @@
 }
 .account-row + .account-row {
   border-top: 1px solid #eee6db;
+}
+.profile-settings-links .account-row {
+  text-decoration: none;
 }
 .account-row:hover {
   background: #f6f0e7;
@@ -282,6 +299,17 @@
   background: #fffdf9;
   box-shadow: 0 2px 5px #49342109;
   color: #804e36;
+}
+@media (max-width: 650px) {
+  .live-profile .account-segments > button {
+    min-height: 52px;
+    padding: 8px 6px;
+    white-space: normal;
+    line-height: 1.35;
+  }
+  .live-profile .account-segments > button:nth-child(2) {
+    flex: 1.65;
+  }
 }
 .account-segments .ui-icon {
   width: 18px;
@@ -1062,12 +1090,6 @@
 .account-modal input,
 .account-modal textarea {
   scroll-margin-block: 25px;
-}
-@media (max-width: 650px) {
-  .profile-editor:has(input:focus, textarea:focus, select:focus)
-    .profile-save-bar {
-    position: static;
-  }
 }
 .notification-category {
   padding: 0 19px;

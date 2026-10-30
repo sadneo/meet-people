@@ -1,5 +1,9 @@
 # Local fictional demo accounts
 
+For the current passive Discover and active Messages flows, use
+[matchmaking-demo.md](matchmaking-demo.md). The legacy queue instructions below
+describe the earlier manual discovery flow.
+
 These commands target **only** the running `supabase_db_meet-people` local project on loopback port 54321. They refuse remote targets and identities without the seeder's admin-owned marker. They require the already reviewed/activated Friends, Dating, photo and trusted-location schema. They are operator tools, not public endpoints.
 
 ## Populate the main testing scenarios
@@ -18,7 +22,7 @@ Dating pairs. The dedicated development account is the main test account:
 | --- | --- |
 | Messages | Six connected contacts (001–006), each with three saved sample messages; the last messages are from the contact to exercise unread badges |
 | Activity | Incoming requests from 007/008 and an outgoing request to 009 |
-| Friends | All 60 contacts in the active queue, ready for the development account's manual Find Friends/check flow |
+| Friends | All 60 contacts opted into passive Friends discovery, subject to reciprocal filters; no legacy queue enrollment |
 | Dating | A large compatible pool with broad adult age filters, distinct interests, bios, preferences and labeled demo avatars |
 | Profile cards | Rich fictional profiles, education/occupation/languages and visibility settings; candidate cards display the fields supported by the existing API |
 | Event groups | The development account and 17 unconnected contacts queued for each of three demo events |

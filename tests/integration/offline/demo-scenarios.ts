@@ -12,7 +12,7 @@ const profiles = demoPlan(6)
 const schemas = ['public','extensions','auth','safety_private','social_private','location_private','dating_private','photo_private','active_private','event_group_private']
 function execute(args: string[], input?: string | Buffer) {
   const result = spawnSync('docker', args, { input, maxBuffer: 16 * 1024 * 1024 })
-  assert.equal(result.status, 0, 'Disposable operation failed; app database unchanged')
+  assert.equal(result.status, 0, `Disposable operation failed; app database unchanged: ${result.stderr.toString().slice(-3000)}`)
   return result.stdout.toString().trim()
 }
 function sql(source: string) {
@@ -34,11 +34,17 @@ try {
   const snapshot = execFileSync('docker',['exec',seedContainer,'pg_dump','-U','postgres','-d','postgres','--schema-only','--format=custom',...schemas.map(schema=>`--schema=${schema}`)],{maxBuffer:16*1024*1024,stdio:['ignore','pipe','pipe']})
   sql('drop schema public;')
   execute(['exec','-i',seedContainer,'pg_restore','-U','supabase_admin','-d',database,'--exit-on-error'],snapshot)
+  // A schema-filtered pg_dump omits extension installation metadata.
+  execute(['exec',seedContainer,'psql','-X','-qAt','-U','supabase_admin','-d',database,'-v','ON_ERROR_STOP=1','-c','create extension if not exists postgis with schema extensions;create extension if not exists pgcrypto with schema extensions;'])
   sql(`begin;do $$ begin if exists(select 1 from auth.users) or exists(select 1 from public.profiles) then raise exception 'Empty fixture required';end if;end $$;
   create or replace function public.get_gemini_embedding(interest_text text) returns double precision[] language plpgsql as $$ begin raise exception 'Offline fixture';end $$;
   insert into location_private.places(id,label,region,aliases,latitude,longitude,provenance,verified_until,enabled) values('${campusId}','${campusLabel}','Synthetic test fixture',array['${campusLabel}'],0,0,'Synthetic disposable test coordinates',statement_timestamp()+interval '2 days',true);
   ${profiles.map(profile=>`insert into auth.users(id,email,aud,role,is_anonymous,raw_app_meta_data) values('${profile.id}','${profile.email}','authenticated','authenticated',false,${literal({pebble_demo_seed:seedMarker})});`).join('\n')}
   commit;`)
+  // Upgrade only the disposable UUID schema to alt-frontend's matching policy.
+  // Provider I/O remains the raising stub; no running application data is copied.
+  execFileSync('python',['scripts/prepare-local-demo-activation.py','--uuid-messaging','--matching-upgrade'],{stdio:['ignore','pipe','pipe']})
+  sql(bindTarget(readFileSync(new URL('../../../worktree/safety-owner-review/local-uuid-matching-upgrade.sql',import.meta.url),'utf8')))
   sql(bindTarget(seedSql(profiles,new Map())))
   sql(bindTarget(scenarioSql(6)))
   const counts = () => JSON.parse(sql(`select json_build_object('connections',(select count(*) from public.connections),'messages',(select count(*) from public.messages),'events',(select count(*) from public.listings where source='${scenarioMarker}'),'eventQueues',(select count(*) from event_group_private.queue where active),'friendsQueues',(select count(*) from public.queue_entries));`))
@@ -79,7 +85,7 @@ try {
   sql(bindTarget(seedSql(pool,new Map(),false,primary)))
   assert.equal(primaryProfile(),before)
   sql(bindTarget(scenarioSql(60,false,primary)))
-  const expanded={connections:11,messages:21,events:3,eventQueues:64,friendsQueues:60}
+  const expanded={connections:11,messages:21,events:3,eventQueues:64,friendsQueues:2}
   assert.deepEqual(counts(),expanded)
   sql(`begin;set local role authenticated;select set_config('request.jwt.claim.sub','${primary.id}',true) is not null;
   do $$ declare inbox jsonb;connections jsonb;candidate jsonb;begin
@@ -88,11 +94,18 @@ try {
    assert public.social_activity()->>'unreadConversations'='6';
    assert jsonb_array_length(connections->'incoming')=2 and jsonb_array_length(connections->'sent')=1 and jsonb_array_length(connections->'connected')=6;
    assert candidate<>'null'::jsonb and candidate->>'bio' like 'Fictional local demo profile%';
-   perform public.join_queue('matchmaking');assert (select count(*) from public.get_queue_match())>=1;
-  end $$;rollback;`)
+   assert jsonb_array_length(public.project_friends_candidates('["${pool[9].id}"]')->'candidates')>=1;
+  end $$;reset role;set local role service_role;select set_config('request.jwt.claim.role','service_role',true) is not null;
+  do $$ begin assert jsonb_array_length(public.get_friends_scoring_pool('${primary.id}','[]')->'candidates')>=1;end $$;rollback;`)
   sql(bindTarget(scenarioSql(60,false,primary)))
   assert.deepEqual(counts(),expanded)
   assert.equal(primaryProfile(),before)
+  sql(`begin;set local role authenticated;select set_config('request.jwt.claim.sub','${primary.id}',true) is not null;
+  do $$ begin assert public.friends_discovery_connection('${pool[9].id}','request')->>'status'='sent';end $$;
+  select set_config('request.jwt.claim.sub','${pool[9].id}',true) is not null;
+  do $$ begin assert public.friends_discovery_connection('${primary.id}','accept')->>'status'='connected';end $$;
+  select set_config('request.jwt.claim.sub','${primary.id}',true) is not null;
+  do $$ begin assert exists(select 1 from jsonb_array_elements(public.social_inbox()->'conversations') chat where chat->>'mode'='friends');end $$;rollback;`)
   // The actual local worker protocol creates groups with a provider that raises
   // on every call. Ranking must therefore use persisted local data exclusively.
   sql(readFileSync(new URL('../../../docs/local-event-group-matching.sql',import.meta.url),'utf8'))
