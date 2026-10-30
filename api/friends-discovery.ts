@@ -13,6 +13,7 @@ function unwrap(result: { data: unknown; error: { code?: string } | null }) {
   const code = result.error.code ?? ''
   if (['28000', 'PGRST301', 'PGRST302', 'PGRST303'].includes(code)) throw new Failure(401, 'Sign in again to use Friends discovery.')
   if (['FR409', 'DA409'].includes(code)) throw new Failure(409, 'Friends settings or connection state changed. Reload before trying again.')
+  if (code === 'CON04') throw new Failure(429, 'Daily request limit reached (10 per 24 hours). Try again later.')
   if (['22023', '23514'].includes(code)) throw new Failure(400, 'Check Friends fields before trying again.')
   if (code === '42501') throw new Failure(403, 'This Friends connection is unavailable.')
   throw new Failure(503, 'Friends discovery could not be confirmed. Reload before retrying.')

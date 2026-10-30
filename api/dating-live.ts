@@ -13,6 +13,7 @@ function unwrap(result:{data:unknown;error:{code?:string}|null}){
  if(result.error){const code=result.error.code
   if(['28000','PGRST301','PGRST302','PGRST303'].includes(code??''))throw new Failure(401,'Sign in again to use Dating.')
   if(code==='DA409')throw new Failure(409,'Dating preferences changed. Reload before trying again.')
+  if(code==='CON04')throw new Failure(429,'Daily request limit reached (10 per 24 hours). Try again later.')
   if(code==='DL409')throw new Failure(409,'Dating is unavailable for this selection. Check saved details, adult eligibility, discovery and current location.')
   if(code==='22023'||code==='23514')throw new Failure(400,'Check Dating fields and reload saved preferences.')
   if(code==='42501')throw new Failure(403,'This connection is unavailable.')
