@@ -15,6 +15,8 @@ import './messages.css'
 import './profile.css'
 import { useLogout } from '../../auth/useLogout'
 import { AccountCredentials } from '../../auth/AccountCredentials'
+import { DeleteAccountPanel } from '../account/DeleteAccountPanel'
+import { PushNotificationsToggle } from '../account/PushNotificationsToggle'
 import { OwnerProfile } from '../account/OwnerProfile'
 import { useAccount } from '../../auth/account-context'
 import { safeReturnTo } from '../../auth/returnTo'
@@ -169,6 +171,7 @@ export function Settings() {
   const savedAccount = useAccount()
   const [safety, setSafety] = useState(false)
   const [credentialsOpen, setCredentialsOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const heading = (_icon: string, title: string, description?: string) => <header className="pt-settings-heading"><div>{description && <p>{description}</p>}<h2>{title}</h2></div></header>
   const toggle = (key: string, title: string, description: string) => <label className="pt-toggle-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" role="switch" aria-label={title} checked={state.settings[key]} disabled={savedAccount?.busy} onChange={e => dispatch({ type: 'setting', key, value: e.target.checked })} /></label>
   return <>
@@ -177,7 +180,7 @@ export function Settings() {
       <header className="pt-settings-title"><span className="account-scope">Account-wide controls</span><h1 tabIndex={-1}>A little peace of mind.</h1><p>Choose what you share, what you hear, and who can find you.</p></header>
       <div className="account-settings-columns">
         <div>
-          <section>{heading('bell', 'Notifications', 'Stay in the loop')}{toggle('notifications', 'Plan & message notifications', 'Get notified about new messages and activity in your conversations.')}</section>
+          <section>{heading('bell', 'Notifications', 'Stay in the loop')}{toggle('notifications', 'Plan & message notifications', 'Get notified about new messages and activity in your conversations.')}<PushNotificationsToggle /></section>
           <section>{heading('shield', 'Privacy', 'Your boundaries')}{toggle('discoverable', 'Show me in discovery', 'Let other people find your profile.')}{toggle('availability', 'Share my availability', 'Show your free-time windows to connections.')}</section>
           <SettingsDetails notificationsEnabled={state.settings.notifications} discoveryEnabled={state.settings.discoverable} />
         </div>
@@ -188,6 +191,7 @@ export function Settings() {
             <button className="pt-settings-row" onClick={() => setSafety(true)}><span><strong>Blocked users</strong><small>View and manage blocked accounts. Service connection is pending.</small></span><Icon name="chevron" size={16} /></button>
             <div className="pt-settings-row"><span><strong>Email &amp; password</strong><small>{!auth.ready ? 'Loading account…' : auth.session ? 'Manage your sign-in email and password.' : 'Sign in to manage your email and password.'}</small></span><button type="button" className="pt-button pt-secondary" disabled={!auth.ready} aria-haspopup="dialog" onClick={() => setCredentialsOpen(true)}>Manage</button></div>
             <div className="pt-settings-row"><span><strong>{auth.session ? 'Log out' : 'Sign in to Pebble'}</strong><small>{auth.session ? 'Sign out of Pebble on this browser.' : 'Sign in to access your account.'}</small></span>{!auth.ready ? <Button secondary disabled>Loading account…</Button> : auth.session ? <Button secondary disabled={auth.busy} onClick={() => void auth.logout()}>{auth.busy ? 'Logging out…' : 'Log out'}</Button> : <Link className="pt-button pt-secondary" to="/login">Sign in</Link>}</div>
+            {auth.session && <div className="pt-settings-row"><span><strong>Delete account</strong><small>Permanently remove your account and data. This cannot be undone.</small></span><Button secondary disabled={auth.busy} onClick={() => setDeleteOpen(true)}>Delete</Button></div>}
             {auth.error && <p role="alert">{auth.error}</p>}
           </section>
           <section aria-label="Matchmaking">{heading('matchmaking', 'Downtime matchmaking', 'Matching, on your terms')}<DowntimeOptIn /><p className="account-feature-note">Active matching turns downtime off. It will not restart automatically. Interests and your weekly schedule stay shared.</p><Link className="pt-settings-row" to="/matchmaking"><span>Review Friends preferences</span><Icon name="chevron" size={16} /></Link></section>
@@ -198,5 +202,6 @@ export function Settings() {
     </div>
     {credentialsOpen && <Modal title="Email & password" className="pt-credentials-dialog" onClose={() => setCredentialsOpen(false)}><AccountCredentials session={auth.session} ready={auth.ready} /></Modal>}
     {safety && <Modal title="Blocked users" onClose={() => setSafety(false)}><BlocklistPanel /></Modal>}
+    {deleteOpen && <Modal title="Delete your account?" onClose={() => setDeleteOpen(false)}><DeleteAccountPanel close={() => setDeleteOpen(false)} /></Modal>}
   </>
 }

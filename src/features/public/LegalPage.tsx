@@ -7,7 +7,7 @@ export function LegalPage({ document }: { document: keyof typeof legalDocuments 
     <nav className="legal-nav" aria-label="Legal documents"><NavLink to="/terms">Terms of Service</NavLink><NavLink to="/privacy">Privacy Policy</NavLink><NavLink to="/cookies">Cookie Policy</NavLink></nav>
     <article className="legal-copy"><h1>{content.title}</h1><p className="legal-meta">Updated {legalPublication.updated}</p><p className="legal-summary">{content.summary}</p>
       {content.sections.map(section => <section key={section.title}><h2>{section.title}</h2>{section.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}</section>)}
-      <section><h2>Contact Pebble</h2><p>Developed and operated by the <strong>{legalPublication.operator}</strong>.</p><p>For support, privacy or account-deletion requests, or to report a concern, email <a href={`mailto:${legalPublication.contactEmail}`}>{legalPublication.contactEmail}</a>.</p><p>Please do not send your password or sign-in codes.</p></section>
+      <section><h2>Contact Pebble</h2><p>Developed and operated by the <strong>{legalPublication.operator}</strong>.</p><p>For support or privacy requests, to ask for account deletion by email (you can also delete your account in Settings), or to report a concern, email <a href={`mailto:${legalPublication.contactEmail}`}>{legalPublication.contactEmail}</a>.</p><p>Please do not send your password or sign-in codes.</p></section>
       <section><Link to="/">Back to Pebble</Link></section>
     </article>
   </div>

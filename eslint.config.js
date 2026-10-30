@@ -5,7 +5,7 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist/', 'supabase/.temp/', '.claude/', 'qa/'] },
+  { ignores: ['dist/', 'supabase/.temp/', '.claude/', 'qa/', 'src/alt/*'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

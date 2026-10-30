@@ -5,6 +5,7 @@ import PebbleApp, { ImmersiveLayout, IntroScreen } from './routes/PebbleApp'
 import { AppShell } from './features/prototype/AppShell'
 import { AuthScreen } from './auth/AuthScreen'
 import NativeBridge from './platform/NativeBridge'
+import PushBridge from './platform/PushBridge'
 import MessagesWorkspace from './features/messaging/Feature'
 import { EventDetail, EventsScreen } from './features/events/Browse'
 import { eventDetailRoute, eventsPath } from './features/events/routes'
@@ -31,7 +32,7 @@ function RootEntry() {
 
 function App() {
   return (
-    <><NativeBridge /><Routes>
+    <><NativeBridge /><PushBridge /><Routes>
       <Route element={<PublicLayout />}>
         <Route path="welcome" element={<MarketingPage />} />
         <Route path="terms" element={<LegalPage document="terms" />} />

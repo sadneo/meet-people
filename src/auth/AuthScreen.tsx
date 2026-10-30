@@ -6,6 +6,7 @@ import { useSession } from './useSession'
 import { useAccount } from './account-context'
 import { safeReturnTo } from './returnTo'
 import { getLocalDevelopmentEnvironment, isLocalDevelopment } from './localDevelopment'
+import { androidDevLoginAllowed, getAndroidDevEnvironment } from './androidDevGuard'
 import { apiUrl, authRedirect, isNative } from '../platform/native'
 import { Browser } from '@capacitor/browser'
 import { authCallbackUrl, validPassword } from './credential-policy'
@@ -140,6 +141,22 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
       throw new AuthMessage('The development account is not ready or sign-in could not be verified. Ask the operator to finish provisioning, then retry.')
     }
   })
+  // Android dev builds only (`--mode android-dev`). The dynamic import sits behind a build-time constant, so release builds drop it.
+  const androidDevelopment = () => void run('android-development', async () => {
+    if (import.meta.env.MODE === 'android-dev' && androidDevLoginAllowed(getAndroidDevEnvironment()) && ready && !session) {
+      try {
+        const { signInAndroidDevUser } = await import('./androidDevLogin')
+        await signInAndroidDevUser(supabase!)
+      } catch (failure) {
+        // Duck-typed on purpose: importing the error class would pull the credentials module into every build.
+        const { message: reason = '', detail = '', target = '' } = failure as { message?: string; detail?: string; target?: string }
+        throw new AuthMessage(reason === 'no-account' ? 'The dev account does not exist yet. Run pnpm android:dev-user, then try again.'
+          : reason === 'not-configured' ? 'Set VITE_DEV_LOGIN_EMAIL and VITE_DEV_LOGIN_PASSWORD in .env.android-dev and rebuild.'
+          : reason === 'unreachable' ? `Cannot reach Supabase at ${target} from this device (${detail}). Check that it is running and that this address opens in the device browser.`
+          : `Dev sign-in failed${detail ? ` (${detail})` : ''}.`)
+      }
+    }
+  })
   const resend = () => void run('resend', async () => {
     const { error } = await supabase!.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: redirectTo } })
     if (currentPage.current !== page) return
@@ -226,5 +243,6 @@ export function AuthScreen({ mode = 'login' }: { mode?: Mode }) {
     {pending === 'development' && <p role="status">Verifying development account…</p>}
     <Link className="pt-auth-home" to="/">Back to home</Link>
     {import.meta.env.DEV && isLocalDevelopment(getLocalDevelopmentEnvironment()) && supabase && <aside className="pt-auth-dev"><span>Local development</span>{ready && !session && authMode && <Button secondary disabled={busy} onClick={development}>{pending === 'development' ? 'Signing in as development user…' : 'Sign in as development user'}</Button>}<a href="http://127.0.0.1:54324" target="_blank" rel="noreferrer">Open Supabase email viewer</a></aside>}
+    {import.meta.env.MODE === 'android-dev' && androidDevLoginAllowed(getAndroidDevEnvironment()) && supabase && ready && !session && <aside className="pt-auth-dev"><span>Android development</span><Button secondary disabled={busy} onClick={androidDevelopment}>{pending === 'android-development' ? 'Signing in as dev account…' : 'Skip login (dev account)'}</Button></aside>}
   </div></section>
 }
