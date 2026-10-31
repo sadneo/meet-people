@@ -8,6 +8,10 @@ The app is live at https://cse416-meet-people.web.app. The checklist explains ex
 what you need to do for email delivery, deployment credentials, Google/Gemini,
 billing, and outage notifications.
 
+Custom-domain setup is pending: `pebble.garden` will serve production;
+`desktop.dev.pebble.garden` and `mobile.dev.pebble.garden` will serve the sandbox
+developer build. All three deploy from `main`. See [deployment setup](docs/deployment.md).
+
 ## Requirements
 
 - Node.js 22
