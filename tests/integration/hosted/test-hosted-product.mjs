@@ -101,7 +101,7 @@ try {
       page.setDefaultTimeout(20000)
       await page.goto(new URL('/login', origin).href)
       await page.getByLabel('Email', { exact: true }).fill(a.email)
-      await page.getByRole('button', { name: 'Continue with email', exact: true }).click()
+      await page.getByRole('button', { name: 'Continue', exact: true }).click()
       await page.getByLabel('Password', { exact: true }).fill(password)
       await page.getByRole('button', { name: 'Sign in', exact: true }).click()
       await expect(page).toHaveURL(origin.href)

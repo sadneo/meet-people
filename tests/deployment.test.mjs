@@ -83,9 +83,9 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
 test('optimized developer build includes the toolbar; normal build excludes it; local login is absent from both', () => {
   const bundle = () => readdirSync('dist/web/assets').filter(file => file.endsWith('.js')).map(file => readFileSync(`dist/web/assets/${file}`, 'utf8')).join('\n')
   execFileSync('pnpm', ['build:web:devtools'], { stdio: 'inherit' })
-  assert.ok(bundle().includes('DEV · Design review'))
+  assert.ok(bundle().includes('Development navigation'))
   assert.ok(!bundle().includes('/__dev/login'))
   execFileSync('pnpm', ['build:web'], { stdio: 'inherit', env: { ...process.env, VITE_DEV_TOOLS: 'false' } })
-  assert.ok(!bundle().includes('DEV · Design review'))
+  assert.ok(!bundle().includes('Development navigation'))
   assert.ok(!bundle().includes('/__dev/login'))
 })

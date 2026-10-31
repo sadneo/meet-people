@@ -4,11 +4,13 @@ import { readFileSync } from 'node:fs'
 import type { Request, Response } from 'express'
 import { createMatchmakingRouter, type UserContextTransport } from '../../../api/matchmaking.js'
 import { disposable } from './disposable.js'
+import { MatchResultSchema } from '../../../shared/matchmaking.js'
+import { FriendsSearchPreferencesSchema } from '../../../shared/friends-search-preferences.js'
 const {checked,sql,literal,rpc}=disposable(process.argv[2]??'pebble-safety-review-20261019-final')
 const a='af000000-0000-4000-8000-000000000001',c='af000000-0000-4000-8000-000000000003'
 const rows=(owner:string,name:string)=>Promise.resolve(sql(`begin;set local role authenticated;set local request.jwt.claim.sub=${literal(owner)};select coalesce(jsonb_agg(to_jsonb(r)),'[]') from public.${name}() r;commit;`))
 const transport={verify:async(token:string)=>token===a?{id:a}:null,actor:(owner:string)=>({status:()=>rows(owner,'get_queue_status'),result:()=>rows(owner,'get_queue_match'),leave:()=>rpc(owner,'leave_queue'),join:(qtype:string)=>rpc(owner,'join_queue',[qtype])})} as unknown as UserContextTransport
-function request(method:string,path:string,body?:unknown){return new Promise<{status:number;data:any}>((resolve,reject)=>{
+function request(method:string,path:string,body?:unknown){return new Promise<{status:number;data:unknown}>((resolve,reject)=>{
  let status=200;const req={method,url:path,query:{},body,headers:{authorization:`Bearer ${a}`}} as unknown as Request
  const res={locals:{},set(){return this},status(value:number){status=value;return this},json(data:unknown){resolve({status,data});return this}} as unknown as Response
  createMatchmakingRouter(transport)(req,res,error=>reject(error??new Error('Route miss')))
@@ -17,12 +19,13 @@ const acceptance=readFileSync('tests/integration/sql/active-nearby.sql','utf8').
 checked("set pebble.safety_owner_test_target='network-none-safety-owner-v1';"+acceptance)
 try{
  assert.deepEqual(await request('GET','/status'),{status:200,data:{mode:'active'}})
- const result=await request('GET','/result');assert.equal(result.status,200);assert.equal(result.data.candidate.id,c);assert.equal(result.data.candidate.mode,'active');assert.equal(result.data.candidate.meetup,null)
- assert.deepEqual(Object.keys(result.data.candidate).sort(),['id','name','avatar','interests','overlap','mode','meetup'].sort())
+ const result=await request('GET','/result');assert.equal(result.status,200)
+ const {candidate}=MatchResultSchema.parse(result.data);assert.ok(candidate);assert.equal(candidate.id,c);assert.equal(candidate.mode,'active');assert.equal(candidate.meetup,null)
+ assert.deepEqual(Object.keys(candidate).sort(),['id','name','avatar','interests','overlap','mode','meetup'].sort())
  assert.equal(checked(`select to_jsonb(count(*)) from public.connections where user_a='${a}' or user_b='${a}'`),0)
  // Canonical filter CAS immediately affects the next manual result.
  const before=await rpc(c,'get_friends_search_preferences');assert.equal(before.error,null)
- const saved=before.data as any
+ const saved=FriendsSearchPreferencesSchema.parse(before.data);assert.ok(saved.preferences)
  const changed=await rpc(c,'save_friends_search_preferences',[JSON.stringify({expectedRevision:saved.revision,preferences:{...saved.preferences,radiusMiles:1}})]);assert.equal(changed.error,null)
  assert.deepEqual(await request('GET','/result'),{status:200,data:{candidate:null}})
  assert.deepEqual(await request('DELETE','/queue'),{status:200,data:{mode:null}})

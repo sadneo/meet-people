@@ -136,6 +136,20 @@ database/site/secret targets for sandbox. Both sandbox origins are allowed Auth
 callbacks, including both custom dev domains. The frontend builds use explicit `VITE_DEV_TOOLS=false` / `true` and
 show branch/short SHA in the developer toolbar. Local-login helpers remain absent.
 
+Fresh databases install the reviewed product prerequisites in
+`20261027000000_product_prerequisites.sql`, before the matching migrations. This
+keeps native UUID conversations and records `canonical-product-uuid-v1`; the
+later UUID projection migration retains the native inbox. Already activated
+stores are checked for required RPCs and keep their existing messaging schema.
+The deployment receipt check accepts both the native UUID and existing legacy
+product versions, each against its own source hash.
+
+The two migration snapshots are generated from the reviewed SQL files with
+`node scripts/generate-product-migrations.mjs`. Unit tests check their source
+integrity. `pnpm test:integration:schema` replays a fresh database and an already
+activated legacy database in disposable containers, including seeds, messaging,
+security checks and preservation of existing contacts.
+
 ### Custom-domain activation
 
 1. Attach `pebble.garden` to Firebase Hosting site `cse416-meet-people`.

@@ -17,6 +17,6 @@ it('strictly bounds private report input and returns intake receipt, never a mod
   expect(SubmitSafetyReportSchema.parse(value)).toEqual(value)
   for (const extra of [{ actorId: id }, { status: 'resolved' }, { blocked: true }]) expect(SubmitSafetyReportSchema.safeParse({ ...value, ...extra }).success).toBe(false)
   expect(SubmitSafetyReportSchema.safeParse({ ...value, context: '🪨'.repeat(1001) }).success).toBe(false)
-  expect(SubmitSafetyReportSchema.safeParse({ ...value, context: '\ud800' }).success).toBe(false)
+  for (const context of ['\0', 'a\0b', '\ud800', '\udc00']) expect(SubmitSafetyReportSchema.safeParse({ ...value, context }).success).toBe(false)
   expect(SafetyReportReceiptSchema.safeParse({ id, requestId: id, targetId: id, receivedAt: '2026-10-19T00:00:00Z', status: 'resolved' }).success).toBe(false)
 })
