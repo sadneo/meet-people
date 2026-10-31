@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -11,7 +11,7 @@ on:
         options: [sandbox, production]
         default: sandbox
       source_ref:
-        description: 'Sandbox: branch name (default dev). Production: full commit SHA already on main.'
+        description: 'Commit SHA already on main. Sandbox defaults to latest main; production requires a full SHA.'
         type: string
         default: ''
       skip_checks:
@@ -29,7 +29,7 @@ permissions:
 # Keep backend, migrations and both frontends in one serialized deployment.
 # Pending runs can be superseded; an active deployment is never cancelled.
 concurrency:
-  group: deploy-${{ github.event_name == 'push' && (github.ref_name == 'main' && 'production' || 'sandbox') || inputs.environment }}
+  group: deploy
   cancel-in-progress: false
 
 jobs:
@@ -39,6 +39,7 @@ jobs:
       sha: ${{ steps.source.outputs.sha }}
       branch: ${{ steps.source.outputs.branch }}
       environment: ${{ steps.source.outputs.environment }}
+      environments: ${{ steps.source.outputs.environments }}
       skip_checks: ${{ steps.source.outputs.skip_checks }}
     steps:
       - uses: actions/checkout@v4
@@ -72,12 +73,16 @@ jobs:
        (needs.resolve.outputs.skip_checks == 'true' && needs.checks.result == 'skipped'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: ${{ needs.resolve.outputs.environment }}
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ${{ fromJSON(needs.resolve.outputs.environments) }}
+    environment: ${{ matrix.environment }}
     permissions:
       contents: read
       id-token: write
     env:
-      DEPLOY_ENVIRONMENT: ${{ needs.resolve.outputs.environment }}
+      DEPLOY_ENVIRONMENT: ${{ matrix.environment }}
       GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       GCP_REGION: ${{ vars.GCP_REGION || 'us-east4' }}
       GAR_REPOSITORY: ${{ vars.GAR_REPOSITORY }}
@@ -160,6 +165,14 @@ jobs:
       - name: Verify developer site
         if: env.DEPLOY_ENVIRONMENT == 'sandbox'
         run: pnpm test:hosted "https://$FIREBASE_DEVTOOLS_SITE_ID.web.app"
+      - name: Verify production domain
+        if: env.DEPLOY_ENVIRONMENT == 'production'
+        run: pnpm test:hosted https://pebble.garden
+      - name: Verify development domains
+        if: env.DEPLOY_ENVIRONMENT == 'sandbox'
+        run: |
+          pnpm test:hosted https://desktop.dev.pebble.garden
+          pnpm test:hosted https://mobile.dev.pebble.garden
       - name: Deployment summary
         if: always()
         env:
@@ -173,5 +186,6 @@ jobs:
           const e = process.env
           const lines = [`### ${e.DEPLOY_ENVIRONMENT} deployment: ${e.DEPLOY_RESULT}`, `- Actor: ${e.GITHUB_ACTOR}`, `- Branch: ${e.SOURCE_BRANCH}`, `- Commit: ${e.RELEASE_SHA}`, `- Checks skipped: ${e.SKIPPED_CHECKS}`, `- Override reason: ${JSON.stringify(e.OVERRIDE_REASON || '')}`, `- Site: https://${e.FIREBASE_HOSTING_SITE_ID}.web.app`, `- Image: ${e.API_IMAGE || 'not built'}`, '- Worker: disabled; not executed or scheduled']
           if (e.DEPLOY_ENVIRONMENT === 'sandbox') lines.push(`- Developer site: https://${e.FIREBASE_DEVTOOLS_SITE_ID}.web.app`)
+          lines.push(`- Custom domains: ${e.DEPLOY_ENVIRONMENT === 'sandbox' ? 'https://desktop.dev.pebble.garden, https://mobile.dev.pebble.garden' : 'https://pebble.garden'}`)
           appendFileSync(e.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n')
           JS

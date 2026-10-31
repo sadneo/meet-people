@@ -8,7 +8,7 @@ import { test } from 'node:test'
 import { resolveDeployment } from '../scripts/resolve-deployment.mjs'
 import { deploymentConfiguration } from '../scripts/configure-deployment.mjs'
 
-test('manual overrides require a reason and production commits must belong to main', () => {
+test('both environments deploy main; manual overrides require a reason and main ancestry', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-deployment-'))
   const git = args => execFileSync('git', ['-C', directory, ...args], {
     encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
@@ -29,9 +29,16 @@ test('manual overrides require a reason and production commits must belong to ma
     assert.throws(() => resolveDeployment({ ...env, SOURCE_REF: feature, SKIP_CHECKS: 'false' }, git))
     assert.throws(() => resolveDeployment({ ...env, SOURCE_REF: 'main', SKIP_CHECKS: 'false' }, git), /full commit SHA/)
     assert.throws(() => resolveDeployment({ ...env, GITHUB_REF: 'refs/heads/dev' }, git), /workflow on main/)
-    assert.equal(resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'feature/demo', SKIP_CHECKS: 'false' }, git).sha, feature)
+    assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'feature/demo', SKIP_CHECKS: 'false' }, git), /full commit SHA/)
+    assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: feature, SKIP_CHECKS: 'false' }, git))
+    const sandbox = resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: '', SKIP_CHECKS: 'false' }, git)
+    assert.equal(sandbox.sha, main)
+    assert.equal(sandbox.branch, 'main')
+    assert.deepEqual(JSON.parse(sandbox.environments), ['sandbox'])
     const automatic = resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main', GITHUB_SHA: main, SKIP_CHECKS: 'true' }, git)
     assert.equal(automatic.skip_checks, 'false', 'Automatic deployments cannot skip checks')
+    assert.deepEqual(JSON.parse(automatic.environments), ['production', 'sandbox'])
+    assert.throws(() => resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/dev', GITHUB_SHA: feature }, git), /workflow on main/)
   } finally { rmSync(directory, { recursive: true, force: true }) }
 })
 
@@ -45,6 +52,12 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
     SUPABASE_PROJECT_REF: 'abcdefghijklmnopqrst', SUPABASE_URL: 'https://abcdefghijklmnopqrst.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'test-public-key',
   }
   const config = deploymentConfiguration(env, base)
+  assert.ok(config.auth.includes('site_url = "https://desktop.dev.pebble.garden"'))
+  for (const domain of ['desktop.dev.pebble.garden', 'mobile.dev.pebble.garden']) {
+    assert.ok(config.auth.includes(`https://${domain}/auth/callback**`))
+    assert.ok(config.auth.includes(`https://${domain}/reset-password**`))
+  }
+  assert.ok(!config.auth.includes('https://pebble.garden/'))
   assert.deepEqual(config.firebase.hosting.map(site => site.public), ['dist/web', 'dist/web-devtools'])
   for (const site of config.firebase.hosting) {
     assert.equal(site.rewrites[0].run.serviceId, 'pebble-api-sandbox')
@@ -55,6 +68,16 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
   assert.throws(() => deploymentConfiguration({ ...env, SUPABASE_PROJECT_REF: 'wacgxhsdhrqigrmqaonc', SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co' }, base), /production database/)
   assert.throws(() => deploymentConfiguration({ ...env, FIREBASE_HOSTING_SITE_ID: 'cse416-meet-people' }, base), /production site/)
   assert.throws(() => deploymentConfiguration({ ...env, API_SECRET: 'pebble-supabase-service-role' }, base))
+  const production = deploymentConfiguration({
+    ...env, DEPLOY_ENVIRONMENT: 'production', API_SERVICE: 'pebble-api', API_SECRET: 'pebble-supabase-service-role',
+    API_RUNTIME_ACCOUNT: 'pebble-api@example-project.iam.gserviceaccount.com', WORKER_JOB: 'pebble-event-group-worker',
+    WORKER_RUNTIME_ACCOUNT: 'pebble-event-group-worker@example-project.iam.gserviceaccount.com',
+    FIREBASE_HOSTING_SITE_ID: 'cse416-meet-people', SUPABASE_PROJECT_REF: 'wacgxhsdhrqigrmqaonc', SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co',
+  }, base)
+  assert.equal(production.firebase.hosting.length, 1)
+  assert.ok(production.auth.includes('site_url = "https://pebble.garden"'))
+  assert.ok(production.auth.includes('https://pebble.garden/auth/callback**'))
+  assert.ok(!production.auth.includes('.dev.pebble.garden'))
 })
 
 test('optimized developer build includes the toolbar; normal build excludes it; local login is absent from both', () => {
