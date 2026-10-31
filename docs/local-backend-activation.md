@@ -1,8 +1,10 @@
 # Local backend activation — October 29, 2026
 
 The alternate frontend's Express routes depend on feature RPCs maintained in the
-reviewed SQL sources under `docs/`. Applying the historical Supabase migrations
-alone does not install these features. The local database had 34 missing API RPCs,
+reviewed SQL sources now under `supabase/schema-sources/`. At the time of this
+activation, the migrations alone did not install these features. Fresh databases
+now install the generated prerequisites described in [deployment](deployment.md).
+The local database had 34 missing API RPCs,
 causing unavailable states for profile facts/photos, detailed settings, Friends
 and Dating, search locations, safety, connections and messaging.
 

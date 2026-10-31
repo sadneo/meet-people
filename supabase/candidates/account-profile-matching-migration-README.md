@@ -1,4 +1,9 @@
-# Account profile migration candidate — parent review/install only
+# Historical account profile migration candidate
+
+This is an earlier review artifact, not the current installation guide. Active
+schema inputs are in [`../schema-sources/`](../schema-sources/README.md); applied
+history is in `supabase/migrations/`. The candidate remains for its source-contract
+test and disposable namespace harness. Do not install it over the current schema.
 
 `account-profile-matching-migration.sql` is a candidate, not an applied migration.
 No `supabase/**` file is changed. The revised candidate now replaces the legacy
@@ -81,18 +86,18 @@ seed scripts, Edge service, live Auth operation or provider access belongs here.
 
 Parent sequence, after preparing that disposable schema only:
 
-1. Load `tests/account-profile-namespace-fixture.sql`. This file explicitly guards
+1. Load `tests/integration/sql/account-profile-namespace-fixture.sql`. This file explicitly guards
    the database name, restricts direct browser DML/schema CREATE **only in the
    disposable fixture**, and replaces `get_gemini_embedding(text)` with a raising
    `PZ001` guard. There are no fake vectors or disabled interest triggers.
-2. Load `docs/account-profile-matching-migration.sql` with `psql -X -v
+2. Load `supabase/candidates/account-profile-matching-migration.sql` with `psql -X -v
    ON_ERROR_STOP=1`. It must install atomically or fail the grants precondition.
-3. Run `tests/account-profile-matching.sql` with the same fail-on-error setting;
+3. Run `tests/integration/sql/account-profile-matching.sql` with the same fail-on-error setting;
    this older single-session behavioral test rolls its fixtures back.
 4. Run the persistent-session concurrency harness once on the fresh disposable DB:
 
 ```sh
-python3 scripts/test-account-profile-namespace.py --socket /ABSOLUTE/DISPOSABLE/SOCKET --psql /usr/bin/psql --disposable-network-none
+python3 tests/integration/local/test-account-profile-namespace.py --socket /ABSOLUTE/DISPOSABLE/SOCKET --psql /usr/bin/psql --disposable-network-none
 ```
 
 For the three SQL file loads use the parent's local `psql` executable with
@@ -126,7 +131,7 @@ the existing matching-profile SQL regressions under the same network isolation.
 
 Agent source-check handoff: `pnpm typecheck`, `pnpm lint` and `git diff --check`
 passed. Execution policy denied `pnpm exec vitest run
-tests/account-profile-candidate-source.test.ts`, Python AST parsing and
+tests/unit/account-profile-candidate-source.test.ts`, Python AST parsing and
 `sha256sum`; none was retried through another launcher. The four authored source
 assertions, Python parsing, all SQL tests and candidate hashes still need parent
 verification. No test counts here imply executed database/concurrency evidence.

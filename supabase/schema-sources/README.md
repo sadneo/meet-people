@@ -1,8 +1,10 @@
 # Schema sources
 
 Active SQL inputs for product deployment, migration generation, isolated acceptance
-tests, and local demo setup live here. SQL candidates and diagnostic queries under
-`docs/` are historical references, not product deployment inputs.
+tests, and local demo setup live here. Historical SQL proposals live in
+`supabase/candidates/`; diagnostic queries live in `supabase/snippets/`. Neither
+directory is a product deployment input. SQL acceptance tests live in
+`tests/integration/sql/`.
 
 ## Product schema
 
