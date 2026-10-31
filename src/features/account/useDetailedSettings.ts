@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useInsertionEffect, useMemo, useRef, useState } from 'react'
 import { SaveDetailedSettingsSchema, sameDetailedSettings, type DetailedSettings, type SaveDetailedSettings } from '../../../shared/detailed-settings'
 import { detailedSettingsClient, DetailedSettingsClientError } from './detailed-settings-client'
 
@@ -10,15 +10,19 @@ const empty = (owner: string | null): State => ({ owner, snapshot: null, phase: 
 // No preview/device cache, master writes, notifications, safety or queue mutation.
 export function useDetailedSettings(owner: string | null, token: string | null, accountBusy = false) {
   const client = useMemo(() => owner && token ? detailedSettingsClient(token) : null, [owner, token])
-  // Render-time fence: descendant layout effects/retained event callbacks can run
-  // before this resource's passive cleanup on a session/account transition.
-  const binding = useRef({ client, accountBusy }); binding.current = { client, accountBusy }
-  const [state, setState] = useState<State>(() => empty(owner))
+  // Commit the callback fence before descendant layout effects can invoke a
+  // retained save/reload, without mutating refs during an abandoned render.
+  const binding = useRef({ client, accountBusy })
+  useInsertionEffect(() => {
+    binding.current = { client, accountBusy }
+    return () => { binding.current = { client: null, accountBusy: true } }
+  }, [client, accountBusy])
+  const [state, setState] = useState(() => ({ value: empty(owner), client }))
   const authority = useRef<State>(empty(owner))
-  const publish = useCallback((next: State) => { authority.current = next; setState(next) }, [])
+  const publish = useCallback((next: State) => { authority.current = next; setState({ value: next, client }) }, [client])
   const generation = useRef(0), locked = useRef(false)
   const operation = useRef<AbortController | null>(null), active = useRef<typeof client>(null)
-  const current = state.owner === owner ? state : empty(owner)
+  const current = state.value.owner === owner ? state.value : empty(owner)
   const valid = useCallback((epoch: number) => generation.current === epoch && binding.current.client === client && active.current === client && authority.current.owner === owner, [client, owner])
   const read = useCallback(async (explicit: boolean) => {
     if (!client || !owner || binding.current.client !== client || active.current !== client || authority.current.owner !== owner || locked.current || (!explicit && authority.current.reconcileRequired)) return null
@@ -84,5 +88,5 @@ export function useDetailedSettings(owner: string | null, token: string | null, 
       return null
     } finally { if (valid(epoch)) { locked.current = false; operation.current = null } }
   }
-  return { ...current, busy: current.phase === 'saving', loading: current.phase === 'loading', canWrite: !!client && active.current === client && !accountBusy && !current.reconcileRequired && current.phase === 'ready' && !!current.snapshot, reload, refresh, save }
+  return { ...current, busy: current.phase === 'saving', loading: current.phase === 'loading', canWrite: !!client && state.client === client && !accountBusy && !current.reconcileRequired && current.phase === 'ready' && !!current.snapshot, reload, refresh, save }
 }

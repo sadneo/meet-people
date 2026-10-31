@@ -99,7 +99,7 @@ export function Auth({
         ((register || reset) && password !== confirm)
       )
         throw new Error(
-          "Use 8â€“128 characters and make sure the passwords match.",
+          "Use 8–128 characters and make sure the passwords match.",
         );
       if (reset) {
         const result = await supabase.auth.updateUser({ password });
@@ -244,7 +244,7 @@ export function Auth({
           </div>}
            <button className="auth-submit" disabled={action.busy || !supabase}>
             {action.busy
-              ? "Please waitâ€¦"
+              ? "Please wait…"
               : reset
                 ? "Update password"
                 : forgot
@@ -388,7 +388,7 @@ export function AuthCallback() {
         <p role="status">
           {status === "information"
             ? "Check both inboxes to finish confirming your email change."
-            : "Verifying your accountâ€¦"}
+            : "Verifying your account…"}
         </p>
       )}
     </main>

@@ -24,7 +24,7 @@ export function ErrorMessage({ children }: { children?: ReactNode }) {
   ) : null;
 }
 export function Loading() {
-  return <p role="status">Loadingâ€¦</p>;
+  return <p role="status">Loading…</p>;
 }
 export function Empty({
   title,
@@ -243,7 +243,7 @@ export function Modal({
       <header className="row between" hidden={!!layerBack}>
         <h2 id={titleId}>{title}</h2>
         <button className="round" onClick={close} aria-label="Close">
-          Ã—
+          ×
         </button>
       </header>
       <ModalLayerContext.Provider value={{ host, activate }}>

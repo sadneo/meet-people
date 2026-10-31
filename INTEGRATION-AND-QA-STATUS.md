@@ -1,5 +1,10 @@
 # Pebble integration and QA status
 
+> October 31 update: see [FRONTEND-PARITY-REPORT.md](FRONTEND-PARITY-REPORT.md) for
+> the current branch review, completed visual pass, Windows development-login fix,
+> 142 browser / 108 focused unit passes and remaining backend blockers.
+> The dated report below records the earlier integration checkpoint.
+
 October 30, 2026 · `yz/prototype-integration` · uncommitted working tree
 
 ## Summary

@@ -56,7 +56,7 @@ test('email stays editable at the password step and recovery options sit immedia
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: test.info().outputPath('login-editable-email.png'), fullPage: true })
   await signIn.click()
-  await expect(page.locator('.garden-workspace canvas')).toBeVisible()
+  await expect(page.locator('.garden-canvas')).toBeVisible()
   expect(fixture.calls.filter(call => call.path === '/api/auth/email')).toHaveLength(2)
 })
 

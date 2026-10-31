@@ -88,6 +88,11 @@ mount, background tracking, or public people/pins map. Keep map attribution visi
 opening and canceling never change saved preferences. Missing configuration shows
 an unavailable state, never a synthetic production map.
 
+Garden uses the reference's #e8efed sky, pixel clouds, illustrative floating islands,
+forest-green wordmark and cream bottom Build tray. `features/garden/sky.css` loads
+after the general shell styles; do not restore the dotted workspace background.
+The collection card shows actual local unlocks rather than simulated weekly totals.
+
 Garden remains a local creative scene. It does not claim real meetings, attendance,
 account rewards or another person’s garden history. Its local balance, purchases
 and unique Mystery Geode unlocks persist in this browser, keyed to the signed-in

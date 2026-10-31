@@ -2,16 +2,16 @@ import { expect,test } from '@playwright/test'
 import { wiringFixture,user,peer } from './wiring-fixture'
 const third='a0000000-0000-4000-8000-000000000003',proposalId='d0000000-0000-4000-8000-000000000001'
 
-for(const status of [429,503])test(`Discover distinguishes ${status===429?'rate-limited':'uncertain'} connection requests without resending`,async({page})=>{
+for(const {status,code} of [{status:429,code:'request_limit'},{status:429,code:undefined},{status:503,code:undefined}])test(`Discover distinguishes ${code==='request_limit'?'rate-limited':`uncertain HTTP ${status}`} connection requests without resending`,async({page})=>{
  await wiringFixture(page)
  let writes=0
  await page.route(`**/api/matchmaking/friends/requests/${peer}`,async route=>{
   writes++
-  await route.fulfill({status,json:{code:status===429?'request_limit':undefined,error:status===429?'Daily request limit reached (10 per 24 hours). Try again later.':'Your Friends action may already be saved. Check Connections before retrying.'}})
+  await route.fulfill({status,json:{code,error:status===429?'Daily request limit reached (10 per 24 hours). Try again later.':'Your Friends action may already be saved. Check Connections before retrying.'}})
  })
  await page.goto('/matchmaking')
  await page.getByRole('button',{name:'Connect',exact:true}).click()
- if(status===429){
+ if(code==='request_limit'){
   await expect(page.getByText('Taylor: request not sent. Daily request limit reached (10 per 24 hours). Try again later.',{exact:true})).toBeVisible()
   await expect(page.getByRole('link',{name:'Check Connections',exact:true})).toHaveCount(0)
  }else{
@@ -62,7 +62,7 @@ for(const viewport of [{width:320,height:568},{width:375,height:667}])test(`Mess
  const dialog=page.getByRole('dialog',{name:'Find a group'})
  await dialog.getByRole('button',{name:'Find a group',exact:true}).click()
  await dialog.getByRole('button',{name:'Check for a group'}).click()
- await expect(dialog.getByText('Campus library Â· 3 people')).toBeVisible()
+ await expect(dialog.getByText('Campus library · 3 people')).toBeVisible()
  await dialog.getByRole('button',{name:'Accept this group'}).click()
  await dialog.getByText('Propose a smaller group',{exact:true}).click()
  await dialog.getByLabel('Taylor',{exact:true}).check()

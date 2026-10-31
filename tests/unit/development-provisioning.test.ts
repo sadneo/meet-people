@@ -48,3 +48,15 @@ it('resumes account creation after an interrupted first attempt', async () => {
   expect(mocks.writeFile).not.toHaveBeenCalled()
   expect(mocks.createUser).toHaveBeenCalledWith(expect.objectContaining({ password: credentials.password }))
 })
+
+it('finishes the four sequential onboarding writes before returning first-use credentials', async () => {
+  await provisionDevelopmentAccount()
+  const chapters = mocks.rpc.mock.calls.filter(([name]) => name === 'save_account').map(([, args]) => args.account_in.completed)
+  expect(chapters).toEqual([[0], [0, 1], [0, 1, 2], [0, 1, 2, 3]])
+})
+it('stops provisioning at a failed chapter instead of claiming completion', async () => {
+  mocks.rpc.mockResolvedValueOnce({ data: { profile: null, completed: [] }, error: null })
+    .mockResolvedValueOnce({ error: null }).mockResolvedValueOnce({ error: new Error('Save failed') })
+  await expect(provisionDevelopmentAccount()).rejects.toThrow('Save failed')
+  expect(mocks.rpc.mock.calls.filter(([name]) => name === 'save_account')).toHaveLength(2)
+})

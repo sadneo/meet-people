@@ -56,7 +56,7 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
             </label>
           ))}
           <p className="account-note">
-            {category === 'discovery' ? 'The location preference doesnâ€™t request device coordinates. Choose a search area separately in Discover.' : category === 'notifications' ? 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.' : 'Only coarse shared-time summaries can appear when both people choose to share. Your full schedule stays private.'}
+            {category === 'discovery' ? 'The location preference doesn’t request device coordinates. Choose a search area separately in Discover.' : category === 'notifications' ? 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.' : 'Only coarse shared-time summaries can appear when both people choose to share. Your full schedule stays private.'}
           </p>
           <button className="btn">Save</button>
         </fieldset>
@@ -113,7 +113,7 @@ function DetailedForm({
           </label>
         ))}
         <p className="account-note">
-          {category === 'discovery' ? 'Global discovery takes priority. Pausing a mode keeps existing chats available.' : 'Global notification preferences take priority. Saving a preference doesnâ€™t verify delivery.'}
+          {category === 'discovery' ? 'Global discovery takes priority. Pausing a mode keeps existing chats available.' : 'Global notification preferences take priority. Saving a preference doesn’t verify delivery.'}
         </p>
         <button className="btn">Save</button>
       </fieldset>
@@ -184,7 +184,7 @@ function Credentials() {
             if (!supabase) return;
             if (!validPassword(password) || password !== confirmation)
               throw new Error(
-                "Use 8â€“128 characters and make sure both passwords match.",
+                "Use 8–128 characters and make sure both passwords match.",
               );
             const result = await supabase.auth.updateUser({
               password,
@@ -318,7 +318,7 @@ export function ProfileSettings({ section }: { section: string }) {
             {notice && <p role="status">{notice}</p>}
           </section>
           </>}
-          {category[0] === 'discovery' && <div className="account-group"><Link className="account-row" to="/matchmaking?mode=friends&preferences=true"><span><b>Friends preferences</b><small>Who youâ€™d like to meet & search area</small></span><Icon name="ChevronRight"/></Link>{canShowDating(current.account?.profile?.birthdate) && <Link className="account-row" to="/matchmaking?mode=dating&preferences=true"><span><b>Dating preferences</b><small>Who youâ€™d like to date & search area</small></span><Icon name="ChevronRight"/></Link>}</div>}
+          {category[0] === 'discovery' && <div className="account-group"><Link className="account-row" to="/matchmaking?mode=friends&preferences=true"><span><b>Friends preferences</b><small>Who you’d like to meet & search area</small></span><Icon name="ChevronRight"/></Link>{canShowDating(current.account?.profile?.birthdate) && <Link className="account-row" to="/matchmaking?mode=dating&preferences=true"><span><b>Dating preferences</b><small>Who you’d like to date & search area</small></span><Icon name="ChevronRight"/></Link>}</div>}
           {category[0] === 'account' && <Credentials/>}
           {category[0] === 'safety' && <Blocklist/>}
           {(category[0] === 'privacy' || category[0] === 'safety') && <section className="account-panel">
