@@ -4,12 +4,11 @@
 This checklist covers the account access, credentials, and decisions still needed
 from you. You do not need to redeploy the app or recreate its infrastructure.
 
-**Custom-domain setup pending:** `main` targets production at `pebble.garden`
-and the sandbox developer build at both `desktop.dev.pebble.garden` and
-`mobile.dev.pebble.garden`. Sandbox has its own healthy Supabase project and
-both GitHub environments have deployment-token secrets configured. Domain
-mappings and Porkbun DNS records are configured; Firebase ownership/HTTPS
-activation must finish before custom-domain release checks pass.
+**Custom domains:** `pebble.garden` and `mobile.dev.pebble.garden` have active
+Firebase ownership and HTTPS certificates. `web.dev.pebble.garden` is mapped to
+the same sandbox developer site and awaits Porkbun DNS/HTTPS activation.
+Sandbox has its own healthy Supabase project and both GitHub environments have
+deployment-token secrets configured. `main` targets all three domains.
 See [deployment operation and setup](docs/deployment.md).
 
 ## Your checklist

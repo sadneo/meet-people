@@ -3,8 +3,8 @@
 **Looking for your next steps? [Start with the owner setup checklist](../HOSTING-SETUP.md).**
 This page is the technical deployment and recovery runbook.
 
-Custom-domain cutover is pending for `pebble.garden` (production) and
-`desktop.dev.pebble.garden` / `mobile.dev.pebble.garden` (sandbox developer build).
+`pebble.garden` (production) and `mobile.dev.pebble.garden` (sandbox developer
+build) have active HTTPS. `web.dev.pebble.garden` awaits DNS/HTTPS activation.
 All deploy from `main`; see [domain activation and deployment](deployment.md).
 
 ## Deployed environment

@@ -11,9 +11,10 @@ The app is live at https://cse416-meet-people.web.app. See
 [HOSTING-SETUP.md](HOSTING-SETUP.md) for email delivery, deployment credentials,
 Google/Gemini, billing, and outage notifications.
 
-Custom-domain setup is pending: `pebble.garden` will serve production;
-`desktop.dev.pebble.garden` and `mobile.dev.pebble.garden` will serve the sandbox
-developer build. All three deploy from `main`. See [deployment setup](docs/deployment.md).
+`pebble.garden` is mapped to production but still returns intermittent Firebase
+404s; `mobile.dev.pebble.garden` passes hosted checks for the sandbox developer
+build. `web.dev.pebble.garden` awaits DNS/HTTPS activation. All three deploy from
+`main`. See [deployment setup](docs/deployment.md).
 
 ## Develop
 
