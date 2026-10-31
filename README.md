@@ -46,6 +46,9 @@ A fresh database needs the existing schema activation process. Starting the app
 does not install SQL. Missing optional capabilities display unavailable states.
 The new frontend does not change deployed Auth, database or hosting configuration.
 
+Active SQL inputs live in [`supabase/schema-sources/`](supabase/schema-sources/README.md).
+Its guide explains source ordering, generated migrations, and deployment hashes.
+
 ## Verify and build
 
 ```sh

@@ -6,21 +6,21 @@ parser.add_argument('--uuid-messaging',action='store_true',help='Use actor adapt
 parser.add_argument('--matching-upgrade',action='store_true',help='Prepare only the new canonical matching migrations for an already activated local backend')
 options=parser.parse_args()
 sources=[
- 'docs/dev-account-reconciliation.sql','docs/profile-details-migration.sql',
- 'docs/detailed-settings-migration.sql','docs/safety-contact-guards-migration.sql',
- 'docs/safety-owner-contact-migration.sql','docs/social-contact-migration.sql',
- 'docs/discovery-privacy-migration.sql','docs/friends-search-preferences-migration.sql',
- 'docs/dating-aggregate-migration.sql','docs/search-location-migration.sql',
- 'docs/active-nearby-migration.sql','docs/profile-photo-migration.sql',
- 'docs/dating-live-migration.sql','docs/real-account-boundary.sql',
- 'docs/friends-runtime-migration.sql',
+ 'supabase/schema-sources/dev-account-reconciliation.sql','supabase/schema-sources/profile-details-migration.sql',
+ 'supabase/schema-sources/detailed-settings-migration.sql','supabase/schema-sources/safety-contact-guards-migration.sql',
+ 'supabase/schema-sources/safety-owner-contact-migration.sql','supabase/schema-sources/social-contact-migration.sql',
+ 'supabase/schema-sources/discovery-privacy-migration.sql','supabase/schema-sources/friends-search-preferences-migration.sql',
+ 'supabase/schema-sources/dating-aggregate-migration.sql','supabase/schema-sources/search-location-migration.sql',
+ 'supabase/schema-sources/active-nearby-migration.sql','supabase/schema-sources/profile-photo-migration.sql',
+ 'supabase/schema-sources/dating-live-migration.sql','supabase/schema-sources/real-account-boundary.sql',
+ 'supabase/schema-sources/friends-runtime-migration.sql',
 ]
 if options.uuid_messaging:
- sources[3:6]=['docs/uuid-safety-owner-migration.sql','docs/uuid-social-contact-migration.sql']
+ sources[3:6]=['supabase/schema-sources/uuid-safety-owner-migration.sql','supabase/schema-sources/uuid-social-contact-migration.sql']
 root=Path(__file__).resolve().parent.parent
 if options.matching_upgrade:
  sources=[str(p.relative_to(root)) for p in sorted((root/'supabase/migrations').glob('*.sql')) if p.name[:8] in ('20261028','20261029','20261030')]
- if options.uuid_messaging:sources.append('docs/uuid-relationship-mode-projection.sql')
+ if options.uuid_messaging:sources.append('supabase/schema-sources/uuid-relationship-mode-projection.sql')
 out="\\set ON_ERROR_STOP on\nbegin;\nset local lock_timeout='3s';\nset local statement_timeout='30s';\n"
 out+="""do $$ begin
  if current_database()<>'postgres' or current_user<>'postgres' or to_regclass('auth.users') is null

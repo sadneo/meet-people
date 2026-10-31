@@ -65,7 +65,7 @@ async function main(){
  try{status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:131072}))}catch{throw new Error('Local Supabase runtime configuration unavailable; no keys printed')}
  const target=new URL(status.API_URL)
  if(target.protocol!=='http:'||!['127.0.0.1','localhost'].includes(target.hostname)||target.port!=='54321'||target.username||target.password||!status.SERVICE_ROLE_KEY||!status.ANON_KEY)throw new Error('Refusing nonlocal or incomplete Supabase configuration')
- if(options['refresh-location'])pg(readFileSync(new URL('../docs/stony-brook-demo-location.sql',import.meta.url),'utf8'),'supabase_admin')
+ if(options['refresh-location'])pg(readFileSync(new URL('../supabase/schema-sources/stony-brook-demo-location.sql',import.meta.url),'utf8'),'supabase_admin')
  // Check safety prerequisites BEFORE creating any Auth fixtures.
  pg(`begin read only;do $$ begin if to_regprocedure('public.get_matching_scoring_settings()') is null or to_regprocedure('public.get_dating_runtime()') is null or to_regprocedure('public.get_friends_runtime()') is null or not exists(select 1 from location_private.places where id='b641ad29-9f92-4e66-9490-0b616f8fd85c' and enabled and verified_until>statement_timestamp()+interval '1 hour') then raise exception 'Local demo prerequisites missing/expired';end if;end $$;rollback;`)
  const password=forDevelopment?randomBytes(32).toString('base64url')+'-Aa1!':await passwordInput();if(password.length<8||password.length>128)throw new Error('Use a password with8–128 characters')

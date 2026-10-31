@@ -13,7 +13,7 @@ for source in sorted((root/'supabase/migrations').glob('*.sql')):
     if source.name not in excluded:shutil.copyfile(source,target/'supabase/migrations'/source.name)
 # Build the exact same prerequisite sequence used in canonical SQL acceptance.
 sources=runpy.run_path(str(root/'tests/integration/offline/matching_sources.py'))['SOURCES']
-reviewed=[p for p in sources if p.startswith('docs/')]
+reviewed=[p for p in sources if p.startswith('supabase/schema-sources/')]
 bundle="begin;\nset local lock_timeout='3s';\nset local statement_timeout='60s';\n"
 for path in reviewed:
     source=(root/path).read_text();start=source.index('\nbegin;');end=source.rindex('\ncommit;')

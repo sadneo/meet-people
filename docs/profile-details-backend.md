@@ -84,7 +84,7 @@ never automatically retry a mutation or overwrite with a guessed revision.
 
 ## Storage, isolation and public boundary
 
-`docs/profile-details-migration.sql` is a **candidate, not an applied migration**.
+`supabase/schema-sources/profile-details-migration.sql` is a **candidate, not an applied migration**.
 It depends only on existing Auth users/uid/roles and a trusted parent-reviewed
 DDL owner. Parent must review function/table ownership, effective grants, default
 privileges and the schema ACL before installation. Definitions intentionally fail

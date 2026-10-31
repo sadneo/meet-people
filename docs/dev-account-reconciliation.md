@@ -15,7 +15,7 @@ implementations become internal primitives with browser EXECUTE revoked. They
 still enforce the symmetric namespace check, original field/window validation,
 projection, and real label/window persistence. All paths take the common namespace
 lock before actor/row locks, and reject non-READ-COMMITTED transactions. The new
-candidate is `docs/dev-account-reconciliation.sql`, not an applied migration.
+candidate is `supabase/schema-sources/dev-account-reconciliation.sql`, not an applied migration.
 
 Four steps are identity (bio/photo optional), three unique interests, social intent,
 then valid birthdate/nonempty city/real availability plus explicit distance/group.
@@ -89,7 +89,7 @@ policies and this candidate before considering installation.
 2. Stub `get_gemini_embedding(text)` to **raise** in this disposable fixture, not
    call HTTP. Never substitute fake vectors in product storage. Optional enrichment
    should preserve each label with NULL embedding; original triggers remain enabled.
-3. Apply `docs/dev-account-reconciliation.sql` with `psql -X -v ON_ERROR_STOP=1 -f`
+3. Apply `supabase/schema-sources/dev-account-reconciliation.sql` with `psql -X -v ON_ERROR_STOP=1 -f`
    only against that isolated socket. Repeat it to prove idempotent function
    wrapping, constraints, data and prefix mapping. Inspect owner/ACLs before/after.
     Include upstream `account_settings` already present with private values saved,
