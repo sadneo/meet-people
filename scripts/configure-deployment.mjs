@@ -36,8 +36,10 @@ export function deploymentConfiguration(env, base) {
       ...rewrite, run: { ...rewrite.run, serviceId: env.API_SERVICE, region: env.GCP_REGION },
     } : rewrite),
   }))
-  const redirects = sites.flatMap(site => [`https://${site}.web.app/auth/callback**`, `https://${site}.web.app/reset-password**`])
-  const auth = `project_id = "meet-people"\n\n[auth]\nsite_url = ${JSON.stringify(`https://${sites[0]}.web.app`)}\nadditional_redirect_urls = ${JSON.stringify(redirects)}\nenable_signup = true\nminimum_password_length = 8\n\n[auth.email]\nenable_confirmations = true\nsecure_password_change = true\n`
+  const domains = sandbox ? ['desktop.dev.pebble.garden', 'mobile.dev.pebble.garden'] : ['pebble.garden']
+  const origins = [...domains.map(domain => `https://${domain}`), ...sites.map(site => `https://${site}.web.app`)]
+  const redirects = origins.flatMap(origin => [`${origin}/auth/callback**`, `${origin}/reset-password**`])
+  const auth = `project_id = "meet-people"\n\n[auth]\nsite_url = ${JSON.stringify(origins[0])}\nadditional_redirect_urls = ${JSON.stringify(redirects)}\nenable_signup = true\nminimum_password_length = 8\n\n[auth.email]\nenable_confirmations = true\nsecure_password_change = true\n`
   return { firebase: { hosting }, auth }
 }
 

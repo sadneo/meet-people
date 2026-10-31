@@ -5,9 +5,21 @@ branch, the alternate Pebble design is the default frontend, connected to the
 existing backend. See [frontend integration](docs/FRONTEND-WIRING.md),
 [design authority](docs/DESIGN.md), and [route plan](docs/UI-PLAN.md).
 
+## Hosting
+
+The app is live at https://cse416-meet-people.web.app. See
+[HOSTING-SETUP.md](HOSTING-SETUP.md) for email delivery, deployment credentials,
+Google/Gemini, billing, and outage notifications.
+
+Custom-domain setup is pending: `pebble.garden` will serve production;
+`desktop.dev.pebble.garden` and `mobile.dev.pebble.garden` will serve the sandbox
+developer build. All three deploy from `main`. See [deployment setup](docs/deployment.md).
+
 ## Develop
 
-Use Node.js 22 and pnpm (the version is declared in `package.json`).
+Use Node.js 22 and pnpm (the version is declared in `package.json`). Local Supabase
+requires Docker or rootless Podman. Nix users can install the declared development
+tools with `nix develop`.
 
 ```sh
 pnpm install --frozen-lockfile

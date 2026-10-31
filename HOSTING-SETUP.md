@@ -4,11 +4,13 @@
 This checklist covers the account access, credentials, and decisions still needed
 from you. You do not need to redeploy the app or recreate its infrastructure.
 
-**CI/CD update:** `main` now targets production and `dev` targets two sandbox
-sites. See [deployment operation and overrides](docs/deployment.md). Sandbox
-database provisioning is currently blocked by Supabase's free-project limit
-and `comfy-room`'s inconsistent pause/hibernation state. The sandbox sites and
-GCP identities are created; they must not use the production database as a fallback.
+**Custom-domain setup pending:** `main` targets production at `pebble.garden`
+and the sandbox developer build at both `desktop.dev.pebble.garden` and
+`mobile.dev.pebble.garden`. Sandbox has its own healthy Supabase project and
+both GitHub environments have deployment-token secrets configured. Domain
+mappings and Porkbun DNS records are configured; Firebase ownership/HTTPS
+activation must finish before custom-domain release checks pass.
+See [deployment operation and setup](docs/deployment.md).
 
 ## Your checklist
 

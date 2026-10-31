@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { provisionDevelopmentAccount } from '../../dev/provision-development-account'
 
 const mocks = vi.hoisted(() => ({ mkdir: vi.fn(), writeFile: vi.fn(), createUser: vi.fn(), getUserById: vi.fn(), signInWithPassword: vi.fn(), rpc: vi.fn(), loadEnv: vi.fn() }))
@@ -10,12 +10,14 @@ const id = 'd0000000-0000-4000-8000-000000000001'
 const credentials = { accountId: id, email: 'pebble-development@example.test', password: 'synthetic-password', url: 'http://127.0.0.1:54321', publicKey: 'sb_publishable_fixture' }
 beforeEach(() => {
   vi.resetAllMocks()
+  for (const key of ['SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) vi.stubEnv(key, undefined)
   mocks.loadEnv.mockReturnValue({ SUPABASE_URL: credentials.url, SUPABASE_PUBLISHABLE_KEY: credentials.publicKey, SUPABASE_SERVICE_ROLE_KEY: 'synthetic-server-only' })
   mocks.getUserById.mockResolvedValue({ data: { user: null }, error: { status: 404 } })
   mocks.createUser.mockResolvedValue({ error: null })
   mocks.signInWithPassword.mockResolvedValue({ data: { user: { id } }, error: null })
   mocks.rpc.mockResolvedValue({ data: { profile: null, completed: [] }, error: null })
 })
+afterEach(() => vi.unstubAllEnvs())
 it('creates a confirmed, marked local user and persists private credentials exclusively', async () => {
   const result = await provisionDevelopmentAccount()
   expect(result.password.length).toBeGreaterThan(32)
