@@ -86,10 +86,11 @@ selected by the built runner. Results use separate `test-results/` subdirectorie
 
 ## CI and historical reports
 
-`.github/workflows/checks.yml` selects unit verification, local integration,
-source-mocked browser journeys and built smoke separately. Its job remains
-disabled with `if: ${{ false }}`; the release verification gate is also disabled.
-No test hooks run automatically on local commits.
+`.github/workflows/checks.yml` calls the reusable `ci.yml` suite for PRs into
+`main` and `dev`. Releases run that same suite against the resolved source SHA;
+manual overrides require an explicit reason. See the
+[deployment runbook](../docs/deployment.md#releases). No test hooks run
+automatically on local commits.
 
 Older handoff/QA reports retain historical paths and commands. Translate
 `tests/<file>.test.*` to `tests/unit/`, `e2e/` to `tests/browser/`, SQL files to

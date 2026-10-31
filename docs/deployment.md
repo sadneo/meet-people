@@ -1,111 +1,76 @@
-# CI/CD operation
+# Deployment and hosting
 
-## Sites and branches
+This is the setup, release and recovery runbook. Workflow behavior lives in
+`.github/workflows/{checks,ci,release}.yml`; generated Hosting/Auth settings come
+from `scripts/configure-deployment.mjs`. For local setup, use
+[development onboarding](development-onboarding.md); for test commands, use
+[tests/README.md](../tests/README.md).
 
-| Site | Branch | API / database | Toolbar |
+## Environments
+
+| URL | Firebase site | Backend | Developer toolbar |
 | --- | --- | --- | --- |
-| https://pebble.garden | `main` | Production | Off |
-| https://web.dev.pebble.garden | `main` | Sandbox | On |
-| https://mobile.dev.pebble.garden | `main` | Same sandbox | On |
-| https://cse416-meet-people-sandbox.web.app | `main` | Same sandbox | Off |
+| https://pebble.garden | `cse416-meet-people` | Production | Off |
+| https://web.dev.pebble.garden | `cse416-meet-people-dev` | Sandbox | On |
+| https://mobile.dev.pebble.garden | `cse416-meet-people-dev` | Sandbox | On |
+| https://cse416-meet-people-sandbox.web.app | `cse416-meet-people-sandbox` | Sandbox | Off |
 
-All deployments come from **main**. A main push deploys the same checked commit
-to production and sandbox using separate GitHub environments and backends.
-Feature branches are tested on PRs; they do not overwrite the sandbox.
-Both dev domains map to `cse416-meet-people-dev`, serving the same responsive
-developer build. Layout follows viewport size, not hostname. Production maps to
-`cse416-meet-people`. Their existing `web.app` addresses remain available.
-Both sandbox builds use one resolved commit, one API deployment and one database.
-Their browser login sessions/localStorage are separate, but backend writes are shared.
+Each site's `https://<site>.web.app` URL remains available. Both developer domains
+serve the same responsive build: layout follows viewport size, not hostname.
+Sandbox sessions/localStorage are separate per origin, but backend writes are shared.
 
-All GCP resources currently share `cse416-meet-people`: creating a new project
-was denied by the university organization. Sandbox uses its own services,
-runtime/deployer identities, registry repository, secret and OIDC pool. This is
-resource/data separation, not a separate-project IAM or billing boundary.
-
-## Supabase provisioning
-
-Both projects are healthy in the school-owned `pebble` organization
-(`kjsmpfandyhaybltljbo`):
-
-| Environment | Project | Reference | Region |
+| Environment | Supabase project | Reference | Region |
 | --- | --- | --- | --- |
 | Production | `pebble-production` | `wacgxhsdhrqigrmqaonc` | `ca-central-1` |
 | Sandbox | `pebble-sandbox` | `wixdiotkntapwrbibaom` | `us-east-1` |
 
-Production was transferred and renamed, preserving its project reference and
-existing data. Both GitHub environments use a token with access to these projects.
+Both Supabase projects belong to the school-owned `pebble` organization.
+GCP/Firebase resources share project `cse416-meet-people` (`368545465466`), with
+Cloud Run in `us-east4`. Sandbox has separate services, runtime/deployer identities,
+registry repository, secret and OIDC pool. This is resource/data separation within
+one GCP project, not a separate IAM or billing boundary.
 
-Set sandbox environment variables `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`
-and `VITE_SUPABASE_PUBLISHABLE_KEY`, and secret `SUPABASE_ACCESS_TOKEN`. Store
-the sandbox service-role key as a version of GCP secret
-`pebble-supabase-service-role-sandbox` (stdin, never source or logs). Do not
-copy the production Supabase ref/key into sandbox: deployment validation rejects it.
+Firebase serves static assets and rewrites `/api/**` to Cloud Run before the SPA
+fallback. `pinTag` binds each Hosting release to its API revision. API responses
+use `private, no-store`; hashed assets use immutable caching. Protected API routes
+verify bearer tokens. The Cloud Run service permits public invocation for Hosting.
+API containers scale to zero, with a maximum of two instances per service.
 
-The sandbox variables and service-role secret are configured. Both sandbox sites
-were activated successfully by [deployment 40552588686](https://github.com/sadneo/meet-people/actions/runs/40552588686)
-at source SHA `9d9b407` on 2026-10-27. Both hosted smoke checks passed; production
-also passed an independent smoke check. Live bundles verified the intended
-backend and toolbar variant, with local-login helpers absent from all three sites.
-The run used a recorded override for the existing baseline unit/lint failures.
+## Releases
 
-Hosting sites deploy sequentially because each site's `pinTag` updates the same
-API service. Concurrent publishing caused a confirmed Cloud Run resource-version
-conflict during the first activation attempt; PRs #27 and #28 contain the fix.
+All deployments come from **main**. A push deploys the same checked commit to
+production and sandbox through separate GitHub environments. Feature branches
+are tested on PRs and do not overwrite sandbox. Version tags are labels only.
 
-Sandbox email authentication is enabled and callbacks cover both sites. Google
-authentication is not yet enabled in the new sandbox project (production Google
-authentication remains enabled). To enable sandbox Google login, configure its
-OAuth client in Supabase and authorize
-`https://wixdiotkntapwrbibaom.supabase.co/auth/v1/callback` in Google Cloud's OAuth
-client settings, then verify an interactive sign-in on both sandbox sites.
+1. Open a PR into `main` or `dev`; `Pull request checks` runs reusable CI.
+2. Merge into `main`; `Deploy` resolves and checks the exact source SHA.
+3. The workflow builds an immutable API image, deploys Edge Functions, applies
+   migrations without development seeds, configures services and deploys Hosting.
+4. Every deployed URL must pass `pnpm test:hosted URL`. Failure fails the run.
 
-## Normal operation
+CI covers types, lint, units, deployment controls, both toolbar builds, disposable
+database reset/generated types, SQL security, local integration, source/built
+browser tests and the Docker build. See the workflow result for current failures;
+past passing counts do not certify the current tree.
 
-1. Open a PR into `dev` or `main`; `Pull request checks` runs full CI.
-2. Merge into `main` to update production and both development domains.
-3. `Deploy` resolves one commit SHA and runs the same CI against that exact SHA.
-4. Only a successful CI result permits an automatic deployment.
-5. Each deployed URL runs hosted smoke checks. A failed smoke check fails the run.
+Deployment runs are serialized; active runs are never cancelled. Hosting sites
+publish sequentially because each site's `pinTag` updates the shared API service.
+Concurrent site publishing can cause Cloud Run resource-version conflicts.
 
-Version tags are release labels only. Deployment workflows are serialized;
-active deployments are never cancelled, but GitHub concurrency can supersede a
-pending run. Production and sandbox jobs use separate resources and run independently.
+### Manual sandbox deployment
 
-CI covers typecheck, lint, unit tests, deployment controls and both optimized
-toolbar variants, database reset/generated types, SQL security, local integration,
-source/built browser tests and Docker build. It uses a disposable local database,
-never a hosted reset. Baseline app unit/lint failures currently block normal
-deployment; they remain visible rather than being excluded or marked successful.
-
-## Manual sandbox deployment
-
-Actions → **Deploy** → **Run workflow**, using the workflow branch **main**:
-
-- Environment: `sandbox`
-- Source ref: `main` (or blank), or a full commit SHA already on main
-- Skip checks: off unless deliberately overriding
-- Override reason: required if skipping
+Run **Deploy** from workflow branch **main**. Source can be blank/`main` or a full
+commit SHA already on main; both sandbox sites are replaced.
 
 ```sh
 gh workflow run release.yml --ref main \
   -f environment=sandbox -f source_ref=main
 ```
 
-The source is resolved once, tested and deployed at that SHA. Commits outside main
-are rejected. Both sandbox sites are replaced. The next successful main deployment
-updates them again.
+### Manual production override
 
-## Approved production override
-
-There are two independent controls:
-
-1. **Merge bypass:** normal merges require `Checks / CI`. Repository admins can
-   explicitly bypass this rule; ordinary contributors cannot. This does not grant
-   an automatic deployment bypass.
-2. **Deployment bypass:** manually run `Deploy` from **main**, choose `production`,
-   enter a **full 40-character commit SHA already on main**, enable `Skip checks`,
-   and supply a reason. An unmerged feature commit is rejected.
+Normal deployments require passing CI. To bypass pre-deployment checks, supply a
+full 40-character SHA already on main and a reason:
 
 ```sh
 gh workflow run release.yml --ref main \
@@ -113,114 +78,164 @@ gh workflow run release.yml --ref main \
   -f skip_checks=true -f override_reason='Explain the known failure and why this release is needed'
 ```
 
-Automatic runs cannot skip checks. A manual override skips pre-deployment CI,
-not dependency installation, compilation, isolation/config validation, migrations
-or post-deployment smoke checks. The summary records actor, branch, SHA, bypass
-status/reason, image, URLs and result. Workflow dispatch is available to users
-with repository write access, so that permission includes the manual deployment
-escape hatch; admin-only merge bypass is a separate permission.
+Automatic runs cannot skip checks. Overrides still validate resource isolation,
+build, apply migrations and run hosted smoke checks. The summary records actor,
+SHA, reason, image, URLs and result. Repository write access permits workflow
+dispatch; admin merge bypass is a separate permission. Neither GitHub environment
+adds an approval prompt. OIDC uses the deployment workflow on main, without
+downloaded service-account keys.
 
-Production uses environment `production`, sandbox uses `sandbox`. Neither has
-an additional approval prompt. GCP authenticates GitHub via OIDC; no downloaded
-service-account keys are needed. Each environment has its own provider/deployer.
+## Configuration
 
-## Configuration and recovery
+Use Node 22, the declared pnpm version and the tools provided by `nix develop`.
+Configure variables and secrets separately in GitHub's `production` and `sandbox`
+environments:
 
-`scripts/bootstrap-gcp.sh` defaults to production; `DEPLOY_ENVIRONMENT=sandbox`
-creates the suffixed resources and environment-scoped GitHub variables. It does
-not create a Supabase project or populate service-role secrets.
+| Location | Values |
+| --- | --- |
+| GitHub environment variables | `GCP_PROJECT_ID`, `GCP_REGION`, `GAR_REPOSITORY`, `GCP_DEPLOY_SA_EMAIL`, `GCP_WIF_PROVIDER`, `API_SERVICE`, `API_RUNTIME_ACCOUNT`, `API_SECRET`, `WORKER_JOB`, `WORKER_RUNTIME_ACCOUNT`, `FIREBASE_HOSTING_SITE_ID`, sandbox `FIREBASE_DEVTOOLS_SITE_ID`, `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
+| GitHub environment secret | `SUPABASE_ACCESS_TOKEN`, with access to that environment's Supabase project |
+| GCP Secret Manager | `pebble-supabase-service-role` / `pebble-supabase-service-role-sandbox`, accessible to the matching API runtime identity |
+| Supabase Vault | `pebble_project_url`, `pebble_ingest_token`, `pebble_embed_secret` |
+| Supabase Edge secrets | `INGEST_TOKEN`, `EMBED_SHARED_SECRET`, optional `GEMINI_API_KEY` and `TICKETMASTER_API_KEY` |
 
-`scripts/configure-deployment.mjs` generates ignored per-deployment Firebase and
-hosted Auth configuration, validates resource names and rejects production
-database/site/secret targets for sandbox. Both sandbox origins are allowed Auth
-callbacks, including both custom dev domains. The frontend builds use explicit `VITE_DEV_TOOLS=false` / `true` and
-show branch/short SHA in the developer toolbar. Local-login helpers remain absent.
+`VITE_*` values are public and compiled into the frontend; never put private keys
+there. Changing them requires a rebuild. Sandbox must use its own Supabase ref/key:
+deployment validation rejects production database/site/secret targets.
 
-Fresh databases install the reviewed product prerequisites in
-`20261027000000_product_prerequisites.sql`, before the matching migrations. This
-keeps native UUID conversations and records `canonical-product-uuid-v1`; the
-later UUID projection migration retains the native inbox. Already activated
-stores are checked for required RPCs and keep their existing messaging schema.
-The deployment receipt check accepts both the native UUID and existing legacy
-product versions, each against its own source hash.
+The workflow uses `supabase link` and CLI-managed database credentials through the
+discovered pooler. The old `SUPABASE_DB_URL` secret is not consumed.
 
-The two migration snapshots are generated from the reviewed SQL files with
-`node scripts/generate-product-migrations.mjs`. Unit tests check their source
-integrity. `pnpm test:integration:schema` replays a fresh database and an already
-activated legacy database in disposable containers, including seeds, messaging,
-security checks and preservation of existing contacts.
+`scripts/configure-deployment.mjs` creates ignored `firebase.deploy.json` and
+`hosting/deployment/supabase/config.toml`. The generated Auth configuration enables
+signup with email confirmation and secure password changes. It allows callback
+and reset routes on the environment's custom domains and `web.app` origins.
+Do not push local development `supabase/config.toml` to hosted projects.
 
-### Custom-domain activation
+### Recreate infrastructure
 
-1. Attach `pebble.garden` to Firebase Hosting site `cse416-meet-people`.
-2. Attach `web.dev.pebble.garden` and `mobile.dev.pebble.garden` to
-   `cse416-meet-people-dev` (both are serving domains, not redirects).
-3. Copy Firebase's exact required DNS records into Porkbun; leave the root Host
-   blank and use `web.dev` / `mobile.dev` for the respective subdomains.
-   Remove conflicting parking records only at the affected hosts. Keep ownership
-   verification records for certificate renewal. Keep Porkbun's nameservers.
-4. Wait for connected domains and active managed certificates before cutover.
-5. Apply the generated Auth configuration: production uses `https://pebble.garden`
-   as Site URL; sandbox uses `https://web.dev.pebble.garden`. Both dev callback
-   origins and existing `web.app` callbacks stay allowed. Each app supplies its
-   own origin when requesting authentication links.
-6. Update the Google OAuth client's JavaScript origins for enabled providers.
-   Redirect URIs remain each environment's Supabase `/auth/v1/callback` URL.
-7. Verify all custom domains with `pnpm test:hosted URL`. Release checks require
-   working custom-domain DNS and HTTPS. Update the production uptime check to
-   `pebble.garden/api/health` only after HTTPS is ready.
+```sh
+gcloud auth login
+export GCP_PROJECT_ID=cse416-meet-people
+export GITHUB_REPOSITORY=sadneo/meet-people
+export GITHUB_REPOSITORY_ID=1361380520
+sh scripts/bootstrap-gcp.sh
+```
 
-Domain mapping is persistent cloud configuration; frontend deploys do not create
-it. Neither custom-domain setup nor DNS requires a new Supabase key.
+Repeat with `DEPLOY_ENVIRONMENT=sandbox` for sandbox resources. Bootstrap creates
+missing infrastructure, IAM and environment-scoped GitHub variables. It does not
+create billing accounts, Hosting sites, Supabase projects or SMTP services.
+Populate each runtime secret from stdin before deploying its API.
 
-On 2026-10-31, Firebase confirmed active hosting, ownership and HTTPS certificates
-for `pebble.garden` and `mobile.dev.pebble.garden`. The original
-`desktop.dev.pebble.garden` mapping is also active. The requested replacement,
-`web.dev.pebble.garden`, was added to the same developer site but has no DNS record
-yet. Keep the existing desktop mapping until the replacement is verified.
-The sandbox OIDC provider accepts only the deployment workflow on main.
-The updated repository configuration has not been deployed.
+After migrations and Edge deployment, `pnpm hosting:configure` preserves generated
+shared tokens, synchronizes Vault/Edge secrets and pushes hosted Auth settings.
+Set `SUPABASE_PROJECT_REF` to the intended environment and `HOSTED_CONFIG_WORKDIR`
+to `hosting/deployment` for generated settings; its default `hosting` directory
+contains the production fallback. Optional provider secrets can be supplied through
+ignored `.env.hosting.local`. Unsupplied Edge secrets are preserved.
 
-Verification: the mobile custom domain and production `web.app` URL pass the full
-hosted smoke test. Production's custom domain returns the app over one connection
-but Firebase's "Site Not Found" 404 over Node/browser connections, despite active
-domain states. Production cutover remains unverified until its hosted smoke test
-passes consistently. The two deployment configuration tests pass locally.
+### Database sources
 
-Firebase returned these DNS records (Porkbun Host is relative to `pebble.garden`):
+`supabase/migrations/` is applied history. Active product SQL inputs live in
+[`supabase/schema-sources/`](../supabase/schema-sources/README.md), including the
+legacy/native-UUID adapters. `scripts/generate-product-migrations.mjs` produces
+the prerequisite and UUID projection snapshots. Tests verify their source hashes.
+Fresh databases install native UUID prerequisites before matching migrations;
+activated databases retain their messaging schema and are checked for required RPCs.
+Use forward migrations for installed databases, rather than rewriting history.
 
-| Type | Host | Answer / Value |
+## Provider and owner setup
+
+- **Deployment access:** create/renew a Supabase personal access token in
+  [account tokens](https://supabase.com/dashboard/account/tokens) and save it as
+  `SUPABASE_ACCESS_TOKEN` in each GitHub environment. Do not substitute a public
+  key, service-role key or database password.
+- **Email:** configure a verified transactional SMTP sender in each Supabase
+  project's Authentication email settings. Disable link tracking for Auth emails.
+  Keep email confirmation enabled. Verify invitation/reset delivery to an external
+  inbox and complete a password reset; a dashboard's "sent" status is insufficient.
+- **Google login:** configure the provider client ID/secret in hosted Supabase,
+  independently of local CLI settings. Authorize the environment's web origins and
+  `https://<project-ref>.supabase.co/auth/v1/callback` in Google Cloud. This is not
+  the app's `/auth/callback` URL. Add permitted Google test users if the consent app
+  is in Testing. See [accounts](accounts.md) for application session behavior.
+- **Embeddings:** set server-only `GEMINI_API_KEY` in Supabase Edge secrets, then
+  verify an authenticated `embed-interest` response with 3,072 dimensions. Saving
+  the key does not backfill existing null embeddings or enable group workers.
+- **Ingestion:** deploy `ingest-ticketmaster` only after supplying its key. For
+  SB Engaged, inspect final `ingestion_runs` results, not just cron enqueue success.
+  `select hosting_private.ingest_sbengaged();` requests an import;
+  `select cron.unschedule('pebble-ingest-sbengaged');` stops scheduling. The schedule
+  definition lives in `20261016130000_hosted_services.sql`.
+- **Billing and alerts:** confirm the linked Google billing account's credit
+  balance/expiry and recipients for the project-filtered $25 budget. Budgets are
+  alerts, not spending caps. Google credits do not pay Supabase charges. Choose and
+  verify a Cloud Monitoring notification channel for `pebble-api-health`; an uptime
+  probe alone does not send incident emails.
+
+## Custom domains
+
+Attach `pebble.garden` to `cse416-meet-people`, and both dev domains to
+`cse416-meet-people-dev`, as serving domains rather than redirects. Keep Porkbun's
+nameservers and copy Firebase's exact required records:
+
+| Type | Porkbun Host (relative to `pebble.garden`) | Value |
 | --- | --- | --- |
 | A | Leave blank | `199.36.158.100` |
 | TXT | Leave blank | `hosting-site=cse416-meet-people` |
 | CNAME | `web.dev` | `cse416-meet-people-dev.web.app` |
 | CNAME | `mobile.dev` | `cse416-meet-people-dev.web.app` |
-| TXT | `_acme-challenge` | `hXblM3oM1MZCkcEYReFD_HHti2OdkVVazXSwMUMD8ZE` |
-| TXT | `_acme-challenge.web.dev` | `O_G1qJ9wBB3U7BD210DVW0hlF7LL91imexz3JmnezEQ` |
-| TXT | `_acme-challenge.mobile.dev` | `C1Fo8d8atEgJU041seIlvoM0_8JCDieuM1WJIpYFaS4` |
 
-Only the `web.dev` CNAME and `_acme-challenge.web.dev` TXT records remain to be
-added in Porkbun. The dashboard returned HTTP 403 from the agent browser, so DNS
-changes require owner access. Public DNS already resolves the root and mobile
-hosts to Firebase's `199.36.158.100` address.
-Certificate challenge values can rotate: re-read each Firebase custom domain's
-certificate verification requirements if validation is retried later.
+Add any `_acme-challenge` TXT records supplied by Firebase's current verification
+requirements; tokens can rotate, so read them from Firebase rather than old docs.
+Remove conflicting parking records only at affected hosts. Keep ownership records
+for certificate renewal. Domain mappings are persistent cloud configuration;
+frontend deployment does not create them.
 
-Workers remain disabled and unscheduled. Database migrations are applied without
-development seeds. API containers scale to zero when idle, maximum two instances
-per service. Stored image versions, traffic, logs and API compute can incur costs;
-Supabase has separate billing. Budget alerts are not spending caps.
+After HTTPS is active, apply generated Auth settings and verify enabled OAuth
+origins. Production's Site URL is `https://pebble.garden`; sandbox's is
+`https://web.dev.pebble.garden`. Each app requests authentication links for its own
+origin. Run `pnpm test:hosted URL` for each domain before updating the uptime probe.
 
-`v1.0.4` took 2m 15s from trigger to completion. Budget 2–4 minutes for deployment
-plus full CI; measure successful CI runtime after existing failures are fixed.
+Last verified **2026-10-31**: production and mobile passed hosted smoke checks.
+The web dev CNAME/challenge TXT resolved publicly, with Firebase verification/HTTPS
+still pending. Retain the earlier `desktop.dev.pebble.garden` mapping until web dev
+passes. These checks do not establish interactive Google sign-in or email delivery.
 
-For rollback, manually deploy a previously deployed SHA on main. Hosting's API
-rewrite is pinned to its API revision. Rolling back code does **not** undo
-database migrations or already-persisted data; use additive migrations and forward
-fixes. Smoke-check failure is not an automatic rollback.
+### Firebase "Site Not Found" with an active domain
 
-Local deployment-specific verification:
+Check the bare homepage, `/index.html`, a fresh query URL, and `/api/health`.
+If only the bare homepage returns a cache-hit 404, distinguish stale CDN content
+from a missing deployment before changing DNS or app code. On 2026-10-31, cloning
+and releasing the identical active production version cleared this condition
+(release `1793490303177000`, version `c5da70460d8e1b5d`). Compare file hashes and
+serving configuration first, preserving the API revision pin. Firebase rejects
+releasing the already-active version directly, so a new clone is required.
+
+## Recovery and verification
+
+- Redeploy a previously deployed SHA on main, or restore a prior Hosting release.
+  Its pinned rewrite follows the paired API revision, not default Cloud Run traffic.
+- If the direct Cloud Run URL also needs rollback, move its traffic to the prior
+  revision. Retain image digests and tagged revisions needed by Hosting releases.
+- Code rollback does not undo migrations or stored data. Use additive forward fixes;
+  failed smoke checks do not automatically roll back a deployment.
+- Use Cloud Run and Supabase logs without logging tokens, request bodies, Vault
+  values or provider keys.
+- `release.yml` hardcodes `EVENT_GROUP_WORKER_ENABLED=false`. It packages the worker
+  job but does not execute or schedule it. The runtime requires both worker/scoring
+  gates, a dedicated worker JWT, enabled registry/database gates and verified
+  provider configuration. Its job has zero retries; uncertain scoring must not be
+  automatically repeated. `scripts/deploy-worker.sh` defines the runtime settings.
 
 ```sh
 pnpm test:deployment
+pnpm test:hosted https://pebble.garden
+pnpm test:hosted https://web.dev.pebble.garden
+pnpm test:hosted https://mobile.dev.pebble.garden
 ```
+
+The smoke check covers SPA routes/assets, API health, database-backed reads and
+anonymous private-account denial. Hosted account/product checks additionally
+create disposable users and require explicit administrative credentials; see
+[test prerequisites](../tests/README.md#integration-tests).
