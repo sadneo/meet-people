@@ -107,7 +107,6 @@ it('fences a late initial GET across owner replacement', async () => {
   expect(hook.result.current.error).toBe('')
 })
 it.each(['token', 'owner', 'account-busy'])('rejects retained mutations during %s transition before passive effect cleanup', async transition => {
-  let retained: ReturnType<typeof useDetailedSettings>['save'] | undefined
   let attempt: Promise<unknown> | undefined
   const hook = renderHook(({ owner, token, busy, invoke }) => {
     const resource = useDetailedSettings(owner, token, busy)
@@ -117,13 +116,12 @@ it.each(['token', 'owner', 'account-busy'])('rejects retained mutations during %
     return resource
   }, { initialProps: { owner: 'first', token: 'first-token', busy: false, invoke: false } })
   await waitFor(() => expect(hook.result.current.canWrite).toBe(true))
-  retained = hook.result.current.save
+  const retained = hook.result.current.save
   hook.rerender({ owner: transition === 'owner' ? 'second' : 'first', token: transition === 'token' ? 'renewed-token' : 'first-token', busy: transition === 'account-busy', invoke: true })
   await act(async () => { expect(await attempt).toBeNull() })
   expect(fixture.puts()).toHaveLength(0)
 })
 it('rejects a retained old-session reload before passive cleanup, without issuing an old-token GET', async () => {
-  let reload: ReturnType<typeof useDetailedSettings>['reload'] | undefined
   let attempt: Promise<unknown> | undefined
   const hook = renderHook(({ token, invoke }) => {
     const resource = useDetailedSettings('first', token)
@@ -131,7 +129,7 @@ it('rejects a retained old-session reload before passive cleanup, without issuin
     return resource
   }, { initialProps: { token: 'first-token', invoke: false } })
   await waitFor(() => expect(hook.result.current.canWrite).toBe(true))
-  reload = hook.result.current.reload
+  const reload = hook.result.current.reload
   hook.rerender({ token: 'renewed-token', invoke: true })
   await act(async () => { expect(await attempt).toBeNull() })
   expect(fixture.gets().filter(call => call.token === 'Bearer first-token')).toHaveLength(1)

@@ -42,7 +42,7 @@ import {
   Loading,
 } from "./ui/common";
 
-const DevelopmentNavigator = import.meta.env.DEV
+const DevelopmentNavigator = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS === 'true'
   ? lazy(() => import('./ui/DevelopmentNavigator'))
   : null;
 
