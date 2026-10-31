@@ -8,7 +8,7 @@ target=root/'worktree/local-matchmaking'
 (target/'supabase/migrations').mkdir(parents=True,exist_ok=True)
 # The canonical product SQL intentionally retains the original bigint messaging
 # model. These two later service-backed replacements are a different schema track.
-excluded={'20261013125000_messaging.sql','20261013130000_connection_requests.sql'}
+excluded={'20261013125000_messaging.sql','20261013130000_connection_requests.sql','20261027000000_product_prerequisites.sql'}
 for source in sorted((root/'supabase/migrations').glob('*.sql')):
     if source.name not in excluded:shutil.copyfile(source,target/'supabase/migrations'/source.name)
 # Build the exact same prerequisite sequence used in canonical SQL acceptance.

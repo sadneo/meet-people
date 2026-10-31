@@ -85,7 +85,7 @@ test("Friends preferences resolve a server-owned area and save revisioned filter
   await page
     .getByRole("button", { name: "Friends preferences", exact: true })
     .click();
-  await page.getByRole('button', { name: /Search area.*Campus/ }).click();
+  await page.getByRole('button', { name: 'Search area Choose an area', exact: true }).click();
   await page.getByRole('combobox', { name: 'Search city or neighborhood' }).fill('Brooklyn');
   await page.getByRole('button', { name: 'Brooklyn, NY', exact: true }).click();
   await page.getByRole('button', { name: 'Set search area', exact: true }).click();
