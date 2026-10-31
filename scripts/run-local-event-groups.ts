@@ -45,7 +45,7 @@ async function main(){
  if(existing.data.user){if(existing.data.user.email!==stored.email||existing.data.user.app_metadata.pebble_local_group_worker!==true)throw new Error('Worker identity is not owned by this local tool')}
  else{if(!flags.setup||existing.error?.status!==404)throw new Error('Local worker identity unavailable');const created=await admin.auth.admin.createUser({id:stored.id,email:stored.email,password:stored.password,email_confirm:true,app_metadata:{pebble_local_group_worker:true}});if(created.error||created.data.user?.id!==stored.id)throw new Error('Local worker creation failed')}
  if(flags.setup){
-  const migration=await readFile(new URL('../docs/local-event-group-matching.sql',import.meta.url),'utf8')
+  const migration=await readFile(new URL('../supabase/schema-sources/local-event-group-matching.sql',import.meta.url),'utf8')
   sql(migration)
   sql(`begin;do $$ begin if not exists(select 1 from auth.users where id='${stored.id}' and raw_app_meta_data->'pebble_local_group_worker'='true'::jsonb) then raise exception 'Worker ownership changed';end if;end $$;insert into event_group_private.workers(actor_id,worker_id,enabled) values('${stored.id}','${workerId}',true) on conflict(actor_id) do update set enabled=true where event_group_private.workers.worker_id='${workerId}';update event_group_private.settings set scoring_enabled=true where singleton;commit;`)
  }

@@ -11,9 +11,10 @@ The app is live at https://cse416-meet-people.web.app. See
 [HOSTING-SETUP.md](HOSTING-SETUP.md) for email delivery, deployment credentials,
 Google/Gemini, billing, and outage notifications.
 
-Custom-domain setup is pending: `pebble.garden` will serve production;
-`desktop.dev.pebble.garden` and `mobile.dev.pebble.garden` will serve the sandbox
-developer build. All three deploy from `main`. See [deployment setup](docs/deployment.md).
+`pebble.garden` is mapped to production but still returns intermittent Firebase
+404s; `mobile.dev.pebble.garden` passes hosted checks for the sandbox developer
+build. `web.dev.pebble.garden` awaits DNS/HTTPS activation. All three deploy from
+`main`. See [deployment setup](docs/deployment.md).
 
 ## Develop
 
@@ -45,6 +46,9 @@ provisioned account; it does not seed data or bypass authentication. See
 A fresh database needs the existing schema activation process. Starting the app
 does not install SQL. Missing optional capabilities display unavailable states.
 The new frontend does not change deployed Auth, database or hosting configuration.
+
+Active SQL inputs live in [`supabase/schema-sources/`](supabase/schema-sources/README.md).
+Its guide explains source ordering, generated migrations, and deployment hashes.
 
 ## Verify and build
 

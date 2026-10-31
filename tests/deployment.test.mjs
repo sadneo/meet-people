@@ -52,8 +52,8 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
     SUPABASE_PROJECT_REF: 'abcdefghijklmnopqrst', SUPABASE_URL: 'https://abcdefghijklmnopqrst.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'test-public-key',
   }
   const config = deploymentConfiguration(env, base)
-  assert.ok(config.auth.includes('site_url = "https://desktop.dev.pebble.garden"'))
-  for (const domain of ['desktop.dev.pebble.garden', 'mobile.dev.pebble.garden']) {
+  assert.ok(config.auth.includes('site_url = "https://web.dev.pebble.garden"'))
+  for (const domain of ['web.dev.pebble.garden', 'mobile.dev.pebble.garden']) {
     assert.ok(config.auth.includes(`https://${domain}/auth/callback**`))
     assert.ok(config.auth.includes(`https://${domain}/reset-password**`))
   }

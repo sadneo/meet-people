@@ -28,7 +28,7 @@ it('accepts unresolved selections without inventing geography, but never accepts
   expect(SaveFriendsSearchPreferencesSchema.safeParse({ ...write, expectedRevision: Number.MAX_SAFE_INTEGER }).success).toBe(false)
 })
 it('authors private CAS/location-reference SQL only, not SQL execution evidence', () => {
-  const sql = readFileSync('docs/friends-search-preferences-migration.sql', 'utf8')
+  const sql = readFileSync('supabase/schema-sources/friends-search-preferences-migration.sql', 'utf8')
   for (const text of ['REVIEW CANDIDATE ONLY', "errcode='FP409'", "errcode='28000'", "errcode='25001'", "set search_path = ''", 'enable row level security', 'from public, anon, authenticated', 'revision = expected_revision', 'for share', 'return public.get_friends_search_preferences()']) expect(sql).toContain(text)
   expect(sql).not.toMatch(/grant\s+(select|insert|update|delete)\b/i)
   expect(sql).not.toMatch(/(?:create or replace|alter function).*\b(?:join_queue|get_queue_match|save_account)\b/i)

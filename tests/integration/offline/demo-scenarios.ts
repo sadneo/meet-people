@@ -108,7 +108,7 @@ try {
   do $$ begin assert exists(select 1 from jsonb_array_elements(public.social_inbox()->'conversations') chat where chat->>'mode'='friends');end $$;rollback;`)
   // The actual local worker protocol creates groups with a provider that raises
   // on every call. Ranking must therefore use persisted local data exclusively.
-  sql(readFileSync(new URL('../../../docs/local-event-group-matching.sql',import.meta.url),'utf8'))
+  sql(readFileSync(new URL('../../../supabase/schema-sources/local-event-group-matching.sql',import.meta.url),'utf8'))
   const worker='d7400000-0000-4000-8000-000000000001'
   sql(`begin;insert into auth.users(id,email,aud,role,is_anonymous) values('${worker}','local-worker@example.test','authenticated','authenticated',false);
   insert into event_group_private.workers(actor_id,worker_id,enabled) values('${worker}','synthetic-local-worker',true);

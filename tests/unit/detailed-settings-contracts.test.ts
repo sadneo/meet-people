@@ -37,7 +37,7 @@ it('keeps strict complete atomic payloads separate from legacy settings and acto
   expect(SaveAccountSchema.safeParse({ ...account, settings: { ...account.settings, ...on } }).success).toBe(false)
 })
 it('authors private Settings CAS and guarded acceptance source, not executed SQL evidence', () => {
-  const sql = readFileSync('docs/detailed-settings-migration.sql', 'utf8')
+  const sql = readFileSync('supabase/schema-sources/detailed-settings-migration.sql', 'utf8')
   for (const required of ['REVIEW CANDIDATE ONLY', "errcode='DS409'", "errcode='28000'", "errcode='25001'", "set search_path = ''", 'public.account_settings', 'enable row level security', 'from public, anon, authenticated', 'revision = expected_revision']) expect(sql).toContain(required)
   expect(sql).not.toMatch(/\b(?:update|insert into|delete from)\s+public\.(?:account_settings|profiles|queue_entries)\b/i)
   expect(sql).not.toMatch(/(?:create or replace|alter function).*\b(?:save_account|get_account|join_queue|leave_queue)\b/i)

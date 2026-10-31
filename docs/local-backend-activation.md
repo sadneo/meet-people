@@ -25,8 +25,8 @@ python3 scripts/prepare-local-demo-activation.py --uuid-messaging
 
 This prepares a reviewable bundle; it does not connect to or apply SQL. It replaces
 the three legacy safety/social sources with
-`docs/uuid-safety-owner-migration.sql` and
-`docs/uuid-social-contact-migration.sql`. The other feature sources and their
+`supabase/schema-sources/uuid-safety-owner-migration.sql` and
+`supabase/schema-sources/uuid-social-contact-migration.sql`. The other feature sources and their
 dependency order remain the same. Do not modify or replay historical migrations
 to make the legacy bundle accept a UUID database.
 

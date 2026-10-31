@@ -73,7 +73,7 @@ results are baseline evidence, not execution of this safety slice.
 - `20261009060000_event_group_queue.sql` locking/proposal/eligibility seams: existing
   profile/social table SHARE fences and block checks are a separate integration,
   not replaced here. Listing/event compatibility is mapped below, not certified.
-- `docs/safety-contact-guards-migration.sql` and the settings/safety enforcement map:
+- `supabase/schema-sources/safety-contact-guards-migration.sql` and the settings/safety enforcement map:
   prior scoped predicate/membership repair, historically scalar int4 read RPC, and
   unavailable blocklist pending metadata policy.
 - `api/index.ts`, `api/matchmaking.ts`, Connections/Messaging clients and shared
@@ -138,7 +138,7 @@ idempotent retry. There is no automatic write retry/compensation or partial succ
 
 ## Candidate containment and race protocol
 
-`docs/safety-owner-contact-migration.sql` requires the reviewed partial candidate,
+`supabase/schema-sources/safety-owner-contact-migration.sql` requires the reviewed partial candidate,
 exact historical core/contact + real 04/08/07 definitions, reviewed table ownership
 including profiles, and compatible function shapes/owners. New schema/name collisions
 abort, not adopt. DDL/ACL changes are one transaction. Parent must inspect inherited
@@ -376,7 +376,7 @@ psql -X -w -v ON_ERROR_STOP=1 -h '/absolute/path/to/approved/network-none-socket
   -f supabase/migrations/20260925000004_connection_logic.sql \
   -f supabase/migrations/20260925000008_messaging.sql \
   -f supabase/migrations/20260925000007_dating_track.sql \
-  -f docs/safety-contact-guards-migration.sql
+  -f supabase/schema-sources/safety-contact-guards-migration.sql
 
 psql -X -w -v ON_ERROR_STOP=1 -h '/absolute/path/to/approved/network-none-socket' -d pebble_safety_owner_disposable \
   -c "SET pebble.safety_owner_test_target='network-none-safety-owner-v1'" \
@@ -406,7 +406,7 @@ of new source or permission for app DB application:
 psql -X -w -v ON_ERROR_STOP=1 -h '/absolute/path/to/approved/network-none-socket' -d pebble_safety_owner_disposable \
   -c "SET pebble.safety_owner_test_target='network-none-safety-owner-v1'; SET search_path=public,pg_catalog" \
   -c "DO \$guard\$ BEGIN IF current_database()<>'pebble_safety_owner_disposable' OR to_regclass('public.safety_owner_disposable_marker') IS NULL THEN RAISE EXCEPTION 'Wrong disposable target'; END IF; IF (SELECT pg_get_userbyid(relowner) FROM pg_catalog.pg_class WHERE oid='public.safety_owner_disposable_marker'::regclass)<>current_user OR (SELECT count(*) FROM public.safety_owner_disposable_marker)<>1 OR NOT EXISTS(SELECT 1 FROM public.safety_owner_disposable_marker WHERE singleton AND purpose='network-none-safety-owner-v1') OR to_regprocedure('public.safety_pair_allowed(uuid,uuid)') IS NULL OR to_regnamespace('safety_private') IS NOT NULL THEN RAISE EXCEPTION 'Unsafe/occupied candidate target'; END IF; END \$guard\$;" \
-  -f docs/safety-owner-contact-migration.sql
+  -f supabase/schema-sources/safety-owner-contact-migration.sql
 ```
 
 There is no facts/Friends/Dating aggregate candidate prerequisite for this safety

@@ -5,7 +5,7 @@
 | Site | Branch | API / database | Toolbar |
 | --- | --- | --- | --- |
 | https://pebble.garden | `main` | Production | Off |
-| https://desktop.dev.pebble.garden | `main` | Sandbox | On |
+| https://web.dev.pebble.garden | `main` | Sandbox | On |
 | https://mobile.dev.pebble.garden | `main` | Same sandbox | On |
 | https://cse416-meet-people-sandbox.web.app | `main` | Same sandbox | Off |
 
@@ -153,15 +153,15 @@ security checks and preservation of existing contacts.
 ### Custom-domain activation
 
 1. Attach `pebble.garden` to Firebase Hosting site `cse416-meet-people`.
-2. Attach `desktop.dev.pebble.garden` and `mobile.dev.pebble.garden` to
+2. Attach `web.dev.pebble.garden` and `mobile.dev.pebble.garden` to
    `cse416-meet-people-dev` (both are serving domains, not redirects).
 3. Copy Firebase's exact required DNS records into Porkbun; leave the root Host
-   blank and use `desktop.dev` / `mobile.dev` for the respective subdomains.
+   blank and use `web.dev` / `mobile.dev` for the respective subdomains.
    Remove conflicting parking records only at the affected hosts. Keep ownership
    verification records for certificate renewal. Keep Porkbun's nameservers.
 4. Wait for connected domains and active managed certificates before cutover.
 5. Apply the generated Auth configuration: production uses `https://pebble.garden`
-   as Site URL; sandbox uses `https://desktop.dev.pebble.garden`. Both dev callback
+   as Site URL; sandbox uses `https://web.dev.pebble.garden`. Both dev callback
    origins and existing `web.app` callbacks stay allowed. Each app supplies its
    own origin when requesting authentication links.
 6. Update the Google OAuth client's JavaScript origins for enabled providers.
@@ -173,10 +173,19 @@ security checks and preservation of existing contacts.
 Domain mapping is persistent cloud configuration; frontend deploys do not create
 it. Neither custom-domain setup nor DNS requires a new Supabase key.
 
-The three mappings were created on 2026-10-31 and all seven Porkbun DNS records
-were verified publicly. Firebase ownership/certificate activation remains pending
-for production at the last check. The sandbox OIDC provider now accepts only the
-deployment workflow on main. The repository configuration has not been deployed.
+On 2026-10-31, Firebase confirmed active hosting, ownership and HTTPS certificates
+for `pebble.garden` and `mobile.dev.pebble.garden`. The original
+`desktop.dev.pebble.garden` mapping is also active. The requested replacement,
+`web.dev.pebble.garden`, was added to the same developer site but has no DNS record
+yet. Keep the existing desktop mapping until the replacement is verified.
+The sandbox OIDC provider accepts only the deployment workflow on main.
+The updated repository configuration has not been deployed.
+
+Verification: the mobile custom domain and production `web.app` URL pass the full
+hosted smoke test. Production's custom domain returns the app over one connection
+but Firebase's "Site Not Found" 404 over Node/browser connections, despite active
+domain states. Production cutover remains unverified until its hosted smoke test
+passes consistently. The two deployment configuration tests pass locally.
 
 Firebase returned these DNS records (Porkbun Host is relative to `pebble.garden`):
 
@@ -184,15 +193,16 @@ Firebase returned these DNS records (Porkbun Host is relative to `pebble.garden`
 | --- | --- | --- |
 | A | Leave blank | `199.36.158.100` |
 | TXT | Leave blank | `hosting-site=cse416-meet-people` |
-| CNAME | `desktop.dev` | `cse416-meet-people-dev.web.app` |
+| CNAME | `web.dev` | `cse416-meet-people-dev.web.app` |
 | CNAME | `mobile.dev` | `cse416-meet-people-dev.web.app` |
 | TXT | `_acme-challenge` | `hXblM3oM1MZCkcEYReFD_HHti2OdkVVazXSwMUMD8ZE` |
-| TXT | `_acme-challenge.desktop.dev` | `x4NsLVp5CyQOitvt1J6T6bR583S8W0g-SMjswZP9osI` |
+| TXT | `_acme-challenge.web.dev` | `O_G1qJ9wBB3U7BD210DVW0hlF7LL91imexz3JmnezEQ` |
 | TXT | `_acme-challenge.mobile.dev` | `C1Fo8d8atEgJU041seIlvoM0_8JCDieuM1WJIpYFaS4` |
 
-Remove the conflicting Porkbun parking records. Firebase observed root addresses
-`207.207.210.107` / `207.207.210.229` and dev-host CNAMEs resolving through
-`pixie.porkbun.com`; these can originate from Porkbun ALIAS/wildcard records.
+Only the `web.dev` CNAME and `_acme-challenge.web.dev` TXT records remain to be
+added in Porkbun. The dashboard returned HTTP 403 from the agent browser, so DNS
+changes require owner access. Public DNS already resolves the root and mobile
+hosts to Firebase's `199.36.158.100` address.
 Certificate challenge values can rotate: re-read each Firebase custom domain's
 certificate verification requirements if validation is retried later.
 

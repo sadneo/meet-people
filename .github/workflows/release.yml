@@ -171,7 +171,7 @@ jobs:
       - name: Verify development domains
         if: env.DEPLOY_ENVIRONMENT == 'sandbox'
         run: |
-          pnpm test:hosted https://desktop.dev.pebble.garden
+          pnpm test:hosted https://web.dev.pebble.garden
           pnpm test:hosted https://mobile.dev.pebble.garden
       - name: Deployment summary
         if: always()
@@ -186,6 +186,6 @@ jobs:
           const e = process.env
           const lines = [`### ${e.DEPLOY_ENVIRONMENT} deployment: ${e.DEPLOY_RESULT}`, `- Actor: ${e.GITHUB_ACTOR}`, `- Branch: ${e.SOURCE_BRANCH}`, `- Commit: ${e.RELEASE_SHA}`, `- Checks skipped: ${e.SKIPPED_CHECKS}`, `- Override reason: ${JSON.stringify(e.OVERRIDE_REASON || '')}`, `- Site: https://${e.FIREBASE_HOSTING_SITE_ID}.web.app`, `- Image: ${e.API_IMAGE || 'not built'}`, '- Worker: disabled; not executed or scheduled']
           if (e.DEPLOY_ENVIRONMENT === 'sandbox') lines.push(`- Developer site: https://${e.FIREBASE_DEVTOOLS_SITE_ID}.web.app`)
-          lines.push(`- Custom domains: ${e.DEPLOY_ENVIRONMENT === 'sandbox' ? 'https://desktop.dev.pebble.garden, https://mobile.dev.pebble.garden' : 'https://pebble.garden'}`)
+          lines.push(`- Custom domains: ${e.DEPLOY_ENVIRONMENT === 'sandbox' ? 'https://web.dev.pebble.garden, https://mobile.dev.pebble.garden' : 'https://pebble.garden'}`)
           appendFileSync(e.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n')
           JS

@@ -124,7 +124,7 @@ The safety routes have no screen wired to them yet.
 |---|---|
 | **30 messages per minute** (`MSG11`) | `supabase/migrations/20261013125000_messaging.sql` |
 | **10 connection requests per 24 h** (`CON04`) | `supabase/migrations/20261013130000_connection_requests.sql` |
-| Photo changes (`PH429`), search locations (`LC429`), safety reports (`SR429`) | **Only in `docs/*-migration.sql`.** See decision 5. |
+| Photo changes (`PH429`), search locations (`LC429`), safety reports (`SR429`) | Defined in `supabase/schema-sources/` and bundled into the product prerequisites migration. Verify the target's installed schema. See decision 5. |
 
 ### Supabase Auth
 Sign-in, sign-up, password reset and email OTP use Supabase's own auth rate limits (set in the Supabase dashboard). The app doesn't change them.
@@ -230,6 +230,6 @@ Signed-out visitors to a signed-in page are sent to sign in.
 | 2 | **Who measures the production proxy hops?** | Someone with Cloud Run log access | **Do it in the first deploy.** Set `LOG_CLIENT_IP=1`, call `/api/health`, read the log, set `TRUST_PROXY_HOPS`, then turn logging off. Until then the default (1) is a best guess. |
 | 3 | **Rate-limit counts live in each server's memory** | Accept / move to a shared store (Redis or the database) | **Accept for now.** With at most 2 instances, a caller gets at most 2× the limit, and counts reset on deploy. Revisit when traffic grows. |
 | 4 | **`POST /api/auth/email` tells anyone whether an email has an account** | Keep (the sign-in screen needs it) / change the sign-in flow | **Keep, but decide consciously.** It's limited to 10 checks per 10 minutes per address. Most consumer apps accept this trade-off. |
-| 5 | **Some database rate limits exist only as docs** | Move them into `supabase/migrations` / confirm they're already on the hosted database | **Confirm first.** The photo-change limit (`PH429`), search-location limit (`LC429`) and safety-report limit (`SR429`) are defined only in `docs/*-migration.sql`. If they were never applied by hand, those limits don't exist in production. |
+| 5 | **Confirm installed database rate limits** | Verify the product prerequisites on the hosted database | The photo-change limit (`PH429`), search-location limit (`LC429`) and safety-report limit (`SR429`) are defined in `supabase/schema-sources/` and bundled by `scripts/product-schema.mjs` into `supabase/migrations/20261027000000_product_prerequisites.sql`. Source files alone do not establish enforcement on a deployed target. |
 | 6 | **Retired "event company" tables** | Keep / drop later | **Keep.** Old event-group chats still read display names from them. Nothing can write to them any more. |
 | 7 | **Cookie Policy wording** | Leave / update | **Leave.** "The app sets no cookies" is still true. The policy already says hosting and third-party storage still need confirming. |

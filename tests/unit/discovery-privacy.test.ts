@@ -16,7 +16,7 @@ it('returns actionable queue consent/readiness denial rather than claiming enrol
   expect(reads).toBe(0)
 })
 it('pins privacy source boundaries without treating source assertions as SQL execution', () => {
-  const sql = readFileSync('docs/discovery-privacy-migration.sql', 'utf8')
+  const sql = readFileSync('supabase/schema-sources/discovery-privacy-migration.sql', 'utf8')
   expect(sql).toContain('Inherited raw privacy bypass')
   expect(sql).toContain('Inherited privacy sequence bypass')
   expect(sql).toContain("has_sequence_privilege(r::name,seq,'SELECT,USAGE,UPDATE')")
