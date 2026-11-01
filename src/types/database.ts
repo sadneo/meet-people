@@ -1517,6 +1517,31 @@ export type Database = {
         Args: { place_in: Json }
         Returns: undefined
       }
+      public_live_events: {
+        Args: {
+          p_category?: string
+          p_id?: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          address: string
+          category: string
+          city: string
+          description: string
+          ends_at: string
+          id: string
+          image_url: string
+          latitude: number
+          location_name: string
+          longitude: number
+          source: string
+          source_url: string
+          starts_at: string
+          status: string
+          title: string
+        }[]
+      }
       read_profile_photo: {
         Args: { owner_in: string; revision_in: number }
         Returns: Json

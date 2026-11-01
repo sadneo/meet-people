@@ -95,8 +95,16 @@ the API compiles once outside Docker. Docker validation exports a GitHub Actions
 layer cache which release preparation reads. Production/sandbox frontend builds
 remain separate from local-test bundles because they embed different backend settings.
 The aggregate `Checks / CI` required check succeeds only if all three lanes pass.
-CI never resets a hosted database. Recent full CI runs pass; hosted release checks
-currently fail on `/api/events?limit=1` returning HTTP 503 in both environments.
+CI never resets a hosted database. Schema replay checks event filtering, pagination,
+details and service-role permissions on fresh and legacy databases. Built-browser
+checks also call the real events endpoint, so a missing RPC fails before deployment.
+
+The events HTTP 503 in release run `41255109334` came from a missing
+`public.public_live_events` RPC. Migration `20261031000000_public_live_events.sql`
+adds the shared list/detail function without changing stored event data. It was
+applied to sandbox and production on 2026-10-31 and recorded in both migration
+histories. Full hosted smoke checks passed on all three custom domains and all
+three Firebase `web.app` sites; real event list/detail requests returned HTTP 200.
 
 ## Manual sandbox deployment
 
@@ -232,7 +240,8 @@ browser. Later checks on 2026-10-31 reached `web.dev.pebble.garden`,
 `mobile.dev.pebble.garden` and `pebble.garden` over HTTPS and passed SPA, asset,
 health and email checks; all three
 failed the events database check with HTTP 503. The earlier DNS/cutover notes
-above are historical; the remaining observed smoke failure is the events endpoint.
+above are historical. The events failure was subsequently fixed by the migration
+described in Normal operation.
 Certificate challenge values can rotate: re-read each Firebase custom domain's
 certificate verification requirements if validation is retried later.
 

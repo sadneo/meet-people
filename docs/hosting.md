@@ -209,10 +209,12 @@ bundle by intercepting `/src/supabase.ts`. Existing guest-avatar assertions in
 `app.spec.ts` also predate the new signed-out header; these are outside the
 hosting smoke suite and need updating with that UI's tests.
 
-Version tags are labels, not deployment triggers. Recent full CI runs pass.
-Hosted smoke checks currently fail because the events endpoint returns HTTP 503
-in both environments. An explicit manual CI override is available; hosted smoke
-checks remain mandatory and failed checks are never changed to success.
+Version tags are labels, not deployment triggers. The missing events RPC that
+caused HTTP 503 in both environments was fixed by migration
+`20261031000000_public_live_events.sql`; all hosted smoke checks now pass.
+Schema replay and built-browser checks cover the real events database contract.
+An explicit manual CI override is available; hosted smoke checks remain mandatory
+and failed checks are never changed to success.
 
 Preparation authenticates with OIDC, uploads frontend bundles and pushes a
 run-specific commit-SHA image. Deployment reuses those bundles and the image
