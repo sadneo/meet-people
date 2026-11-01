@@ -46,7 +46,7 @@ export function ActiveFriends({ close, changed }: { close: () => void; changed: 
     <label htmlFor="active-group-size">New friends · You + {ideal}<input id="active-group-size" type="range" min={1} max={8} value={ideal} disabled={disabled} onChange={event=>setIdeal(+event.target.value)}/></label>
     <label className="check"><input type="checkbox" checked={allowExisting} disabled={disabled} onChange={event=>setAllowExisting(event.target.checked)}/>Open to joining an existing group</label>
     <p className="muted">We may offer a smaller group of at least two. Everyone must accept that exact roster.</p>
-    
+
     {status&&!status.enabled&&<p role="status">Group search is not available right now.</p>}
    </>}
   <div className="row"><ActionButton secondary disabled={busy||loading} onClick={()=>void refresh()}>Refresh search status</ActionButton><ActionButton secondary disabled={busy} onClick={()=>setPreferences(value=>!value)}>Search preferences</ActionButton></div>

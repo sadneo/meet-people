@@ -5,9 +5,14 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist/', 'supabase/.temp/', '.claude/', 'qa/'] },
+  // The standalone reference app has its own checks; see src/alt/README.md.
+  { ignores: ['dist/', 'supabase/.temp/', '.claude/', 'qa/', 'src/alt/'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ['scripts/**/*.{js,mjs,cjs}', 'tools/qa-real-users/**/*.mjs'],
+    languageOptions: { globals: globals.node },
+  },
   {
     files: ['src/ui/garden*.js'],
     languageOptions: { globals: globals.browser },

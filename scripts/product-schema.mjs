@@ -3,42 +3,53 @@ import { createHash } from 'node:crypto'
 import { URL } from 'node:url'
 
 export const productSources = [
-  'docs/dev-account-reconciliation.sql',
-  'docs/profile-details-migration.sql',
-  'docs/detailed-settings-migration.sql',
-  'docs/safety-contact-guards-migration.sql',
-  'docs/safety-owner-contact-migration.sql',
-  'docs/social-contact-migration.sql',
-  'docs/discovery-privacy-migration.sql',
-  'docs/friends-search-preferences-migration.sql',
-  'docs/dating-aggregate-migration.sql',
-  'docs/search-location-migration.sql',
-  'docs/active-nearby-migration.sql',
-  'docs/profile-photo-migration.sql',
-  'docs/dating-live-migration.sql',
-  'docs/real-account-boundary.sql',
-  'docs/friends-runtime-migration.sql',
+  'supabase/schema-sources/dev-account-reconciliation.sql',
+  'supabase/schema-sources/profile-details-migration.sql',
+  'supabase/schema-sources/detailed-settings-migration.sql',
+  'supabase/schema-sources/safety-contact-guards-migration.sql',
+  'supabase/schema-sources/safety-owner-contact-migration.sql',
+  'supabase/schema-sources/social-contact-migration.sql',
+  'supabase/schema-sources/discovery-privacy-migration.sql',
+  'supabase/schema-sources/friends-search-preferences-migration.sql',
+  'supabase/schema-sources/dating-aggregate-migration.sql',
+  'supabase/schema-sources/search-location-migration.sql',
+  'supabase/schema-sources/active-nearby-migration.sql',
+  'supabase/schema-sources/profile-photo-migration.sql',
+  'supabase/schema-sources/dating-live-migration.sql',
+  'supabase/schema-sources/real-account-boundary.sql',
+  'supabase/schema-sources/friends-runtime-migration.sql',
 ]
 export const productVersion = 'canonical-product-v1'
+export const uuidProductVersion = 'canonical-product-uuid-v1'
+export const uuidProductSources = [
+  ...productSources.slice(0, 3),
+  'supabase/schema-sources/uuid-safety-owner-migration.sql',
+  'supabase/schema-sources/uuid-social-contact-migration.sql',
+  ...productSources.slice(6),
+]
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 function section(source, start, end) {
   const first = source.indexOf(start), last = source.indexOf(end, first + start.length)
   if (first < 0 || last < first) throw new Error('Product schema source boundaries changed; review deployment sources.')
   return source.slice(first, last)
 }
-export function buildProductSchema() {
-  const sources = productSources.map(path => {
+export function buildProductSchema(messaging = 'legacy') {
+  if (!['legacy', 'uuid'].includes(messaging)) throw new Error('Unknown product messaging schema.')
+  const version = messaging === 'uuid' ? uuidProductVersion : productVersion
+  const sources = (messaging === 'uuid' ? uuidProductSources : productSources).map(path => {
     const source = read(path), start = source.indexOf('\nbegin;'), end = source.lastIndexOf('\ncommit;')
     if (start < 0 || end <= start || source.slice(end + '\ncommit;'.length).trim()) throw new Error(`Invalid transaction source: ${path}`)
-    return `\n-- ${path}\n${source.slice(start + '\nbegin;'.length, end)}\n`
+    // Historical labels are part of installed source hashes and migration snapshots.
+    const label = path.replace('supabase/schema-sources/', 'docs/')
+    return `\n-- ${label}\n${source.slice(start + '\nbegin;'.length, end)}\n`
   })
   // Keep the already-installed UUID stores intact in a private archive. The
   // canonical dev contact implementation uses bigint storage and UUID aliases.
   // This transition is only admitted while the old contact universe is empty.
   const contactTables = section(read('supabase/migrations/20260925000000_init_schema.sql'), 'create table conversations (', '-- ============================================\n-- BLOCKS')
   const contactTrigger = section(read('supabase/migrations/20260925000004_connection_logic.sql'), 'create or replace function connections_after_update()', '-- ============================================\n-- get_incoming_requests')
-  const setup = read('docs/production-contact-reconciliation.sql') + contactTables + contactTrigger + read('supabase/migrations/20260925000008_messaging.sql')
-  const payload = setup + sources.join('\n')
+  const setup = read('supabase/schema-sources/production-contact-reconciliation.sql') + contactTables + contactTrigger + read('supabase/migrations/20260925000008_messaging.sql')
+  const payload = (messaging === 'uuid' ? '' : setup) + sources.join('\n')
   const hash = createHash('sha256').update(payload).digest('hex')
   const sql = `begin;
 set local lock_timeout='5s';
@@ -50,9 +61,59 @@ create table if not exists deployment_private.product_versions(version text prim
 revoke all on deployment_private.product_versions from public,anon,authenticated;
 do $$ begin if exists(select 1 from deployment_private.product_versions) then raise exception 'Product schema already installed; inspect version before changing it';end if;end $$;
 ${payload}
-insert into deployment_private.product_versions(version,source_hash) values('${productVersion}','${hash}');
+insert into deployment_private.product_versions(version,source_hash) values('${version}','${hash}');
 notify pgrst,'reload schema';
 commit;
 `
-  return { sql, hash, version: productVersion }
+  return { sql, hash, version }
+}
+
+export function buildProductPrerequisitesMigration() {
+  const bundle = buildProductSchema('uuid')
+  const body = bundle.sql.slice('begin;\n'.length, -'commit;\n'.length)
+  return `-- Generated by scripts/generate-product-migrations.mjs from reviewed SQL sources.
+-- Install prerequisites before matching migrations on a fresh native UUID store.
+-- Existing activated stores retain their data and their messaging implementation.
+begin;
+select pg_advisory_xact_lock(hashtextextended('pebble.product-schema',0));
+do $prerequisites$
+declare signature text;
+begin
+  if to_regnamespace('safety_private') is not null then
+    foreach signature in array array[
+      'safety_private.actor()', 'public.get_account()',
+      'public.get_profile_details()', 'public.get_detailed_settings()',
+      'public.get_friends_search_preferences()', 'public.get_dating_preferences()',
+      'public.get_search_location_receipt(text,uuid)', 'public.get_profile_photo_state()',
+      'public.get_friends_runtime()'
+    ] loop
+      if to_regprocedure(signature) is null then
+        raise exception 'Partial product installation: missing %; inspect before upgrading', signature;
+      end if;
+    end loop;
+    return;
+  end if;
+  execute $product_schema$${body}$product_schema$;
+end
+$prerequisites$;
+commit;
+`
+}
+
+export function buildUuidRelationshipProjectionMigration() {
+  const source = read('supabase/schema-sources/uuid-relationship-mode-projection.sql')
+  const body = source.slice(source.indexOf('\nbegin;') + '\nbegin;'.length, source.lastIndexOf('\ncommit;'))
+  return `-- Generated by scripts/generate-product-migrations.mjs.
+-- Preserve native UUID inboxes after the shared relationship-mode migration.
+begin;
+do $projection$
+begin
+  if (select atttypid from pg_attribute where attrelid='public.conversations'::regclass
+      and attname='id' and not attisdropped) = 'uuid'::regtype then
+    execute $uuid_projection$${body}$uuid_projection$;
+  end if;
+end
+$projection$;
+commit;
+`
 }

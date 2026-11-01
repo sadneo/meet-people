@@ -4,7 +4,7 @@ import { expect, it } from 'vitest'
 
 // Verification commands run from the approved repository root. Do not derive
 // filesystem paths from Vite's runner/browser-origin import.meta.url.
-const sql = readFileSync('docs/safety-owner-contact-migration.sql', 'utf8')
+const sql = readFileSync('supabase/schema-sources/safety-owner-contact-migration.sql', 'utf8')
 const acceptance = readFileSync('tests/integration/sql/safety-owner-contact.sql', 'utf8')
 const races = readFileSync('tests/integration/sql/safety-owner-race-session.sql', 'utf8')
 it('uses canonical blocks and one ordered pair key on block and legacy contact guards (static source, not runtime evidence)', () => {

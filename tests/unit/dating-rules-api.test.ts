@@ -1,8 +1,11 @@
 // @vitest-environment node
-import { expect, it, vi } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import type { Request, Response } from 'express'
 import { createMatchmakingRouter, type UserContextTransport } from '../../api/matchmaking'
-import type { DatingScoringTransport } from '../../api/matching/dating-recommendations'
+import { createDatingScoringTransport, DatingEligibilityError, type DatingScoringTransport } from '../../api/matching/dating-recommendations'
+import { datingLiveClient } from '../../src/features/matchmaking/dating-live-client'
+
+afterEach(() => vi.unstubAllGlobals())
 
 const actorId = 'a0000000-0000-4000-8000-000000000001'
 const targetId = 'a0000000-0000-4000-8000-000000000002'
@@ -55,6 +58,24 @@ it('keeps failures unavailable without leaking provider details or using legacy 
   expect(f.legacy).not.toHaveBeenCalled()
   expect((await request(f, { excludedIds: [] }, 'valid', '/dating/candidate', 'POST', false)).status).toBe(200)
   expect(f.legacy).toHaveBeenCalledOnce()
+})
+it.each(['/dating/candidate', '/dating/recommendations'])('preserves the real DL409 setup rejection for %s without private error details or fallback', async path => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ code: 'DL409', message: 'private SQL details' }, { status: 400 })))
+  const service = createDatingScoringTransport('https://synthetic.supabase.test', 'server-only-test-key')
+  const failure = await service.pool(actorId, []).catch(error => error)
+  expect(failure).toBeInstanceOf(DatingEligibilityError)
+  const f = fixture(); f.pool.mockRejectedValueOnce(failure)
+  const result = await request(f, { excludedIds: [] }, 'valid', path)
+  expect(result).toMatchObject({ status: 409, data: { code: 'dating_setup_required', error: expect.stringContaining('Dating setup') } })
+  expect(JSON.stringify(result)).not.toContain('private SQL details')
+  expect(f.project).not.toHaveBeenCalled(); expect(f.legacy).not.toHaveBeenCalled()
+})
+it('the Dating client preserves structured setup guidance instead of replacing it with a generic error', async () => {
+  const network = vi.fn(async () => Response.json({ code: 'dating_setup_required', error: 'Confirm your Dating search area.' }, { status: 409 }))
+  vi.stubGlobal('fetch', network)
+  await expect(datingLiveClient('synthetic').enable({ expectedProfileRevision: 1, expectedSearchRevision: 1, enabled: true }))
+    .rejects.toMatchObject({ status: 409, code: 'dating_setup_required', message: 'Confirm your Dating search area.' })
+  expect(network).toHaveBeenCalledOnce()
 })
 it('reads default-off settings, validates timezone, and checks write revisions', async () => {
   const f = fixture()

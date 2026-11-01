@@ -103,7 +103,7 @@ PostgREST schema cache notified; function/resource metadata confirmed. Historica
 migration files/history unchanged. Candidates remain documented separately.
 
 One operator-requested public Stony Brook campus anchor was published using
-`docs/stony-brook-demo-location.sql`, seven-day expiry and primary IGN coordinate
+`supabase/schema-sources/stony-brook-demo-location.sql`, seven-day expiry and primary IGN coordinate
 provenance. No device/user coordinates or shared profile/search settings were
 changed. Local postgres needed explicit SET membership in the narrow publisher role;
 no app-role privilege was added. First denied publication rolled back, then approved

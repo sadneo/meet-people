@@ -337,6 +337,78 @@ export type Database = {
           },
         ]
       }
+      dating_owner_aggregates: {
+        Row: {
+          profile: Json
+          profile_revision: number
+          search: Json
+          search_revision: number
+          user_id: string
+        }
+        Insert: {
+          profile: Json
+          profile_revision: number
+          search: Json
+          search_revision: number
+          user_id: string
+        }
+        Update: {
+          profile?: Json
+          profile_revision?: number
+          search?: Json
+          search_revision?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      dating_search_location_refs: {
+        Row: {
+          area_label: string
+          id: string
+          latitude: number
+          longitude: number
+          source: string
+          usable: boolean
+          user_id: string
+        }
+        Insert: {
+          area_label: string
+          id: string
+          latitude: number
+          longitude: number
+          source: string
+          usable: boolean
+          user_id: string
+        }
+        Update: {
+          area_label?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          source?: string
+          usable?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      detailed_settings: {
+        Row: {
+          revision: number
+          settings: Json
+          user_id: string
+        }
+        Insert: {
+          revision: number
+          settings: Json
+          user_id: string
+        }
+        Update: {
+          revision?: number
+          settings?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       event_group_members: {
         Row: {
           event_id: string
@@ -479,6 +551,54 @@ export type Database = {
         }
         Update: {
           display_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      friends_search_location_refs: {
+        Row: {
+          area_label: string
+          id: string
+          latitude: number
+          longitude: number
+          source: string
+          usable: boolean
+          user_id: string
+        }
+        Insert: {
+          area_label: string
+          id: string
+          latitude: number
+          longitude: number
+          source: string
+          usable: boolean
+          user_id: string
+        }
+        Update: {
+          area_label?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          source?: string
+          usable?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      friends_search_preferences: {
+        Row: {
+          preferences: Json
+          revision: number
+          user_id: string
+        }
+        Insert: {
+          preferences: Json
+          revision: number
+          user_id: string
+        }
+        Update: {
+          preferences?: Json
+          revision?: number
           user_id?: string
         }
         Relationships: []
@@ -854,6 +974,24 @@ export type Database = {
           },
         ]
       }
+      profile_details: {
+        Row: {
+          facts: Json
+          revision: number
+          user_id: string
+        }
+        Insert: {
+          facts: Json
+          revision?: number
+          user_id: string
+        }
+        Update: {
+          facts?: Json
+          revision?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -966,12 +1104,27 @@ export type Database = {
     }
     Functions: {
       accept_dating_match: { Args: { match_id: number }; Returns: undefined }
+      active_friends_command: { Args: { command_in: Json }; Returns: Json }
+      active_friends_history: {
+        Args: { before_in?: number; group_in: string }
+        Returns: Json
+      }
+      active_friends_read: {
+        Args: { group_in: string; seq_in: number }
+        Returns: Json
+      }
+      active_friends_send: {
+        Args: { body_in: string; group_in: string; request_in: string }
+        Returns: Json
+      }
       auth_email_exists: { Args: { email_in: string }; Returns: boolean }
       availability_overlap_minutes: {
         Args: { a: string; b: string }
         Returns: number
       }
+      block_owner_target: { Args: { target_in: string }; Returns: Json }
       can_connect: { Args: { user1: string; user2: string }; Returns: boolean }
+      claim_active_friends_job: { Args: never; Returns: Json }
       claim_event_group_job: {
         Args: { lease_seconds: number; worker_id: string }
         Returns: Json
@@ -981,6 +1134,7 @@ export type Database = {
         Args: { job_id_in: string; lease_token_in: string; members: string[] }
         Returns: Json
       }
+      confirm_map_search_location: { Args: { ticket_in: Json }; Returns: Json }
       connection_accept: {
         Args: { p_other_id: string; p_user_id: string }
         Returns: Json
@@ -998,6 +1152,28 @@ export type Database = {
       connection_requests_today: { Args: never; Returns: number }
       connection_state: {
         Args: { p_other_id: string; p_user_id: string }
+        Returns: Json
+      }
+      dating_adult_on: {
+        Args: { as_of: string; dob: string }
+        Returns: boolean
+      }
+      dating_campus_date: { Args: { instant_in: string }; Returns: string }
+      dating_clear_targets: { Args: { p: Json }; Returns: Json }
+      dating_complete: { Args: { p: Json }; Returns: boolean }
+      dating_default_profile: { Args: never; Returns: Json }
+      dating_location_resolved: {
+        Args: { actor: string; home: string; s: Json }
+        Returns: boolean
+      }
+      dating_reciprocal_targets: {
+        Args: { a: Json; b: Json }
+        Returns: boolean
+      }
+      dating_targets: { Args: { p: Json }; Returns: Json }
+      detailed_settings_masters: { Args: { value_in: Json }; Returns: Json }
+      effective_detailed_settings: {
+        Args: { choices_in: Json; masters_in: Json }
         Returns: Json
       }
       end_dating_match: { Args: { match_id: number }; Returns: undefined }
@@ -1028,8 +1204,21 @@ export type Database = {
         Args: { job_id_in: string; lease_token_in: string; reason_code: string }
         Returns: Json
       }
+      find_dating_candidate: { Args: { excluded_in: Json }; Returns: Json }
+      finish_active_friends_job: {
+        Args: { selection_in: Json; token_in: string; unit_in: string }
+        Returns: Json
+      }
+      friends_discovery_connection: {
+        Args: { action_in: string; target_in: string }
+        Returns: Json
+      }
       get_account: { Args: never; Returns: Json }
       get_account_profile: { Args: never; Returns: Json }
+      get_active_friends_group: { Args: { group_in: string }; Returns: Json }
+      get_active_friends_groups: { Args: never; Returns: Json }
+      get_active_friends_status: { Args: never; Returns: Json }
+      get_connection_request_allowance: { Args: never; Returns: Json }
       get_dating_match: {
         Args: never
         Returns: {
@@ -1048,6 +1237,14 @@ export type Database = {
           suggested_start: string
         }[]
       }
+      get_dating_preferences: { Args: never; Returns: Json }
+      get_dating_runtime: { Args: never; Returns: Json }
+      get_dating_scoring_pool: {
+        Args: { actor_in: string; excluded_in: Json }
+        Returns: Json
+      }
+      get_dating_scoring_settings: { Args: never; Returns: Json }
+      get_detailed_settings: { Args: never; Returns: Json }
       get_event_group_queue: { Args: { listing_id_in: string }; Returns: Json }
       get_event_matches: {
         Args: { meetup_id_in: number }
@@ -1085,6 +1282,13 @@ export type Database = {
           title: string
         }[]
       }
+      get_friends_discovery_status: { Args: never; Returns: Json }
+      get_friends_runtime: { Args: never; Returns: Json }
+      get_friends_scoring_pool: {
+        Args: { actor_in: string; excluded_in: Json }
+        Returns: Json
+      }
+      get_friends_search_preferences: { Args: never; Returns: Json }
       get_gemini_embedding: {
         Args: { interest_text: string }
         Returns: number[]
@@ -1120,7 +1324,17 @@ export type Database = {
         Returns: Json
       }
       get_matching_notifications: { Args: never; Returns: Json }
+      get_matching_scoring_settings: { Args: never; Returns: Json }
       get_matchmaking_profile: { Args: never; Returns: Json }
+      get_owner_block_state: { Args: { target_in: string }; Returns: Json }
+      get_owner_blocklist: { Args: never; Returns: Json }
+      get_owner_safety_report: {
+        Args: { request_id_in: string }
+        Returns: Json
+      }
+      get_profile_details: { Args: never; Returns: Json }
+      get_profile_photo_reference: { Args: { owner_in: string }; Returns: Json }
+      get_profile_photo_state: { Args: never; Returns: Json }
       get_queue_match: {
         Args: never
         Returns: {
@@ -1163,6 +1377,14 @@ export type Database = {
           title: string
         }[]
       }
+      get_search_location_map: {
+        Args: { mode_in: string; reference_in: string }
+        Returns: Json
+      }
+      get_search_location_receipt: {
+        Args: { mode_in: string; reference_in: string }
+        Returns: Json
+      }
       get_sent_requests: {
         Args: never
         Returns: {
@@ -1173,6 +1395,14 @@ export type Database = {
           to_user: string
           username: string
         }[]
+      }
+      interest_policy_profile_write: {
+        Args: { profile_in: Json }
+        Returns: Json
+      }
+      issue_browser_search_location: {
+        Args: { location_in: Json }
+        Returns: Json
       }
       join_event_group_queue: { Args: { listing_id_in: string }; Returns: Json }
       join_queue: { Args: { qtype: string }; Returns: undefined }
@@ -1279,7 +1509,44 @@ export type Database = {
         Returns: number
       }
       profile_embedding: { Args: { p_id: string }; Returns: number[] }
+      profile_language_key: { Args: { value_in: string }; Returns: string }
       profile_text: { Args: { p_id: string }; Returns: string }
+      project_dating_candidate: { Args: { target_in: string }; Returns: Json }
+      project_friends_candidates: { Args: { targets_in: Json }; Returns: Json }
+      public_live_events: {
+        Args: {
+          p_category?: string
+          p_id?: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          address: string
+          category: string
+          city: string
+          description: string
+          ends_at: string
+          id: string
+          image_url: string
+          latitude: number
+          location_name: string
+          longitude: number
+          source: string
+          source_url: string
+          starts_at: string
+          status: string
+          title: string
+        }[]
+      }
+      publish_search_location_place: {
+        Args: { place_in: Json }
+        Returns: undefined
+      }
+      read_profile_photo: {
+        Args: { owner_in: string; revision_in: number }
+        Returns: Json
+      }
+      reconcile_active_friends_job: { Args: { unit_in: string }; Returns: Json }
       reconcile_event_group_job: {
         Args: { job_id_in: string; lease_token_in: string }
         Returns: Json
@@ -1308,6 +1575,15 @@ export type Database = {
           reset_count: number
         }[]
       }
+      reconciliation_chapters: { Args: { p: Json; prefs: Json }; Returns: Json }
+      reconciliation_identity_write: {
+        Args: { profile_in: Json }
+        Returns: Json
+      }
+      reconciliation_profile_write: {
+        Args: { profile_in: Json }
+        Returns: Json
+      }
       record_interaction: {
         Args: {
           context_in: string
@@ -1319,10 +1595,33 @@ export type Database = {
         }
         Returns: undefined
       }
+      request_dating_connection: { Args: { target_in: string }; Returns: Json }
       request_dating_match: { Args: { other_id: string }; Returns: number }
+      resolve_search_area: { Args: { resolution_in: Json }; Returns: Json }
+      safety_pair_allowed: {
+        Args: { first_id: string; second_id: string }
+        Returns: boolean
+      }
       save_account: { Args: { account_in: Json }; Returns: Json }
       save_account_profile: { Args: { profile_in: Json }; Returns: Json }
+      save_dating_preferences: { Args: { aggregate_in: Json }; Returns: Json }
+      save_dating_scoring_settings: {
+        Args: { settings_in: Json }
+        Returns: Json
+      }
+      save_detailed_settings: { Args: { settings_in: Json }; Returns: Json }
+      save_friends_search_preferences: {
+        Args: { preferences_in: Json }
+        Returns: Json
+      }
+      save_matching_scoring_settings: {
+        Args: { settings_in: Json }
+        Returns: Json
+      }
       save_matchmaking_profile: { Args: { profile_in: Json }; Returns: Json }
+      save_profile_details: { Args: { details_in: Json }; Returns: Json }
+      save_profile_photo: { Args: { photo_in: Json }; Returns: Json }
+      search_location_places: { Args: { query_in: string }; Returns: Json }
       search_people: {
         Args: { max_results?: number; q: string }
         Returns: {
@@ -1335,13 +1634,48 @@ export type Database = {
           username: string
         }[]
       }
+      set_dating_enabled: { Args: { change_in: Json }; Returns: Json }
       shared_interest_labels: {
         Args: { user1: string; user2: string }
         Returns: string[]
       }
+      social_activity: { Args: never; Returns: Json }
+      social_connection: {
+        Args: { action_in: string; target_in: string }
+        Returns: Json
+      }
+      social_connection_list: { Args: never; Returns: Json }
+      social_history: {
+        Args: { after_in?: number; before_in?: number; conversation_in: string }
+        Returns: Json
+      }
+      social_inbox: { Args: { page_in?: number }; Returns: Json }
+      social_read: {
+        Args: { conversation_in: string; seq_in: number }
+        Returns: Json
+      }
       social_reliability: { Args: { p_id: string }; Returns: number }
+      social_send: {
+        Args: { body_in: string; conversation_in: string; request_in: string }
+        Returns: Json
+      }
+      submit_safety_report: { Args: { report_in: Json }; Returns: Json }
+      sweep_active_friends: { Args: never; Returns: Json }
+      unblock_owner_target: { Args: { target_in: string }; Returns: Json }
       user_interest_vector: { Args: { p_id: string }; Returns: number[] }
       valid_account_identity: { Args: { profile_in: Json }; Returns: boolean }
+      valid_dating_profile: { Args: { p: Json }; Returns: boolean }
+      valid_dating_search: { Args: { s: Json }; Returns: boolean }
+      valid_detailed_settings: { Args: { value_in: Json }; Returns: boolean }
+      valid_friends_search_preferences: {
+        Args: { prefs_in: Json }
+        Returns: boolean
+      }
+      valid_profile_facts: { Args: { facts_in: Json }; Returns: boolean }
+      valid_profile_interests: {
+        Args: { labels: Json; require_minimum: boolean }
+        Returns: boolean
+      }
       vec_similarity: { Args: { a: number[]; b: number[] }; Returns: number }
       withdraw_event_interest: {
         Args: { meetup_id_in: number }

@@ -16,7 +16,8 @@ export default function DevelopmentNavigator() {
   const { pathname } = useLocation()
   const details = useRef<HTMLDetailsElement>(null)
   const summary = useRef<HTMLElement>(null)
-  if (!isLocalDevelopment(getLocalDevelopmentEnvironment())) return null
+  if (import.meta.env.VITE_DEV_TOOLS !== 'true' && !isLocalDevelopment(getLocalDevelopmentEnvironment())) return null
+  const build = [import.meta.env.VITE_BUILD_BRANCH, import.meta.env.VITE_BUILD_SHA?.slice(0, 7)].filter(Boolean).join(' · ')
   function jump(path: string) {
     if (!views.some(group => group.pages.some(([, route]) => route === path))) return
     if (details.current) details.current.open = false
@@ -24,7 +25,7 @@ export default function DevelopmentNavigator() {
     navigate(path)
   }
   return (
-    <aside className="devbar development-navigator" aria-label="Development navigation">
+    <aside className="development-navigator" aria-label="Development navigation">
       <details ref={details} onKeyDown={event => {
         if (event.key === 'Escape') {
           event.currentTarget.open = false
@@ -37,7 +38,7 @@ export default function DevelopmentNavigator() {
           <span className="devchevron" aria-hidden="true">⌃</span>
         </summary>
         <div className="devpanel">
-          <div className="devtitle"><b>Pebble · UI review</b><small>Live local app · Changes may be saved</small></div>
+          <div className="devtitle"><b>Pebble · UI review</b><small>{build || 'Live app'} · Changes may be saved</small></div>
           <label htmlFor="dev-view">Jump to a view</label>
           <select id="dev-view" value={views.some(group => group.pages.some(([, route]) => route === pathname)) ? pathname : ''} onChange={event => jump(event.target.value)}>
             <option value="" disabled>Choose a screen…</option>

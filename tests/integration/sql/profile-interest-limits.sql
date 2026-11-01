@@ -8,10 +8,14 @@ do $$ begin
  assert public.valid_profile_interests('["Coffee","Art","Music"]',true);
  assert public.valid_profile_interests('["Coffee","Art","Music","Outdoors","Gaming"]',true);
  assert public.valid_profile_interests('["Coffee","Art","Music","Custom one","Custom two"]',true);
- assert not public.valid_profile_interests('["Coffee","Art","Custom one","Custom two"]',true);
+ assert public.valid_profile_interests('["Coffee"]',true);
+ assert public.valid_profile_interests('["Ceramics"]',true);
+ assert public.valid_profile_interests('["Custom one","Custom two"]',true);
+ assert public.valid_profile_interests('["Coffee","Art","Custom one","Custom two"]',true);
  assert not public.valid_profile_interests('["Coffee","Art","Custom one","Custom two","Custom three"]',false);
  assert not public.valid_profile_interests('["Coffee","Art","Music","Outdoors","Gaming","Movies"]',true);
  assert not public.valid_profile_interests('["Coffee","Coffee","Art"]',true);
+ assert not public.valid_profile_interests('["   "]',true);
  assert public.valid_profile_interests('[]',false);
  assert not public.valid_profile_interests('[]',true);
  assert not has_function_privilege('authenticated','public.interest_policy_profile_write(jsonb)','EXECUTE');
@@ -28,8 +32,8 @@ do $$ declare a jsonb; before_save jsonb; bad jsonb;begin
  bad:=jsonb_set(a,'{profile,interests}','["Coffee","Art","Music","Food","Movies","Gaming"]');
  begin perform public.save_account(bad);raise exception 'Six interests saved';exception when sqlstate '22023' then null;end;
  assert public.get_account()=before_save,'Rejected write changed account';
- bad:=jsonb_set(jsonb_set(a,'{completed}','[0,1]'),'{profile,interests}','["Coffee","Custom one","Custom two"]');
- begin perform public.save_account(bad);raise exception 'Custom interests completed provided requirement';exception when sqlstate '22023' then null;end;
+ bad:=jsonb_set(jsonb_set(a,'{completed}','[0,1]'),'{profile,interests}','[]');
+ begin perform public.save_account(bad);raise exception 'Empty interests completed chapter';exception when sqlstate '22023' then null;end;
  assert public.get_account()=before_save,'Rejected completion changed account';
  -- Fixture labels save without provider I/O; the hook state rolls back below.
 end $$;
@@ -41,5 +45,11 @@ do $$ declare a jsonb;begin
  a:=jsonb_set(jsonb_set(a,'{completed}','[0,1]'),'{profile,interests}','["Coffee","Art","Music","Custom one","Custom two"]');
  assert public.save_account(a)->'completed'='[0,1]'::jsonb;
  assert jsonb_array_length(public.get_account()->'profile'->'interests')=5;
+ a:=jsonb_set(a,'{profile,interests}','["Ceramics"]');
+ assert public.save_account(a)->'completed'='[0,1]'::jsonb;
+ assert public.get_account()->'profile'->'interests'='["Ceramics"]'::jsonb;
+ a:=jsonb_set(a,'{profile,interests}','["Coffee"]');
+ assert public.save_account(a)->'completed'='[0,1]'::jsonb;
+ assert public.get_account()->'profile'->'interests'='["Coffee"]'::jsonb;
 end $$;
 rollback;

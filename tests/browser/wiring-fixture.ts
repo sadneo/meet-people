@@ -173,6 +173,10 @@ export async function wiringFixture(
         policy: "nearby-first-v1",
         canJoin: true,
       });
+    if (path.endsWith('/friends/status')) {
+      const enabled = account.settings.discoverable && detailed.settings.friendsDiscovery;
+      return reply({ available: true, eligible: enabled, reason: enabled ? null : 'discovery_off' });
+    }
     if (path.endsWith("/friends-search-preferences")) {
       if (method === "PUT") {
         friendRevision++;
@@ -333,6 +337,8 @@ export async function wiringFixture(
         distance_miles: null,
         interested_count: 0,
       });
+    if (path === "/api/connections/request-allowance")
+      return reply({ limit: 10, used: 0, remaining: 10, availableAt: null });
     if (path === "/api/connections")
       return reply({ incoming: [], sent: [], connected: [] });
     if (path.startsWith("/api/connections/")) {

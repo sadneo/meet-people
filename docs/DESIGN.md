@@ -77,7 +77,7 @@ availability use one canonical Profile resource.
 
 Dating targets derive from clear gender/sexuality labels with reciprocal checks;
 only ambiguous/nonbinary combinations require clarification. Interests are capped
-at five, with at least three provided choices and at most two custom labels.
+at five, with at least one interest (provided or custom) and at most two custom labels.
 Avoid persistent explanatory microcopy when labels suffice; show errors and required
 clarification only when relevant. Availability From/Until fields share a row on mobile.
 

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { DatingAggregateSchema } from './dating.js'
+import { DatingAggregateSchema, completeDatingProfile } from './dating.js'
 import { MatchingProfileSchema } from './matchmaking.js'
 import { discoveryDetailFields } from './discovery-details.js'
 export const DatingRuntimeSchema=z.object({available:z.literal(true),aggregate:DatingAggregateSchema,canStart:z.boolean(),globalDiscovery:z.boolean(),datingDiscovery:z.boolean()}).strict()
@@ -14,3 +14,17 @@ export const DatingBatchResponseSchema=z.object({candidates:z.array(DatingCandid
 export type DatingCandidate=z.infer<typeof DatingCandidateSchema>
 export type DatingRuntime=z.infer<typeof DatingRuntimeSchema>
 export type DatingEnable=z.infer<typeof DatingEnableSchema>
+
+// Guidance derives from the owner-only server snapshot, never a guessed device
+// age/location or an inferred participation choice. API eligibility still rules.
+export function datingDiscoveryBlocker(value: DatingRuntime) {
+  const { aggregate } = value
+  if (!aggregate.eligibility.adult) return 'age'
+  if (!value.globalDiscovery || !value.datingDiscovery) return 'discovery_off'
+  if (!completeDatingProfile(aggregate.profile)) return 'profile'
+  if (!aggregate.search?.searchArea.resolvedLocationRef) return 'preferences'
+  if (!aggregate.eligibility.locationResolved) return 'location'
+  if (!value.canStart) return 'unavailable'
+  if (!aggregate.profile.enabled) return 'paused'
+  return aggregate.effectiveEnabled ? null : 'unavailable'
+}

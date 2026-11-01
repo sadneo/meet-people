@@ -5,9 +5,16 @@ branch, the alternate Pebble design is the default frontend, connected to the
 existing backend. See [frontend integration](docs/FRONTEND-WIRING.md),
 [design authority](docs/DESIGN.md), and [route plan](docs/UI-PLAN.md).
 
+## Hosting
+
+Production: https://pebble.garden. See [deployment and hosting](docs/deployment.md)
+for sandbox domains, setup, releases, provider configuration and recovery.
+
 ## Develop
 
-Use Node.js 22 and pnpm (the version is declared in `package.json`).
+Use Node.js 22 and pnpm (the version is declared in `package.json`). Local Supabase
+requires Docker or rootless Podman. Nix users can install the declared development
+tools with `nix develop`.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -34,6 +41,9 @@ A fresh database needs the existing schema activation process. Starting the app
 does not install SQL. Missing optional capabilities display unavailable states.
 The new frontend does not change deployed Auth, database or hosting configuration.
 
+Active SQL inputs live in [`supabase/schema-sources/`](supabase/schema-sources/README.md).
+Its guide explains source ordering, generated migrations, and deployment hashes.
+
 ## Verify and build
 
 ```sh
@@ -51,7 +61,15 @@ recorded in [the integration notes](docs/FRONTEND-WIRING.md).
 
 The built web app is in `dist/web`; the server is in `dist/api`.
 `pnpm start:api` starts the compiled API, and `pnpm preview` serves the built web app.
-For existing hosting setup, use [HOSTING-SETUP.md](HOSTING-SETUP.md).
+For hosting setup, use [the deployment runbook](docs/deployment.md).
+
+For labeled local test users, messaging, Dating and event-group queues, run
+`pnpm demo:populate --dry-run` to preview, then `pnpm demo:populate` to populate
+60 contacts around the existing development login and fill all upcoming event
+queues with labeled test contacts. Run `pnpm dev:groups` in a
+separate terminal to match event queues using saved interests and availability,
+without Gemini or external scoring. See [demo data](docs/demo-data.md) for
+scenario logins, reruns and the required activated local backend.
 
 ## Integration boundaries
 

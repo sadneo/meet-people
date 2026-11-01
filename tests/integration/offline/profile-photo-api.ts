@@ -5,10 +5,11 @@ import sharp from 'sharp'
 import type { Request,Response } from 'express'
 import { createMatchmakingRouter,type UserContextTransport } from '../../../api/matchmaking.js'
 import { disposable } from './disposable.js'
+import { ProfilePhotoStateSchema } from '../../../shared/profile-photo.js'
 const {checked,rpc,literal}=disposable(process.argv.includes('--fresh-demo')?'pebble-demo-final-20261019':'pebble-sprint-review-20261019')
 const a='b2000000-0000-4000-8000-000000000001',b='b2000000-0000-4000-8000-000000000002'
 const transport={verify:async(token:string)=>[a,b].includes(token)?{id:token}:null,actor:(owner:string)=>({profilePhotoState:()=>rpc(owner,'get_profile_photo_state'),saveProfilePhoto:(value:unknown)=>rpc(owner,'save_profile_photo',[JSON.stringify(value)]),readProfilePhoto:(target:string,revision:number)=>rpc(owner,'read_profile_photo',[target,revision])})} as unknown as UserContextTransport
-function request(owner:string,method:string,path:string,body?:unknown){return new Promise<{status:number;data:any}>((resolve,reject)=>{
+function request(owner:string,method:string,path:string,body?:unknown){return new Promise<{status:number;data:unknown}>((resolve,reject)=>{
  let status=200;const req={method,url:path,query:Object.fromEntries(new URL(path,'http://offline').searchParams),body,headers:{authorization:`Bearer ${owner}`}} as unknown as Request
  const res={locals:{},set(){return this},type(){return this},status(value:number){status=value;return this},json(data:unknown){resolve({status,data});return this},send(data:unknown){resolve({status,data});return this}} as unknown as Response
  createMatchmakingRouter(transport)(req,res,error=>reject(error??new Error('Route miss')))
@@ -18,10 +19,10 @@ try{
  const initial=await request(a,'GET','/profile-photo');assert.equal(initial.status,200);assert.deepEqual(initial.data,{revision:0,hasPhoto:false,updatedAt:null})
  const source=await sharp({create:{width:800,height:400,channels:3,background:'#dfcbbd'}}).withMetadata({orientation:6}).withExifMerge({IFD0:{Artist:'private-camera-owner'}}).jpeg().toBuffer()
  const path='/profile-photo?expectedRevision=0&requestId=b2100000-0000-4000-8000-000000000001'
- const saved=await request(a,'PUT',path,source);assert.equal(saved.status,200,JSON.stringify(saved));assert.equal(saved.data.revision,1);assert.equal(saved.data.hasPhoto,true)
+ const saved=await request(a,'PUT',path,source);assert.equal(saved.status,200,JSON.stringify(saved));const savedState=ProfilePhotoStateSchema.parse(saved.data);assert.equal(savedState.revision,1);assert.equal(savedState.hasPhoto,true)
  assert.deepEqual(await request(a,'GET','/profile-photo'),saved)
  assert.deepEqual(await request(a,'PUT',path,source),saved,'Retry must replay same revision')
- const read=await request(a,'GET',`/profile-photo/${a}/1`);assert.equal(read.status,200)
+ const read=await request(a,'GET',`/profile-photo/${a}/1`);assert.equal(read.status,200);assert.ok(Buffer.isBuffer(read.data))
  const metadata=await sharp(read.data).metadata();assert.equal(metadata.width,256);assert.equal(metadata.height,512);assert.equal(metadata.exif,undefined);assert.equal(metadata.icc,undefined)
  assert.equal((await request(b,'GET',`/profile-photo/${a}/1`)).status,404,'Unauthorized peer read')
  assert.equal((await request(a,'PUT','/profile-photo?expectedRevision=0&requestId=b2100000-0000-4000-8000-000000000002',source)).status,409)
@@ -29,7 +30,7 @@ try{
  const bypass=await rpc(a,'save_profile_photo',[JSON.stringify({expectedRevision:1,requestId:'b2100000-0000-4000-8000-000000000003',jpegBase64:source.toString('base64')})]);assert.equal(bypass.error?.code,'22023')
  assert.equal(checked(`select to_jsonb(photo_private.valid_jpeg(decode(${literal(read.data.toString('base64'))},'base64')))`),true)
  const spoof=await rpc(a,'save_profile_photo',[JSON.stringify({expectedRevision:1,requestId:'b2100000-0000-4000-8000-000000000003',jpegBase64:null,user_id:b})]);assert.equal(spoof.error?.code,'22023')
- const removed=await request(a,'DELETE','/profile-photo?expectedRevision=1&requestId=b2100000-0000-4000-8000-000000000004');assert.equal(removed.status,200);assert.equal(removed.data.revision,2);assert.equal(removed.data.hasPhoto,false)
+ const removed=await request(a,'DELETE','/profile-photo?expectedRevision=1&requestId=b2100000-0000-4000-8000-000000000004');assert.equal(removed.status,200);const removedState=ProfilePhotoStateSchema.parse(removed.data);assert.equal(removedState.revision,2);assert.equal(removedState.hasPhoto,false)
  assert.deepEqual(await request(a,'GET','/profile-photo'),removed)
  assert.equal((await request(a,'GET',`/profile-photo/${a}/1`)).status,404)
  assert.equal((await request(a,'PUT',path,source)).status,409,'Old upload replay resurrected removed image')

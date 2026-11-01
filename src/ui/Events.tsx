@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
-import { BrowserEventsResponseSchema as EventsResponseSchema, BrowserEventSchema as EventSchema } from "../features/events/client";
+import { EventsResponseSchema, EventSchema } from "../../shared/events";
 import type { EventGroupQueue } from "../../shared/matchmaking";
 import {
   eventRequest,
@@ -9,6 +9,7 @@ import {
   sourceLink,
 } from "../features/events/client";
 import { matchmakingClient } from "../features/matchmaking/client";
+import { useCachedLoad } from "../data/useCachedLoad";
 import { useAction, useLoad } from "./hooks";
 import {
   ActionButton,
@@ -26,7 +27,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
   const [category, setCategory] = useState(""),
     [page, setPage] = useState(1),
     [filtersOpen, setFiltersOpen] = useState(false);
-  const resource = useLoad(
+  const resource = useCachedLoad(
     useCallback(
       (signal) =>
         eventRequest(
@@ -36,6 +37,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
         ),
       [category, page],
     ),
+    ["events", category, page], 30_000,
   );
   const availableCategories = resource.value?.categories ?? [];
   const creativeCategory = availableCategories.includes('Arts') && !availableCategories.includes('Creative') ? 'Arts' : 'Creative';
@@ -149,12 +151,13 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
 }
 export function EventDetail({ publicView = false }: { publicView?: boolean }) {
   const { id = "" } = useParams(),
-    resource = useLoad(
+    resource = useCachedLoad(
       useCallback(
         (signal) =>
           eventRequest(`/${encodeURIComponent(id)}`, EventSchema, { signal }),
         [id],
       ),
+      ["event", id], 30_000,
     );
   const event = resource.value,
     source = event ? sourceLink(event.source_url) : null;

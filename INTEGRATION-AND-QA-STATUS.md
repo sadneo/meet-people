@@ -1,5 +1,8 @@
 # Pebble integration and QA status
 
+> Historical integration-branch checkpoint. For the simulated latest-dev combination,
+> see the merge-readiness report outside this temporary worktree.
+
 > October 31 update: see [FRONTEND-PARITY-REPORT.md](FRONTEND-PARITY-REPORT.md) for
 > the current branch review, completed visual pass, Windows development-login fix,
 > 142 browser / 108 focused unit passes and remaining backend blockers.

@@ -1,5 +1,8 @@
 # Pebble frontend parity and QA
 
+> Historical integration-branch checkpoint. For the simulated latest-dev combination,
+> see the merge-readiness report outside this temporary worktree.
+
 Updated October 31, 2026 (America/New_York). Target: `yz/prototype-integration`,
 HEAD `f1d3a21`. Reference: **`Pebble-Garden-Asset-Work/Pebble.html`**, read-only.
 

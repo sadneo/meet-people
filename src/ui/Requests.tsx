@@ -2,28 +2,24 @@ import { canShowDating } from './age-visibility'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { connections } from '../features/connections/client'
-import { useAction, useLoad } from './hooks'
+import { useAction } from './hooks'
+import { useCachedLoad } from '../data/useCachedLoad'
 import { ActionButton, ErrorMessage, Icon, PersonPhoto, ResourceState } from './common'
-import { matchingClient } from './matching-client'
+import { respondToConnectionRequest } from './request-actions'
 import { useCurrent } from './current'
 import { SafetyActions } from './Safety'
 
 export function Requests() {
   const current = useCurrent(), navigate = useNavigate(), action = useAction()
-  const people = useLoad(useCallback(signal => connections.list(signal), []))
+  const people = useCachedLoad(useCallback(signal => connections.list(signal), []), ['connections'], 0)
   const [uncertain, setUncertain] = useState(false)
   const live = useRef(true)
   useEffect(() => { live.current = true; return () => { live.current = false } }, [])
   async function respond(id: string, accept: boolean, mode?: 'friends' | 'dating' | null) {
-    if (uncertain) return
+    if (uncertain || people.refreshing || people.error) return
     await action.run(async () => {
       setUncertain(true)
-      const result = accept
-        ? mode === 'dating'
-          ? await matchingClient(current.session.access_token).connect('Dating', id)
-          : await matchingClient(current.session.access_token).acceptFriend(id)
-        : await connections.remove(id)
-      if (accept ? result.status !== 'connected' : result.status !== 'none') throw new Error('The request response could not be confirmed.')
+      const result = await respondToConnectionRequest(current.session.access_token, { id, mode }, accept)
       window.dispatchEvent(new Event('pebble:activity-changed'))
       window.dispatchEvent(new Event('pebble:matching-changed'))
       if (!live.current) return
@@ -70,8 +66,8 @@ export function Requests() {
       </div>
       <div className="request-actions">
         {/* eslint-disable-next-line react-hooks/refs -- respond reads the mounted ref only after a click/network response, never during render. */}
-        <ActionButton disabled={action.busy || uncertain} onClick={() => void respond(person.id, true, person.mode)}>{person.mode === 'dating' ? 'Like back' : 'Accept'}</ActionButton>
-        <ActionButton secondary disabled={action.busy || uncertain} onClick={() => void respond(person.id, false)}>Decline</ActionButton>
+        <ActionButton disabled={action.busy || uncertain || people.refreshing} onClick={() => void respond(person.id, true, person.mode)}>{person.mode === 'dating' ? 'Like back' : 'Accept'}</ActionButton>
+        <ActionButton secondary disabled={action.busy || uncertain || people.refreshing} onClick={() => void respond(person.id, false)}>Decline</ActionButton>
       </div>
     </section>)}
     </details>)}

@@ -15,6 +15,7 @@ test('account controls use focused disclosure rows without issuing credential ch
 
 test('Discover interest actions use the saved profile and retain its minimum-interest rule',async({page})=>{
  const fixture=await wiringFixture(page)
+ fixture.getAccount().profile!.interests=['Coffee']
  await page.route('**/api/matchmaking/friends/recommendations',route=>route.fulfill({json:{algorithmVersion:'friends-rules-v1',candidates:[{id:peer,name:'Taylor',age:23,city:null,bio:null,avatar:null,photoRevision:0,interests:['Coffee','Hiking'],areaDistanceMiles:2}]}}))
  await page.goto('/matchmaking')
  await page.getByRole('button',{name:'Coffee · shared interest',exact:true}).click()
@@ -25,9 +26,13 @@ test('Discover interest actions use the saved profile and retain its minimum-int
  await page.getByRole('button',{name:'Hiking',exact:true}).click()
  await page.getByRole('button',{name:'Add to my interests'}).click()
  await expect(page.getByRole('dialog')).toHaveCount(0)
- expect(fixture.getAccount().profile!.interests).toEqual(['Coffee','Art','Music','Hiking'])
+ expect(fixture.getAccount().profile!.interests).toEqual(['Coffee','Hiking'])
  await page.reload()
  await expect(page.getByRole('button',{name:'Hiking · shared interest',exact:true})).toBeVisible()
+ await page.getByRole('button',{name:'Coffee · shared interest',exact:true}).click()
+ await page.getByRole('button',{name:'Remove from my interests'}).click()
+ await expect(page.getByRole('dialog')).toHaveCount(0)
+ expect(fixture.getAccount().profile!.interests).toEqual(['Hiking'])
 })
 
 test('waiting event group updates automatically when a proposal becomes available',async({page})=>{

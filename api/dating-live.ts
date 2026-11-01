@@ -4,16 +4,17 @@ import { DatingRuntimeSchema,DatingEnableSchema,DatingCandidateRequestSchema,Dat
 import { sameDatingProfile,sameDatingSearch } from '../shared/dating.js'
 import { ConnectionStateSchema } from '../shared/connections.js'
 import type { UserContextTransport } from './matchmaking.js'
-import { rankedDatingCandidate, rankedDatingBatch, type DatingScoringTransport } from './matching/dating-recommendations.js'
+import { rankedDatingCandidate, rankedDatingBatch, DatingEligibilityError, type DatingScoringTransport } from './matching/dating-recommendations.js'
 import { DatingBatchRequestSchema } from '../shared/dating-live.js'
 import { DatingScoringSettingsResponseSchema, SaveDatingScoringSettingsSchema } from '../shared/dating-scoring.js'
-class Failure extends Error{constructor(readonly status:number,message:string){super(message)}}
+class Failure extends Error{constructor(readonly status:number,message:string,readonly code?:string){super(message)}}
 type Actor=ReturnType<UserContextTransport['actor']>
 function unwrap(result:{data:unknown;error:{code?:string}|null}){
  if(result.error){const code=result.error.code
   if(['28000','PGRST301','PGRST302','PGRST303'].includes(code??''))throw new Failure(401,'Sign in again to use Dating.')
   if(code==='DA409')throw new Failure(409,'Dating preferences changed. Reload before trying again.')
-  if(code==='DL409')throw new Failure(409,'Dating is unavailable for this selection. Check saved details, adult eligibility, discovery and current location.')
+  if(code==='CON04')throw new Failure(429,'Daily request limit reached (10 per 24 hours). Try again later.', 'request_limit')
+  if(code==='DL409')throw new Failure(409,'Dating is unavailable for this selection. Check saved details, adult eligibility, discovery and current location.','dating_setup_required')
   if(code==='22023'||code==='23514')throw new Failure(400,'Check Dating fields and reload saved preferences.')
   if(code==='42501')throw new Failure(403,'This connection is unavailable.')
   throw new Failure(503,'Real Dating could not be confirmed. Reload before retrying.')
@@ -77,6 +78,6 @@ export function createDatingLiveRouter(scoring: DatingScoringTransport | null = 
   try{const current=parse(ConnectionStateSchema,unwrap(await read(target.data,'get')));if(current.status!==saved.status||current.conversationId!==saved.conversationId)throw new Error('Changed readback');res.json(current)}
   catch{throw new Failure(503,'The request may already be saved. Check Connections before trying again.')}
  })
- router.use((error:unknown,_req:Request,res:Response,next:NextFunction)=>{void next;const failure=error instanceof Failure?error:new Failure(503,'Real Dating could not be confirmed. Reload before retrying.');res.status(failure.status).json({error:failure.message})})
+ router.use((error:unknown,_req:Request,res:Response,next:NextFunction)=>{void next;const failure=error instanceof Failure?error:error instanceof DatingEligibilityError?new Failure(409,error.message,'dating_setup_required'):new Failure(503,'Real Dating could not be confirmed. Reload before retrying.');res.status(failure.status).json({error:failure.message,...(failure.code?{code:failure.code}:{})})})
  return router
 }

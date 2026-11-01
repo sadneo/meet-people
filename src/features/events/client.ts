@@ -1,12 +1,6 @@
 import { supabase } from '../../supabase'
 import type { ZodType } from 'zod'
 import { apiUrl } from '../../platform/native'
-import { EventSchema, EventsResponseSchema } from '../../../shared/events'
-
-// The newer public Events API omits the retired interest count. Accept either
-// generation in the browser without changing the current server's contract.
-export const BrowserEventSchema = EventSchema.omit({ interested_count: true })
-export const BrowserEventsResponseSchema = EventsResponseSchema.extend({ events: BrowserEventSchema.array() })
 
 export async function eventRequest<T>(path: string, schema: ZodType<T>, options: { body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   const unavailable = 'Events are unavailable. Try again.'

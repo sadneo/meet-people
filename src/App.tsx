@@ -1,4 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect } from "react";
+import { useQueryClient } from '@tanstack/react-query';
+import { prefetchNavigation } from './data/navigation';
+import { useCurrent } from './ui/current';
 import {
   Link,
   Navigate,
@@ -9,15 +12,18 @@ import {
   useLocation,
   useNavigate,
 } from "react-router";
+import { useCachedLoad } from "./data/useCachedLoad";
 import { MessagingActivitySchema } from "../shared/messaging";
 import { messagingRequest } from "./features/messaging/client";
 import { useSession } from "./auth/useSession";
 import { supabase } from "./supabase";
 import NativeBridge from "./platform/NativeBridge";
+import { SessionQueryProvider } from "./data/SessionQueryProvider";
 import { Private } from "./ui/session";
 import { Auth, AuthCallback } from "./ui/Auth";
 import { Discover } from "./ui/Discover";
-import { Profile, Onboarding } from "./ui/Profile";
+import { Profile } from "./ui/Profile";
+import { Onboarding } from "./ui/Onboarding";
 import { Settings } from "./ui/Settings";
 import { Events, EventDetail } from "./ui/Events";
 import { Messages } from "./ui/Messages";
@@ -26,7 +32,7 @@ import { Activity } from "./ui/Activity";
 import { Garden } from "./features/garden/Garden";
 import { retainGardenFor } from './features/garden/state';
 import { Landing, Legal } from "./ui/Public";
-import { useAction, useLoad } from "./ui/hooks";
+import { useAction } from "./ui/hooks";
 import {
   ActionButton,
   Brand,
@@ -36,19 +42,30 @@ import {
   Loading,
 } from "./ui/common";
 
-const DevelopmentNavigator = import.meta.env.DEV
+const DevelopmentNavigator = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS === 'true'
   ? lazy(() => import('./ui/DevelopmentNavigator'))
   : null;
 
 function Shell() {
+  const client = useQueryClient(), current = useCurrent();
+  useEffect(() => {
+    const warm = () => { prefetchNavigation(client, '/events', current.session.access_token); prefetchNavigation(client, '/messages', current.session.access_token); };
+    if ('requestIdleCallback' in window) {
+      const idle = window.requestIdleCallback(warm, { timeout: 1000 });
+      return () => window.cancelIdleCallback(idle);
+    }
+    const timer = setTimeout(warm, 300);
+    return () => clearTimeout(timer);
+  }, [client, current.session.access_token]);
   const location = useLocation(),
     garden = ["/", "/home", "/community"].includes(location.pathname);
-  const activity = useLoad(
+  const activity = useCachedLoad(
     useCallback(
       (signal) =>
         messagingRequest("/activity", MessagingActivitySchema, { signal }),
       [],
     ),
+    ["activity"], 2000,
   );
   useEffect(() => {
     window.addEventListener("pebble:activity-changed", activity.reload);
@@ -73,7 +90,7 @@ function Shell() {
           {links.map(([label, to]) => label === 'Garden' ? (
             <Link key={label} to={to} className={garden ? 'active' : undefined} aria-current={garden ? 'page' : undefined}><Icon name={label}/><span>{label}</span></Link>
           ) : (
-            <NavLink key={label} to={to}>
+            <NavLink key={label} to={to} onPointerEnter={() => prefetchNavigation(client, to, current.session.access_token)} onFocus={() => prefetchNavigation(client, to, current.session.access_token)}>
               <Icon name={label} />
               <span>{label}</span>
               {label === "Messages" &&
@@ -141,18 +158,12 @@ export default function App() {
       </main>
     );
   return (
-    <>
+    <SessionQueryProvider scope={session?.user.id ?? "public"}>
       <NativeBridge />
+      {DevelopmentNavigator && <Suspense fallback={null}><DevelopmentNavigator /></Suspense>}
       <Routes>
         <Route path="/welcome" element={<Landing />} />
-        <Route
-          path="/"
-          element={session ? <Private session={session} /> : <Landing />}
-        >
-          <Route element={<Shell />}>
-            <Route index element={<Garden />} />
-          </Route>
-        </Route>
+        {!session && <Route path="/" element={<Landing />} />}
         <Route path="/login" element={<Auth />} />
         <Route path="/register" element={<Auth mode="register" />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
@@ -169,6 +180,7 @@ export default function App() {
           <Route path="/messages/requests" element={<Requests />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route element={<Shell />}>
+            {session && <Route index element={<Garden />} />}
             <Route path="/home" element={<Garden />} />
             <Route path="/community" element={<Garden />} />
             <Route path="/matchmaking" element={<Discover />} />
@@ -192,7 +204,6 @@ export default function App() {
           </Route>
         </Route>
       </Routes>
-      {DevelopmentNavigator && <Suspense fallback={null}><DevelopmentNavigator /></Suspense>}
-    </>
+    </SessionQueryProvider>
   );
 }

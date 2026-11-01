@@ -45,6 +45,26 @@ legend {
 .row {
   min-width: 0;
 }
+.event-group-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.group-search-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border: 2px solid var(--line);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: group-search-spin 0.8s linear infinite;
+}
+@keyframes group-search-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
 .sr-only {
   position: absolute;
   width: 1px;
@@ -143,6 +163,40 @@ legend {
 .auth-card .btn {
   margin-top: 15px;
 }
+.auth-recovery-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  column-gap: 12px;
+  margin-top: 8px;
+}
+.auth-recovery-options > button,
+.auth-recovery-options > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  font-size: 13px;
+}
+.auth-recovery-options > button { color: var(--muted); }
+.auth-recovery-options + .auth-submit { margin-top: 8px; }
+.password-input-control { position: relative; }
+.password-field .password-input-control > input { padding-right: 52px; }
+.password-input-control > .password-visibility-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--muted);
+}
+.password-visibility-toggle:hover { color: var(--ink); }
+.password-visibility-toggle .ui-icon { width: 20px; height: 20px; }
 .auth-footer a {
   min-height: 44px;
   display: flex;
@@ -259,18 +313,51 @@ legend {
   min-height: 44px;
 }
 .development-navigator {
-  z-index: 60;
+  position: relative;
+  color: var(--ink);
+  background: var(--cream);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
 }
+.development-navigator > details > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+.development-navigator summary::-webkit-details-marker { display: none; }
+.development-navigator summary b { color: var(--green); font-size: 11px; }
+.development-navigator summary:focus-visible { outline: 2px solid var(--green); outline-offset: -3px; }
+.development-navigator details[open] .devchevron { transform: rotate(180deg); }
 .development-navigator .devpanel {
+  position: static;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: var(--cream);
   max-height: min(60dvh, 480px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 16px 20px;
+}
+.development-navigator .devpanel > * { max-width: 760px; }
+.development-navigator .devpanel small { color: var(--muted); }
+.development-navigator .devquick button { color: var(--ink); border-color: var(--line); }
+.development-navigator .devquick button:hover { background: var(--purple); }
+body:has(.development-navigator) {
+  --development-toolbar-height: 44px;
+}
+body:has(.development-navigator) .shell { min-height: calc(100dvh - var(--development-toolbar-height)); }
+body:has(.development-navigator) .shell > .sky-garden-main { height: calc(100dvh - var(--development-toolbar-height)); }
+body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
+@media (min-width: 801px) {
+  body:has(.development-navigator) .app-navigation { height: calc(100dvh - var(--development-toolbar-height)); }
 }
 @media (max-width: 800px) {
-  body:has(.app-navigation) .development-navigator {
-    bottom: calc(90px + env(safe-area-inset-bottom));
-  }
-  body:not(:has(.app-navigation)) .development-navigator {
-    bottom: calc(12px + env(safe-area-inset-bottom));
-  }
+  body:has(.development-navigator) .shell > .sky-garden-main { height: calc(100dvh - 76px - var(--development-toolbar-height)); }
 }
 .account-form > .btn {
   margin-top: 18px;
@@ -354,6 +441,10 @@ legend {
 .friends-waiting {
   text-align: center;
   padding: 48px 20px 30px;
+}
+.discovery-request-limit .row {
+  justify-content: center;
+  margin-top: 24px;
 }
 .friends-waiting > .ui-icon {
   width: 72px;
@@ -745,7 +836,7 @@ legend {
   .messaging-page .connection-kind { font-size: 10px; }
   .messaging-page.chat-selected > .pagehead { display: none; }
   .messaging-page.chat-selected .live-messages {
-    height: calc(100dvh - 124px - env(safe-area-inset-bottom));
+    height: calc(100dvh - 124px - env(safe-area-inset-bottom) - var(--development-toolbar-height, 0px));
     min-height: 240px;
     overflow: hidden;
     background: #fffdf9;
@@ -753,7 +844,6 @@ legend {
     border-radius: 18px;
   }
   .messaging-page .chat-back { width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
-  body:has(.messaging-page.chat-selected) .development-navigator { bottom: calc(150px + env(safe-area-inset-bottom)); }
   .messaging-page .chat-header { padding: 12px; gap: 10px; flex-wrap: nowrap; }
   .messaging-page .chat-header h3 { min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
   .messaging-page .live-composer { padding: 12px; }
@@ -793,6 +883,16 @@ legend {
 .activity-page {
   max-width: 1000px;
   margin: auto;
+}
+.activity-page .item .portrait {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex: none;
+}
+.activity-page .item > .row > b {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .garden-status {
   position: absolute;
@@ -1149,7 +1249,6 @@ legend {
   .live-profile .profile-save-bar { position: fixed; left: 20px; right: 20px; bottom: calc(84px + env(safe-area-inset-bottom)); margin: 0; padding: 14px 0 3px; z-index: 35; }
   .live-profile .profile-save-bar .btn { min-width: 0; flex: 1; }
   .live-profile .profile-save-bar .btn:not(.light) { flex: 1.5; }
-  body:has(.live-profile .profile-save-bar) .development-navigator { bottom: calc(160px + env(safe-area-inset-bottom)); }
   .discovery-page .discovery-profile .dating-card { padding: 0 0 110px; }
   body:has(.event-detail) .app-navigation, body:has(.event-detail) .mobile-utilities { display: none; }
   .shell > main:has(> .event-detail) { padding: 0; }

@@ -1,5 +1,13 @@
 import { z } from 'zod'
 export const RelationshipModeSchema = z.enum(['friends', 'dating'])
+export const ConnectionRequestAllowanceSchema = z.object({
+  limit: z.literal(10),
+  used: z.number().int().nonnegative().safe(),
+  remaining: z.number().int().min(0).max(10),
+  availableAt: z.iso.datetime({ offset: true }).nullable(),
+}).strict().refine(value => value.remaining === Math.max(0, value.limit - value.used)
+  && (value.remaining === 0 ? value.availableAt !== null : value.availableAt === null))
+export type ConnectionRequestAllowance = z.infer<typeof ConnectionRequestAllowanceSchema>
 
 export const ConnectionStateSchema = z.object({
   status: z.enum(['none', 'sent', 'incoming', 'connected']),

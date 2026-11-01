@@ -1,18 +1,19 @@
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod'
-import { FriendsBatchRequestSchema } from '../shared/friends-discovery.js'
+import { FriendsBatchRequestSchema, FriendsDiscoveryStatusSchema } from '../shared/friends-discovery.js'
 import { MatchingScoringSettingsResponseSchema, SaveMatchingScoringSettingsSchema } from '../shared/matching-scoring.js'
 import { ConnectionStateSchema } from '../shared/connections.js'
-import { rankedFriendsBatch, type FriendsScoringTransport } from './matching/friends-recommendations.js'
+import { rankedFriendsBatch, FriendsEligibilityError, type FriendsScoringTransport } from './matching/friends-recommendations.js'
 import type { UserContextTransport } from './matchmaking.js'
 
 type Actor = ReturnType<UserContextTransport['actor']>
-class Failure extends Error { constructor(readonly status: number, message: string) { super(message) } }
+class Failure extends Error { constructor(readonly status: number, message: string, readonly code?: string) { super(message) } }
 function unwrap(result: { data: unknown; error: { code?: string } | null }) {
   if (!result.error) return result.data
   const code = result.error.code ?? ''
   if (['28000', 'PGRST301', 'PGRST302', 'PGRST303'].includes(code)) throw new Failure(401, 'Sign in again to use Friends discovery.')
   if (['FR409', 'DA409'].includes(code)) throw new Failure(409, 'Friends settings or connection state changed. Reload before trying again.')
+  if (code === 'CON04') throw new Failure(429, 'Daily request limit reached (10 per 24 hours). Try again later.', 'request_limit')
   if (['22023', '23514'].includes(code)) throw new Failure(400, 'Check Friends fields before trying again.')
   if (code === '42501') throw new Failure(403, 'This Friends connection is unavailable.')
   throw new Failure(503, 'Friends discovery could not be confirmed. Reload before retrying.')
@@ -37,6 +38,12 @@ export function createFriendsDiscoveryRouter(scoring: FriendsScoringTransport | 
     const project = actor(res).projectFriendsCandidates
     if (!project) throw new Failure(503, 'Friends discovery is not available yet.')
     res.json(await rankedFriendsBatch(scoring!, res.locals.actorId, input.data.excludedIds, input.data.limit, project))
+  })
+  router.get('/status', async (req, res) => {
+    if (req.body !== undefined && !z.object({}).strict().safeParse(req.body).success) throw new Failure(400, 'Unexpected Friends fields.')
+    const read = actor(res).friendsDiscoveryStatus
+    if (!read) throw new Failure(503, 'Friends discovery setup is not available yet.')
+    res.json(parsed(FriendsDiscoveryStatusSchema, unwrap(await read())))
   })
   router.get('/scoring-settings', async (req, res) => {
     if (req.body !== undefined && !z.object({}).strict().safeParse(req.body).success) throw new Failure(400, 'Unexpected Friends fields.')
@@ -74,8 +81,9 @@ export function createFriendsDiscoveryRouter(scoring: FriendsScoringTransport | 
   }
   router.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     void _next
-    const failure = error instanceof Failure ? error : new Failure(503, 'Friends discovery could not be confirmed. Reload before retrying.')
-    res.status(failure.status).json({ error: failure.message })
+    const failure = error instanceof Failure ? error : error instanceof FriendsEligibilityError
+      ? new Failure(409, error.message, 'friends_setup_required') : new Failure(503, 'Friends discovery could not be confirmed. Reload before retrying.')
+    res.status(failure.status).json({ error: failure.message, ...(failure.code ? { code: failure.code } : {}) })
   })
   return router
 }

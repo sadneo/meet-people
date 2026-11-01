@@ -1,12 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { matchingClient } from "./matching-client";
+import { respondToConnectionRequest } from "./request-actions";
 import { connections } from "../features/connections/client";
 import { matchmakingClient } from "../features/matchmaking/client";
-import { useAction, useLoad } from "./hooks";
+import { useAction } from "./hooks";
+import { useCachedLoad } from '../data/useCachedLoad';
 import {
   ActionButton,
-  Avatar,
+  PersonPhoto,
   Empty,
   ErrorMessage,
   ResourceState,
@@ -23,9 +24,10 @@ export function Activity() {
       () => matchmakingClient(current.session.access_token),
       [current.session.access_token],
     );
-  const people = useLoad(useCallback((signal) => connections.list(signal), [])),
-    updates = useLoad(useCallback(() => client.notifications(), [client])),
+  const people = useCachedLoad(useCallback((signal) => connections.list(signal), []), ['connections'], 0),
+    updates = useCachedLoad(useCallback(() => client.notifications(), [client]), ['notifications'], 0),
     action = useAction();
+  const [uncertain, setUncertain] = useState(false);
   return (
     <div className={`activity-page ${matches ? 'plans-page' : ''}`}>
       {matches && <><Link className="account-back" to="/matchmaking"><Icon name="Back"/>Discover</Link><div className="eyebrow">Matches &amp; Plans</div></>}
@@ -33,10 +35,16 @@ export function Activity() {
         <h2>{matches ? 'From a hello to a “see you there.”' : 'Your little updates.'}</h2>
         <ActionButton
           secondary
-          disabled={people.loading || updates.loading}
+          disabled={action.busy || people.loading || updates.loading}
           onClick={() => {
-            people.reload();
-            updates.reload();
+            void action.run(async () => {
+              if (uncertain) {
+                await connections.list();
+                setUncertain(false);
+              }
+              people.reload();
+              updates.reload();
+            });
           }}
         >
           Refresh
@@ -44,7 +52,8 @@ export function Activity() {
       </div>
       {matches && <div className="tabs" role="group" aria-label="Matches and plans view">{['Upcoming', 'Connections', 'Past'].map(name => <button key={name} type="button" aria-pressed={tab === name} className={tab === name ? 'active' : ''} onClick={() => setTab(name)}>{name}</button>)}</div>}
       <ErrorMessage>{action.error}</ErrorMessage>
-      <section className="card" id="requests" hidden={matches && tab !== 'Connections'}>
+      {uncertain && !action.busy && <p role="status">The request response is unconfirmed. Refresh before another change.</p>}
+            <section className="card" id="requests" hidden={matches && tab !== 'Connections'}>
         <h3>Connection requests</h3>
         <ResourceState
           loading={people.loading}
@@ -57,16 +66,19 @@ export function Activity() {
         {people.value?.incoming.map((person) => (
           <div className="row between item" key={person.id}>
             <div className="row">
-              <Avatar name={person.display_name} url={person.avatar_url} />
+              <PersonPhoto id={person.id} name={person.display_name} fallback={person.avatar_url} />
               <b>{person.display_name}</b>
             </div>
             <div className="row wrap">
               <ActionButton
-                disabled={action.busy}
+                disabled={action.busy || uncertain || people.refreshing}
                 onClick={() => {
                   void action.run(async () => {
                     try {
-                      await matchingClient(current.session.access_token).acceptFriend(person.id);
+                      setUncertain(true);
+                      await respondToConnectionRequest(current.session.access_token, person, true);
+                      setUncertain(false);
+                      window.dispatchEvent(new Event("pebble:matching-changed"));
                     } finally {
                       people.reload();
                       window.dispatchEvent(
@@ -80,13 +92,17 @@ export function Activity() {
               </ActionButton>
               <ActionButton
                 secondary
-                disabled={action.busy}
+                disabled={action.busy || uncertain || people.refreshing}
                 onClick={() => {
                   void action.run(async () => {
                     try {
-                      await connections.remove(person.id);
+                      setUncertain(true);
+                      await respondToConnectionRequest(current.session.access_token, person, false);
+                      setUncertain(false);
+                      window.dispatchEvent(new Event("pebble:matching-changed"));
                     } finally {
                       people.reload();
+                      window.dispatchEvent(new Event("pebble:activity-changed"));
                     }
                   });
                 }}
@@ -107,7 +123,7 @@ export function Activity() {
         {people.value?.connected.map((person) => (
           <div className="row between item" key={person.id}>
             <div className="row">
-              <Avatar name={person.display_name} url={person.avatar_url} />
+              <PersonPhoto id={person.id} name={person.display_name} fallback={person.avatar_url} />
               <b>{person.display_name}</b>
             </div>
             {person.conversationId && (

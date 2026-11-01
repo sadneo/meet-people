@@ -2,6 +2,11 @@ import { z } from 'zod'
 import { MatchingProfileSchema } from './matchmaking.js'
 import { discoveryDetailFields } from './discovery-details.js'
 const id = z.uuid().transform(value => value.toLowerCase())
+export const FriendsDiscoveryStatusSchema = z.object({
+  available: z.literal(true),
+  eligible: z.boolean(),
+  reason: z.enum(['profile', 'age', 'discovery_off', 'preferences', 'location']).nullable(),
+}).strict().refine(value => value.eligible === (value.reason === null))
 
 export const FriendsBatchRequestSchema = z.object({
   excludedIds: z.array(id).max(200).refine(values => new Set(values).size === values.length, 'Choose distinct IDs.'),

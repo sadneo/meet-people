@@ -213,34 +213,38 @@ where m.title like 'Golden hour photo walk%'
 -- ============================================
 -- ACCEPTED CONNECTIONS
 -- ============================================
-insert into connections (user_a, user_b, status, initiated_by, responded_at) values
-  ('11111111-1111-1111-1111-111111111111',
-   '22222222-2222-2222-2222-222222222222',
-   'accepted',
-   '11111111-1111-1111-1111-111111111111', now()),
-  ('33333333-3333-3333-3333-333333333333',
-   '88888888-8888-8888-8888-888888888888',
-   'accepted',
-   '33333333-3333-3333-3333-333333333333', now()),
-  ('33333333-3333-3333-3333-333333333333',
-   'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-   'accepted',
-   'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', now()),
-  ('66666666-6666-6666-6666-666666666666',
-   'cccccccc-cccc-cccc-cccc-cccccccccccc',
-   'accepted',
-   '66666666-6666-6666-6666-666666666666', now());
+-- Exercise actor-bound requests and recipient acceptance, as required by the
+-- safety guards. Accepted inserts would skip the real connection lifecycle.
+do $$ declare pair record; recipient uuid; begin
+  for pair in select * from (values
+    ('11111111-1111-1111-1111-111111111111'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, '11111111-1111-1111-1111-111111111111'::uuid),
+    ('33333333-3333-3333-3333-333333333333'::uuid, '88888888-8888-8888-8888-888888888888'::uuid, '33333333-3333-3333-3333-333333333333'::uuid),
+    ('33333333-3333-3333-3333-333333333333'::uuid, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid),
+    ('66666666-6666-6666-6666-666666666666'::uuid, 'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid, '66666666-6666-6666-6666-666666666666'::uuid)
+  ) as pairs(user_a,user_b,initiator) loop
+    perform set_config('request.jwt.claim.sub',pair.initiator::text,true);
+    insert into public.connections(user_a,user_b,status,initiated_by)
+      values(pair.user_a,pair.user_b,'pending',pair.initiator);
+    recipient := case when pair.initiator=pair.user_a then pair.user_b else pair.user_a end;
+    perform set_config('request.jwt.claim.sub',recipient::text,true);
+    update public.connections set status='accepted',responded_at=now()
+      where user_a=pair.user_a and user_b=pair.user_b;
+  end loop;
+  perform set_config('request.jwt.claim.sub','',true);
+end $$;
 
 -- ============================================
 -- PENDING REQUEST
 -- ============================================
-insert into connections (user_a, user_b, status, initiated_by)
-values (
-  '11111111-1111-1111-1111-111111111111',
-  '55555555-5555-5555-5555-555555555555',
-  'pending',
-  '55555555-5555-5555-5555-555555555555'
-);
+do $$ begin
+  perform set_config('request.jwt.claim.sub','55555555-5555-5555-5555-555555555555',true);
+  insert into connections (user_a, user_b, status, initiated_by) values (
+    '11111111-1111-1111-1111-111111111111',
+    '55555555-5555-5555-5555-555555555555',
+    'pending', '55555555-5555-5555-5555-555555555555'
+  );
+  perform set_config('request.jwt.claim.sub','',true);
+end $$;
 
 -- ============================================
 -- MESSAGES

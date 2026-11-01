@@ -9,10 +9,12 @@ for(const {status,code} of [{status:429,code:'request_limit'},{status:429,code:u
   writes++
   await route.fulfill({status,json:{code,error:status===429?'Daily request limit reached (10 per 24 hours). Try again later.':'Your Friends action may already be saved. Check Connections before retrying.'}})
  })
+ if(code==='request_limit')await page.route('**/api/connections/request-allowance',route=>route.fulfill({json:writes?{limit:10,used:10,remaining:0,availableAt:new Date(Date.now()+3600000).toISOString()}:{limit:10,used:9,remaining:1,availableAt:null}}))
  await page.goto('/matchmaking')
  await page.getByRole('button',{name:'Connect',exact:true}).click()
  if(code==='request_limit'){
-  await expect(page.getByText('Taylor: request not sent. Daily request limit reached (10 per 24 hours). Try again later.',{exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'You’ve reached today’s request limit.'})).toBeVisible()
+  await expect(page.getByRole('button',{name:'Connect',exact:true})).toHaveCount(0)
   await expect(page.getByRole('link',{name:'Check Connections',exact:true})).toHaveCount(0)
  }else{
   await expect(page.getByText(/Taylor: request unconfirmed/)).toBeVisible()

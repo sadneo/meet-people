@@ -2,11 +2,13 @@
 // and are never logged or saved. Uses genuine SDK Auth and actual HTTP endpoints.
 import assert from 'node:assert/strict'
 import { chromium,expect } from '@playwright/test'
-let raw='';for await(const chunk of process.stdin){raw+=chunk;if(raw.length>8192)throw new Error('Runtime input too large')}
-let input;try{input=JSON.parse(raw)}catch{throw new Error('Runtime input invalid')}
+async function readInput(){
+ let raw='';for await(const chunk of process.stdin){raw+=chunk;if(raw.length>8192)throw new Error('Runtime input too large')}
+ try{return JSON.parse(raw)}catch{throw new Error('Runtime input invalid')}
+}
+const input=await readInput()
 assert.equal(typeof input.email,'string');assert.equal(typeof input.password,'string')
 assert.deepEqual(input.dating,[{gender:'Man',sexuality:'Straight',intent:'Long-term relationship',style:'Monogamy'},{gender:'Woman',sexuality:'Straight',intent:'Long-term relationship',style:'Monogamy'}],'Explicit approved demo choices required')
-raw=''
 const browser=await chromium.launch({headless:true}),participants=[],queued=new Set()
 async function api(page,path,method='GET',body){
  const result=await page.evaluate(async({path,method,body})=>{

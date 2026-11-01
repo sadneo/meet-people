@@ -13,6 +13,19 @@ function request(kind: 'connections' | 'conversations', method: string, path: st
   })
 }
 const configured = (actor: object = {}) => ({ verify: async () => ({ id: a }), actor: () => actor }) as unknown as UserContextTransport
+it('reads only the authenticated actor’s rolling request allowance and validates its consistency', async () => {
+  const value = { limit: 10, used: 10, remaining: 0, availableAt: '2026-10-31T15:00:00Z' }
+  const call = vi.fn(async () => ({ data: value, error: null }))
+  const transport = configured({ connectionRequestAllowance: call })
+  expect(await request('connections', 'GET', '/request-allowance', undefined, transport)).toEqual({ status: 200, data: value, cache: 'no-store' })
+  expect(call).toHaveBeenCalledExactlyOnceWith()
+  expect((await request('connections', 'GET', `/request-allowance?actor=${b}`, undefined, transport)).status).toBe(400)
+  expect((await request('connections', 'GET', '/request-allowance', { actorId: b }, transport)).status).toBe(400)
+  expect(call).toHaveBeenCalledOnce()
+  expect((await request('connections', 'GET', '/request-allowance', undefined, transport, '')).status).toBe(401)
+  call.mockResolvedValueOnce({ data: { ...value, remaining: 1 }, error: null })
+  expect((await request('connections', 'GET', '/request-allowance', undefined, transport)).status).toBe(502)
+})
 it('requires verified identity and real capabilities; event group operations remain unavailable', async () => {
   expect((await request('connections', 'GET', '/', undefined, null)).status).toBe(503)
   expect((await request('connections', 'GET', '/', undefined, configured(), '')).status).toBe(401)
@@ -35,6 +48,13 @@ it('maps admission denial, uncertainty and malformed responses without inventing
     expect((await request('connections', 'POST', `/${b}`, {}, configured({ socialConnection: async () => ({ data: null, error }) }))).status).toBe(status)
   }
   expect((await request('connections', 'POST', `/${b}`, {}, configured({ socialConnection: async () => ({ data: {}, error: null }) }))).status).toBe(502)
+})
+it.each([
+  ['MSG01', 403], ['MSG03', 403], ['MSG05', 403], ['CON02', 403],
+  ['MSG08', 400], ['MSG09', 400], ['MSG10', 409], ['MSG11', 429], ['CON04', 429],
+])('maps native UUID messaging error %s to HTTP %i', async (code, status) => {
+  const transport = configured({ socialHistory: async () => ({ data: null, error: { code } }) })
+  expect((await request('conversations', 'GET', `/${b}/messages`, undefined, transport)).status).toBe(status)
 })
 it('uses the actual SDK with only fixed RPC names and the actor JWT/public key', async () => {
   const calls: { name: string; body: unknown }[] = []

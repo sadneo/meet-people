@@ -35,7 +35,7 @@ export function profileLanguageKey(value: string): string {
   }).join('')
 }
 // /u treats a valid surrogate pair as one scalar; only unpaired surrogates match.
-const validText = (value: string) => !/[\u0000\uD800-\uDFFF]/u.test(value)
+const validText = (value: string) => !value.includes('\0') && !/[\uD800-\uDFFF]/u.test(value)
 const text = (max: number) => z.string().refine(validText, 'Use valid Unicode text without NUL.')
   .refine(value => Array.from(value).length <= max, `Use at most ${max} characters.`)
 const language = text(60).refine(value => profileLanguageKey(value).length > 0, 'Enter a language.')

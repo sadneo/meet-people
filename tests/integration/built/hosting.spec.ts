@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { EventsResponseSchema } from '../../../shared/events'
 
 test('production shell supports deep-link refresh and same-origin API access', async ({ page, request }) => {
   const errors: string[] = []
@@ -15,6 +16,14 @@ test('production shell supports deep-link refresh and same-origin API access', a
   const health = await request.get('/api/health')
   expect(await health.json()).toEqual({ status: 'ok' })
   expect(health.headers()['cache-control']).toContain('no-store')
+  const events = await request.get('/api/events?limit=1')
+  expect(events.status()).toBe(200)
+  const listing = EventsResponseSchema.parse(await events.json())
+  if (listing.events[0]) {
+    const detail = await request.get(`/api/events/${listing.events[0].id}`)
+    expect(detail.status()).toBe(200)
+    expect((await detail.json()).id).toBe(listing.events[0].id)
+  }
   expect((await request.get('/api/matchmaking/account')).status()).toBe(401)
   expect(errors).toEqual([])
 })

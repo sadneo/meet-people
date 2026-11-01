@@ -61,13 +61,13 @@ it('retains an interrupted save gate across repeated same-owner token refreshes 
   expect(hook.result.current.snapshot?.profile.heightInches).toBe(60)
 })
 it.each(['token', 'owner', 'busy'])('fences retained saves in a %s render before passive cleanup', async change => {
-  let retained: ReturnType<typeof useDatingPreferences>['save'] | undefined, pending: Promise<unknown> | undefined
+  let pending: Promise<unknown> | undefined
   const hook = renderHook(({ owner, token, busy, invoke }) => {
     const resource = useDatingPreferences(owner, token, busy)
     useLayoutEffect(() => { if (invoke) pending = retained!(write()) }, [invoke])
     return resource
   }, { initialProps: { owner: 'first', token: 'first-token', busy: false, invoke: false } })
-  await waitFor(() => expect(hook.result.current.canWrite).toBe(true)); retained = hook.result.current.save
+  await waitFor(() => expect(hook.result.current.canWrite).toBe(true)); const retained = hook.result.current.save
   hook.rerender({ owner: change === 'owner' ? 'second' : 'first', token: change === 'token' ? 'new-token' : 'first-token', busy: change === 'busy', invoke: true })
   await act(async () => { expect(await pending).toBeNull() })
   expect(fixture.puts()).toHaveLength(0)

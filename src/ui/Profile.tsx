@@ -2,17 +2,15 @@ import { canShowDating, meetsMinimumAge } from './age-visibility'
 import './parity-account.css'
 import { MatchingSchedule } from './MatchingSchedule';
 import { DatingPreferencesPanel } from './Preferences';
-import { useId, useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { Link, Navigate, useSearchParams } from "react-router";
 import {
-  completedAccountChapters,
   SaveAccountSchema,
   type Account,
 } from "../../shared/account";
 import { AvailabilitySchema, type MatchingProfile } from "../../shared/matchmaking";
 import type { ProfileDetails } from "../../shared/profile-details";
 import { ProfileFactsSchema } from '../../shared/profile-details';
-import { safeReturnTo } from "../auth/returnTo";
 import { globalInterestChoices } from "../features/account/global-interests";
 import { customInterestLimit, interestAdditionProblem, interestCounts, interestLimit } from '../../shared/interests';
 import { useProfileDetails } from "../features/account/useProfileDetails";
@@ -25,7 +23,6 @@ import {
   ActionButton,
   Avatar,
   Icon,
-  Brand,
   ErrorMessage,
   ResourceState,
   Modal,
@@ -57,7 +54,7 @@ export function Interests({
   const [custom, setCustom] = useState("");
   return (
     <fieldset>
-      <legend className={compact ? 'sr-only' : undefined}>Interests · choose at least three from the provided list</legend>
+      <legend className={compact ? 'sr-only' : undefined}>Interests · choose at least one from the list or your own</legend>
       <div className="interest-chips">
         {[...new Set([...suggestions, ...value])].map((label) => (
           <button
@@ -230,308 +227,6 @@ export function Availability({
     </fieldset>
   );
 }
-export function AccountForm({
-  initial,
-  onboarding = false,
-}: {
-  initial: Account;
-  onboarding?: boolean;
-}) {
-  const current = useCurrent(),
-    navigate = useNavigate(),
-    [search] = useSearchParams();
-  const [source, setSource] = useState(initial),
-    [draft, setDraft] = useState<Account>(() => structuredClone(initial)),
-    [validation, setValidation] = useState(""),
-    [saved, setSaved] = useState(false);
-  // Failed writes retain the same source and the user's draft. Confirmed
-  // saves or explicit reloads replace it with the authoritative account.
-  if (source !== initial) {
-    setSource(initial);
-    setDraft(structuredClone(initial));
-    setValidation("");
-  }
-  const profile = draft.profile ?? {
-    username: "",
-    display_name: "",
-    bio: null,
-    birthdate: null,
-    location_city: null,
-    avatar_url: null,
-    interests: [],
-    availability: [],
-  };
-  const chapter = onboarding ? completedAccountChapters(initial).length : -1;
-  const identity = chapter === 0 || chapter === -1,
-    interests = chapter === 1 || chapter === -1,
-    intent = chapter === 2 || chapter === -1,
-    preferences = chapter >= 3 || chapter === -1;
-  const update = (value: Partial<MatchingProfile>) => {
-    setSaved(false);
-    setDraft({ ...draft, profile: { ...profile, ...value } });
-  };
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setValidation("");
-    setSaved(false);
-    const value = {
-      ...draft,
-      profile,
-      completed: onboarding
-        ? [0, 1, 2, 3].slice(0, Math.min(4, chapter + 1))
-        : initial.completed,
-    };
-    const parsed = SaveAccountSchema.safeParse(value);
-    if (!parsed.success) {
-      setValidation(
-        parsed.error.issues[0]?.message ?? "Complete the required fields.",
-      );
-      return;
-    }
-    if (
-      preferences &&
-      (!profile.birthdate ||
-        profile.birthdate > new Date().toISOString().slice(0, 10))
-    ) {
-      setValidation("Enter a valid birthdate in the past.");
-      return;
-    }
-    if (preferences && !meetsMinimumAge(profile.birthdate)) {
-      setValidation("You must be at least 13 to use Pebble.");
-      return;
-    }
-    if (await current.save(parsed.data)) {
-      if (onboarding && chapter >= 3)
-        navigate(safeReturnTo(search.get("returnTo")) ?? "/", {
-          replace: true,
-        });
-      else setSaved(true);
-    }
-  }
-  return (
-    <form className="account-form" onSubmit={(event) => void submit(event)}>
-      <fieldset disabled={current.busy || current.loading}>
-        {identity && (
-          <>
-            <label>
-              Username
-              <input
-                autoComplete="username"
-                value={profile.username}
-                maxLength={80}
-                required
-                onChange={(event) => update({ username: event.target.value })}
-              />
-            </label>
-            <label>
-              Display name
-              <input
-                autoComplete="name"
-                required
-                maxLength={120}
-                value={profile.display_name}
-                onChange={(event) =>
-                  update({ display_name: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Bio
-              <textarea
-                maxLength={1000}
-                value={profile.bio ?? ""}
-                onChange={(event) =>
-                  update({ bio: event.target.value || null })
-                }
-              />
-            </label>
-          </>
-        )}
-        {interests && (
-          <Interests
-            value={profile.interests}
-            change={(interests) => update({ interests })}
-          />
-        )}
-        {intent && (
-          <fieldset>
-            <legend>What would you like to do?</legend>
-            {[
-              ...new Set([
-                "Make friends",
-                "Find study buddies",
-                "Meet activity partners",
-                "Date",
-                ...draft.preferences.intents,
-              ]),
-            ].map((label) => (
-              <label className="check-row" key={label}>
-                <input
-                  type="checkbox"
-                  checked={draft.preferences.intents.includes(label)}
-                  onChange={(event) =>
-                    setDraft({
-                      ...draft,
-                      profile,
-                      preferences: {
-                        ...draft.preferences,
-                        intents: event.target.checked
-                          ? [...draft.preferences.intents, label]
-                          : draft.preferences.intents.filter(
-                              (item) => item !== label,
-                            ),
-                      },
-                    })
-                  }
-                />
-                {label}
-              </label>
-            ))}
-          </fieldset>
-        )}
-        {preferences && (
-          <>
-            <div className="formgrid">
-              <label>
-                Birthdate · private
-                <input
-                  type="date"
-                  required
-                  max={new Date().toISOString().slice(0, 10)}
-                  value={profile.birthdate ?? ""}
-                  onChange={(event) =>
-                    update({ birthdate: event.target.value || null })
-                  }
-                />
-              </label>
-              <label>
-                City or campus area
-                <input
-                  required
-                  maxLength={120}
-                  value={profile.location_city ?? ""}
-                  onChange={(event) =>
-                    update({ location_city: event.target.value || null })
-                  }
-                />
-              </label>
-            </div>
-            <div className="formgrid">
-              <label>
-                Distance
-                <select
-                  required
-                  value={draft.preferences.distance}
-                  onChange={(event) =>
-                    setDraft({
-                      ...draft,
-                      profile,
-                      preferences: {
-                        ...draft.preferences,
-                        distance: event.target
-                          .value as Account["preferences"]["distance"],
-                      },
-                    })
-                  }
-                >
-                  <option value="">Choose a distance</option>
-                  {["Nearby", "5 miles", "10 miles"].map((label) => (
-                    <option key={label}>{label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Group preference
-                <select
-                  required
-                  value={draft.preferences.group}
-                  onChange={(event) =>
-                    setDraft({
-                      ...draft,
-                      profile,
-                      preferences: {
-                        ...draft.preferences,
-                        group: event.target
-                          .value as Account["preferences"]["group"],
-                      },
-                    })
-                  }
-                >
-                  <option value="">Choose a group size</option>
-                  {["One-on-one", "Small groups", "Either"].map((label) => (
-                    <option key={label}>{label}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <Availability
-              value={profile.availability}
-              change={(availability) => update({ availability })}
-            />
-          </>
-        )}
-      </fieldset>
-      <ErrorMessage>{validation || current.error}</ErrorMessage>
-      {current.error && (
-        <ActionButton secondary onClick={current.reload}>
-          Reload account and replace draft before saving again
-        </ActionButton>
-      )}
-      {saved && <p role="status">Profile saved.</p>}
-      <button
-        className="btn"
-        disabled={current.busy || !current.available || current.loading}
-      >
-        {current.busy
-          ? "Saving…"
-          : onboarding
-            ? chapter >= 3
-              ? "Finish setup"
-              : "Continue"
-            : "Save profile"}
-      </button>
-    </form>
-  );
-}
-export function Onboarding() {
-  const current = useCurrent(),
-    step = completedAccountChapters(current.account!).length;
-  if (step >= 4)
-    return (
-      <main className="auth-screen">
-        <Brand />
-        <p>Your profile is ready.</p>
-        <Link className="btn" to="/">
-          Enter Pebble
-        </Link>
-      </main>
-    );
-  return (
-    <main className="auth-screen onboarding">
-      <Brand />
-      <p className="muted">Step {step + 1} of 4</p>
-      <h1>
-        {
-          [
-            "Start with you.",
-            "Your kind of things.",
-            "What brings you here?",
-            "Make room for a hello.",
-          ][step]
-        }
-      </h1>
-      <AccountForm key={step} initial={current.account!} onboarding />
-      <SignOut />
-    </main>
-  );
-}
-function SignOut() {
-  return (
-    <Link className="text-link" to="/logout">
-      Sign out
-    </Link>
-  );
-}
 export function PhotoEditor({ compact = false }: { compact?: boolean }) {
   const photo = useProfilePhoto(),
     current = useCurrent(),
@@ -585,7 +280,7 @@ export function PhotoEditor({ compact = false }: { compact?: boolean }) {
           type="file"
           id={inputId}
           accept="image/jpeg,image/png,image/webp"
-          disabled={action.busy}
+          disabled={action.busy || photo.loading || !!photo.error || reconcile}
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
         />
       </label>
@@ -609,6 +304,7 @@ export function PhotoEditor({ compact = false }: { compact?: boolean }) {
           disabled={
             !photo.snapshot?.hasPhoto ||
             photo.loading ||
+            !!photo.error ||
             action.busy ||
             reconcile
           }
@@ -621,8 +317,7 @@ export function PhotoEditor({ compact = false }: { compact?: boolean }) {
             secondary
             disabled={action.busy}
             onClick={() => {
-              photo.reload();
-              setReconcile(false);
+              void photo.reload().then(saved => { if (saved) setReconcile(false); });
             }}
           >
             Reload photo before retrying
@@ -709,6 +404,14 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
   done: () => void;
 }) {
   const current = useCurrent(), formId = useId();
+  const photo = useProfilePhoto(), photoInputId = useId();
+  const [photoDraft, setPhotoDraft] = useState<{ file: File | null; revision: number; preview: string | null } | null>(null);
+  const [photoReconcile, setPhotoReconcile] = useState(false);
+  const saveLock = useRef(false);
+  useEffect(() => {
+    const url = photoDraft?.preview;
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [photoDraft]);
   const [source, setSource] = useState(initial.profile);
   const [profile, setProfile] = useState(() => structuredClone(initial.profile!));
   const [facts, setFacts] = useState(() => structuredClone(initialFacts.facts));
@@ -720,10 +423,24 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
   }
   const update = (value: Partial<MatchingProfile>) => setProfile(before => ({ ...before, ...value }));
   const busy = saving || current.busy || factsResource.busy;
+  function stagePhoto(file: File | null) {
+    if (busy || photo.loading || photo.error || !photo.snapshot || photoReconcile) return;
+    if (file && (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024 || file.size === 0)) {
+      setError('Choose a JPEG, PNG or WebP image up to 5 MB.');
+      return;
+    }
+    setError('');
+    setPhotoDraft({ file, revision: photo.snapshot.revision, preview: file ? URL.createObjectURL(file) : null });
+  }
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || saveLock.current) return;
     setError('');
+    if (photoReconcile || photoDraft && (!photo.client || photo.loading || photo.error || !photo.snapshot || photoDraft.revision !== photo.snapshot.revision)) {
+      setPhotoReconcile(true);
+      setError('Reload the saved photo before saving again. Other profile drafts are still here.');
+      return;
+    }
     const parsed = SaveAccountSchema.safeParse({ ...current.account!, profile });
     const optional = ProfileFactsSchema.safeParse(facts);
     if (!parsed.success || !optional.success) {
@@ -739,19 +456,48 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
       setError('Reload optional details before saving again. Your draft is still here.');
       return;
     }
+    saveLock.current = true;
     setSaving(true);
+    let savedDetails = false;
+    let photoAttempted = false;
     try {
       if (JSON.stringify(profile) !== JSON.stringify(current.account?.profile) && !await current.save(parsed.data)) return;
       if (factsChanged && !await factsResource.save({ expectedRevision: initialFacts.revision, facts: optional.data })) {
-        setError('Your main profile is saved, but optional details could not be confirmed. Reload those details before trying again.');
+        setError('Your main profile is saved, but optional details could not be confirmed. The photo has not been changed. Reload optional details before trying again.');
         return;
       }
+      savedDetails = true;
+      if (photoDraft) {
+        setPhotoReconcile(true);
+        photoAttempted = true;
+        await photo.client!.save(photoDraft.file, photoDraft.revision, crypto.randomUUID());
+        setPhotoDraft(null);
+        window.dispatchEvent(new CustomEvent(photoChangedEvent, { detail: current.session.user.id }));
+        if (!await photo.reload()) {
+          setError('Profile details and photo are saved, but the photo preview could not be refreshed. Reload the saved photo before continuing.');
+          return;
+        }
+        setPhotoReconcile(false);
+      }
       done();
-    } finally { setSaving(false); }
+    } catch (failure) {
+      setError(photoAttempted
+        ? `${savedDetails ? 'Profile details are saved. ' : ''}The photo change could not be confirmed and may already be saved. Reload the saved photo before retrying. ${failure instanceof Error ? failure.message : ''}`
+        : 'Profile details could not be confirmed. Reload account and optional details before retrying. The photo has not been changed.');
+    } finally { saveLock.current = false; setSaving(false); }
   }
   return <div className="profile-editor">
     <div className="account-edit-fields">
-      {section === 'basics' && <PhotoEditor compact/>}
+      {section === 'basics' && <section className="profile-photo-editor">
+        <div className="profile-edit-photo">
+          <Avatar name={profile.display_name} url={photoDraft ? photoDraft.preview : photo.url} large/>
+          <div><label className="account-edit-text" htmlFor={photoInputId}>Edit Photo</label>{(photoDraft ? !!photoDraft.file : photo.snapshot?.hasPhoto) && <button className="account-edit-text is-danger" aria-label="Remove photo" type="button" disabled={busy || photo.loading || !!photo.error || photoReconcile} onClick={() => stagePhoto(null)}>Remove</button>}</div>
+        </div>
+        <ResourceState loading={photo.loading} error={photo.error} reload={() => { void photo.reload(); }}/>
+        <label className="sr-only">Choose a photo<input id={photoInputId} type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || photo.loading || !!photo.error || !photo.snapshot || photoReconcile} onChange={event => { const file = event.target.files?.[0]; if (file) stagePhoto(file); event.target.value = ''; }}/></label>
+      </section>}
+      {photoDraft && <p className="account-note">Photo {photoDraft.file ? 'selection' : 'removal'} will be saved with Save changes.</p>}
+      {photoReconcile && <ActionButton secondary disabled={busy || photo.loading} onClick={() => { void photo.reload().then(saved => { if (saved) { setPhotoDraft(null); setPhotoReconcile(false); setError('Saved photo reloaded. Any unsaved photo selection was discarded.'); } }); }}>Reload saved photo and discard photo draft</ActionButton>}
       <form id={formId} className="profile-draft" onSubmit={event => void save(event)}>
         <fieldset disabled={busy || !current.available}>
           <div hidden={section !== 'basics'}>

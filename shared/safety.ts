@@ -10,7 +10,7 @@ export const OwnerBlocklistSchema = z.object({ enforcement, blocks: z.array(z.ob
   .refine(value => new Set(value.blocks.map(block => block.targetId)).size === value.blocks.length, 'Duplicate block entries.')
 export const SafetyReportReasonSchema = z.enum(['Harassment', 'Inappropriate content', 'Impersonation', 'Safety concern', 'Other'])
 export const SubmitSafetyReportSchema = z.object({ requestId: SafetyIdSchema, targetId: SafetyIdSchema, reason: SafetyReportReasonSchema,
-  context: z.string().refine(value => !/[\u0000\uD800-\uDFFF]/u.test(value) && Array.from(value).length <= 1000, 'Use at most 1000 valid Unicode characters without NUL.') }).strict()
+  context: z.string().refine(value => !value.includes('\0') && !/[\uD800-\uDFFF]/u.test(value) && Array.from(value).length <= 1000, 'Use at most 1000 valid Unicode characters without NUL.') }).strict()
 export const SafetyReportReceiptSchema = z.object({ id: SafetyIdSchema, requestId: SafetyIdSchema, targetId: SafetyIdSchema, receivedAt: timestamp, status: z.literal('received') }).strict()
 export const SafetyErrorSchema = z.object({ code: z.enum(['auth', 'invalid', 'conflict', 'not_found', 'rate_limited', 'unavailable', 'provider', 'malformed']), error: z.string().max(160) }).strict()
 export type OwnerBlockState = z.infer<typeof OwnerBlockStateSchema>

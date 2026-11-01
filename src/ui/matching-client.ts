@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { apiUrl } from '../platform/native'
-import { FriendsBatchRequestSchema, FriendsBatchResponseSchema } from '../../shared/friends-discovery'
+import { FriendsBatchRequestSchema, FriendsBatchResponseSchema, FriendsDiscoveryStatusSchema } from '../../shared/friends-discovery'
 import { DatingBatchRequestSchema, DatingBatchResponseSchema } from '../../shared/dating-live'
 import { ActiveStatusSchema, ActiveGroupsSchema, ActiveGroupSchema, ActiveHistorySchema, type ActiveCommand } from '../../shared/active-friends'
 import { MatchingScoringSettingsResponseSchema, SaveMatchingScoringSettingsSchema, type SaveMatchingScoringSettings } from '../../shared/matching-scoring'
@@ -30,6 +30,7 @@ export function matchingClient(token: string) {
     } finally { clearTimeout(timer); options.signal?.removeEventListener('abort', abort) }
   }
   return {
+    friendsStatus: (signal?: AbortSignal) => request('/friends/status', FriendsDiscoveryStatusSchema, { signal }),
     friends: (excludedIds: string[], signal?: AbortSignal) => request('/friends/recommendations', FriendsBatchResponseSchema, { body: FriendsBatchRequestSchema.parse({ excludedIds, limit: 10 }), signal }),
     dating: (excludedIds: string[], signal?: AbortSignal) => request('/dating/recommendations', DatingBatchResponseSchema, { body: DatingBatchRequestSchema.parse({ excludedIds, limit: 10 }), signal }),
     connect: (mode: 'Friends' | 'Dating', target: string) => request(mode === 'Friends' ? `/friends/requests/${encodeURIComponent(target)}` : `/dating/requests/${encodeURIComponent(target)}`, ConnectionStateSchema, { body: {} }),
