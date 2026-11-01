@@ -1,0 +1,17 @@
+file,bytes,sha256,notes
+source/dist/assets/alex.jpg,152771,2b8e05c040958435e268ce7d182c0f65249ae21c1bb3837d4b61dcf63285c83c,Illustrative stock photo; fictional sample profile/event; confirm production license/provenance
+source/dist/assets/event-music.jpg,53369,531968fbee007f6ad38936bc5668f1c6552c57912eb9e485f920a06c03c65427,Illustrative stock photo; fictional sample profile/event; confirm production license/provenance
+source/dist/assets/event-picnic.jpg,336700,3a84faaa030e0a64f6b23877bfb85bb9a5874b9311697bc69e6f85cd542e1b6e,Illustrative stock photo; fictional sample profile/event; confirm production license/provenance
+source/dist/assets/event-pottery.jpg,271079,34ab176fff3fccbaddac722049caff3deedc464bbedba88738948bc4a4345426,Illustrative stock photo; fictional sample profile/event; confirm production license/provenance
+source/dist/assets/garden-sprites-manifest.json,3281,7130fd88fc3098770b23ce435dcf75f5b5a9295a2367af06f9d4b0ac8450ecca,Existing demo artwork/branding or sprite metadata; confirm rights before production
+source/dist/assets/garden-sprites-v1.png,962865,b9c0248588feafa65087b5e971344fe3fcb560f23200c8a152fe6d9ad80838ab,Existing demo artwork/branding or sprite metadata; confirm rights before production
+source/dist/assets/garden.png,218931,c93ba4dc45bb2909d33e77973deb3992664f0b4c68aba7e349b0f8c009f7e145,Existing demo artwork/branding or sprite metadata; confirm rights before production
+source/dist/assets/jordan.jpg,221933,8ae2f03eb9bde2cfe39107889f5f51d095ddad4d9fecadbe237f11b968fa3b4c,Illustrative stock photo; fictional sample profile/event; confirm production license/provenance
+source/dist/assets/maya.jpg,74746,d92d4575ef81a925a732f01c1fa58e7d2b033f405a7f354306febb11194a6d41,Illustrative stock photo; fictional sample profile/event; confirm production license/provenance
+source/dist/assets/pebble-wordmark.png,4652,f2aadcd01a4dc73f1c8dab11c7e609471c06cf344adf51f3f0592b0ba7d0559e,Existing demo artwork/branding or sprite metadata; confirm rights before production
+source/dist/assets/pebble-wordmark.svg,1701,915fd4fa36c602bc34b2f426d6b8002098389500fdd29adc3a1e3bbd47cc552a,Existing demo artwork/branding or sprite metadata; confirm rights before production
+source/dist/assets/pebble.png,91255,c7a05651a2b02754743b632298d067e1bb7cc4090f0718f3584f08fac1d37b1c,Existing demo artwork/branding or sprite metadata; confirm rights before production
+source/dist/assets/sam.jpg,123890,dd974d5a186b2fafbb470cf54e8f3e11c2df01195dd9ff1ee3c5280bd3e69aae,Illustrative stock photo; fictional sample profile/event; confirm production license/provenance
+source/dist/assets/sky-island-terrain.png,1011447,309e2283ea9c95266ff26d169ccf31cf77477de2cfd45f3fe705b0334e2a1401,Existing demo artwork/branding or sprite metadata; confirm rights before production
+source/dist/assets/square-garden-cutout.png,1093118,7843d8172b2c4b3a3338914288e76c5c71ef39d4865315718ceae0f8e174bd5b,Existing demo artwork/branding or sprite metadata; confirm rights before production
+source/dist/assets/square-garden-ground.png,1011554,1286d8e52f73b18802228b83dd22731cf0e5863662cb3346b9222b6d6425a308,Existing demo artwork/branding or sprite metadata; confirm rights before production

@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.116.0'
-import { extractSbEngagedDetailImage } from '../_shared/extract-sbengaged-detail.ts'
+import { fetchSbEngagedDetails, selectSbEngagedDetails, enrichedSbEngagedImage, type ExistingSbEngagedDetail, type SbEngagedDetail } from '../_shared/sbengaged-detail-enrichment.ts'
 import { normalizeSbEngagedEvent, type SbEngagedListing } from '../_shared/normalize-sbengaged.ts'
 import { parseSbEngagedICal } from '../_shared/parse-sbengaged-ical.ts'
 
@@ -7,16 +7,14 @@ const feedUrl = 'https://sbengaged.stonybrook.edu/ical/stonybrook/ical_stonybroo
 const source = 'sbengaged'
 const smokeLimit = 20
 const smokeDetailLimit = 5
-const fullDetailLimit = 25
-const detailConcurrency = 4
-const detailsRefreshMs = 6 * 60 * 60 * 1000
+const fullDetailLimit = 250
 const eventRetentionDays = 7
 const maxFeedBytes = 10 * 1024 * 1024
 
 type IngestionMode = 'smoke' | 'full'
 type LifecycleSummary = { reset_count: number; missed_count: number; inactivated_count: number }
-type ExistingListing = { external_id: string; image_url: string | null; details_synced_at: string | null }
-type DetailResult = { externalId: string; success: true; imageUrl: string | null } | { externalId: string; success: false }
+type ExistingListing = ExistingSbEngagedDetail
+type DetailResult = SbEngagedDetail
 
 function json(status: number, body: Record<string, unknown>) {
   return Response.json(body, { status })
@@ -28,43 +26,6 @@ function getSupabaseClient(): SupabaseClient | null {
   return url && serviceRoleKey
     ? createClient(url, serviceRoleKey, { auth: { persistSession: false } })
     : null
-}
-
-function detailUrl(listing: SbEngagedListing) {
-  return listing.source_url.replace('/rsvp?', '/rsvp_boot?')
-}
-
-function shouldRefreshDetails(existing: ExistingListing | undefined, now: Date) {
-  if (!existing?.details_synced_at) return true
-  const syncedAt = Date.parse(existing.details_synced_at)
-  return Number.isNaN(syncedAt) || now.getTime() - syncedAt >= detailsRefreshMs
-}
-
-async function fetchDetail(externalId: string, url: string): Promise<DetailResult> {
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(10_000) })
-      if (response.ok) return { externalId, success: true, imageUrl: extractSbEngagedDetailImage(await response.text()) }
-      if (attempt === 0 && (response.status === 429 || response.status >= 500)) {
-        const retryAfter = Number(response.headers.get('retry-after'))
-        await new Promise((resolve) => setTimeout(resolve, Number.isFinite(retryAfter) ? retryAfter * 1000 : 500))
-        continue
-      }
-    } catch {
-      if (attempt === 0) continue
-    }
-    break
-  }
-  return { externalId, success: false }
-}
-
-async function fetchDetails(listings: SbEngagedListing[]) {
-  const results: DetailResult[] = []
-  for (let start = 0; start < listings.length; start += detailConcurrency) {
-    results.push(...await Promise.all(listings.slice(start, start + detailConcurrency)
-      .map((listing) => fetchDetail(listing.external_id, detailUrl(listing)))))
-  }
-  return results
 }
 
 async function existingListings(supabase: SupabaseClient, externalIds: string[]) {
@@ -184,61 +145,61 @@ Deno.serve(async (request) => {
     existing = found.rows
   }
   const detailLimit = mode === 'smoke' ? smokeDetailLimit : fullDetailLimit
-  const detailCandidates = accepted.map((result) => result.listing)
-    .filter((listing) => shouldRefreshDetails(existing.get(listing.external_id), now))
-    .slice(0, detailLimit)
-  const detailResults = await fetchDetails(detailCandidates)
+  const detailEligible = selectSbEngagedDetails(accepted.map(result => result.listing), existing, now, accepted.length)
+  const detailCandidates = detailEligible.slice(0, detailLimit)
+  const detailResults = await fetchSbEngagedDetails(detailCandidates.map(listing => listing.external_id))
   const details = new Map(detailResults.filter((result): result is Extract<DetailResult, { success: true }> => result.success)
     .map((result) => [result.externalId, result]))
   const detailFailures = detailResults.filter((result) => !result.success).length
+  const detailRequests = detailResults.reduce((sum, result) => sum + result.attempts, 0)
+  const detailDeferred = detailEligible.length - detailResults.length
   const rows = accepted.map(({ listing }) => {
     const detail = details.get(listing.external_id)
     const prior = existing.get(listing.external_id)
     return {
       ...listing,
-      image_url: detail ? detail.imageUrl : prior?.image_url ?? null,
-      details_synced_at: detail ? now.toISOString() : prior?.details_synced_at ?? null,
+      ...enrichedSbEngagedImage(prior, detail, now),
     }
   })
 
   let deletedCount = 0
   let lifecycle: LifecycleSummary = { reset_count: 0, missed_count: 0, inactivated_count: 0 }
-  const errors = detailFailures ? ['sbengaged_detail_enrichment_failed'] : []
+  const errors = [...(detailFailures ? ['sbengaged_detail_enrichment_failed'] : []), ...(detailDeferred ? ['sbengaged_detail_enrichment_deferred'] : [])]
   if (supabase && runId) {
     const upsert = await upsertListings(supabase, rows)
     if (!upsert.success) {
-      await finishRun(supabase, runId, { status: 'failed', requestCount: 1 + detailResults.length, fetchedCount: selected.length, acceptedCount: accepted.length, skippedCount: skipped.length, upsertedCount: 0, errors: [upsert.error] })
+      await finishRun(supabase, runId, { status: 'failed', requestCount: 1 + detailRequests, fetchedCount: selected.length, acceptedCount: accepted.length, skippedCount: skipped.length, upsertedCount: 0, errors: [upsert.error] })
       return json(502, { error: upsert.error })
     }
     const cleanup = await deleteExpiredListings(supabase)
     if (!cleanup.success) {
-      await finishRun(supabase, runId, { status: 'failed', requestCount: 1 + detailResults.length, fetchedCount: selected.length, acceptedCount: accepted.length, skippedCount: skipped.length, upsertedCount: rows.length, errors: [cleanup.error] })
+      await finishRun(supabase, runId, { status: 'failed', requestCount: 1 + detailRequests, fetchedCount: selected.length, acceptedCount: accepted.length, skippedCount: skipped.length, upsertedCount: rows.length, errors: [cleanup.error] })
       return json(502, { error: cleanup.error })
     }
     deletedCount = cleanup.count
     if (mode === 'full') {
       const reconciliation = await reconcileFullSync(supabase, windowStartsAt, windowEndsAt, rows.map((row) => row.external_id))
       if (!reconciliation.success) {
-        await finishRun(supabase, runId, { status: 'failed', requestCount: 1 + detailResults.length, fetchedCount: selected.length, acceptedCount: accepted.length, skippedCount: skipped.length, upsertedCount: rows.length, deletedCount, errors: [reconciliation.error] })
+        await finishRun(supabase, runId, { status: 'failed', requestCount: 1 + detailRequests, fetchedCount: selected.length, acceptedCount: accepted.length, skippedCount: skipped.length, upsertedCount: rows.length, deletedCount, errors: [reconciliation.error] })
         return json(502, { error: reconciliation.error })
       }
       lifecycle = reconciliation.summary
     }
     await finishRun(supabase, runId, {
-      status: detailFailures ? 'partial' : 'completed', requestCount: 1 + detailResults.length,
+      status: detailFailures || detailDeferred ? 'partial' : 'completed', requestCount: 1 + detailRequests,
       fetchedCount: selected.length, acceptedCount: accepted.length, skippedCount: skipped.length,
       upsertedCount: rows.length, deletedCount, lifecycle, errors,
     })
   }
 
   return json(200, {
-    status: detailFailures ? 'partial' : 'ok', mode, dryRun,
+    status: detailFailures || detailDeferred ? 'partial' : 'ok', mode, dryRun,
     window: { startsAt: windowStartsAt, endsAt: windowEndsAt },
     received: { feedEvents: feedEvents.length, inWindow: inWindow.length, selected: selected.length },
     normalized: { accepted: accepted.length, skipped: skipped.length },
-    enrichment: { requested: detailResults.length, succeeded: details.size, failed: detailFailures },
+    enrichment: { requested: detailResults.length, requests: detailRequests, succeeded: details.size, failed: detailFailures, deferred: detailDeferred },
     storage: { dryRun, upserted: dryRun ? 0 : rows.length }, cleanup: { removed: deletedCount, retentionDays: eventRetentionDays },
     lifecycle: { reset: lifecycle.reset_count, missed: lifecycle.missed_count, inactivated: lifecycle.inactivated_count },
-    ingestionRun: runId ? { id: runId, status: detailFailures ? 'partial' : 'completed' } : null,
+    ingestionRun: runId ? { id: runId, status: detailFailures || detailDeferred ? 'partial' : 'completed' } : null,
   })
 })

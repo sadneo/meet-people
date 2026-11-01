@@ -2,13 +2,12 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { useLayoutEffect } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useFriendsPreferences } from '../../src/features/matchmaking/useFriendsPreferences'
-import { friendsPreferenceDraft, friendsDraftWrite } from '../../src/features/matchmaking/friends-preferences-draft'
 import { friendsPreferencesFixture, deferredFriendsResponse } from './friends-preferences-fixture'
 
 let fixture: ReturnType<typeof friendsPreferencesFixture>
 beforeEach(() => { fixture = friendsPreferencesFixture() })
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
-function write() { const draft = friendsPreferenceDraft(fixture.state.stored); return friendsDraftWrite(fixture.state.stored, draft.filters, draft.options) }
+function write() { return { expectedRevision: fixture.state.stored.revision, preferences: fixture.state.stored.preferences ?? { ageMin: 18, ageMax: 35, radiusMiles: 15, goals: [], searchArea: { source: 'home' as const, resolvedLocationRef: null } } } }
 async function load() {
   const hook = renderHook(({ owner, token }) => useFriendsPreferences(owner, token), { initialProps: { owner: 'first', token: 'first-token' } })
   await waitFor(() => expect(hook.result.current.canWrite).toBe(true)); return hook
@@ -56,13 +55,13 @@ it('preserves interrupted-write reconciliation over token refreshes and fences l
   expect(hook.result.current.canWrite).toBe(true)
 })
 it.each(['owner', 'token', 'busy'])('blocks a retained mutation during %s render before passive cleanup', async change => {
-  let retained: ReturnType<typeof useFriendsPreferences>['save'] | undefined, attempted: Promise<unknown> | undefined
+  let attempted: Promise<unknown> | undefined
   const hook = renderHook(({ owner, token, busy, invoke }) => {
     const result = useFriendsPreferences(owner, token, busy)
     useLayoutEffect(() => { if (invoke) attempted = retained!(write()) }, [invoke])
     return result
   }, { initialProps: { owner: 'first', token: 'first-token', busy: false, invoke: false } })
-  await waitFor(() => expect(hook.result.current.canWrite).toBe(true)); retained = hook.result.current.save
+  await waitFor(() => expect(hook.result.current.canWrite).toBe(true)); const retained = hook.result.current.save
   hook.rerender({ owner: change === 'owner' ? 'second' : 'first', token: change === 'token' ? 'renewed-token' : 'first-token', busy: change === 'busy', invoke: true })
   await act(async () => { expect(await attempted).toBeNull() })
   expect(fixture.puts()).toHaveLength(0)

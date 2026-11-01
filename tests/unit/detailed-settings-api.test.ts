@@ -5,6 +5,7 @@ import { emptyDetailedSettings, effectiveDetailedSettings, type DetailedSettings
 
 const id = 'a0000000-0000-4000-8000-000000000001', other = 'a0000000-0000-4000-8000-000000000002'
 const choices = { messages: true, plans: false, matches: true, friendsDiscovery: true, datingDiscovery: false }
+const off = { ...emptyDetailedSettings(), friendsDiscovery: false }
 let stored: Map<string, { revision: number; settings: typeof choices }>, masters: DetailedSettings['masters'], rpcError: string | null
 const reads = vi.fn(), writes = vi.fn()
 const snapshot = (owner: string) => {
@@ -46,13 +47,13 @@ it('reads safe virtual defaults, saves choices atomically and scopes readback to
   expect(await request('PUT', { expectedRevision: 0, settings: choices })).toMatchObject({ status: 200, data: { revision: 1, settings: choices, effective: choices } })
   expect((await request('GET', undefined, 'second')).data).toMatchObject({ revision: 0, settings: emptyDetailedSettings(), masters: null })
   masters = { notifications: false, discoverable: false }
-  expect((await request()).data).toMatchObject({ revision: 1, settings: choices, effective: emptyDetailedSettings() })
+  expect((await request()).data).toMatchObject({ revision: 1, settings: choices, effective: off })
   expect(writes).toHaveBeenCalledWith(id, { expectedRevision: 0, settings: choices })
 })
 it('allows masters to change independently during a detailed save without claiming effective activation', async () => {
   await request()
   masters = { notifications: false, discoverable: false }
-  expect(await request('PUT', { expectedRevision: 0, settings: choices })).toMatchObject({ status: 200, data: { revision: 1, settings: choices, masters, effective: emptyDetailedSettings() } })
+  expect(await request('PUT', { expectedRevision: 0, settings: choices })).toMatchObject({ status: 200, data: { revision: 1, settings: choices, masters, effective: off } })
 })
 it('rejects unauthenticated/injected/partial/legacy operational writes before mutation', async () => {
   for (const token of ['', 'forged']) expect((await request('PUT', { expectedRevision: 0, settings: choices }, token)).status).toBe(401)
@@ -97,9 +98,9 @@ it('reads only the dedicated fixed RPC via the actual SDK, not defaulted get_acc
   const names: string[] = []
   const fetch: typeof globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
     const name = new URL(String(input)).pathname.split('/').pop()!; names.push(name)
-    return Response.json(name === 'user' ? { id } : { revision: 0, settings: emptyDetailedSettings(), masters: null, effective: emptyDetailedSettings() })
+    return Response.json(name === 'user' ? { id } : { revision: 0, settings: emptyDetailedSettings(), masters: null, effective: off })
   })
   const real = createUserContextTransport({ url: 'https://database.test', publicKey: 'sb_publishable_test', fetch })
-  expect(await request('GET', undefined, 'first', '/detailed-settings', real)).toMatchObject({ status: 200, data: { masters: null, effective: emptyDetailedSettings() } })
+  expect(await request('GET', undefined, 'first', '/detailed-settings', real)).toMatchObject({ status: 200, data: { masters: null, effective: off } })
   expect(names).toEqual(['user', 'get_detailed_settings'])
 })

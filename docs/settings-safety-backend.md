@@ -18,7 +18,7 @@ Sources reviewed before implementation:
 - `supabase/migrations/20261013120000_accounts.sql:14–24,27–68`:
   `get_account` supplies default-on masters when no row exists; `save_account`
   writes a whole legacy account and calls the matching-profile writer.
-- `docs/dev-account-reconciliation.sql:78–128,131–161`: unified writer/compatibility
+- `supabase/schema-sources/dev-account-reconciliation.sql:78–128,131–161`: unified writer/compatibility
   delegation, canonical identity and settings preservation; fallback masters remain
   default-on. Reconciliation has its own prerequisite order and acceptance gates.
 - `SettingsDetails.tsx` and `account-ui-preview-context.ts`: five flat choices are
@@ -101,7 +101,7 @@ no service-role actor writer or request-controlled RPC names are introduced.
 
 ## Candidate installation / acceptance (parent only)
 
-`docs/detailed-settings-migration.sql` is authored, not applied by the agent.
+`supabase/schema-sources/detailed-settings-migration.sql` is authored, not applied by the agent.
 It requires Auth/roles and the actual persisted `account_settings` table, trusted
 reviewed DDL owner and effective ACL inspection. Installation requires actual
 legacy-table SELECT and complete RLS visibility, not a silently filtered master
@@ -135,7 +135,7 @@ PostgREST acceptance. Existing DB application is not authorized by source author
 
 ## Partial concrete safety candidate — NOT authoritative blocking
 
-`docs/safety-contact-guards-migration.sql` is separate optional parent-reviewed
+`supabase/schema-sources/safety-contact-guards-migration.sql` is separate optional parent-reviewed
 candidate source; it is NOT applied, HTTP-mounted or UI-wired. It requires the
 reviewed legacy blocks/profiles/conversations/messages and existing signatures.
 

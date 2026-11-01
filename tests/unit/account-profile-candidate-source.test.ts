@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 
-const candidate = readFileSync('docs/account-profile-matching-migration.sql', 'utf8')
+const candidate = readFileSync('supabase/candidates/account-profile-matching-migration.sql', 'utf8')
 const legacy = readFileSync('supabase/migrations/20261008220000_matchmaking_profile_rpcs.sql', 'utf8')
 function body(source: string, name: string) {
   const start = source.indexOf(`function public.${name}(`)

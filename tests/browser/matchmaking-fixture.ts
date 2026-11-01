@@ -35,7 +35,7 @@ export async function mockMatchingSession(page: Page, signedIn = true, signOutFa
     } };
   ` }))
 }
-export const browserProfile = { username: 'sam', display_name: 'Sam', bio: null, birthdate: '2000-01-01', location_city: 'Campus', avatar_url: null, interests: ['Coffee', 'Books', 'Games'], availability: [{ dow: 0, start_time: '21:00:00', end_time: '24:00:00' }] }
+export const browserProfile = { username: 'sam', display_name: 'Sam', bio: null, birthdate: '2000-01-01', location_city: 'Campus', avatar_url: null, interests: ['Coffee', 'Art', 'Music'], availability: [{ dow: 0, start_time: '21:00:00', end_time: '24:00:00' }] }
 // Explicit synthetic persisted choices, never a runtime default or session bypass.
 export function browserAccount(profile: Account['profile'] = browserProfile): Account {
   const account: Account = { ...emptyAccount, profile, preferences: { intents: ['Meet new people'], usual: [], distance: 'Nearby', group: 'Either' }, completed: [] }

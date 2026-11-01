@@ -12,3 +12,15 @@ it('decodes, orients, bounds dimensions and removes camera metadata from real by
 it('rejects unsupported, malformed and oversized input without returning a photo',async()=>{
  for(const bytes of [Buffer.from('not a real image'),Buffer.alloc(5*1024*1024+1),Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>')])await expect(sanitizeProfilePhoto(bytes)).rejects.toThrow()
 })
+it('serves normal avatar bursts through a bounded queue and still strips metadata',async()=>{
+ const input=await sharp({create:{width:128,height:128,channels:3,background:'#dfcbbd'}}).withExifMerge({IFD0:{Artist:'private-camera-owner'}}).jpeg().toBuffer()
+ const photos=await Promise.all(Array.from({length:12},()=>sanitizeProfilePhoto(input,true)))
+ expect(photos).toHaveLength(12)
+ for(const bytes of photos){expect((await sharp(bytes).metadata()).exif).toBeUndefined();expect(bytes.includes(Buffer.from('private-camera-owner'))).toBe(false)}
+})
+it('keeps avatar backpressure bounded instead of accepting unlimited queued images',async()=>{
+ const input=await sharp({create:{width:128,height:128,channels:3,background:'#dfcbbd'}}).jpeg().toBuffer()
+ const results=await Promise.allSettled(Array.from({length:35},()=>sanitizeProfilePhoto(input,true)))
+ expect(results.filter(result=>result.status==='fulfilled')).toHaveLength(34)
+ expect(results.filter(result=>result.status==='rejected')).toHaveLength(1)
+})

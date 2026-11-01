@@ -5,8 +5,8 @@ test('production shell supports deep-link refresh and same-origin API access', a
   page.on('pageerror', error => errors.push(error.message))
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Find a little time in common.' })).toBeAttached()
-  await expect(page.getByRole('navigation', { name: 'Public navigation' }).getByRole('link', { name: 'Sign in', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Meet new friends/ })).toBeAttached()
+  await expect(page.getByRole('link', { name: /Sign in/ })).toBeVisible()
   for (const route of ['/events', '/login', '/reset-password']) {
     await page.goto(route)
     await page.reload()

@@ -1,0 +1,34 @@
+.account-modal > header[hidden], .modal-content[hidden], .modal-layer-host[hidden] { display: none !important; }
+.modal-content { min-width: 0; }
+.search-area .search-area-button { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 68px; padding: 13px 16px; border: 1px solid var(--line); border-radius: 13px; background: #fcfaf7; color: var(--ink); text-align: left; font: inherit; }
+.search-area-button > span { display: grid; gap: 5px; min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.search-area-button .search-area-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.account-modal.has-modal-layer { width: calc(100% - 48px); max-width: 760px; height: min(860px, calc(100dvh - 48px)); max-height: calc(100dvh - 48px); padding: 0; overflow: hidden; }
+.has-modal-layer .modal-layer-host { height: 100%; }
+.search-location-sheet { display: grid; grid-template-rows: auto auto minmax(160px, 1fr) auto; height: 100%; min-width: 0; background: #fff; }
+.search-location-sheet > header { gap: 12px; padding: max(16px, env(safe-area-inset-top)) 16px 12px; }
+.search-location-sheet > header h2 { margin: 0; font-size: 21px; letter-spacing: -.6px; }
+.search-location-sheet > header .round { flex-shrink: 0; border: 1px solid var(--line); border-radius: 13px; background: #fffdf9; }
+.location-search-controls { position: relative; z-index: 2; padding: 0 16px 8px; }
+.location-search-controls input[type=search] { display: block; width: 100%; min-height: 48px; padding: 12px 14px; margin: 0; border: 1px solid var(--line); border-radius: 13px; background: var(--cream); font: inherit; font-size: 16px; color: var(--ink); }
+.location-search-controls .location-current { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 8px 2px; border: 0; background: transparent; color: var(--green); font: inherit; font-size: 14px; font-weight: 600; text-align: left; }
+.location-search-controls > [role=status] { display: block; padding-bottom: 8px; color: var(--muted); font-size: 13px; }
+.location-suggestions { position: absolute; top: 52px; left: 16px; right: 16px; max-height: min(300px, 40dvh); overflow: auto; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: 13px; background: #fff; box-shadow: 0 8px 20px #302b2815; list-style: none; }
+.location-suggestions button { display: block; width: 100%; min-height: 48px; padding: 12px; border: 0; border-radius: 8px; background: #fff; color: var(--ink); font: inherit; font-size: 14px; text-align: left; overflow-wrap: anywhere; }
+.location-suggestions [aria-selected=true] button, .location-suggestions button:hover { background: var(--cream); }
+.location-map-frame { position: relative; min-height: 0; background: var(--cream); border-block: 1px solid var(--line); }
+.location-map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.location-map-loading { position: absolute; inset: 40% 16px auto; margin: 0; color: var(--muted); text-align: center; font-size: 14px; }
+.location-center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); color: var(--green); filter: drop-shadow(0 2px 2px #302b2840); pointer-events: none; }
+.location-center-pin .ui-icon { display: block; width: 42px; height: 48px; fill: #fffdf9; stroke-width: 1.7; }
+.location-center-pin.moving { transform: translate(-50%, calc(-100% - 4px)); }
+.location-picker-footer { display: grid; gap: 10px; max-height: 42dvh; overflow: auto; padding: 16px 20px max(20px, env(safe-area-inset-bottom)); }
+.location-picker-footer .location-chosen { margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.location-picker-footer .account-error { margin: 0; font-size: 13px; }
+.location-picker-footer .btn { width: 100%; min-height: 48px; margin: 0; }
+.search-location-sheet button:focus-visible, .search-location-sheet input:focus-visible, .search-area-button:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+@media (max-width: 626px) {
+  .account-modal.has-modal-layer { width: 100%; max-width: none; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; border: 0; }
+  .search-location-sheet { grid-template-rows: auto auto minmax(120px, 1fr) auto; }
+}
+@media (prefers-reduced-motion: no-preference) { .location-center-pin { transition: transform 100ms ease; } }

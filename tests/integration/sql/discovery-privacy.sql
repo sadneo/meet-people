@@ -8,7 +8,7 @@ do $$ begin
  if exists(select 1 from auth.users where id in('fa000000-0000-4000-8000-000000000001','fa000000-0000-4000-8000-000000000002','fa000000-0000-4000-8000-000000000003')) or exists(select 1 from pg_catalog.pg_roles where rolname='privacy_inherited_fixture') then raise exception 'Fixture occupied'; end if;
 end $$;
 create temporary table privacy_candidate(line_number bigint generated always as identity,line text not null);
-\copy privacy_candidate(line) from 'docs/discovery-privacy-migration.sql' with (format csv,delimiter E'\x01',quote E'\x02',escape E'\x02',null E'\x03')
+\copy privacy_candidate(line) from 'supabase/schema-sources/discovery-privacy-migration.sql' with (format csv,delimiter E'\x01',quote E'\x02',escape E'\x02',null E'\x03')
 create role privacy_inherited_fixture nologin nosuperuser nobypassrls;
 do $$ declare candidate text;role_in text;seq text;t text;privilege_in text;failure text;before_acl aclitem[];begin
  select string_agg(line,E'\n' order by line_number) into candidate from privacy_candidate where lower(btrim(line)) not in('begin;','commit;');

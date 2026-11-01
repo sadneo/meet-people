@@ -29,7 +29,7 @@ set local search_path=public,pg_catalog;
 -- Client-side source only, no server file/program/provider access. Strip only
 -- the two outer boundaries so ALL positive/negative installations roll back.
 create temporary table safety_owner_candidate_source(line_number bigint generated always as identity,line text not null);
-\copy safety_owner_candidate_source(line) from 'docs/safety-owner-contact-migration.sql' with (format csv,delimiter E'\x01',quote E'\x02',escape E'\x02',null E'\x03')
+\copy safety_owner_candidate_source(line) from 'supabase/schema-sources/safety-owner-contact-migration.sql' with (format csv,delimiter E'\x01',quote E'\x02',escape E'\x02',null E'\x03')
 create temporary table safety_owner_install_source(body text not null);
 do $$ begin
   assert (select count(*) from safety_owner_candidate_source where lower(btrim(line))='begin;')=1;

@@ -28,6 +28,10 @@ it('one explicit same-origin loopback POST returns only verified session with no
   expect(result.headers['Cache-Control']).toBe('no-store')
   expect(result.headers['Access-Control-Allow-Origin']).toBeUndefined()
 })
+it('accepts localhost only when the Origin matches the localhost Host', async () => {
+  expect((await request({ host: 'localhost:3000', origin: 'http://localhost:3000' })).status).toBe(200)
+  expect((await request({ host: 'localhost:3000', origin: 'http://127.0.0.1:3000' })).status).toBe(403)
+})
 it.each([{ method: 'GET' }, { origin: '' }, { origin: 'http://evil.test' }, { origin: 'null' }, { origin: 'http://127.0.0.1:3001' }, { host: 'evil.test:3000' }, { remote: '192.168.1.2' }, { body: '{}' }, { body: '{"intent":"development-sign-in","email":"attacker"}' }, { type: 'text/plain' }, { body: 'x'.repeat(1025) }])('rejects CSRF/method/remote/intent before credential access: %j', async overrides => {
   const result = await request(overrides)
   expect(result.status).not.toBe(200); expect(result.authenticate).not.toHaveBeenCalled()

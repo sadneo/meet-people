@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 
-const sql = readFileSync(new URL('../../docs/dating-aggregate-migration.sql', import.meta.url), 'utf8')
+const sql = readFileSync(new URL('../../supabase/schema-sources/dating-aggregate-migration.sql', import.meta.url), 'utf8')
 const acceptance = readFileSync(new URL('../integration/sql/dating-aggregate.sql', import.meta.url), 'utf8')
 it('keeps the candidate additive/private, actor-derived and independent of all operational/legacy writers (source checks only)', () => {
   expect(sql).toContain('actor uuid:=auth.uid()')

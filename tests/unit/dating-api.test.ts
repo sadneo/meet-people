@@ -123,7 +123,7 @@ it('never treats missing/malformed dependencies, partial response or failed cano
   expect((await request('GET', undefined, 'first', '/dating-preferences', null)).status).toBe(503)
 })
 it('uses authoritative DOB for enable denial while retaining incomplete drafts, regardless of visibility', async () => {
-  const enabled = { ...draft, profile: { ...emptyDatingProfile(), gender: 'Woman', sexuality: 'Straight', intent: 'Long-term relationship' as const, style: 'Monogamy' as const, enabled: true, visibility: { gender: true, sexuality: true, height: true } }, search: { ...draft.search!, searchArea: { source: 'home' as const, resolvedLocationRef: first } } }
+  const enabled = { ...draft, profile: { ...emptyDatingProfile(), gender: 'Woman', sexuality: 'Straight', intent: 'Long-term relationship' as const, style: 'Monogamy' as const, clarifiedTargets: ['Man'], enabled: true, visibility: { gender: true, sexuality: true, height: true } }, search: { ...draft.search!, searchArea: { source: 'home' as const, resolvedLocationRef: first } } }
   for (const birthdate of [null, '2027-01-01', '2008-10-20', 'invalid']) {
     dob = birthdate
     expect((await request('PUT', enabled)).status).toBe(400)

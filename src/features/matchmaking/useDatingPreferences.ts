@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useInsertionEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { SaveDatingAggregateSchema, sameDatingProfile, sameDatingSearch, validDatingTransition, type DatingAggregate, type SaveDatingAggregate } from '../../../shared/dating'
 import { datingAggregateClient, DatingClientError } from './dating-aggregate-client'
 
@@ -7,9 +7,14 @@ type State = { owner: string | null; snapshot: DatingAggregate | null; phase: Ph
 const empty = (owner: string | null): State => ({ owner, snapshot: null, phase: owner ? 'loading' : 'unavailable', error: owner ? '' : 'Sign in to load saved Dating preferences.', reconcileRequired: false })
 export function useDatingPreferences(owner: string | null, token: string | null, accountBusy = false) {
   const client = useMemo(() => owner && token ? datingAggregateClient(token) : null, [owner, token])
-  const binding = useRef({ client, accountBusy }); binding.current = { client, accountBusy }
-  const [state, setState] = useState<State>(() => empty(owner)), authority = useRef<State>(empty(owner))
-  const publish = useCallback((next: State) => { authority.current = next; setState(next) }, [])
+  // Fence retained callbacks before descendant layout effects, not during render.
+  const binding = useRef({ client, accountBusy })
+  useInsertionEffect(() => {
+    binding.current = { client, accountBusy }
+    return () => { binding.current = { client: null, accountBusy: true } }
+  }, [client, accountBusy])
+  const [state, setState] = useState(() => ({ value: empty(owner), client })), authority = useRef<State>(empty(owner))
+  const publish = useCallback((next: State) => { authority.current = next; setState({ value: next, client }) }, [client])
   const generation = useRef(0), locked = useRef(false), active = useRef<typeof client>(null), mounted = useRef(false)
   const operation = useRef<AbortController | null>(null)
   // Fence unmounts at layout cleanup too, before passive effect cleanup.
@@ -77,6 +82,6 @@ export function useDatingPreferences(owner: string | null, token: string | null,
       return null
     } finally { if (valid(epoch)) { locked.current = false; operation.current = null } }
   }
-  const current = state.owner === owner ? state : empty(owner)
-  return { ...current, accountBusy, busy: current.phase === 'saving', loading: current.phase === 'loading', canWrite: !!client && mounted.current && active.current === client && !accountBusy && current.phase === 'ready' && !current.reconcileRequired && !!current.snapshot && !current.snapshot.profile.enabled, reload, save }
+  const current = state.value.owner === owner ? state.value : empty(owner)
+  return { ...current, accountBusy, busy: current.phase === 'saving', loading: current.phase === 'loading', canWrite: !!client && state.client === client && !accountBusy && current.phase === 'ready' && !current.reconcileRequired && !!current.snapshot && !current.snapshot.profile.enabled, reload, save }
 }

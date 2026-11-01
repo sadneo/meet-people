@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { expect, it } from 'vitest'
-const sql = readFileSync(resolve('docs/dev-account-reconciliation.sql'), 'utf8')
+const sql = readFileSync(resolve('supabase/schema-sources/dev-account-reconciliation.sql'), 'utf8')
 it('keeps one account writer with compatibility delegates and internal primitives inaccessible to browser roles', () => {
   expect(sql).toContain('rename to reconciliation_identity_write')
   expect(sql).toContain('rename to reconciliation_profile_write')

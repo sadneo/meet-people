@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useInsertionEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { SaveFriendsSearchPreferencesSchema, sameFriendsPreferences, type FriendsSearchPreferences, type SaveFriendsSearchPreferences } from '../../../shared/friends-search-preferences'
 import { friendsPreferencesClient, FriendsPreferencesClientError } from './friends-preferences-client'
 
@@ -9,9 +9,14 @@ const empty = (owner: string | null): State => ({ owner, snapshot: null, phase: 
 // global account/profile writes, default persistence or generic resource layer.
 export function useFriendsPreferences(owner: string | null, token: string | null, accountBusy = false) {
   const client = useMemo(() => owner && token ? friendsPreferencesClient(token) : null, [owner, token])
-  const binding = useRef({ client, accountBusy }); binding.current = { client, accountBusy }
-  const [state, setState] = useState<State>(() => empty(owner)), authority = useRef<State>(empty(owner))
-  const publish = useCallback((next: State) => { authority.current = next; setState(next) }, [])
+  // Fence retained callbacks before descendant layout effects, not during render.
+  const binding = useRef({ client, accountBusy })
+  useInsertionEffect(() => {
+    binding.current = { client, accountBusy }
+    return () => { binding.current = { client: null, accountBusy: true } }
+  }, [client, accountBusy])
+  const [state, setState] = useState(() => ({ value: empty(owner), client })), authority = useRef<State>(empty(owner))
+  const publish = useCallback((next: State) => { authority.current = next; setState({ value: next, client }) }, [client])
   const generation = useRef(0), locked = useRef(false), active = useRef<typeof client>(null), mounted = useRef(false)
   const operation = useRef<AbortController | null>(null)
   useLayoutEffect(() => { mounted.current = true; return () => { mounted.current = false; operation.current?.abort() } }, [])
@@ -72,6 +77,6 @@ export function useFriendsPreferences(owner: string | null, token: string | null
       return null
     } finally { if (valid(epoch)) { locked.current = false; operation.current = null } }
   }
-  const current = state.owner === owner ? state : empty(owner)
-  return { ...current, accountBusy, busy: current.phase === 'saving', loading: current.phase === 'loading', canWrite: !!client && mounted.current && active.current === client && !accountBusy && current.phase === 'ready' && !current.reconcileRequired && !!current.snapshot, reload, save }
+  const current = state.value.owner === owner ? state.value : empty(owner)
+  return { ...current, accountBusy, busy: current.phase === 'saving', loading: current.phase === 'loading', canWrite: !!client && state.client === client && !accountBusy && current.phase === 'ready' && !current.reconcileRequired && !!current.snapshot, reload, save }
 }

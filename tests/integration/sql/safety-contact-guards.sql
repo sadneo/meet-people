@@ -66,7 +66,7 @@ create temporary table safety_hist_messaging_source(line_number bigint generated
 create temporary table safety_candidate_source(line_number bigint generated always as identity,line text not null);
 \copy safety_hist_connections_source(line) from 'supabase/migrations/20260925000004_connection_logic.sql' with (format csv,delimiter E'\x01',quote E'\x02',escape E'\x02',null E'\x03')
 \copy safety_hist_messaging_source(line) from 'supabase/migrations/20260925000008_messaging.sql' with (format csv,delimiter E'\x01',quote E'\x02',escape E'\x02',null E'\x03')
-\copy safety_candidate_source(line) from 'docs/safety-contact-guards-migration.sql' with (format csv,delimiter E'\x01',quote E'\x02',escape E'\x02',null E'\x03')
+\copy safety_candidate_source(line) from 'supabase/schema-sources/safety-contact-guards-migration.sql' with (format csv,delimiter E'\x01',quote E'\x02',escape E'\x02',null E'\x03')
 create temporary table safety_install_source(kind text primary key,body text not null);
 insert into safety_install_source values
   ('connections',(select string_agg(line,E'\n' order by line_number)||E'\n' from safety_hist_connections_source)),

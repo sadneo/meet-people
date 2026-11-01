@@ -7,7 +7,7 @@ export type DetailedSettingsValues = z.infer<typeof DetailedSettingsValuesSchema
 export const DetailedSettingsMastersSchema = z.object({ notifications: z.boolean(), discoverable: z.boolean() }).strict()
 export type DetailedSettingsMasters = z.infer<typeof DetailedSettingsMastersSchema>
 export function emptyDetailedSettings(): DetailedSettingsValues {
-  return { messages: false, plans: false, matches: false, friendsDiscovery: false, datingDiscovery: false }
+  return { messages: false, plans: false, matches: false, friendsDiscovery: true, datingDiscovery: false }
 }
 export function sameDetailedSettings(a: DetailedSettingsValues, b: DetailedSettingsValues) {
   return a.messages === b.messages && a.plans === b.plans && a.matches === b.matches && a.friendsDiscovery === b.friendsDiscovery && a.datingDiscovery === b.datingDiscovery
@@ -25,7 +25,7 @@ export function effectiveDetailedSettings(settings: DetailedSettingsValues, mast
 }
 const revision = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
 export const DetailedSettingsSchema = z.object({ revision, settings: DetailedSettingsValuesSchema, masters: DetailedSettingsMastersSchema.nullable(), effective: DetailedSettingsValuesSchema }).strict()
-  .refine(value => value.revision !== 0 || sameDetailedSettings(value.settings, emptyDetailedSettings()), 'Unstored detailed choices must be off.')
+  .refine(value => value.revision !== 0 || sameDetailedSettings(value.settings, emptyDetailedSettings()), 'Unstored detailed choices must match defaults.')
   .refine(value => sameDetailedSettings(value.effective, effectiveDetailedSettings(value.settings, value.masters)), 'Global masters must dominate detailed preferences.')
 export const SaveDetailedSettingsSchema = z.object({ expectedRevision: revision.max(Number.MAX_SAFE_INTEGER - 1), settings: DetailedSettingsValuesSchema }).strict()
 export const DetailedSettingsErrorSchema = z.object({ code: z.enum(['auth', 'invalid', 'conflict', 'unavailable', 'provider', 'malformed']), error: ProfileDetailsErrorSchema.shape.error }).strict()

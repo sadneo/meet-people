@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod'
-import { ConnectionListSchema, ConnectionStateSchema } from '../shared/connections.js'
+import { ConnectionListSchema, ConnectionStateSchema, ConnectionRequestAllowanceSchema } from '../shared/connections.js'
 import { ConversationsSchema, HistorySchema, MarkReadSchema, MessageSchema, MessagingActivitySchema, ReadStateSchema, SendMessageSchema } from '../shared/messaging.js'
 import type { UserContextTransport } from './matchmaking.js'
 
@@ -17,9 +17,10 @@ async function result<T>(call: (() => PromiseLike<{ data: unknown; error: { code
   if (response.error) {
     const code = response.error.code
     if (['28000', 'PGRST301', 'PGRST302', 'PGRST303'].includes(code ?? '')) throw new SocialFailure(401, 'Sign in again to continue.')
-    if (code === '42501') throw new SocialFailure(403, 'This conversation or connection is unavailable.')
-    if (code === 'SC409') throw new SocialFailure(409, 'That message request was used for different content. Reload before retrying.')
-    if (['22023', '23514', '22021', '22P05'].includes(code ?? '')) throw new SocialFailure(400, 'Check the request fields.')
+    if (['42501', 'MSG01', 'MSG03', 'MSG04', 'MSG05', 'MSG07', 'CON02', 'CON03', 'CON05'].includes(code ?? '')) throw new SocialFailure(403, 'This conversation or connection is unavailable.')
+    if (['SC409', 'MSG10'].includes(code ?? '')) throw new SocialFailure(409, 'That message request was used for different content. Reload before retrying.')
+    if (['MSG11', 'CON04'].includes(code ?? '')) throw new SocialFailure(429, 'Too many requests. Try again later.')
+    if (['22023', '23514', '22021', '22P05', 'MSG08', 'MSG09', 'CON01'].includes(code ?? '')) throw new SocialFailure(400, 'Check the request fields.')
     throw new SocialFailure(503, 'The operation could not be confirmed. Reload before retrying; changes may already be saved.')
   }
   const parsed = schema.safeParse(response.data)
@@ -29,7 +30,7 @@ async function result<T>(call: (() => PromiseLike<{ data: unknown; error: { code
 const page = z.coerce.number().int().min(1).max(10000)
 const cursor = z.coerce.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
 
-/** Fixed actor RPCs only. UUID aliases preserve the existing frontend contract.
+/** Fixed actor RPCs only. Native UUIDs or legacy aliases share the frontend contract.
  * Event-group creation/leave stays unavailable until its lifecycle is approved.
  */
 export function createSocialRouter(transport: UserContextTransport | null, kind: 'connections' | 'conversations') {
@@ -49,6 +50,7 @@ export function createSocialRouter(transport: UserContextTransport | null, kind:
   const actor = (response: Response) => response.locals.actor as Actor
   const noQuery = (request: Request) => query(request, empty)
   if (kind === 'connections') {
+    router.get('/request-allowance', async (request, response) => { body(request); noQuery(request); response.json(await result(actor(response).connectionRequestAllowance, ConnectionRequestAllowanceSchema)) })
     router.get('/', async (request, response) => { body(request); noQuery(request); response.json(await result(actor(response).socialConnectionList, ConnectionListSchema)) })
     const connection = (action: 'get' | 'request' | 'accept' | 'remove') => async (request: Request, response: Response) => {
       body(request); noQuery(request); const target = id(request.params.targetId), call = actor(response).socialConnection
@@ -84,6 +86,7 @@ export function createSocialRouter(transport: UserContextTransport | null, kind:
     router.post('/:conversationId/leave', async () => { throw new SocialFailure(503, 'Event-group conversation changes are not available yet.') })
   }
   router.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
+    void _next
     const failure = error instanceof SocialFailure ? error : new SocialFailure(503, 'The operation could not be confirmed. Reload before retrying; changes may already be saved.')
     response.status(failure.status).json({ error: failure.message })
   })

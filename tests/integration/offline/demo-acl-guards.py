@@ -6,15 +6,15 @@ assert json.loads(subprocess.check_output(['docker','inspect','--format','{"netw
 base=['docker','exec','-i',container,'psql','-X','-qAt','-U','postgres','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose','-d','pebble_safety_owner_disposable']
 marker="do $$ begin if not exists(select 1 from public.safety_owner_disposable_marker where singleton and purpose='network-none-safety-owner-v1') then raise exception 'Wrong disposable';end if;end $$;"
 cases=[
- ('photo RPC','docs/profile-photo-migration.sql','grant execute on function public.get_profile_photo_reference(uuid) to demo_acl_inherited;'),
- ('photo column','docs/profile-photo-migration.sql','grant select(jpeg) on photo_private.photos to demo_acl_inherited;'),
- ('photo mutation','docs/profile-photo-migration.sql','grant update on photo_private.requests to demo_acl_inherited;'),
- ('photo helper','docs/profile-photo-migration.sql','grant execute on function photo_private.lock_audience(uuid,uuid) to demo_acl_inherited;'),
- ('photo schema','docs/profile-photo-migration.sql','grant usage on schema photo_private to demo_acl_inherited;'),
- ('Dating RPC','docs/dating-live-migration.sql','grant execute on function public.find_dating_candidate(jsonb) to demo_acl_inherited;'),
- ('Dating helper','docs/dating-live-migration.sql','grant execute on function dating_private.people() to demo_acl_inherited;'),
- ('actor helper','docs/real-account-boundary.sql','grant execute on function safety_private.actor() to demo_acl_inherited;'),
- ('Friends runtime','docs/friends-runtime-migration.sql','grant execute on function public.get_friends_runtime() to demo_acl_inherited;'),
+ ('photo RPC','supabase/schema-sources/profile-photo-migration.sql','grant execute on function public.get_profile_photo_reference(uuid) to demo_acl_inherited;'),
+ ('photo column','supabase/schema-sources/profile-photo-migration.sql','grant select(jpeg) on photo_private.photos to demo_acl_inherited;'),
+ ('photo mutation','supabase/schema-sources/profile-photo-migration.sql','grant update on photo_private.requests to demo_acl_inherited;'),
+ ('photo helper','supabase/schema-sources/profile-photo-migration.sql','grant execute on function photo_private.lock_audience(uuid,uuid) to demo_acl_inherited;'),
+ ('photo schema','supabase/schema-sources/profile-photo-migration.sql','grant usage on schema photo_private to demo_acl_inherited;'),
+ ('Dating RPC','supabase/schema-sources/dating-live-migration.sql','grant execute on function public.find_dating_candidate(jsonb) to demo_acl_inherited;'),
+ ('Dating helper','supabase/schema-sources/dating-live-migration.sql','grant execute on function dating_private.people() to demo_acl_inherited;'),
+ ('actor helper','supabase/schema-sources/real-account-boundary.sql','grant execute on function safety_private.actor() to demo_acl_inherited;'),
+ ('Friends runtime','supabase/schema-sources/friends-runtime-migration.sql','grant execute on function public.get_friends_runtime() to demo_acl_inherited;'),
 ]
 for name,path,grant in cases:
  source=Path(path).read_text();guard=source[source.rindex('do $$'):source.rindex('commit;')]

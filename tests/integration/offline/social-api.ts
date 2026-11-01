@@ -7,6 +7,9 @@ import assert from 'node:assert/strict'
 import type { Request, Response } from 'express'
 import { createSocialRouter } from '../../../api/social.js'
 import { createMatchmakingRouter, type UserContextTransport } from '../../../api/matchmaking.js'
+import { ConnectionStateSchema } from '../../../shared/connections.js'
+import { ConversationsSchema, HistorySchema, MessageSchema, MessagingActivitySchema, ReadStateSchema } from '../../../shared/messaging.js'
+import { OwnerBlockStateSchema } from '../../../shared/safety.js'
 const container = process.argv[2] ?? 'pebble-safety-review-20261019', database = 'pebble_safety_owner_disposable'
 assert.match(container, /^pebble-safety-review-20261019(?:-fresh|-final)?$/)
 const inspected = JSON.parse(execFileSync('docker', ['inspect', '--format', '{{json .}}', container], { encoding: 'utf8' }))
@@ -42,7 +45,7 @@ const transport = {
   }),
 } as unknown as UserContextTransport
 async function request(kind: 'connections' | 'conversations' | 'safety', actor: string, method: string, url: string, body?: unknown) {
-  return new Promise<{ status: number; data: any }>((resolve, reject) => {
+  return new Promise<{ status: number; data: unknown }>((resolve, reject) => {
     let status = 200
     const req = { method, url, query: Object.fromEntries(new URL(url, 'http://offline').searchParams), headers: { authorization: `Bearer ${actor}` }, body } as unknown as Request
     const res = { locals: {}, set() { return this }, status(value: number) { status = value; return this }, json(data: unknown) { resolve({ status, data }); return this } } as unknown as Response
@@ -53,27 +56,28 @@ async function request(kind: 'connections' | 'conversations' | 'safety', actor: 
 checked(`insert into auth.users values('${a}'),('${b}'),('${outsider}'); insert into public.profiles(id,username,display_name,birthdate,location_city) values('${a}','offline-social-a','Synthetic A','2000-01-01','Synthetic campus'),('${b}','offline-social-b','Synthetic B','2000-01-01','Synthetic campus'),('${outsider}','offline-social-c','Synthetic C','2000-01-01','Synthetic campus'); insert into public.account_settings(user_id,preferences,settings,completed) select id,'{"distance":"Nearby","group":"One-on-one","intents":["Activity partners"],"usual":[]}','{"notifications":false,"availability":false,"discoverable":true,"location":false}','[0,1,2,3]' from public.profiles where username in('offline-social-a','offline-social-b','offline-social-c');`)
 checked(`insert into public.user_interests(profile_id,text) select p.id,x from public.profiles p cross join unnest(array['Art','Coffee','Music']) x where p.username in('offline-social-a','offline-social-b','offline-social-c'); insert into public.availability(profile_id,dow,start_time,end_time) select p.id,1,'12:00','17:00' from public.profiles p where p.username in('offline-social-a','offline-social-b','offline-social-c');`)
 try {
-  assert.equal((await request('connections', a, 'POST', `/${b}`, {})).data.status, 'sent')
+  assert.equal(ConnectionStateSchema.parse((await request('connections', a, 'POST', `/${b}`, {})).data).status, 'sent')
   const accepted = await request('connections', b, 'POST', `/${a}/accept`, {})
-  assert.equal(accepted.status, 200); assert.equal(accepted.data.status, 'connected')
-  const chat = accepted.data.conversationId; assert.match(chat, /^[0-9a-f-]{36}$/)
+  assert.equal(accepted.status, 200); const connection = ConnectionStateSchema.parse(accepted.data); assert.equal(connection.status, 'connected')
+  const chat = connection.conversationId; assert.ok(chat); assert.match(chat, /^[0-9a-f-]{36}$/)
   const body = { body: 'Persisted offline flow 🪨', clientRequestId: 'eb000000-0000-4000-8000-000000000001' }
   const message = await request('conversations', a, 'POST', `/${chat}/messages`, body)
-  assert.equal(message.status, 200)
+  assert.equal(message.status, 200); const savedMessage = MessageSchema.parse(message.data)
   assert.deepEqual(await request('conversations', a, 'POST', `/${chat}/messages`, body), message)
   const inbox = await request('conversations', b, 'GET', '/?page=1')
-  assert.equal(inbox.data.conversations[0].unread_count, 1)
-  assert.deepEqual((await request('conversations', b, 'GET', `/${chat}/messages`)).data.messages, [message.data])
+  assert.equal(ConversationsSchema.parse(inbox.data).conversations[0].unread_count, 1)
+  assert.deepEqual(HistorySchema.parse((await request('conversations', b, 'GET', `/${chat}/messages`)).data).messages, [message.data])
   assert.equal((await request('conversations', outsider, 'GET', `/${chat}/messages`)).status, 403)
-  assert.equal((await request('conversations', b, 'POST', `/${chat}/read`, { seq: message.data.seq })).data.lastReadSeq, message.data.seq)
-  assert.equal((await request('conversations', b, 'GET', '/activity')).data.unreadConversations, 0)
-  assert.equal((await request('safety', b, 'PUT', `/safety/blocks/${a}`, {})).data.outgoingBlocked, true)
+  assert.equal(ReadStateSchema.parse((await request('conversations', b, 'POST', `/${chat}/read`, { seq: savedMessage.seq })).data).lastReadSeq, savedMessage.seq)
+  assert.equal(MessagingActivitySchema.parse((await request('conversations', b, 'GET', '/activity')).data).unreadConversations, 0)
+  assert.equal(OwnerBlockStateSchema.parse((await request('safety', b, 'PUT', `/safety/blocks/${a}`, {})).data).outgoingBlocked, true)
   const history = await request('conversations', b, 'GET', `/${chat}/messages`)
-  assert.equal(history.data.canSend, false); assert.deepEqual(history.data.messages, [message.data])
+  const blockedHistory = HistorySchema.parse(history.data)
+  assert.equal(blockedHistory.canSend, false); assert.deepEqual(blockedHistory.messages, [message.data])
   assert.equal((await request('conversations', a, 'POST', `/${chat}/messages`, { ...body, clientRequestId: 'eb000000-0000-4000-8000-000000000002' })).status, 403)
-  assert.equal((await request('conversations', b, 'POST', `/${chat}/read`, { seq: message.data.seq })).status, 403)
+  assert.equal((await request('conversations', b, 'POST', `/${chat}/read`, { seq: savedMessage.seq })).status, 403)
   assert.equal((await request('safety', b, 'DELETE', `/safety/blocks/${a}`, {})).status, 200)
-  assert.equal((await request('conversations', a, 'GET', `/${chat}/messages`)).data.canSend, false)
+  assert.equal(HistorySchema.parse((await request('conversations', a, 'GET', `/${chat}/messages`)).data).canSend, false)
   console.log('PASS: API -> actual SQL request/accept/send/idempotency/readback/unread/receipt/block/history/unblock flow; foreign-user denial. Synthetic Auth, no live PostgREST claim.')
 } finally {
   checked(`begin; do $$ begin if exists(select 1 from public.profiles where id in('${a}','${b}','${outsider}') and username not in('offline-social-a','offline-social-b','offline-social-c')) then raise exception 'Unrecognized fixture'; end if; end $$; delete from safety_private.revoked_connections where connection_id in(select id from public.connections where user_a='${a}' and user_b='${b}'); delete from auth.users where id in('${a}','${b}','${outsider}'); commit;`)

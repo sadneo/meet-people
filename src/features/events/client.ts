@@ -25,6 +25,7 @@ export async function eventRequest<T>(path: string, schema: ZodType<T>, options:
 
 export const eventImagePlaceholder = '/images/event-placeholder.svg'
 export function safeImage(url: string | null) {
+  if (url && /^\/pebble\/event-(picnic|music|pottery)\.jpg$/.test(url)) return url
   if (url && /^https?:\/\//i.test(url)) {
     try {
       const parsed = new URL(url)

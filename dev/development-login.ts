@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import type { Plugin } from 'vite'
 import { AccountSchema, completedAccountChapters } from '../shared/account.js'
+import { provisionDevelopmentAccount } from './provision-development-account.js'
 
 const loopback = (value: string | undefined) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '')
 const localUrl = (value: string) => {
@@ -22,7 +23,7 @@ const publicKey = (value: string) => {
 const Credentials = z.object({ accountId: z.uuid(), email: z.email().max(254), password: z.string().min(1).max(128), url: z.string().refine(localUrl), publicKey: z.string().max(4096).refine(publicKey) }).strict()
 export const parseDevelopmentCredentials = (value: unknown) => Credentials.parse(value)
 type Credentials = z.infer<typeof Credentials>
-const unavailable = 'Development account provisioning is unavailable. Ask the operator to configure and populate the dedicated local account; no data was created.'
+const unavailable = 'Development account provisioning is unavailable. Check that local Supabase is running and .env.local contains its local connection settings.'
 
 // Runtime-only fixed path. Never imported by the browser; no environment/browser path override.
 export async function readDevelopmentCredentials() {
@@ -76,7 +77,19 @@ export async function authenticateDevelopmentAccount(input: unknown, network: ty
   return { access_token: session.access_token, refresh_token: session.refresh_token, expires_in: session.expires_in, token_type: session.token_type, user: { id: user.id } }
 }
 
-export function developmentLoginHandler(origin: string, authenticate = async () => authenticateDevelopmentAccount(await readDevelopmentCredentials())) {
+export async function signInDevelopmentAccount() {
+  let credentials: Credentials
+  try { credentials = await readDevelopmentCredentials() }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    credentials = await provisionDevelopmentAccount()
+    return authenticateDevelopmentAccount(credentials)
+  }
+  if (credentials.accountId === 'd0000000-0000-4000-8000-000000000001' && credentials.email === 'pebble-development@example.test') await provisionDevelopmentAccount(credentials)
+  return authenticateDevelopmentAccount(credentials)
+}
+
+export function developmentLoginHandler(origin: string, authenticate = signInDevelopmentAccount) {
   let busy = false
   return async (request: IncomingMessage, response: ServerResponse, next: () => void) => {
     if (request.url !== '/__dev/login') return next()
@@ -85,7 +98,8 @@ export function developmentLoginHandler(origin: string, authenticate = async () 
     response.setHeader('X-Content-Type-Options', 'nosniff')
     const reply = (status: number, body: unknown) => { response.statusCode = status; response.end(JSON.stringify(body)) }
     if (request.method !== 'POST') return reply(405, { error: 'POST required.' })
-    if (request.headers.host !== new URL(origin).host || request.headers.origin !== origin || !loopback(request.socket.remoteAddress) || !loopback(request.socket.localAddress) || request.headers['x-forwarded-host'] || request.headers['x-forwarded-for'] || request.headers['sec-fetch-site'] === 'cross-site') return reply(403, { error: 'Local same-origin request required.' })
+    const allowedHosts = [new URL(origin).host, `localhost:${new URL(origin).port}`]
+    if (!allowedHosts.includes(request.headers.host ?? '') || request.headers.origin !== `http://${request.headers.host}` || !loopback(request.socket.remoteAddress) || !loopback(request.socket.localAddress) || request.headers['x-forwarded-host'] || request.headers['x-forwarded-for'] || request.headers['sec-fetch-site'] === 'cross-site') return reply(403, { error: 'Local same-origin request required.' })
     if (request.headers['content-type'] !== 'application/json') return reply(415, { error: 'JSON required.' })
     if (busy) return reply(429, { error: 'Development sign-in already pending.' })
     busy = true

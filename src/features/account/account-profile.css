@@ -1,9 +1,0 @@
-.account-profile { width: min(100%, 560px); margin: 32px auto; display: grid; gap: 24px; color: var(--pt-ink); }
-.account-profile a { color: var(--pt-ink); min-height: 44px; display: flex; align-items: center; }
-.account-profile h1 { margin: 0; }
-.account-profile form, .account-profile fieldset { display: grid; gap: 20px; }
-.account-profile fieldset { padding: 0; border: 0; min-width: 0; }
-.account-profile label { display: grid; gap: 8px; font-weight: 700; }
-.account-profile input, .account-profile textarea { width: 100%; box-sizing: border-box; min-width: 0; }
-.account-profile textarea { min-height: 120px; }
-.account-profile p { line-height: 1.6; overflow-wrap: anywhere; }

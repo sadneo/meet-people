@@ -41,7 +41,7 @@ try {
   const file = join(directory, 'functions.env')
   writeFileSync(file, Object.entries(secrets).map(([name, value]) => `${name}=${JSON.stringify(value)}`).join('\n'), { mode: 0o600 })
   cli(['secrets', 'set', '--project-ref', ref, '--env-file', file])
-  cli(['config', 'push', '--project-ref', ref, '--workdir', 'hosting', '--yes'])
+  cli(['config', 'push', '--project-ref', ref, '--workdir', process.env.HOSTED_CONFIG_WORKDIR || 'hosting', '--yes'])
   console.info('Hosted Vault and Edge Function secrets configured; existing generated tokens preserved.')
 } finally {
   rmSync(directory, { recursive: true, force: true })

@@ -1,6 +1,7 @@
 import { z, type ZodType } from 'zod'
 import { BrowserSearchLocationSchema, ResolveSearchAreaSchema, SearchLocationReceiptSchema, SearchPlacesSchema, type BrowserSearchLocation, type ResolveSearchArea } from '../../../shared/search-locations'
 import { apiUrl } from '../../platform/native'
+import { MapConfigSchema, MapSuggestionsSchema, MapPreviewSchema, MapSelectionSchema, type MapSuggestionsRequest, type MapPreviewRequest, type MapTicket } from '../../../shared/location-picker'
 export class SearchLocationError extends Error { constructor(readonly status: number,message: string){super(message)} }
 export function searchLocationClient(token: string) {
  async function request<T>(path: string,schema: ZodType<T>,body?: unknown,signal?: AbortSignal):Promise<T>{
@@ -29,7 +30,18 @@ export function searchLocationClient(token: string) {
   if(saved.source!==issued.source||saved.areaLabel!==issued.areaLabel||saved.method!==issued.method||saved.expiresAt!==issued.expiresAt)throw new SearchLocationError(503,'Location readback changed. Choose the area again before saving.')
   return saved
  }
- return{lookup:(query:string,signal?:AbortSignal)=>request(`/places?${new URLSearchParams({q:query})}`,SearchPlacesSchema,undefined,signal),receipt,
+  return{lookup:(query:string,signal?:AbortSignal)=>request(`/places?${new URLSearchParams({q:query})}`,SearchPlacesSchema,undefined,signal),receipt,
+  mapConfig: (signal?: AbortSignal) => request('/map/config', MapConfigSchema, undefined, signal),
+  suggestions: (value: MapSuggestionsRequest, signal?: AbortSignal) => request('/map/suggestions', MapSuggestionsSchema, value, signal),
+  preview: (value: MapPreviewRequest, signal?: AbortSignal) => request('/map/preview', MapPreviewSchema, value, signal),
+  mapSelection: (mode: 'friends' | 'dating', reference: string, signal?: AbortSignal) => request(`/map/${mode}/${encodeURIComponent(reference)}`, MapSelectionSchema, undefined, signal),
+  confirmMap: async (mode: 'friends' | 'dating', ticket: MapTicket, signal?: AbortSignal) => {
+    const issued = await request('/map/confirm', SearchLocationReceiptSchema, { mode, ticket }, signal)
+    if (issued.mode !== mode || issued.method !== 'selected-area' || issued.source !== 'temporary' || !issued.usable) throw new SearchLocationError(502, 'Map selection could not be confirmed.')
+    const saved = await receipt(mode, issued.id, signal)
+    if (saved.mode !== issued.mode || saved.areaLabel !== issued.areaLabel || saved.method !== issued.method || saved.source !== issued.source || !saved.usable || saved.expiresAt !== issued.expiresAt) throw new SearchLocationError(503, 'Map selection readback changed. Reload before saving.')
+    return saved
+  },
  resolve:(value:ResolveSearchArea,signal?:AbortSignal)=>confirm(ResolveSearchAreaSchema.parse(value),'/resolve',signal),
  browser:(value:BrowserSearchLocation,signal?:AbortSignal)=>confirm(BrowserSearchLocationSchema.parse(value),'/browser',signal)}
 }

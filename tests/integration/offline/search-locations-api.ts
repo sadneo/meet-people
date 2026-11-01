@@ -4,6 +4,8 @@ import assert from 'node:assert/strict'
 import type { Request,Response } from 'express'
 import { createMatchmakingRouter,type UserContextTransport } from '../../../api/matchmaking.js'
 import { disposable } from './disposable.js'
+import { SearchLocationReceiptSchema, SearchPlacesSchema } from '../../../shared/search-locations.js'
+import { FriendsSearchPreferencesSchema } from '../../../shared/friends-search-preferences.js'
 const {checked,literal,rpc}=disposable(process.argv[2]??'pebble-safety-review-20261019-fresh')
 const a='ba000000-0000-4000-8000-000000000001',b='ba000000-0000-4000-8000-000000000002',place='bc000000-0000-4000-8000-000000000001'
 const transport={verify:async(token:string)=>[a,b].includes(token)?{id:token}:null,actor:(actor:string)=>({
@@ -11,7 +13,7 @@ const transport={verify:async(token:string)=>[a,b].includes(token)?{id:token}:nu
  browserSearchLocation:(value:unknown)=>rpc(actor,'issue_browser_search_location',[JSON.stringify(value)]),searchLocationReceipt:(mode:string,reference:string)=>rpc(actor,'get_search_location_receipt',[mode,reference]),
  friendsSearchPreferences:()=>rpc(actor,'get_friends_search_preferences'),saveFriendsSearchPreferences:(value:unknown)=>rpc(actor,'save_friends_search_preferences',[JSON.stringify(value)]),
 })} as unknown as UserContextTransport
-function request(actor:string,method:string,path:string,body?:unknown){return new Promise<{status:number;data:any}>((resolve,reject)=>{
+function request(actor:string,method:string,path:string,body?:unknown){return new Promise<{status:number;data:unknown}>((resolve,reject)=>{
  let status=200;const req={method,url:path,query:Object.fromEntries(new URL(path,'http://offline').searchParams),body,headers:{authorization:`Bearer ${actor}`}} as unknown as Request
  const res={locals:{},set(){return this},status(value:number){status=value;return this},json(data:unknown){resolve({status,data});return this}} as unknown as Response
  createMatchmakingRouter(transport)(req,res,error=>reject(error??new Error('Route miss')))
@@ -23,25 +25,25 @@ const payload={id:place,label:'API synthetic campus',region:'Synthetic region',a
 try{
 checked(`begin;set local role pebble_location_catalog_publisher;select public.publish_search_location_place(${literal(JSON.stringify(payload))}::jsonb);commit;`)
 const before=checked(`select to_jsonb(md5(to_jsonb(p)::text)) from public.profiles p where id='${a}'`)
- const found=await request(a,'GET','/search-locations/places?q=synthetic');assert.equal(found.status,200);assert.equal(found.data.places[0].id,place)
+ const found=await request(a,'GET','/search-locations/places?q=synthetic');assert.equal(found.status,200);assert.equal(SearchPlacesSchema.parse(found.data).places[0].id,place)
  const selection={requestId:'bd000000-0000-4000-8000-000000000001',mode:'friends',source:'home',placeId:place}
- const issued=await request(a,'POST','/search-locations/resolve',selection);assert.equal(issued.status,200);assert.equal(issued.data.usable,true)
+ const issued=await request(a,'POST','/search-locations/resolve',selection);assert.equal(issued.status,200);const area=SearchLocationReceiptSchema.parse(issued.data);assert.equal(area.usable,true)
  assert.deepEqual(await request(a,'POST','/search-locations/resolve',selection),issued)
- assert.equal((await request(b,'GET',`/search-locations/friends/${issued.data.id}`)).status,404)
- assert.equal((await request(a,'GET','/friends-search-preferences')).data.revision,0)
- const preferences={ageMin:18,ageMax:99,radiusMiles:15,goals:[],searchArea:{source:'home',resolvedLocationRef:issued.data.id}}
- const saved=await request(a,'PUT','/friends-search-preferences',{expectedRevision:0,preferences});assert.equal(saved.status,200);assert.equal(saved.data.revision,1)
+ assert.equal((await request(b,'GET',`/search-locations/friends/${area.id}`)).status,404)
+ assert.equal(FriendsSearchPreferencesSchema.parse((await request(a,'GET','/friends-search-preferences')).data).revision,0)
+ const preferences={ageMin:18,ageMax:99,radiusMiles:15,goals:[],searchArea:{source:'home',resolvedLocationRef:area.id}}
+ const saved=await request(a,'PUT','/friends-search-preferences',{expectedRevision:0,preferences});assert.equal(saved.status,200);assert.equal(FriendsSearchPreferencesSchema.parse(saved.data).revision,1)
  assert.deepEqual((await request(a,'GET','/friends-search-preferences')).data,saved.data)
  const gps={requestId:'bd000000-0000-4000-8000-000000000002',mode:'friends',latitude:0,longitude:0,accuracyMeters:20,observedAt:new Date().toISOString(),consent:true}
  assert.equal((await request(a,'POST','/search-locations/browser',gps)).status,403)
  checked(`update public.account_settings set settings=settings||'{"location":true}' where user_id='${a}';`)
- const device=await request(a,'POST','/search-locations/browser',gps);assert.equal(device.status,200);assert.equal(device.data.method,'device-reported')
+ const device=await request(a,'POST','/search-locations/browser',gps);assert.equal(device.status,200);const deviceArea=SearchLocationReceiptSchema.parse(device.data);assert.equal(deviceArea.method,'device-reported')
  assert.deepEqual((await request(a,'GET','/friends-search-preferences')).data,saved.data,'Issuance mutated saved filters')
  checked(`update public.account_settings set settings=settings||'{"location":false}' where user_id='${a}';`)
- assert.equal((await request(a,'GET',`/search-locations/friends/${device.data.id}`)).data.usable,false)
- assert.equal((await request(a,'GET',`/search-locations/friends/${issued.data.id}`)).data.usable,true)
+ assert.equal(SearchLocationReceiptSchema.parse((await request(a,'GET',`/search-locations/friends/${deviceArea.id}`)).data).usable,false)
+ assert.equal(SearchLocationReceiptSchema.parse((await request(a,'GET',`/search-locations/friends/${area.id}`)).data).usable,true)
  checked(`update location_private.places set enabled=false where id='${place}';`)
- assert.equal((await request(a,'GET',`/search-locations/friends/${issued.data.id}`)).data.usable,false)
+ assert.equal(SearchLocationReceiptSchema.parse((await request(a,'GET',`/search-locations/friends/${area.id}`)).data).usable,false)
  assert.equal((await request(a,'PUT','/friends-search-preferences',{expectedRevision:1,preferences})).status,400)
  assert.deepEqual((await request(a,'GET','/friends-search-preferences')).data,saved.data)
  assert.equal(checked(`select to_jsonb(md5(to_jsonb(p)::text)) from public.profiles p where id='${a}'`),before)

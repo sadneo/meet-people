@@ -43,15 +43,19 @@ try {
   const a = client(), b = client()
   const users = []
   for (const actor of [a, b]) {
+    stage = 'signup'
     const email = `smoke-${randomUUID()}@example.test`
     const { data, error } = await actor.auth.signUp({ email, password })
     if (error) throw error
     assert.ok(data.user)
     ids.push(data.user.id)
+    stage = 'local email-confirmation policy'
     assert.equal(data.session, null, 'Local email confirmation should be enabled; restart Supabase after changing auth config.')
     // Confirm out-of-band without requiring a human to open Mailpit.
+    stage = 'email confirmation'
     const confirmed = await admin.auth.admin.updateUserById(data.user.id, { email_confirm: true })
     if (confirmed.error) throw confirmed.error
+    stage = 'initial password login'
     const signed = await actor.auth.signInWithPassword({ email, password })
     if (signed.error) throw signed.error
     assert.ok(signed.data.session)
@@ -124,9 +128,11 @@ try {
   assert.deepEqual(await rpc(recovered, 'get_account'), account)
   const signedOut = await Promise.all([a, b, recovered].map(actor => actor.auth.signOut()))
   assert.ok(signedOut.every(result => !result.error), 'Final signout failed.')
-} catch {
+} catch (error) {
   // SDK/process diagnostics can contain credentials or token-bearing URLs.
-  failure = new Error(`Local Auth acceptance failed at ${stage}.`)
+  const code = typeof error?.code === 'string' && /^[a-z0-9_]{1,80}$/i.test(error.code) ? error.code : 'unknown'
+  const status = Number.isInteger(error?.status) ? error.status : 'unknown'
+  failure = new Error(`Local Auth acceptance failed at ${stage} (code: ${code}, status: ${status}).`)
 } finally {
   for (const id of ids) {
     try { const { error } = await admin.auth.admin.deleteUser(id); if (error) cleanupFailures++ }

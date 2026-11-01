@@ -3,8 +3,8 @@
 project_id = "meet-people"
 
 [auth]
-site_url = "https://cse416-meet-people.web.app"
-additional_redirect_urls = ["https://cse416-meet-people.web.app/auth/callback**", "https://cse416-meet-people.web.app/reset-password**"]
+site_url = "https://pebble.garden"
+additional_redirect_urls = ["https://pebble.garden/auth/callback**", "https://pebble.garden/reset-password**", "https://cse416-meet-people.web.app/auth/callback**", "https://cse416-meet-people.web.app/reset-password**"]
 enable_signup = true
 minimum_password_length = 8
 

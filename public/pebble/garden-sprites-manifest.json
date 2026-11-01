@@ -1,0 +1,248 @@
+{
+  "image": "garden-sprites-v1.png",
+  "coordinateSpace": [
+    1280,
+    1280
+  ],
+  "frames": {
+    "garnet": [
+      55,
+      90,
+      200,
+      190
+    ],
+    "sapphire": [
+      300,
+      90,
+      195,
+      190
+    ],
+    "emerald": [
+      540,
+      90,
+      195,
+      190
+    ],
+    "citrine": [
+      775,
+      90,
+      195,
+      190
+    ],
+    "river": [
+      1000,
+      80,
+      225,
+      230
+    ],
+    "tree": [
+      35,
+      310,
+      230,
+      235
+    ],
+    "walkway": [
+      285,
+      315,
+      225,
+      230
+    ],
+    "meadow": [
+      510,
+      350,
+      240,
+      195
+    ],
+    "shrub": [
+      750,
+      345,
+      230,
+      200
+    ],
+    "rock": [
+      995,
+      345,
+      235,
+      200
+    ],
+    "grass": [
+      40,
+      560,
+      220,
+      210
+    ],
+    "wildflowers": [
+      285,
+      570,
+      225,
+      200
+    ],
+    "bench": [
+      515,
+      570,
+      225,
+      200
+    ],
+    "lanterns": [
+      760,
+      560,
+      225,
+      210
+    ],
+    "picnic": [
+      995,
+      575,
+      235,
+      195
+    ],
+    "bridge": [
+      40,
+      800,
+      230,
+      200
+    ],
+    "vegetables": [
+      285,
+      800,
+      225,
+      200
+    ],
+    "cafe": [
+      520,
+      780,
+      225,
+      220
+    ],
+    "stage": [
+      760,
+      790,
+      225,
+      210
+    ],
+    "cottage": [
+      995,
+      790,
+      235,
+      210
+    ],
+    "hall": [
+      35,
+      1015,
+      230,
+      190
+    ],
+    "pebble": [
+      300,
+      1020,
+      200,
+      185
+    ]
+  },
+  "items": [
+    {
+      "id": "garnet",
+      "name": "Garnet",
+      "cost": 300
+    },
+    {
+      "id": "sapphire",
+      "name": "Sapphire",
+      "cost": 300
+    },
+    {
+      "id": "emerald",
+      "name": "Emerald",
+      "cost": 300
+    },
+    {
+      "id": "citrine",
+      "name": "Citrine",
+      "cost": 300
+    },
+    {
+      "id": "river",
+      "name": "River",
+      "cost": 80
+    },
+    {
+      "id": "tree",
+      "name": "Tree Cluster",
+      "cost": 60
+    },
+    {
+      "id": "walkway",
+      "name": "Walkway",
+      "cost": 45
+    },
+    {
+      "id": "meadow",
+      "name": "Flower Meadow",
+      "cost": 25
+    },
+    {
+      "id": "shrub",
+      "name": "Shrub Patch",
+      "cost": 30
+    },
+    {
+      "id": "rock",
+      "name": "Rock Formation",
+      "cost": 35
+    },
+    {
+      "id": "grass",
+      "name": "Grass Details",
+      "cost": 20
+    },
+    {
+      "id": "wildflowers",
+      "name": "Wildflower Patch",
+      "cost": 10
+    },
+    {
+      "id": "bench",
+      "name": "Garden Bench",
+      "cost": 15
+    },
+    {
+      "id": "lanterns",
+      "name": "Path Lanterns",
+      "cost": 20
+    },
+    {
+      "id": "picnic",
+      "name": "Picnic Spot",
+      "cost": 25
+    },
+    {
+      "id": "bridge",
+      "name": "Footbridge",
+      "cost": 30
+    },
+    {
+      "id": "vegetables",
+      "name": "Community Garden",
+      "cost": 40
+    },
+    {
+      "id": "cafe",
+      "name": "Café Cart",
+      "cost": 55
+    },
+    {
+      "id": "stage",
+      "name": "Music Stage",
+      "cost": 70
+    },
+    {
+      "id": "cottage",
+      "name": "Cottage Expansion",
+      "cost": 90
+    },
+    {
+      "id": "hall",
+      "name": "Community Hall",
+      "cost": 120
+    }
+  ]
+}

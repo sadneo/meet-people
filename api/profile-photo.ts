@@ -5,14 +5,30 @@ import { ProfilePhotoStateSchema, ProfilePhotoWriteSchema } from '../shared/prof
 import type { UserContextTransport } from './matchmaking.js'
 class PhotoFailure extends Error{constructor(readonly status:number,message:string){super(message)}}
 let processing=0,uploads=0
+const waitingReads: {resolve:()=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}[]=[]
+async function acquireProcessing(wait:boolean){
+ if(processing<2){processing++;return}
+ if(!wait||waitingReads.length>=32)throw new PhotoFailure(503,'Photo processing is busy. Try again shortly.')
+ await new Promise<void>((resolve,reject)=>{
+  const entry={resolve,reject,timer:setTimeout(()=>{
+   const index=waitingReads.indexOf(entry)
+   if(index!==-1){waitingReads.splice(index,1);reject(new PhotoFailure(503,'Photo processing is busy. Try again shortly.'))}
+  },5000)}
+  waitingReads.push(entry)
+ })
+}
+function releaseProcessing(){
+ const next=waitingReads.shift()
+ if(next){clearTimeout(next.timer);next.resolve()}
+ else processing--
+}
 const admittedUploads=new WeakSet<Request>()
 function releaseUpload(request:Request){if(admittedUploads.delete(request))uploads--}
-export async function sanitizeProfilePhoto(input:Buffer){
+export async function sanitizeProfilePhoto(input:Buffer,waitForProcessing=false){
  if(input.length<12||input.length>5*1024*1024)throw new PhotoFailure(400,'Choose a JPEG, PNG or WebP photo up to 5 MB.')
  const jpeg=input[0]===255&&input[1]===216&&input[2]===255,png=input.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),webp=input.toString('ascii',0,4)==='RIFF'&&input.toString('ascii',8,12)==='WEBP'
  if(!jpeg&&!png&&!webp)throw new PhotoFailure(400,'Choose a still JPEG, PNG or WebP photo.')
- if(processing>=2)throw new PhotoFailure(503,'Photo processing is busy. Try again shortly.')
- processing++
+ await acquireProcessing(waitForProcessing)
  try{
   const image=sharp(input,{limitInputPixels:16_000_000,failOn:'error',animated:false}).timeout({seconds:5})
   const metadata=await image.metadata()
@@ -21,7 +37,7 @@ export async function sanitizeProfilePhoto(input:Buffer){
   if(bytes.length>262144)throw new Error('Output too large')
   return bytes
  }catch(failure){if(failure instanceof PhotoFailure)throw failure;throw new PhotoFailure(400,'This photo could not be processed. Choose a still JPEG, PNG or WebP under 16 megapixels.')}
- finally{processing--}
+ finally{releaseProcessing()}
 }
 type Actor=ReturnType<UserContextTransport['actor']>
 function unwrap(result:{data:unknown;error:{code?:string}|null}){
@@ -83,7 +99,9 @@ export function createProfilePhotoRouter(){
   const call=actor(res).readProfilePhoto;if(!call)throw new PhotoFailure(503,'Photo storage is not available yet.')
   const parsed=z.object({revision:z.number().int().positive().safe(),jpegBase64:z.string().max(360000)}).strict().safeParse(unwrap(await call(owner.data,revision.data)))
   if(!parsed.success||revision.data!==0&&parsed.data.revision!==revision.data)throw new PhotoFailure(502,'Photo response could not be confirmed.')
-  const bytes=await sanitizeProfilePhoto(Buffer.from(parsed.data.jpegBase64,'base64'))
+  // A normal Discover/inbox batch loads many avatars together. Queue reads
+  // within a bounded budget while retaining sanitization and two CPU workers.
+  const bytes=await sanitizeProfilePhoto(Buffer.from(parsed.data.jpegBase64,'base64'),true)
   res.type('image/jpeg').send(bytes)
  })
  router.use((error:unknown,_req:Request,res:Response,next:NextFunction)=>{void next;releaseUpload(_req);
