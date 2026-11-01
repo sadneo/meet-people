@@ -42,3 +42,38 @@
 @media(max-width:800px){.shell>main.sky-garden-main{height:calc(100dvh - 79px - env(safe-area-inset-bottom,0px));min-height:0}.integrated-sky-garden .garden-heading{top:23px;left:21px;right:20px}.integrated-sky-garden .garden-balance{font-size:12px}.integrated-sky-garden .garden-balance img{width:24px;height:24px}.integrated-sky-garden .garden-bottom{left:17px;bottom:83px}.integrated-sky-garden .garden-activity{padding:11px 14px;gap:8px;border-radius:18px}.integrated-sky-garden .garden-activity span{font-size:11px}.integrated-sky-garden .garden-activity small{font-size:9px}.garden-inventory-dock .garden-build{min-height:62px}.integrated-sky-garden .garden-drawer{width:100%;max-width:none;height:calc(83dvh - 60px);max-height:calc(100dvh - 120px);margin:auto 0 calc(79px + env(safe-area-inset-bottom,0px));border-radius:25px 25px 0 0}}
 @media(prefers-reduced-motion:no-preference){.integrated-sky-garden .garden-drawer[open]{animation:garden-inventory-rise .22s cubic-bezier(.22,1,.36,1)}}
 @keyframes garden-inventory-rise{from{transform:translateY(80px);opacity:.7}to{transform:translateY(0);opacity:1}}
+
+/* Garden catalog and compact, non-modal daily history. */
+.integrated-sky-garden .garden-build-section{border-bottom:1px solid #e7e7d9;margin:0}
+.garden-build-section>summary{display:flex;align-items:center;gap:11px;min-height:58px;cursor:pointer;list-style:none;color:#526349;font-size:14px;font-weight:600}
+.garden-build-section>summary::-webkit-details-marker{display:none}
+.garden-build-section>summary svg{width:22px;height:22px;flex:none}
+.garden-build-section>summary span{flex:1}
+.garden-build-section>summary small{font-weight:400;font-size:11px;color:#8a927c}
+.garden-build-section>summary svg:last-child{width:16px;height:16px}
+.garden-build-section[open]>summary svg:last-child{transform:rotate(180deg)}
+.garden-build-section>summary:focus-visible,.garden-week button:focus-visible{outline:2px solid #9d503d;outline-offset:2px;border-radius:8px}
+.integrated-sky-garden .garden-build-section .garden-shop-item:last-child{border-bottom:0}
+.garden-keyboard-help{margin:20px 0 0;font-size:12px;color:#7c876d}
+.garden-keyboard-help summary{min-height:44px;align-content:center;cursor:pointer}
+.integrated-sky-garden .garden-drawer footer.garden-build-footer{display:flex;flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px;background:#fffdf5}
+.integrated-sky-garden .garden-build-footer .garden-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0}
+.integrated-sky-garden .garden-build-footer .garden-tools button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;padding:8px 4px;font-size:11px;border:1px solid #e7e7d9;border-radius:12px;white-space:nowrap;color:#526349}
+.integrated-sky-garden .garden-build-footer .garden-tools button:last-child{color:#9d503d}
+.integrated-sky-garden .garden-build-footer small{text-align:center;max-width:none;color:#8a927c}
+.garden-week{width:310px;max-width:calc(100vw - 34px);padding:9px 12px 8px;background:#fffdf5;border:1px solid #fffdf9;border-radius:20px;box-shadow:0 8px 28px #31422e14}
+.garden-week header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.garden-week header>div{display:flex;align-items:baseline;gap:9px}
+.garden-week strong{font-size:12px;color:#333d32}
+.garden-week header span{font-size:10px;color:#7c876d}
+.integrated-sky-garden .garden-week header button{border:0;background:none;padding:0;min-height:44px;min-width:44px;justify-content:center}
+.garden-week header svg{width:16px;height:16px}
+.garden-week-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.integrated-sky-garden .garden-week-days button{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-width:0;min-height:61px;border:0;border-radius:8px;padding:4px 0;background:transparent;font-size:10px;color:#68785d}
+.integrated-sky-garden .garden-week-days button[aria-pressed=true]{background:#eee0d3;color:#9d503d}
+.garden-week-bar-track{display:flex;height:32px;align-items:flex-end;justify-content:center;width:100%}
+.garden-week-bar{display:block;width:12px;max-width:80%;border-radius:3px 3px 1px 1px;background:#9aa98a}
+.garden-week-days button[aria-pressed=true] .garden-week-bar{background:#9d503d}
+.garden-week-days button:disabled .garden-week-bar{background:#d7dbd0}
+.garden-week p{font-size:9px;color:#8a927c;margin:6px 0 0;text-align:center}
+@media(max-width:360px){.integrated-sky-garden .garden-build-footer .garden-tools button{flex-direction:column;gap:3px;font-size:10px}.garden-week{width:286px}}

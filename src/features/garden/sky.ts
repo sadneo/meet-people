@@ -1,6 +1,11 @@
 // The finalized prototype's sky, cloud silhouettes and overview camera.
 // Background islands are illustrations, not other users' saved gardens.
-export function gardenProjection(width: number, height: number, camera: {x:number;y:number;zoom:number}) {
+export function gardenProjection(width: number, height: number, camera: {x:number;y:number;zoom:number}, bottomInset = 0) {
+  if (bottomInset) {
+    const top = 100, available = Math.max(100, height - bottomInset - top)
+    const scale = Math.max(.08, Math.min((width - 36) / 1320, available / 1015, .85))
+    return { scale, x: width / 2 - 724 * scale, y: top + (available - 1015 * scale) / 2 }
+  }
   const scale = Math.max(.16, Math.min((width-36)/1320, Math.max(180,height-240)/820, .85)) * camera.zoom
   return {scale, x:width/2-724*scale+camera.x, y:height*.47-590*scale+camera.y}
 }
