@@ -22,7 +22,7 @@ export default function DevelopmentNavigator() {
     navigate(path)
   }
   return (
-    <aside className="devbar development-navigator" aria-label="Development navigation">
+    <aside className="development-navigator" aria-label="Development navigation">
       <details ref={details} onKeyDown={event => {
         if (event.key === 'Escape') {
           event.currentTarget.open = false

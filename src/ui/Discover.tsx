@@ -14,6 +14,7 @@ import { matchingClient } from './matching-client'
 import { useDiscoveryDeck } from './useDiscoveryDeck'
 import { useRequestAllowance, type RequestAllowanceControl } from './useRequestAllowance'
 import { useQueryClient } from '@tanstack/react-query'
+import { canonicalInterest } from '../../shared/interests'
 export function Connect({
   id,
   dating = false,
@@ -145,7 +146,9 @@ function Candidate({
       if (live.current) setTransitioning(false);
     }
   }
-  const shared = interests.filter(interest => current.account?.profile?.interests.includes(interest));
+  const viewerInterests = new Set(current.account?.profile?.interests.map(canonicalInterest) ?? []);
+  const shared = interests.filter(interest => viewerInterests.has(canonicalInterest(interest)));
+  const sharedCount = new Set(shared.map(canonicalInterest)).size;
   const sortedInterests = [...shared, ...interests.filter(interest => !shared.includes(interest))];
   return (
     <article className={`dating-focus discovery-profile ${dating ? 'dating-profile' : 'friends-focus'}`}>
@@ -171,7 +174,7 @@ function Candidate({
       <div className="dating-profile-body">
         {bio && <section><h3>About {name}</h3><p>{bio}</p></section>}
         <section>
-          <div className="dating-section-heading"><h3>Interests</h3>{shared.length > 0 && <span>{shared.length} in common</span>}</div>
+          <div className="dating-section-heading"><h3>Interests</h3>{sharedCount > 0 && <span>{sharedCount} in common</span>}</div>
           <div className="dating-interest-list">{sortedInterests.map(interest => <span key={interest} className={`dating-interest ${shared.includes(interest) ? 'in-common' : ''}`}>
             {shared.includes(interest) && <Icon name="Check" />}{interest}{shared.includes(interest) && <span className="sr-only"> · shared interest</span>}
           </span>)}</div>
@@ -264,10 +267,11 @@ export function Discover(){
     const saved = mode === 'Friends'
       ? (await friendsPreferencesClient(token).read(signal)).preferences?.searchArea
       : (await datingLiveClient(token).status(signal)).aggregate.search?.searchArea;
-    return saved?.source === 'temporary' ? saved.areaLabel : saved?.source === 'home' ? home : null;
+    if (!saved?.resolvedLocationRef) return null;
+    return saved.source === 'temporary' ? saved.areaLabel : saved.source === 'home' ? home : null;
   }, [mode, token, epoch, home]));
   const revision=JSON.stringify([epoch,current.account?.profile])
-  return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className="area-link" aria-label="Search area & preferences" onClick={()=>setPreferences(true)}>⌖ {area.loading || area.error ? 'Search area' : area.value || 'Search area'} <span aria-hidden="true">⌄</span></button></div>
+  return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className="area-link" aria-label="Search area & preferences" onClick={()=>setPreferences(true)}>⌖ {area.loading ? 'Search area' : area.error ? 'Check search area' : area.value || 'Choose an area'} <span aria-hidden="true">⌄</span></button></div>
   <div className="discovertools"><div className="mode-toggle" role="group" aria-label="Matchmaking mode"><span className={`mode-toggle-indicator ${mode==='Dating'?'dating':''}`} aria-hidden="true"/>{(['Friends','Dating'] as const).map(item=><button key={item} data-mode={item} className={mode===item?'selected':''} aria-pressed={mode===item} onClick={()=>setMode(item)}><Icon name={item}/>{item}</button>)}</div><div className="row"><button className="round" aria-label={`${mode} preferences`} onClick={()=>setPreferences(true)}><Icon name="DiscoveryPreferences"/></button><Link className="round discovery-activity" to="/matches" aria-label="Matches and activity"><Icon name="DiscoveryActivity" /></Link></div></div>
  <ResourceState loading={!allowance.value && allowance.checking} error={allowance.error} reload={()=>void allowance.refresh()}/>
  {allowance.limited ? <section className="friends-waiting discovery-request-limit" aria-labelledby="request-limit-title">

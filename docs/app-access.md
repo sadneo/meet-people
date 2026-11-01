@@ -53,14 +53,14 @@ instead of failing account loading and being logged out.
   to login with an explanation. Failed signout offers a retry without private access.
   Save/reconciliation failures still retain drafts rather than signing out.
 - **Ready persisted profile:** ordinary app access. Readiness requires valid
-  canonical identity, at least three unique interests, valid birthdate, nonempty
+  canonical identity, at least one interest (premade or custom), valid birthdate, nonempty
    city/campus area, at least one valid non-overlapping availability window, social
    intent and explicit distance/group choices. It does not require photos or
    coordinates. Distance/group values do not enable Dating, geolocation or new
    ranking rules. This supersedes identity-only/optional-preferences access.
 
 Each sequential chapter saves through unified PUT and authoritative GET readback:
-identity, at least three unique interests, social intent, then real windows,
+identity, at least one interest (premade or custom), social intent, then real windows,
 birthdate/city and distance/group. Bio is optional. Existing valid stored fields map
 to a completed prefix; fully valid no-marker accounts never replay onboarding.
 Missing new private choices require only the missing steps, not a second full flow.

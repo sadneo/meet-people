@@ -156,6 +156,7 @@ export default function App() {
   return (
     <SessionQueryProvider scope={session?.user.id ?? "public"}>
       <NativeBridge />
+      {DevelopmentNavigator && <Suspense fallback={null}><DevelopmentNavigator /></Suspense>}
       <Routes>
         <Route path="/welcome" element={<Landing />} />
         {!session && <Route path="/" element={<Landing />} />}
@@ -199,7 +200,6 @@ export default function App() {
           </Route>
         </Route>
       </Routes>
-      {DevelopmentNavigator && <Suspense fallback={null}><DevelopmentNavigator /></Suspense>}
     </SessionQueryProvider>
   );
 }

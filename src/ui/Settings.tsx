@@ -11,8 +11,9 @@ import { useCurrent } from "./current";
 import { Blocklist } from "./Safety";
 import { settingsCategories } from './settings-navigation';
 import { PasswordField } from './PasswordField';
+import { MatchingSchedule } from './MatchingSchedule';
 
-function MasterSettings({ category }: { category: 'discovery' | 'notifications' | 'privacy' }) {
+function MasterSettings({ category }: { category: 'discovery' | 'notifications' }) {
   const current = useCurrent(),
     [source, setSource] = useState(current.account!.settings),
     [draft, setDraft] = useState(current.account!.settings),
@@ -23,15 +24,17 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
     setSource(current.account!.settings);
     setDraft(current.account!.settings);
   }
-  const labels: Record<keyof Account["settings"], string> = {
+  // The legacy account availability flag is persisted but is not consulted by
+  // discovery_details or group proposal projections. Do not present it as a
+  // sharing gate or copy it into the independent scoring-settings opt-in.
+  const labels: Record<Exclude<keyof Account["settings"], 'availability'>, string> = {
     notifications: "Notifications",
     discoverable: "Discovery",
-    availability: "Share availability",
-    location: "Location preference",
+    location: "Allow device location for search areas",
   };
   return (
     <section className="account-panel">
-      <h3>{category === 'notifications' ? 'Activity notifications' : category === 'privacy' ? 'Profile visibility' : 'Discovery & location'}</h3>
+      <h3>{category === 'notifications' ? 'Activity notifications' : 'Discovery & location'}</h3>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -41,7 +44,7 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
         }}
       >
         <fieldset disabled={current.busy || !current.available}>
-          {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => category === 'notifications' ? key === 'notifications' : category === 'privacy' ? key === 'availability' : key === 'discoverable' || key === 'location').map((key) => (
+          {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => category === 'notifications' ? key === 'notifications' : key === 'discoverable' || key === 'location').map((key) => (
             <label className="settings-switch" key={key}>
               <span>{labels[key]}</span>
               <input
@@ -55,7 +58,7 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
             </label>
           ))}
           <p className="account-note">
-            {category === 'discovery' ? 'The location preference doesn’t request device coordinates. Choose a search area separately in Discover.' : category === 'notifications' ? 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.' : 'Only coarse shared-time summaries can appear when both people choose to share. Your full schedule stays private.'}
+            {category === 'discovery' ? 'Allows “Use my current location” when choosing a search area in Discover. Your device asks permission when you use it; this switch alone does not request coordinates. You can still search or move the map manually when it is off.' : 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.'}
           </p>
           <button className="btn">Save</button>
         </fieldset>
@@ -288,7 +291,12 @@ export function ProfileSettings({ section }: { section: string }) {
       <Link className="account-back" to="/profile"><Icon name="Back"/>Profile</Link>
       <div className="pagehead"><h2>{category[1]}</h2></div>
       <div className="settings-detail" key={category[0]}>
-          {(category[0] === 'discovery' || category[0] === 'notifications' || category[0] === 'privacy') && <MasterSettings category={category[0]}/>}
+          {(category[0] === 'discovery' || category[0] === 'notifications') && <MasterSettings category={category[0]}/>}
+          {category[0] === 'privacy' && <section className="account-panel">
+            <h3>Shared availability</h3>
+            <p className="account-note">Manage shared-time explanations below or in Edit profile → Interests & Availability. Both places use the same setting. Weekly time windows are edited in your profile.</p>
+            <MatchingSchedule token={current.session.access_token} disabled={current.busy} onSaved={() => window.dispatchEvent(new Event('pebble:matching-changed'))}/>
+          </section>}
           {(category[0] === 'discovery' || category[0] === 'notifications') && <>
           <section className="account-panel">
             <h3>{category[1]} preferences</h3>
