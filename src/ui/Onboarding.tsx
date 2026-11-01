@@ -1,3 +1,4 @@
+import { meetsMinimumAge, canShowDating } from './age-visibility'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { completedAccountChapters, SaveAccountSchema, type Account } from '../../shared/account'
@@ -81,6 +82,7 @@ function Chapter({ initial, chapter, advance, onBusyChange }: { initial: Account
     setTimezoneError('')
     await action.run(async () => {
       if ((chapter === 0 || chapter === 3) && (!profile.birthdate || profile.birthdate > new Date().toISOString().slice(0, 10))) throw new Error('Enter a valid birthdate in the past.')
+      if ((chapter === 0 || chapter === 3) && !meetsMinimumAge(profile.birthdate)) throw new Error('You must be at least 13 to use Pebble.')
       if ((chapter === 0 || chapter === 3) && !profile.location_city?.trim()) throw new Error('Enter your city or campus area.')
       if (chapter === 1) {
         const problem = interestSelectionProblem(profile.interests)
@@ -107,7 +109,7 @@ function Chapter({ initial, chapter, advance, onBusyChange }: { initial: Account
         <HomeAndBirthday profile={profile} update={update}/>
       </>}
       {chapter === 1 && <Interests value={profile.interests} change={interests => update({ interests })}/>}
-      {chapter === 2 && <fieldset className="onboarding-intentions"><legend className="sr-only">What would you like to do?</legend>{[...intentions, ...draft.preferences.intents.filter(value => !intentions.some(item => item.value === value)).map(value => ({ value, label: value, detail: 'Your saved choice.', icon: 'Friends' }))].map(item => <label className={`onboarding-choice ${draft.preferences.intents.includes(item.value) ? 'is-selected' : ''}`} key={item.value}>
+      {chapter === 2 && <fieldset className="onboarding-intentions"><legend className="sr-only">What would you like to do?</legend>{[...intentions.filter(item => item.value !== 'Date' || canShowDating(profile.birthdate)), ...draft.preferences.intents.filter(value => !intentions.some(item => item.value === value)).map(value => ({ value, label: value, detail: 'Your saved choice.', icon: 'Friends' }))].map(item => <label className={`onboarding-choice ${draft.preferences.intents.includes(item.value) ? 'is-selected' : ''}`} key={item.value}>
         <input type="checkbox" aria-label={item.label} aria-description={item.detail} checked={draft.preferences.intents.includes(item.value)} onChange={event => preference({ intents: event.target.checked ? [...draft.preferences.intents, item.value] : draft.preferences.intents.filter(value => value !== item.value) })}/><Icon name={item.icon}/><span><b>{item.label}</b><small>{item.detail}</small></span>
       </label>)}</fieldset>}
       {chapter === 3 && <>
@@ -121,7 +123,7 @@ function Chapter({ initial, chapter, advance, onBusyChange }: { initial: Account
     <ErrorMessage>{timezoneError || action.error || current.error}</ErrorMessage>
     {current.error && <ActionButton secondary disabled={disabled} onClick={current.reload}>Reload account and replace draft before saving again</ActionButton>}
     <button className="btn onboarding-continue" disabled={disabled || scheduleBusy || !current.available}>{disabled ? 'Saving…' : chapter === 3 ? 'Finish setup' : 'Save & continue'}<Icon name="ArrowRight"/></button>
-    {chapter === 2 && <p className="muted onboarding-save-note">Dating participation and each group or event queue have their own opt-in.</p>}
+    {chapter === 2 && <p className="muted onboarding-save-note">{canShowDating(profile.birthdate) ? 'Dating participation and each group or event queue have their own opt-in.' : 'Each group or event queue has its own opt-in.'}</p>}
   </form>
 }
 

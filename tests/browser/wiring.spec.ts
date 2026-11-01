@@ -316,12 +316,12 @@ test("garden renders the new canvas, supports local building and cleans up on na
   page.on("pageerror", (error) => failures.push(error.message));
   await wiringFixture(page);
   await page.goto("/");
-  await expect(page.locator("#sky-canvas")).toBeVisible();
+  await expect(page.locator(".garden-canvas")).toBeVisible();
   await page.getByRole("button", { name: /Build with/ }).click();
   await expect(
-    page.getByRole("dialog", { name: "Garden inventory" }),
+    page.getByRole("dialog", { name: "Your garden" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Close panel" }).click();
+  await page.getByRole("button", { name: "Close Garden inventory" }).click();
   await page.getByRole("link", { name: "Discover", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Discover", exact: true }),
@@ -379,7 +379,7 @@ test("email-first sign-in installs the real SDK session before entering the app"
     .getByLabel("Password", { exact: true })
     .fill("Synthetic-fixture-password-1!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.locator("#sky-canvas")).toBeVisible();
+  await expect(page.locator(".garden-canvas")).toBeVisible();
   expect(
     fixture.calls.some(
       (call) => call.path === "/api/auth/email" && call.method === "POST",
@@ -473,16 +473,19 @@ test("garden purchases use the new renderer without calling an invented economy 
   page.on("pageerror", (error) => errors.push(error.message));
   const fixture = await wiringFixture(page);
   await page.goto("/");
+  await page.getByRole("complementary", {name:"Development navigation"}).locator("summary").click();
+  await page.getByRole("button", {name:"Add 1,000 test Pebbles"}).click();
+  await page.getByRole("complementary", {name:"Development navigation"}).locator("summary").click();
   await page.getByRole("button", { name: /Build with/ }).click();
   await page
-    .locator(".builditem")
+    .locator(".garden-shop-item")
     .filter({ hasText: "Garden Bench" })
     .getByRole("button", { name: "Build", exact: true })
     .click();
-  await expect(page.locator(".sky-balance b")).toHaveText("225");
+  await expect(page.locator(".garden-balance strong")).toHaveText("985");
   await page.getByRole('link', { name: 'Discover', exact: true }).click();
   await page.getByRole('link', { name: 'Garden', exact: true }).click();
-  await expect(page.locator('.sky-balance b')).toHaveText('225');
+  await expect(page.locator('.garden-balance strong')).toHaveText('985');
 
   expect(
     fixture.calls.some((call) =>

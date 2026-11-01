@@ -90,7 +90,7 @@ export function useDiscoveryDeck(token: string, mode: 'Friends' | 'Dating', enab
       setOutcomes(current => current.map(item => item.person.id === person.id ? { person, state: 'confirmed', result } : item))
       window.dispatchEvent(new Event('pebble:activity-changed'))
     } catch (failure) {
-      // A 429 rejects the request before saving; interrupted writes/readbacks
+      // Only request_limit confirms rejection before saving; interrupted writes/readbacks
       // still require reconciliation and must never be silently retried.
       const rejected = failure instanceof MatchingError && failure.status === 429 && failure.code === 'request_limit'
       if (live.current) setOutcomes(current => current.map(item => item.person.id === person.id ? { person, state: rejected ? 'rejected' : 'uncertain', error: failure instanceof Error ? failure.message : 'Request could not be confirmed.' } : item))

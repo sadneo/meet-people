@@ -1,6 +1,8 @@
 import { useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { getLocalDevelopmentEnvironment, isLocalDevelopment } from '../auth/localDevelopment'
+import { useSession } from '../auth/useSession'
+import { updateGarden } from '../features/garden/state'
 
 const views = [
   { group: 'Public', pages: [['Landing page', '/welcome'], ['Sign in', '/login'], ['Register', '/register'], ['Password recovery', '/forgot-password'], ['Guest events', '/explore']] },
@@ -9,6 +11,7 @@ const views = [
 ]
 
 export default function DevelopmentNavigator() {
+  const { session } = useSession()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const details = useRef<HTMLDetailsElement>(null)
@@ -44,6 +47,7 @@ export default function DevelopmentNavigator() {
             </optgroup>)}
           </select>
           <small className="devhint">Private views require sign-in. This navigator does not bypass account setup.</small>
+          {session && <button type="button" className="btn light" onClick={() => updateGarden(session.user.id, {type:'demo-funds'})}>Add 1,000 test Pebbles</button>}
           <div className="devquick">
             {[['Landing page', '/welcome'], ['Sign in', '/login'], ['Discover', '/matchmaking'], ['Garden', '/home']].map(([label, path]) => <button key={path} type="button" onClick={() => jump(path)}>{label}</button>)}
           </div>

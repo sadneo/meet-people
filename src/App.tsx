@@ -29,8 +29,8 @@ import { Events, EventDetail } from "./ui/Events";
 import { Messages } from "./ui/Messages";
 import { Requests } from "./ui/Requests";
 import { Activity } from "./ui/Activity";
-import { Garden } from "./ui/Garden";
-import { retainGardenFor } from './ui/garden-state';
+import { Garden } from "./features/garden/Garden";
+import { retainGardenFor } from './features/garden/state';
 import { Landing, Legal } from "./ui/Public";
 import { useAction } from "./ui/hooks";
 import {
@@ -87,8 +87,10 @@ function Shell() {
       <div className="shell">
         <nav className="app-navigation" aria-label="Main navigation">
           <Brand />
-          {links.map(([label, to]) => (
-            <NavLink key={label} end={to === "/"} to={to} onPointerEnter={() => prefetchNavigation(client, to, current.session.access_token)} onFocus={() => prefetchNavigation(client, to, current.session.access_token)}>
+          {links.map(([label, to]) => label === 'Garden' ? (
+            <Link key={label} to={to} className={garden ? 'active' : undefined} aria-current={garden ? 'page' : undefined}><Icon name={label}/><span>{label}</span></Link>
+          ) : (
+            <NavLink key={label} to={to} onPointerEnter={() => prefetchNavigation(client, to, current.session.access_token)} onFocus={() => prefetchNavigation(client, to, current.session.access_token)}>
               <Icon name={label} />
               <span>{label}</span>
               {label === "Messages" &&
@@ -101,10 +103,12 @@ function Shell() {
             </NavLink>
           ))}
           <div className="sub">
+            <NavLink to="/matches">Matches &amp; Plans</NavLink>
             <NavLink to="/activity">Activity</NavLink>
+            <Link className={location.pathname === "/profile" && location.search.includes("section=settings") ? "active" : undefined} to="/profile?section=settings">Settings</Link>
           </div>
         </nav>
-        <main id="main" className={garden ? "sky-garden-main" : ""}>
+        <main id="main" className={garden ? "sky-garden-main" : location.pathname === '/matchmaking' ? 'mobile-dating-main' : ''}>
           <Outlet />
         </main>
       </div>

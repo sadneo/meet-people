@@ -12,7 +12,12 @@ import {
 } from "../auth/localDevelopment";
 import { useAction } from "./hooks";
 import { Brand, ErrorMessage } from "./common";
-import { PasswordField } from './PasswordField';
+
+import { PasswordField } from "./PasswordField";
+
+// Keep only non-secret form text during in-app policy navigation. Passwords
+// remain component-local and are never written to history or browser storage.
+const emailDrafts = new Map<string, string>();
 
 export function Auth({
   mode = "login",
@@ -22,11 +27,12 @@ export function Auth({
   const action = useAction(),
     navigate = useNavigate(),
     [search] = useSearchParams();
-  const [email, setEmail] = useState(() => search.get("email") ?? ""),
+  const [email, setEmail] = useState(() => search.get("email") ?? emailDrafts.get(mode) ?? ""),
     [password, setPassword] = useState(""),
     [confirm, setConfirm] = useState(""),
     [stage, setStage] = useState<"email" | "password">("email"),
     [notice, setNotice] = useState("");
+  useEffect(() => { emailDrafts.set(mode, email); }, [mode, email]);
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -155,6 +161,7 @@ export function Auth({
                 ? "Find your people."
                  : "Welcome to Pebble"}
         </h1>
+        {mode === 'login' && <p className="auth-introduction">Sign in or create an account to find your people.</p>}
         <form onSubmit={(event) => void submit(event)}>
           {!reset && (
             <>
@@ -176,7 +183,7 @@ export function Auth({
           )}
           {!forgot && (stage === "password" || register || reset) && (
             <>
-                <PasswordField
+              <PasswordField
                   label="Password"
                   id="auth-password"
                   autoComplete={
@@ -193,7 +200,7 @@ export function Auth({
                   <PasswordField
                     label="Confirm password"
                     id="auth-confirm"
-                    autoComplete="new-password"
+                      autoComplete="new-password"
                     required
                     value={confirm}
                     onChange={(event) => setConfirm(event.target.value)}
@@ -249,6 +256,7 @@ export function Auth({
                       : "Sign in"}
           </button>
         </form>
+        {mode === 'login' && <Link className="auth-account-link" to={`/register?${new URLSearchParams({ email, returnTo })}`}>New to Pebble? Create an account</Link>}
         {mode === "login" && (
           <>
             <div className="auth-or" aria-hidden="true">or</div>
@@ -298,8 +306,8 @@ export function Auth({
           <Link to="/privacy">Privacy Policy</Link>.
         </p>}
         <footer className="auth-footer">
-          <Link to="/privacy">Privacy</Link>
-          <Link to="/terms">Terms</Link>
+          <Link to="/privacy" state={{ authFrom: mode === 'register' ? '/register' : '/login' }}>Privacy</Link>
+          <Link to="/terms" state={{ authFrom: mode === 'register' ? '/register' : '/login' }}>Terms</Link>
           <a href={`mailto:${legalPublication.contactEmail}`}>Safety</a>
         </footer>
       </div>
@@ -343,9 +351,7 @@ export function AuthCallback() {
         verified.data.user?.id !== result.data.session.user.id
       )
         throw new Error("Invalid identity");
-      const pathname = decodeURIComponent(incoming.pathname)
-        .replace(/\/+$/, "")
-        .toLowerCase();
+      const pathname = decodeURIComponent(incoming.pathname).replace(/\/+$/, '').toLowerCase();
       return parsed.recovery || pathname === "/reset-password"
         ? "recovery"
         : (safeReturnTo(incoming.searchParams.get("returnTo")) ?? "/");

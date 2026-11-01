@@ -1,0 +1,44 @@
+/* Finalized Pebble.html composition. Scope above legacy .garden-workspace rules. */
+.shell>main.sky-garden-main{padding:0!important;height:100dvh;min-height:0;overflow:hidden}
+.sky-garden-main>section.integrated-sky-garden{width:100%;height:100%;min-height:0;margin:0;border-radius:0;background:#e8efed;color:#333d32}
+.integrated-sky-garden .garden-heading{top:31px;left:36px;right:32px;z-index:3}
+.integrated-sky-garden .garden-wordmark{width:144px;height:auto;margin:0!important;line-height:0;font-size:0!important}
+.garden-wordmark img{display:block;width:100%;height:auto}
+.integrated-sky-garden .garden-balance{padding:6px 13px 6px 9px;gap:7px;font-size:14px;border:1px solid #fffdf5;background:#fffdf0db;border-radius:24px;color:#333d32;box-shadow:0 5px 15px #57684b0c}
+.integrated-sky-garden .garden-balance img{width:28px;height:28px}
+.integrated-sky-garden .garden-balance strong{font-weight:600}
+.integrated-sky-garden .garden-bottom{left:33px;right:auto;bottom:29px;z-index:2}
+.integrated-sky-garden .garden-activity{display:flex;align-items:center;gap:12px;background:#fffdf0df;padding:13px 19px;border:1px solid #fffdf5;border-radius:19px;box-shadow:0 5px 20px #5363460c;text-align:left;color:#333d32}
+.integrated-sky-garden .garden-activity svg{color:#9d6e49;width:24px;height:24px}
+.integrated-sky-garden .garden-activity span{font-size:12px;line-height:1.5;font-weight:600}
+.integrated-sky-garden .garden-activity small{font-size:10px;color:#7c876d;margin-top:3px}
+.garden-inventory-dock{position:absolute;bottom:0;right:24px;width:410px;max-width:calc(100% - 48px);z-index:3;border:1px solid #fefdf7;border-bottom:0;border-radius:23px 23px 0 0;background:#fffdf4f5;box-shadow:0 -5px 24px #40513709;overflow:hidden}
+.garden-inventory-dock .garden-build{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;min-height:64px;width:100%;padding:10px 18px 12px;touch-action:none;color:#526349;background:transparent;border:0;cursor:pointer}
+.garden-inventory-handle{display:block;width:34px;height:4px;border-radius:8px;background:#bdc7b2;flex:none}
+.garden-inventory-dock svg{width:21px;height:21px}
+.integrated-sky-garden .garden-selection{bottom:88px;border-color:#fffdf5;background:#fffdf5;color:#526349}
+.garden-friend-islands{position:absolute;inset:0;pointer-events:none;z-index:2}
+.garden-friend-island{position:absolute;padding:0;border:0;background:transparent;box-shadow:none;pointer-events:auto;cursor:pointer;border-radius:24px;transform:translate(-50%,-50%);min-width:44px;min-height:44px}
+.garden-friend-island.island-0{left:17%;top:22%;width:90px;height:71px}.garden-friend-island.island-1{left:81%;top:29%;width:76px;height:60px}.garden-friend-island.island-2{left:54%;top:15%;width:62px;height:49px}
+.garden-friend-preview{display:block;width:100%;max-height:260px;object-fit:contain;image-rendering:pixelated}
+.integrated-sky-garden .garden-drawer{width:410px;max-width:calc(100% - 48px);height:min(840px,calc(100dvh - 48px));max-height:calc(100dvh - 48px);margin:auto 24px 0 auto;border-radius:25px 25px 0 0;border:1px solid #fffdf5;background:#fffdf5;color:#333d32;padding:13px 0 0;box-shadow:0 18px 80px #31422e25}
+.integrated-sky-garden .garden-drawer::backdrop{background:#31422e25;backdrop-filter:none}
+.garden-drawer>.garden-inventory-handle{margin:0 auto 17px;width:38px;background:#c9cfbd}
+.integrated-sky-garden .garden-drawer header{padding:0 22px 10px;border:0;flex:none}
+.integrated-sky-garden .garden-drawer h2{font-size:24px;font-weight:700;margin:0;letter-spacing:-.6px}
+.integrated-sky-garden .garden-drawer header button{color:#526349}
+.garden-build-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 22px 13px;flex:none;font-size:11px;color:#8a917f}
+.garden-build-meta>span{display:flex;align-items:center;gap:8px;font-size:12px}.garden-build-meta img{width:30px;height:30px}.garden-build-meta button{color:#9d503d;font-size:11px;min-height:44px;background:none;border:0;cursor:pointer}
+.integrated-sky-garden .garden-drawer-body{padding:0 22px 22px;scrollbar-width:thin}
+.integrated-sky-garden .garden-drawer h3{font-family:inherit;font-size:14px;font-weight:600;color:#68785d}
+.integrated-sky-garden .garden-shop-item{gap:12px;padding:16px 0;border-color:#e7e7d9}
+.integrated-sky-garden .garden-shop-item canvas,.integrated-sky-garden .garden-shop-item>img{width:58px;height:58px;background:#e9eddb;border-radius:14px;padding:5px}
+.integrated-sky-garden .garden-shop-item strong{font-size:13px;font-weight:600}.integrated-sky-garden .garden-shop-item small{font-size:11px;line-height:1.5;color:#8a927c;margin-top:6px}
+.integrated-sky-garden .garden-shop-item button{background:#e9eddb;color:#526349;border:0;min-width:58px;font-size:11px;border-radius:14px}
+.integrated-sky-garden .garden-tools{position:static;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.integrated-sky-garden .garden-tools button{width:auto;min-height:36px;padding:8px 10px;font-size:11px;gap:5px;border-color:#e7e7d9;background:transparent;color:#68785d}.integrated-sky-garden .garden-tools svg{width:16px;height:16px}
+.integrated-sky-garden .garden-drawer footer{border-color:#e7e7d9;padding:13px 22px;flex:none}.integrated-sky-garden .garden-drawer footer button{background:none;color:#9d503d;border:0;font-size:11px}
+@media(max-width:1000px){.garden-inventory-dock{left:0;right:0;width:100%;max-width:none}.integrated-sky-garden .garden-bottom{bottom:84px}.integrated-sky-garden .garden-selection{bottom:84px}}
+@media(max-width:800px){.shell>main.sky-garden-main{height:calc(100dvh - 79px - env(safe-area-inset-bottom,0px));min-height:0}.integrated-sky-garden .garden-heading{top:23px;left:21px;right:20px}.integrated-sky-garden .garden-balance{font-size:12px}.integrated-sky-garden .garden-balance img{width:24px;height:24px}.integrated-sky-garden .garden-bottom{left:17px;bottom:83px}.integrated-sky-garden .garden-activity{padding:11px 14px;gap:8px;border-radius:18px}.integrated-sky-garden .garden-activity span{font-size:11px}.integrated-sky-garden .garden-activity small{font-size:9px}.garden-inventory-dock .garden-build{min-height:62px}.integrated-sky-garden .garden-drawer{width:100%;max-width:none;height:calc(83dvh - 60px);max-height:calc(100dvh - 120px);margin:auto 0 calc(79px + env(safe-area-inset-bottom,0px));border-radius:25px 25px 0 0}}
+@media(prefers-reduced-motion:no-preference){.integrated-sky-garden .garden-drawer[open]{animation:garden-inventory-rise .22s cubic-bezier(.22,1,.36,1)}}
+@keyframes garden-inventory-rise{from{transform:translateY(80px);opacity:.7}to{transform:translateY(0);opacity:1}}

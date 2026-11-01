@@ -69,6 +69,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
         </select>
         <div className="row wrap">
           <ActionButton onClick={() => setFiltersOpen(false)}>Done</ActionButton>
+          <ActionButton secondary onClick={() => selectCategory('')}>Reset filters</ActionButton>
           <ActionButton secondary disabled={resource.loading} onClick={resource.reload}>Refresh events</ActionButton>
         </div>
       </Modal>}
