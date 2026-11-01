@@ -11,6 +11,17 @@ const pool = (count = 3): FriendsScoringPool => ({ viewer: signals, candidates: 
 const person = (n: number) => ({ id: id(n), name: `Person ${n}`, age: 24, city: 'Campus', bio: null, avatar: null, photoRevision: 0, interests: signals.interests, areaDistanceMiles: 1 })
 
 describe('Friends compatibility', () => {
+  it('ranks single custom-interest profiles without excluding unrelated interests or changing weights', () => {
+    const input = pool(2)
+    input.viewer = { ...signals, interests: ['sci-fi'] }
+    input.candidates[0].interests = ['Science fiction']
+    input.candidates[1].interests = ['Ceramics']
+    const ranked = rankFriendsPool(input)
+    expect(ranked).toHaveLength(2)
+    expect(ranked[0].components.interests).toBe(1)
+    expect(ranked[1].components.interests).toBe(0)
+    expect(ranked[0].score - ranked[1].score).toBeCloseTo(0.4)
+  })
   it('uses Friends weights, reciprocal distance and deterministic ties, independent of Dating data', () => {
     const ranked = rankFriendsPool(pool())
     expect(ranked[0].score).toBeCloseTo(0.4 + 0.35 * 0.5 + 0.15 + 0.10 * 0.9)

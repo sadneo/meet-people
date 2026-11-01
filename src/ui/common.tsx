@@ -64,6 +64,7 @@ export function ActionButton({
 }
 export function Icon({ name }: { name: string }) {
   const paths: Record<string, ReactNode> = {
+    External: <path d="M7 17 17 7M7 7h10v10" />,
     Back: <path d="m15 18-6-6 6-6" />,
     ChevronRight: <path d="m9 6 6 6-6 6" />,
     Eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></>,

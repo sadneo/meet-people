@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import type { Plugin } from 'vite'
 import { AccountSchema, completedAccountChapters } from '../shared/account.js'
+import { validatePrivateDevelopmentFile } from './private-development-file.js'
 import { provisionDevelopmentAccount } from './provision-development-account.js'
 
 const loopback = (value: string | undefined) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '')
@@ -27,10 +28,12 @@ const unavailable = 'Development account provisioning is unavailable. Check that
 
 // Runtime-only fixed path. Never imported by the browser; no environment/browser path override.
 export async function readDevelopmentCredentials() {
-  const file = await open(join(homedir(), '.local/share/pebble/development-account.json'), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
+  const path = join(homedir(), '.local/share/pebble/development-account.json')
+  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
   try {
     const stat = await file.stat()
-    if (!stat.isFile() || stat.uid !== process.getuid?.() || (stat.mode & 0o7777) !== 0o600 || stat.size > 8192) throw new Error('Invalid credential file')
+    if (!stat.isFile() || stat.size > 8192) throw new Error('Invalid credential file')
+    await validatePrivateDevelopmentFile(path, stat)
     const buffer = Buffer.alloc(8193)
     const { bytesRead } = await file.read(buffer, 0, buffer.length, 0)
     if (bytesRead > 8192) throw new Error('Invalid credential file')

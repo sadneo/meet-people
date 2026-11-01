@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query';
-import { prefetchNavigation } from './data/navigation';
-import { useCurrent } from './ui/current';
+import { prefetchNavigation } from '../data/navigation';
+import { useCurrent } from '../ui/current';
 import {
   Link,
   Navigate,
@@ -12,27 +12,28 @@ import {
   useLocation,
   useNavigate,
 } from "react-router";
-import { useCachedLoad } from "./data/useCachedLoad";
-import { MessagingActivitySchema } from "../shared/messaging";
-import { messagingRequest } from "./features/messaging/client";
-import { useSession } from "./auth/useSession";
-import { supabase } from "./supabase";
-import NativeBridge from "./platform/NativeBridge";
-import { SessionQueryProvider } from "./data/SessionQueryProvider";
-import { Private } from "./ui/session";
-import { Auth, AuthCallback } from "./ui/Auth";
-import { Discover } from "./ui/Discover";
-import { Profile } from "./ui/Profile";
-import { Onboarding } from "./ui/Onboarding";
-import { Settings } from "./ui/Settings";
-import { Events, EventDetail } from "./ui/Events";
-import { Messages } from "./ui/Messages";
-import { Requests } from "./ui/Requests";
-import { Activity } from "./ui/Activity";
-import { Garden } from "./ui/Garden";
-import { retainGardenFor } from './ui/garden-state';
-import { Landing, Legal } from "./ui/Public";
-import { useAction } from "./ui/hooks";
+import { useCachedLoad } from "../data/useCachedLoad";
+import { MessagingActivitySchema } from "../../shared/messaging";
+import { messagingRequest } from "../features/messaging/client";
+import { useSession } from "../auth/useSession";
+import { supabase } from "../supabase";
+import NativeBridge from "../platform/NativeBridge";
+import { SessionQueryProvider } from "../data/SessionQueryProvider";
+import { Private } from "../ui/session";
+import { Auth, AuthCallback } from "../ui/Auth";
+import { Discover } from "../ui/Discover";
+import { Profile } from "../ui/Profile";
+import { Onboarding } from "../ui/Onboarding";
+import { Settings } from "../ui/Settings";
+import { Events, EventDetail } from "../ui/Events";
+import { EventGroup } from './EventGroup';
+import { Messages } from "../ui/Messages";
+import { Requests } from "../ui/Requests";
+import { Activity } from "../ui/Activity";
+import { Garden } from "../features/garden/Garden";
+import { retainGardenFor } from '../features/garden/state';
+import { Legal } from "../ui/Public";
+import { useAction } from "../ui/hooks";
 import {
   ActionButton,
   Brand,
@@ -40,10 +41,10 @@ import {
   ErrorMessage,
   Icon,
   Loading,
-} from "./ui/common";
+} from "../ui/common";
 
 const DevelopmentNavigator = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS === 'true'
-  ? lazy(() => import('./ui/DevelopmentNavigator'))
+  ? lazy(() => import('./DevelopmentNavigator'))
   : null;
 
 function Shell() {
@@ -87,8 +88,10 @@ function Shell() {
       <div className="shell">
         <nav className="app-navigation" aria-label="Main navigation">
           <Brand />
-          {links.map(([label, to]) => (
-            <NavLink key={label} end={to === "/"} to={to} onPointerEnter={() => prefetchNavigation(client, to, current.session.access_token)} onFocus={() => prefetchNavigation(client, to, current.session.access_token)}>
+          {links.map(([label, to]) => label === 'Garden' ? (
+            <Link key={label} to={to} className={garden ? 'active' : undefined} aria-current={garden ? 'page' : undefined}><Icon name={label}/><span>{label}</span></Link>
+          ) : (
+            <NavLink key={label} to={to} onPointerEnter={() => prefetchNavigation(client, to, current.session.access_token)} onFocus={() => prefetchNavigation(client, to, current.session.access_token)}>
               <Icon name={label} />
               <span>{label}</span>
               {label === "Messages" &&
@@ -101,10 +104,12 @@ function Shell() {
             </NavLink>
           ))}
           <div className="sub">
+            <NavLink to="/matches">Matches &amp; Plans</NavLink>
             <NavLink to="/activity">Activity</NavLink>
+            <Link className={location.pathname === "/profile" && location.search.includes("section=settings") ? "active" : undefined} to="/profile?section=settings">Settings</Link>
           </div>
         </nav>
-        <main id="main" className={garden ? "sky-garden-main" : ""}>
+        <main id="main" className={garden ? "sky-garden-main" : location.pathname === '/matchmaking' ? 'mobile-dating-main' : ''}>
           <Outlet />
         </main>
       </div>
@@ -156,9 +161,10 @@ export default function App() {
   return (
     <SessionQueryProvider scope={session?.user.id ?? "public"}>
       <NativeBridge />
+      {DevelopmentNavigator && <Suspense fallback={null}><DevelopmentNavigator /></Suspense>}
       <Routes>
-        <Route path="/welcome" element={<Landing />} />
-        {!session && <Route path="/" element={<Landing />} />}
+        <Route path="/welcome" element={<Navigate replace to="/" />} />
+        {!session && <Route path="/" element={<Navigate replace to="/login" />} />}
         <Route path="/login" element={<Auth />} />
         <Route path="/register" element={<Auth mode="register" />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
@@ -169,8 +175,6 @@ export default function App() {
         <Route path="/terms" element={<Legal kind="terms" />} />
         <Route path="/privacy" element={<Legal kind="privacy" />} />
         <Route path="/cookies" element={<Legal kind="cookies" />} />
-        <Route path="/explore" element={<Events publicView />} />
-        <Route path="/explore/:id" element={<EventDetail publicView />} />
         <Route element={<Private session={session} />}>
           <Route path="/messages/requests" element={<Requests />} />
           <Route path="/onboarding" element={<Onboarding />} />
@@ -180,7 +184,7 @@ export default function App() {
             <Route path="/community" element={<Garden />} />
             <Route path="/matchmaking" element={<Discover />} />
             <Route path="/events" element={<Events />} />
-            <Route path="/events/:id" element={<EventDetail />} />
+            <Route path="/events/:id" element={<EventDetail renderGroup={(id, available) => <EventGroup id={id} available={available} />} />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/messages/chat" element={<Messages />} />
             <Route path="/profile" element={<Profile />} />
@@ -199,7 +203,6 @@ export default function App() {
           </Route>
         </Route>
       </Routes>
-      {DevelopmentNavigator && <Suspense fallback={null}><DevelopmentNavigator /></Suspense>}
     </SessionQueryProvider>
   );
 }

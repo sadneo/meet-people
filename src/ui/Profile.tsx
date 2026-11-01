@@ -1,6 +1,8 @@
+import { canShowDating, meetsMinimumAge } from './age-visibility'
+import './parity-account.css'
 import { MatchingSchedule } from './MatchingSchedule';
 import { DatingPreferencesPanel } from './Preferences';
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
 import {
   SaveAccountSchema,
@@ -23,6 +25,7 @@ import {
   Icon,
   ErrorMessage,
   ResourceState,
+  Modal,
 } from "./common";
 import { useCurrent } from "./current";
 import { ProfileSettings, ProfileSettingsLinks } from './Settings';
@@ -51,7 +54,7 @@ export function Interests({
   const [custom, setCustom] = useState("");
   return (
     <fieldset>
-      <legend className={compact ? 'sr-only' : undefined}>Interests · choose at least three from the provided list</legend>
+      <legend className={compact ? 'sr-only' : undefined}>Interests · choose at least one from the list or your own</legend>
       <div className="interest-chips">
         {[...new Set([...suggestions, ...value])].map((label) => (
           <button
@@ -277,7 +280,7 @@ export function PhotoEditor({ compact = false }: { compact?: boolean }) {
           type="file"
           id={inputId}
           accept="image/jpeg,image/png,image/webp"
-          disabled={action.busy}
+          disabled={action.busy || photo.loading || !!photo.error || reconcile}
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
         />
       </label>
@@ -301,6 +304,7 @@ export function PhotoEditor({ compact = false }: { compact?: boolean }) {
           disabled={
             !photo.snapshot?.hasPhoto ||
             photo.loading ||
+            !!photo.error ||
             action.busy ||
             reconcile
           }
@@ -313,8 +317,7 @@ export function PhotoEditor({ compact = false }: { compact?: boolean }) {
             secondary
             disabled={action.busy}
             onClick={() => {
-              photo.reload();
-              setReconcile(false);
+              void photo.reload().then(saved => { if (saved) setReconcile(false); });
             }}
           >
             Reload photo before retrying
@@ -332,11 +335,25 @@ export function Profile() {
     );
   const photo = useProfilePhoto();
   const [search, setSearch] = useSearchParams();
-  const requestedSection = search.get('section');
-  const [section, setSection] = useState<'basics' | 'interests' | 'dating' | null>(() => requestedSection === 'basics' || requestedSection === 'interests' || requestedSection === 'dating' ? requestedSection : null);
-  function closeEditor() { setSection(null); if(search.has('section'))setSearch({}, {replace:true}); void facts.reload(); }
+  const [preview, setPreview] = useState(false);
+  const adult = canShowDating(current.account?.profile?.birthdate);
+  const requestedSection = search.get('section') === 'dating' && !adult ? 'basics' : search.get('section');
+  const section = requestedSection === 'basics' || requestedSection === 'interests' || requestedSection === 'dating' ? requestedSection : null;
+  function setSection(value: 'basics' | 'interests' | 'dating') {
+    const next = new URLSearchParams(search);
+    next.set('section', value);
+    setSearch(next);
+  }
+  function closeEditor() {
+    const next = new URLSearchParams(search);
+    next.delete('section');
+    setSearch(next, {replace:true});
+    void facts.reload();
+  }
   const profile = current.account?.profile;
   const settingsCategory = settingsCategories.find(category => category[0] === requestedSection);
+  if (requestedSection === 'settings')
+    return <div className="account-page settings-page"><div className="pagehead"><h2>Settings</h2></div><div className="settings-profile-summary"><Avatar name={profile?.display_name ?? ''} url={photo.url}/><div><b>{profile?.display_name}</b><p>{current.session.user.email}</p></div></div><ProfileSettingsLinks/><Link className="account-logout" to="/logout">Sign out of Pebble</Link></div>;
   if (settingsCategory)
     return <ProfileSettings key={settingsCategory[0]} section={settingsCategory[0]}/>;
   if (requestedSection === 'friends-preferences' || requestedSection === 'dating-preferences')
@@ -345,21 +362,36 @@ export function Profile() {
     <div className="account-page profile-page live-profile">
       <div className="pagehead">
         <h2>{section ? 'Edit profile' : 'Profile'}</h2>
+        <div className="row"><button type="button" className="btn light small" onClick={() => setPreview(true)}>Preview</button>{!section && <Link className="round" aria-label="Settings" to="/profile?section=settings"><Icon name="Settings"/></Link>}</div>
       </div>
       {!section ? <div className="profile-overview">
-        <div className="profile-summary"><Avatar name={profile?.display_name ?? ''} url={photo.url} large/><div><h3>{profile?.display_name}</h3><p>{profile?.location_city || 'Add your home area'}</p></div></div>
+        <div className="profile-summary"><Avatar name={profile?.display_name ?? ''} url={photo.url} large/><div><h3>{profile?.display_name}</h3><p>{profile?.location_city || 'Add your home area'}</p></div><button className="account-edit-text" aria-label="Edit profile" onClick={() => setSection('basics')}>Edit</button></div>
         <p className="profile-saved-bio">{profile?.bio || 'Add a little about yourself.'}</p>
-        <div className="account-group"><button className="account-row" aria-label="Edit profile" onClick={() => setSection('basics')}><span className="account-row-icon"><Icon name="Profile"/></span><span className="account-row-copy"><b>Edit profile</b><small>About you, interests, availability & Dating details</small></span><Icon name="ChevronRight"/></button></div>
-        <ProfileSettingsLinks/>
-        <Link className="account-logout" to="/logout">Sign out of Pebble</Link>
+        <div className="account-group">
+          <button className="account-row" onClick={() => setSection('basics')}><span className="account-row-icon"><Icon name="Profile"/></span><span className="account-row-copy"><b>About you</b><small>Photo, bio, home & personal details</small></span><Icon name="ChevronRight"/></button>
+          <button className="account-row" onClick={() => setSection('interests')}><span className="account-row-icon"><Icon name="Events"/></span><span className="account-row-copy"><b>Interests & availability</b><small>{profile?.interests.length ?? 0} interests · {profile?.availability.length ?? 0} saved time windows</small></span><Icon name="ChevronRight"/></button>
+          {adult && <button className="account-row" onClick={() => setSection('dating')}><span className="account-row-icon"><Icon name="Dating"/></span><span className="account-row-copy"><b>Dating details</b><small>Your identity & intentions</small></span><Icon name="ChevronRight"/></button>}
+        </div>
+        <p className="account-note">{adult ? 'Profile details are shared. Your Friends and Dating search preferences stay separate.' : 'Your profile and Friends search preferences stay separate.'}</p>
+        <div className="account-group">
+          <Link className="account-row" to="/matchmaking?mode=friends&preferences=true"><span className="account-row-icon"><Icon name="Friends"/></span><span className="account-row-copy"><b>Friends preferences</b><small>Who you’d like to meet & search area</small></span><Icon name="ChevronRight"/></Link>
+          {adult && <Link className="account-row" to="/matchmaking?mode=dating&preferences=true"><span className="account-row-icon"><Icon name="Dating"/></span><span className="account-row-copy"><b>Dating preferences</b><small>Who you’d like to date & search area</small></span><Icon name="ChevronRight"/></Link>}
+        </div>
       </div> : <>
-        {(section === 'basics' || section === 'interests' || section === 'dating') && <div className="account-segments" role="group" aria-label="Profile sections">{(['basics', 'interests', 'dating'] as const).map((tab, i) => <button key={tab} aria-pressed={section === tab} onClick={() => setSection(tab)}>{['About You', 'Interests & Availability', 'Dating Profile'][i]}</button>)}</div>}
+        {(section === 'basics' || section === 'interests' || section === 'dating') && <div className="account-segments" role="group" aria-label="Profile sections">{(['basics', 'interests', 'dating'] as const).filter(tab => tab !== 'dating' || adult).map((tab, i) => <button key={tab} aria-pressed={section === tab} onClick={() => setSection(tab)}>{['About You', 'Interests & Availability', 'Dating Profile'][i]}</button>)}</div>}
         <div hidden={section !== 'basics' && section !== 'interests'}>
           <ResourceState loading={facts.loading} error={facts.error} reload={() => void facts.reload()}/>
           {facts.details && <ProfileDraft initial={current.account!} initialFacts={facts.details} factsResource={facts} section={section === 'interests' ? 'interests' : 'basics'} done={closeEditor}/>}
         </div>
-        {section === 'dating' && <section className="account-edit-fields"><DatingPreferencesPanel view="profile" done={closeEditor}/></section>}
+        {adult && section === 'dating' && <section className="account-edit-fields"><DatingPreferencesPanel view="profile" done={closeEditor}/></section>}
       </>}
+      {preview && <Modal className="account-preview-modal" title="Your profile" close={() => setPreview(false)}>
+        <p className="account-note">Preview of your saved profile. Your full schedule and birthdate stay private.</p>
+        <div className="own-profile-photo"><Avatar name={profile?.display_name ?? ''} url={photo.url} large/><div><h2>{profile?.display_name}</h2><p>{profile?.location_city}</p></div></div>
+        {profile?.bio && <section className="own-preview-section"><h3>About you</h3><p>{profile.bio}</p></section>}
+        {!!profile?.interests.length && <section className="own-preview-section"><h3>Interests</h3><div className="own-preview-interests">{profile.interests.map(interest => <span className="chip" key={interest}>{interest}</span>)}</div></section>}
+        {facts.details && <dl className="own-profile-facts">{(['education', 'occupation', 'languages'] as const).filter(key => facts.details!.facts.visibility[key] && facts.details!.facts[key].length).map(key => <div key={key}><dt>{key[0].toUpperCase() + key.slice(1)}</dt><dd>{Array.isArray(facts.details!.facts[key]) ? (facts.details!.facts[key] as string[]).join(', ') : facts.details!.facts[key]}</dd></div>)}</dl>}
+      </Modal>}
     </div>
   );
 }
@@ -372,6 +404,14 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
   done: () => void;
 }) {
   const current = useCurrent(), formId = useId();
+  const photo = useProfilePhoto(), photoInputId = useId();
+  const [photoDraft, setPhotoDraft] = useState<{ file: File | null; revision: number; preview: string | null } | null>(null);
+  const [photoReconcile, setPhotoReconcile] = useState(false);
+  const saveLock = useRef(false);
+  useEffect(() => {
+    const url = photoDraft?.preview;
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [photoDraft]);
   const [source, setSource] = useState(initial.profile);
   const [profile, setProfile] = useState(() => structuredClone(initial.profile!));
   const [facts, setFacts] = useState(() => structuredClone(initialFacts.facts));
@@ -383,14 +423,32 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
   }
   const update = (value: Partial<MatchingProfile>) => setProfile(before => ({ ...before, ...value }));
   const busy = saving || current.busy || factsResource.busy;
+  function stagePhoto(file: File | null) {
+    if (busy || photo.loading || photo.error || !photo.snapshot || photoReconcile) return;
+    if (file && (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024 || file.size === 0)) {
+      setError('Choose a JPEG, PNG or WebP image up to 5 MB.');
+      return;
+    }
+    setError('');
+    setPhotoDraft({ file, revision: photo.snapshot.revision, preview: file ? URL.createObjectURL(file) : null });
+  }
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || saveLock.current) return;
     setError('');
+    if (photoReconcile || photoDraft && (!photo.client || photo.loading || photo.error || !photo.snapshot || photoDraft.revision !== photo.snapshot.revision)) {
+      setPhotoReconcile(true);
+      setError('Reload the saved photo before saving again. Other profile drafts are still here.');
+      return;
+    }
     const parsed = SaveAccountSchema.safeParse({ ...current.account!, profile });
     const optional = ProfileFactsSchema.safeParse(facts);
     if (!parsed.success || !optional.success) {
       setError(!parsed.success ? parsed.error.issues[0].message : !optional.success ? optional.error.issues[0].message : 'Check your profile.');
+      return;
+    }
+    if (profile.birthdate && !meetsMinimumAge(profile.birthdate)) {
+      setError("You must be at least 13 to use Pebble.");
       return;
     }
     const factsChanged = JSON.stringify(optional.data) !== JSON.stringify(initialFacts.facts);
@@ -398,19 +456,48 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
       setError('Reload optional details before saving again. Your draft is still here.');
       return;
     }
+    saveLock.current = true;
     setSaving(true);
+    let savedDetails = false;
+    let photoAttempted = false;
     try {
       if (JSON.stringify(profile) !== JSON.stringify(current.account?.profile) && !await current.save(parsed.data)) return;
       if (factsChanged && !await factsResource.save({ expectedRevision: initialFacts.revision, facts: optional.data })) {
-        setError('Your main profile is saved, but optional details could not be confirmed. Reload those details before trying again.');
+        setError('Your main profile is saved, but optional details could not be confirmed. The photo has not been changed. Reload optional details before trying again.');
         return;
       }
+      savedDetails = true;
+      if (photoDraft) {
+        setPhotoReconcile(true);
+        photoAttempted = true;
+        await photo.client!.save(photoDraft.file, photoDraft.revision, crypto.randomUUID());
+        setPhotoDraft(null);
+        window.dispatchEvent(new CustomEvent(photoChangedEvent, { detail: current.session.user.id }));
+        if (!await photo.reload()) {
+          setError('Profile details and photo are saved, but the photo preview could not be refreshed. Reload the saved photo before continuing.');
+          return;
+        }
+        setPhotoReconcile(false);
+      }
       done();
-    } finally { setSaving(false); }
+    } catch (failure) {
+      setError(photoAttempted
+        ? `${savedDetails ? 'Profile details are saved. ' : ''}The photo change could not be confirmed and may already be saved. Reload the saved photo before retrying. ${failure instanceof Error ? failure.message : ''}`
+        : 'Profile details could not be confirmed. Reload account and optional details before retrying. The photo has not been changed.');
+    } finally { saveLock.current = false; setSaving(false); }
   }
   return <div className="profile-editor">
     <div className="account-edit-fields">
-      {section === 'basics' && <PhotoEditor compact/>}
+      {section === 'basics' && <section className="profile-photo-editor">
+        <div className="profile-edit-photo">
+          <Avatar name={profile.display_name} url={photoDraft ? photoDraft.preview : photo.url} large/>
+          <div><label className="account-edit-text" htmlFor={photoInputId}>Edit Photo</label>{(photoDraft ? !!photoDraft.file : photo.snapshot?.hasPhoto) && <button className="account-edit-text is-danger" aria-label="Remove photo" type="button" disabled={busy || photo.loading || !!photo.error || photoReconcile} onClick={() => stagePhoto(null)}>Remove</button>}</div>
+        </div>
+        <ResourceState loading={photo.loading} error={photo.error} reload={() => { void photo.reload(); }}/>
+        <label className="sr-only">Choose a photo<input id={photoInputId} type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || photo.loading || !!photo.error || !photo.snapshot || photoReconcile} onChange={event => { const file = event.target.files?.[0]; if (file) stagePhoto(file); event.target.value = ''; }}/></label>
+      </section>}
+      {photoDraft && <p className="account-note">Photo {photoDraft.file ? 'selection' : 'removal'} will be saved with Save changes.</p>}
+      {photoReconcile && <ActionButton secondary disabled={busy || photo.loading} onClick={() => { void photo.reload().then(saved => { if (saved) { setPhotoDraft(null); setPhotoReconcile(false); setError('Saved photo reloaded. Any unsaved photo selection was discarded.'); } }); }}>Reload saved photo and discard photo draft</ActionButton>}
       <form id={formId} className="profile-draft" onSubmit={event => void save(event)}>
         <fieldset disabled={busy || !current.available}>
           <div hidden={section !== 'basics'}>

@@ -2,15 +2,15 @@ import { expect, test } from '@playwright/test';
 import { wiringFixture } from './wiring-fixture';
 
 for (const width of [320, 390, 800]) {
-  test(`Profile contains the account settings categories at ${width}px`, async ({ page }) => {
+  test(`Settings keeps the account categories behind the prototype profile hub at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     const fixture = await wiringFixture(page);
     await page.goto('/settings');
-    await expect(page).toHaveURL(/\/profile$/);
+    await expect(page).toHaveURL(/\/profile\?section=settings$/);
     await expect(page.locator('.profile-settings-links .account-row')).toHaveCount(5);
     for (const row of await page.locator('.profile-settings-links .account-row').all())
       await expect(row).toHaveCSS('text-decoration-line', 'none');
-    await expect(page.getByRole('link', { name: 'Settings', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
     await expect(page.getByLabel('New password', { exact: true })).toHaveCount(0);
     await page.getByRole('link', { name: /^Discovery Friends/ }).click();
     await expect(page.getByRole('heading', { name: 'Discovery', exact: true })).toBeVisible();
@@ -49,12 +49,12 @@ test('profile tabs highlight their state and keep the demo save bar above mobile
   await expect(page.getByLabel('Timezone', { exact: true })).toBeVisible();
 });
 
-test('Profile and its editor omit Preview and the photo helper text', async ({ page }) => {
+test('Profile and its editor retain the prototype Preview and photo controls', async ({ page }) => {
   await wiringFixture(page);
   await page.goto('/profile');
-  await expect(page.getByRole('button', { name: 'Preview', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Preview', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Preview', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Preview', exact: true })).toBeVisible();
   await expect(page.getByText(/One photo · JPG, PNG or WebP/)).toHaveCount(0);
   await expect(page.getByLabel('Choose a photo', { exact: false })).toBeAttached();
 });
@@ -71,15 +71,16 @@ test('Profile Dating details stay separate from search preferences and do not ch
   expect(fixture.calls.filter(call => call.method === 'PUT' || call.method === 'POST')).toHaveLength(0);
 });
 
-test('Profile keeps personal details without duplicate search preference shortcuts', async ({ page }) => {
+test('Profile separates personal details and mode preferences like the finalized prototype', async ({ page }) => {
   await wiringFixture(page);
   await page.goto('/profile');
   await expect(page.getByRole('button', { name: /^Friends preferences/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Dating preferences/ })).toHaveCount(0);
-  await expect(page.getByText('Profile details are shared. Your Friends and Dating search preferences stay separate.')).toHaveCount(0);
+  await expect(page.getByText('Profile details are shared. Your Friends and Dating search preferences stay separate.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
-  await expect(page.locator('.profile-overview button.account-row')).toHaveCount(1);
-  await expect(page.locator('.profile-settings-links .account-row')).toHaveCount(5);
+  await expect(page.locator('.profile-overview button.account-row')).toHaveCount(3);
+  await expect(page.getByRole('link', {name: /^Friends preferences/})).toBeVisible();
+  await expect(page.getByRole('link', {name: /^Dating preferences/})).toBeVisible();
 });
 
 test('Discovery settings have no legacy downtime queue controls or queue requests', async ({ page }) => {

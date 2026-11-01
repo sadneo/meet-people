@@ -150,7 +150,7 @@ export function Messages() {
           )}
         </aside>
         {selected ? (
-          <Chat key={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} initialDraft={drafts[draftKey] ?? ''} saveDraft={value => setDrafts(previous => {
+          <Chat key={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} connectionLabel={rows.find(row => row.id === selected)?.label ?? ''} initialDraft={drafts[draftKey] ?? ''} saveDraft={value => setDrafts(previous => {
             const next = { ...previous };
             if (value) next[draftKey] = value; else delete next[draftKey];
             return next;
@@ -165,9 +165,10 @@ export function Messages() {
     </section>
   );
 }
-function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: string; changed: () => void; isGroup?: boolean; initialDraft: string; saveDraft: (value: string) => void }) {
+function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, saveDraft }: { id: string; changed: () => void; isGroup?: boolean; connectionLabel?: string; initialDraft: string; saveDraft: (value: string) => void }) {
   const [group,setGroup]=useState<ActiveGroup|null>(null)
   const [removeOpen, setRemoveOpen] = useState(false);
+  const [peopleOpen, setPeopleOpen] = useState(false);
   const historyElement = useRef<HTMLDivElement>(null), lastVisibleMessage = useRef<string | null>(null);
   const current = useCurrent()
   const token = current.session.access_token
@@ -180,7 +181,10 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
         return {kind:'friends_group' as const,canSend:true,messages:value.messages,participants:group.members,nextCursor:value.nextCursor}
       },[token,id,isGroup]),
       ["message-history", isGroup ? "group" : "direct", id], 0,
+      { refetchInterval: 4000, refetchOnWindowFocus: 'always', retainDataOnError: true },
     );
+  // Display data survives a failed poll, but never grants stale send permissions.
+  const canSend = !!history.value?.canSend && !history.error && !history.refreshing;
   const historyPage=async(before:number)=>isGroup?matchingClient(token).history(id,before):messagingRequest(`/${encodeURIComponent(id)}/messages?before=${before}`,HistorySchema)
 
   const [body, setBody] = useState(initialDraft),
@@ -193,11 +197,11 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
   const composer = useRef<HTMLTextAreaElement>(null),
     focusAfterSend = useRef(false);
   useEffect(() => {
-    if (focusAfterSend.current && !action.busy && !uncertain && !history.refreshing && history.value?.canSend) {
+    if (focusAfterSend.current && !action.busy && !uncertain && canSend) {
       composer.current?.focus();
       focusAfterSend.current = false;
     }
-  }, [action.busy, uncertain, history.refreshing, history.value?.canSend]);
+  }, [action.busy, uncertain, canSend]);
   const live = useRef(true);
   useEffect(() => {
     live.current = true;
@@ -206,6 +210,11 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
     };
   }, []);
   const reloadHistory=history.reload
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') reloadHistory(); };
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, [reloadHistory]);
   useEffect(()=>{const refresh=()=>{setOlder([]);setConfirmed([]);reloadHistory()};window.addEventListener('pebble:matching-changed',refresh);return()=>window.removeEventListener('pebble:matching-changed',refresh)},[reloadHistory])
   const messages = [
     ...new Map(
@@ -215,6 +224,9 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
     ).values(),
   ].sort((a, b) => a.seq - b.seq);
   const newest = history.value?.messages.at(-1)?.seq ?? 0;
+  const acknowledgedRead = useRef(0);
+  const pendingRead = useRef<{ seq: number; controller: AbortController } | null>(null);
+  useEffect(() => () => { pendingRead.current?.controller.abort(); }, []);
   const lastMessage = messages.at(-1);
   useEffect(() => {
     const element = historyElement.current;
@@ -223,11 +235,15 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
     lastVisibleMessage.current = lastMessage.id;
   }, [lastMessage, current.session.user.id]);
   useEffect(() => {
-    if (history.refreshing || !newest || document.visibilityState !== "visible") return;
+    if (history.refreshing || history.error || !newest || newest <= acknowledgedRead.current || document.visibilityState !== "visible") return;
+    if (pendingRead.current && pendingRead.current.seq >= newest) return;
+    pendingRead.current?.controller.abort();
     const controller = new AbortController();
+    pendingRead.current = { seq: newest, controller };
     void (isGroup?matchingClient(token).read(id,newest,controller.signal):messagingRequest(`/${encodeURIComponent(id)}/read`,ReadStateSchema,{body:{seq:newest},signal:controller.signal}))
       .then(() => {
         if (!controller.signal.aborted) {
+          acknowledgedRead.current = newest;
           setReadError("");
           window.dispatchEvent(new Event("pebble:activity-changed"));
           changed();
@@ -238,13 +254,14 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
           setReadError(
             "Read status could not be saved. Refresh messages to check again.",
           );
+      }).finally(() => {
+        if (pendingRead.current?.controller === controller) pendingRead.current = null;
       });
-    return () => controller.abort();
-  }, [id, newest, changed, token, isGroup, history.refreshing]);
+  }, [id, newest, changed, token, isGroup, history.refreshing, history.error, history.updatedAt]);
   async function send(event: FormEvent) {
     event.preventDefault();
     await action.run(async () => {
-      if (history.refreshing || !history.value?.canSend || (!body.trim() && !retry.current)) return;
+      if (!canSend || (!body.trim() && !retry.current)) return;
       retry.current ??= {
         body: body.trim(),
         clientRequestId: crypto.randomUUID(),
@@ -281,10 +298,10 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
           <Icon name="Back" />
         </Link>
         {others[0] && <PersonPhoto id={others[0].id} name={others[0].display_name} fallback={others[0].avatar_url} />}
-        <h3>
+        <button className="chat-identity-button" type="button" aria-label="View conversation members" onClick={() => setPeopleOpen(true)}><h3>
           {group?.name || others.map((person) => person.display_name).join(", ") ||
             "Conversation"}
-        </h3>
+        </h3>{connectionLabel && <span className={`connection-kind ${connectionLabel === 'Dating' ? 'dating' : ''}`}>{connectionLabel}</span>}</button>
         <details className="chat-options" onKeyDown={event => {
           if (event.key === 'Escape') {
             event.currentTarget.open = false;
@@ -293,6 +310,7 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
         }}>
           <summary className="round" aria-label="Conversation options and safety"><Icon name="More" /></summary>
           <div className="chat-options-menu">
+          <ActionButton secondary onClick={() => setPeopleOpen(true)}>View people</ActionButton>
           <ActionButton
           secondary
           disabled={action.busy}
@@ -310,6 +328,7 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
           </div>
         </details>
       </header>
+      {peopleOpen && <Modal title={isGroup ? 'Group members' : 'Conversation members'} close={() => setPeopleOpen(false)}><div className="conversation-members">{history.value?.participants.map(person => <div className="row item" key={person.id}><PersonPhoto id={person.id} name={person.display_name} fallback={person.avatar_url}/><div><b>{person.id === current.session.user.id ? 'You' : person.display_name}</b></div>{person.id !== current.session.user.id && <SafetyActions id={person.id} name={person.display_name}/>}</div>)}</div></Modal>}
       {removeOpen && others[0] && <Modal title="Remove connection?" close={() => setRemoveOpen(false)}>
         <p>Remove your connection with {others[0].display_name}? This does not block the account or erase saved messages.</p>
         <ErrorMessage>{action.error}</ErrorMessage>
@@ -385,22 +404,22 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
           onKeyDown={(event) => {
             if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             event.preventDefault();
-            if (event.repeat || !body.trim() || !history.value?.canSend || history.refreshing || action.busy || uncertain) return;
+            if (event.repeat || !body.trim() || !canSend || action.busy || uncertain) return;
             focusAfterSend.current = true;
             event.currentTarget.form?.requestSubmit();
           }}
           aria-describedby="message-keyboard-help"
-          disabled={!history.value?.canSend || history.refreshing || action.busy || uncertain}
+          disabled={!history.value || action.busy || uncertain}
         />
         <button
           className={`btn message-send ${uncertain ? 'retry' : ''}`}
           aria-label={action.busy ? 'Sending…' : uncertain ? 'Retry same message' : 'Send'}
-          disabled={!history.value?.canSend || history.refreshing || action.busy || !body.trim()}
+          disabled={!canSend || action.busy || !body.trim()}
         >
           {action.busy ? "…" : uncertain ? "Retry same message" : <Icon name="Send" />}
         </button>
       </form>
-      <p id="message-keyboard-help" className="account-note">
+      <p id="message-keyboard-help" className="sr-only">
         Enter to send · Shift+Enter for a new line.
       </p>
       {uncertain && (

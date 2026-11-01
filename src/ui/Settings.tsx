@@ -1,3 +1,5 @@
+import { PasswordField } from "./PasswordField";
+import { canShowDating } from './age-visibility'
 import { useMemo, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
 import type { Account } from "../../shared/account";
@@ -10,9 +12,9 @@ import { ActionButton, ErrorMessage, Icon, ResourceState } from "./common";
 import { useCurrent } from "./current";
 import { Blocklist } from "./Safety";
 import { settingsCategories } from './settings-navigation';
-import { PasswordField } from './PasswordField';
+import { MatchingSchedule } from './MatchingSchedule';
 
-function MasterSettings({ category }: { category: 'discovery' | 'notifications' | 'privacy' }) {
+function MasterSettings({ category }: { category: 'discovery' | 'notifications' }) {
   const current = useCurrent(),
     [source, setSource] = useState(current.account!.settings),
     [draft, setDraft] = useState(current.account!.settings),
@@ -23,15 +25,17 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
     setSource(current.account!.settings);
     setDraft(current.account!.settings);
   }
-  const labels: Record<keyof Account["settings"], string> = {
+  // The legacy account availability flag is persisted but is not consulted by
+  // discovery_details or group proposal projections. Do not present it as a
+  // sharing gate or copy it into the independent scoring-settings opt-in.
+  const labels: Record<Exclude<keyof Account["settings"], 'availability'>, string> = {
     notifications: "Notifications",
     discoverable: "Discovery",
-    availability: "Share availability",
-    location: "Location preference",
+    location: "Allow device location for search areas",
   };
   return (
     <section className="account-panel">
-      <h3>{category === 'notifications' ? 'Activity notifications' : category === 'privacy' ? 'Profile visibility' : 'Discovery & location'}</h3>
+      <h3>{category === 'notifications' ? 'Activity notifications' : 'Discovery & location'}</h3>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -41,7 +45,7 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
         }}
       >
         <fieldset disabled={current.busy || !current.available}>
-          {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => category === 'notifications' ? key === 'notifications' : category === 'privacy' ? key === 'availability' : key === 'discoverable' || key === 'location').map((key) => (
+          {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => category === 'notifications' ? key === 'notifications' : key === 'discoverable' || key === 'location').map((key) => (
             <label className="settings-switch" key={key}>
               <span>{labels[key]}</span>
               <input
@@ -55,7 +59,7 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
             </label>
           ))}
           <p className="account-note">
-            {category === 'discovery' ? 'The location preference doesn’t request device coordinates. Choose a search area separately in Discover.' : category === 'notifications' ? 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.' : 'Only coarse shared-time summaries can appear when both people choose to share. Your full schedule stays private.'}
+            {category === 'discovery' ? 'Allows “Use my current location” when choosing a search area in Discover. Your device asks permission when you use it; this switch alone does not request coordinates. You can still search or move the map manually when it is off.' : 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.'}
           </p>
           <button className="btn">Save</button>
         </fieldset>
@@ -82,6 +86,7 @@ function DetailedForm({
   category: 'discovery' | 'notifications';
 }) {
   const [value, setValue] = useState(initial.settings);
+  const adult = canShowDating(useCurrent().account?.profile?.birthdate);
   const labels = {
     messages: "Message notifications",
     plans: "Plan notifications",
@@ -97,7 +102,7 @@ function DetailedForm({
       }}
     >
       <fieldset disabled={disabled}>
-        {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => category === 'discovery' ? key === 'friendsDiscovery' || key === 'datingDiscovery' : key === 'messages' || key === 'plans' || key === 'matches').map((key) => (
+        {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => key !== 'datingDiscovery' || adult).filter(key => category === 'discovery' ? key === 'friendsDiscovery' || key === 'datingDiscovery' : key === 'messages' || key === 'plans' || key === 'matches').map((key) => (
           <label className="settings-switch" key={key}>
             <span>{labels[key]}</span>
             <input
@@ -136,12 +141,8 @@ function Credentials() {
     [current.session.user.identities],
   );
   return (
-    <section className="account-panel">
-      <h3>Account & security</h3>
-      <p>{current.session.user.email}</p>
-      <p className="account-note">
-        Sign-in methods: {methods.join(", ") || "Unavailable"}
-      </p>
+    <section className="account-group credential-settings">
+      <details><summary><span><b>Email</b><small>{current.session.user.email || "Your account email"}</small></span><Icon name="ChevronRight"/></summary>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -176,6 +177,9 @@ function Credentials() {
           <button className="btn light">Change email</button>
         </fieldset>
       </form>
+      </details>
+      <div className="account-row"><span><b>Sign-in methods</b><small>{methods.join(", ") || "Provider information unavailable"}</small></span></div>
+      <details><summary><span><b>Change password</b><small>Confirm your identity before changing it.</small></span><Icon name="ChevronRight"/></summary>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -210,7 +214,7 @@ function Credentials() {
         }}
       >
         <fieldset disabled={action.busy}>
-            <PasswordField
+          <PasswordField
               label="New password"
               autoComplete="new-password"
               minLength={8}
@@ -219,7 +223,7 @@ function Credentials() {
               onChange={(event) => setPassword(event.target.value)}
               required
             />
-            <PasswordField
+          <PasswordField
               label="Confirm password"
               autoComplete="new-password"
               value={confirmation}
@@ -255,22 +259,22 @@ function Credentials() {
           <button className="btn light">Update password</button>
         </fieldset>
       </form>
+      </details>
       <ErrorMessage>{action.error}</ErrorMessage>
       {notice && <p role="status">{notice}</p>}
-      <p>
-        <Link to="/logout">Sign out</Link>
-      </p>
+      <Link className="account-row" to="/logout"><span><b>Sign out</b><small>End your session on this device</small></span><Icon name="ChevronRight"/></Link>
     </section>
   );
 }
 export function ProfileSettingsLinks() {
-  return <div className="account-group profile-settings-links">{settingsCategories.map(([id, title, detail, icon]) => <Link className="account-row" key={id} to={`/profile?section=${id}`}><span className="account-row-icon"><Icon name={icon}/></span><span className="account-row-copy"><b>{title}</b><small>{detail}</small></span><Icon name="ChevronRight"/></Link>)}</div>;
+  const adult=canShowDating(useCurrent().account?.profile?.birthdate);
+  return <div className="account-group profile-settings-links">{settingsCategories.map(([id, title, detail, icon]) => <Link className="account-row" key={id} to={`/profile?section=${id}`}><span className="account-row-icon"><Icon name={icon}/></span><span className="account-row-copy"><b>{title}</b><small>{id==='discovery'&&!adult?'Friends & location':detail}</small></span><Icon name="ChevronRight"/></Link>)}</div>;
 }
 
 export function Settings() {
   const [search] = useSearchParams();
   const category = settingsCategories.find(item => item[0] === search.get('section'));
-  return <Navigate replace to={category ? `/profile?section=${category[0]}` : '/profile'}/>;
+  return <Navigate replace to={category ? `/profile?section=${category[0]}` : '/profile?section=settings'}/>;
 }
 
 export function ProfileSettings({ section }: { section: string }) {
@@ -285,10 +289,15 @@ export function ProfileSettings({ section }: { section: string }) {
   if (!category) return <Navigate replace to="/profile"/>;
   return (
     <div className="account-page settings-page">
-      <Link className="account-back" to="/profile"><Icon name="Back"/>Profile</Link>
+      <Link className="account-back" to="/profile?section=settings"><Icon name="Back"/>Settings</Link>
       <div className="pagehead"><h2>{category[1]}</h2></div>
       <div className="settings-detail" key={category[0]}>
-          {(category[0] === 'discovery' || category[0] === 'notifications' || category[0] === 'privacy') && <MasterSettings category={category[0]}/>}
+          {(category[0] === 'discovery' || category[0] === 'notifications') && <MasterSettings category={category[0]}/>}
+          {category[0] === 'privacy' && <section className="account-panel">
+            <h3>Shared availability</h3>
+            <p className="account-note">Manage shared-time explanations below or in Edit profile → Interests & Availability. Both places use the same setting. Weekly time windows are edited in your profile.</p>
+            <MatchingSchedule token={current.session.access_token} disabled={current.busy} onSaved={() => window.dispatchEvent(new Event('pebble:matching-changed'))}/>
+          </section>}
           {(category[0] === 'discovery' || category[0] === 'notifications') && <>
           <section className="account-panel">
             <h3>{category[1]} preferences</h3>
@@ -317,7 +326,7 @@ export function ProfileSettings({ section }: { section: string }) {
             {notice && <p role="status">{notice}</p>}
           </section>
           </>}
-          {category[0] === 'discovery' && <div className="account-group"><Link className="account-row" to="/matchmaking?mode=friends&preferences=true"><span><b>Friends preferences</b><small>Who you’d like to meet & search area</small></span><Icon name="ChevronRight"/></Link><Link className="account-row" to="/matchmaking?mode=dating&preferences=true"><span><b>Dating preferences</b><small>Who you’d like to date & search area</small></span><Icon name="ChevronRight"/></Link></div>}
+          {category[0] === 'discovery' && <div className="account-group"><Link className="account-row" to="/matchmaking?mode=friends&preferences=true"><span><b>Friends preferences</b><small>Who you’d like to meet & search area</small></span><Icon name="ChevronRight"/></Link>{canShowDating(current.account?.profile?.birthdate) && <Link className="account-row" to="/matchmaking?mode=dating&preferences=true"><span><b>Dating preferences</b><small>Who you’d like to date & search area</small></span><Icon name="ChevronRight"/></Link>}</div>}
           {category[0] === 'account' && <Credentials/>}
           {category[0] === 'safety' && <Blocklist/>}
           {(category[0] === 'privacy' || category[0] === 'safety') && <section className="account-panel">

@@ -11,8 +11,59 @@ permissions:
   contents: read
 
 jobs:
-  check:
-    name: CI
+  quick:
+    name: Static, unit and container checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test:unit
+      - run: node --test tools/qa-real-users/*.test.mjs
+      - uses: docker/setup-buildx-action@v3
+      - name: Validate API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+  browser:
+    name: Source browser journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:browser --workers=2
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: source-browser-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+  integration:
+    name: Database and built browser checks
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -25,9 +76,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm verify
-      - name: Verify deployment controls and both toolbar variants
-        run: pnpm test:deployment
       - run: pnpm supabase:start
       - run: pnpm supabase:check
       - name: Verify seeded messaging
@@ -37,16 +85,29 @@ jobs:
       - run: pnpm env:local
       - run: pnpm test:integration
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Source-mocked browser journeys
-        run: pnpm test:browser --workers=2
-      - name: Browser tests against production artifacts
-        run: pnpm test:browser:built --workers=2
-      - run: docker build --tag pebble-api:check .
+      # Deployment checks validate dev web/mobile and leave production-mode web in dist/web.
+      - run: pnpm test:deployment
+      - run: pnpm build:api
+      - name: Browser tests against verified production-mode artifacts
+        run: sh scripts/test-built.sh --workers=2
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: test-results
+          name: integration-results
           path: |
             test-results/
             playwright-report/
           retention-days: 7
+
+  check:
+    # Preserve the branch-protection context: Checks / CI.
+    name: CI
+    needs: [quick, browser, integration]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Require every CI lane to pass
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: node -e 'const jobs = JSON.parse(process.env.RESULTS); if (!Object.values(jobs).every(job => job.result === "success")) process.exit(1)'

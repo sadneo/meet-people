@@ -4,7 +4,8 @@ import { z } from 'zod'
 
 const emailRequest = z.object({ email: z.string().trim().max(254).email() }).strict()
 
-export function createAuthRouter(client: SupabaseClient | null) {
+export function createAuthRouter(client: SupabaseClient | null, emailRequestsPerWindow = 10) {
+  if (!Number.isInteger(emailRequestsPerWindow) || emailRequestsPerWindow < 1 || emailRequestsPerWindow > 300) throw new Error('Invalid email-check request limit')
   const router = Router()
   // ponytail: single-process limits; use shared edge limits before adding API replicas.
   const attempts = new Map<string, number>()
@@ -14,7 +15,7 @@ export function createAuthRouter(client: SupabaseClient | null) {
     const now = Date.now()
     if (now >= windowEnds) { attempts.clear(); total = 0; windowEnds = now + 10 * 60_000 }
     const ip = request.socket.remoteAddress ?? 'unknown', count = attempts.get(ip) ?? 0
-    if (count >= 10 || total >= 1000) {
+    if (count >= emailRequestsPerWindow || total >= 1000) {
       response.set('Retry-After', String(Math.ceil((windowEnds - now) / 1000))).status(429).json({ error: 'Too many attempts. Please wait a few minutes and try again.' })
       return
     }

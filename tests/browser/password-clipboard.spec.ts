@@ -7,6 +7,7 @@ for (const settings of [false, true]) {
     await page.setViewportSize({ width: 320, height: 740 })
     await wiringFixture(page, { guest: !settings })
     await page.goto(settings ? '/profile?section=account' : '/register?email=clipboard-fixture%40example.test')
+    if (settings) await page.locator('summary').filter({ hasText: 'Change password' }).click()
     const password = page.getByLabel(settings ? 'New password' : 'Password', { exact: true })
     const confirmation = page.getByLabel('Confirm password', { exact: true })
     const value = 'Synthetic-copy-and-paste-1!'

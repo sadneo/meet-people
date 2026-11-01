@@ -50,7 +50,9 @@ gcloud secrets add-iam-policy-binding "pebble-supabase-service-role$SUFFIX" --pr
 if ! gcloud iam workload-identity-pools describe "$POOL" --location=global --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
   gcloud iam workload-identity-pools create "$POOL" --location=global --display-name="GitHub $ENVIRONMENT" --project="$GCP_PROJECT_ID" --quiet
 fi
-CONDITION="assertion.repository_id == '$GITHUB_REPOSITORY_ID' && assertion.environment == '$ENVIRONMENT' && assertion.workflow_ref == '$GITHUB_REPOSITORY/.github/workflows/release.yml@refs/heads/main' && assertion.ref == 'refs/heads/main'"
+REF_CONDITION="assertion.ref == 'refs/heads/main'"
+if [ "$ENVIRONMENT" = sandbox ]; then REF_CONDITION="assertion.ref in ['refs/heads/main', 'refs/heads/dev']"; fi
+CONDITION="assertion.repository_id == '$GITHUB_REPOSITORY_ID' && assertion.environment == '$ENVIRONMENT' && assertion.workflow_ref == '$GITHUB_REPOSITORY/.github/workflows/release.yml@' + assertion.ref && ($REF_CONDITION)"
 if ! gcloud iam workload-identity-pools providers describe "$PROVIDER" --workload-identity-pool="$POOL" --location=global --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
   gcloud iam workload-identity-pools providers create-oidc "$PROVIDER" --location=global --workload-identity-pool="$POOL" \
     --issuer-uri=https://token.actions.githubusercontent.com \
@@ -76,9 +78,9 @@ gh variable set API_RUNTIME_ACCOUNT --repo "$GITHUB_REPOSITORY" --env "$ENVIRONM
 gh variable set API_SECRET --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "pebble-supabase-service-role$SUFFIX"
 gh variable set WORKER_JOB --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "pebble-event-group-worker$SUFFIX"
 gh variable set WORKER_RUNTIME_ACCOUNT --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "$WORKER"
-gh variable set FIREBASE_HOSTING_SITE_ID --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "$GCP_PROJECT_ID$SUFFIX"
+gh variable set FIREBASE_WEB_SITE_ID --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "$GCP_PROJECT_ID$SUFFIX"
 if [ "$ENVIRONMENT" = sandbox ]; then
-  gh variable set FIREBASE_DEVTOOLS_SITE_ID --repo "$GITHUB_REPOSITORY" --env sandbox --body "$GCP_PROJECT_ID-dev"
+  gh variable set FIREBASE_MOBILE_SITE_ID --repo "$GITHUB_REPOSITORY" --env sandbox --body "$GCP_PROJECT_ID-dev"
 fi
 
 if [ "$ENVIRONMENT" = production ] && [ -z "$(gcloud monitoring uptime list-configs --project="$GCP_PROJECT_ID" --filter='displayName=pebble-api-health' --format='value(name)')" ]; then

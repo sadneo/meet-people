@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { respondToConnectionRequest } from "./request-actions";
 import { connections } from "../features/connections/client";
 import { matchmakingClient } from "../features/matchmaking/client";
@@ -11,11 +11,14 @@ import {
   Empty,
   ErrorMessage,
   ResourceState,
+  Icon,
 } from "./common";
 import { useCurrent } from "./current";
 import { SafetyActions } from "./Safety";
 
 export function Activity() {
+  const matches = useLocation().pathname === '/matches';
+  const [tab, setTab] = useState('Upcoming');
   const current = useCurrent(),
     client = useMemo(
       () => matchmakingClient(current.session.access_token),
@@ -26,9 +29,10 @@ export function Activity() {
     action = useAction();
   const [uncertain, setUncertain] = useState(false);
   return (
-    <div className="activity-page">
+    <div className={`activity-page ${matches ? 'plans-page' : ''}`}>
+      {matches && <><Link className="account-back" to="/matchmaking"><Icon name="Back"/>Discover</Link><div className="eyebrow">Matches &amp; Plans</div></>}
       <div className="pagehead">
-        <h2>Your little updates.</h2>
+        <h2>{matches ? 'From a hello to a “see you there.”' : 'Your little updates.'}</h2>
         <ActionButton
           secondary
           disabled={action.busy || people.loading || updates.loading}
@@ -46,9 +50,10 @@ export function Activity() {
           Refresh
         </ActionButton>
       </div>
+      {matches && <div className="tabs" role="group" aria-label="Matches and plans view">{['Upcoming', 'Connections', 'Past'].map(name => <button key={name} type="button" aria-pressed={tab === name} className={tab === name ? 'active' : ''} onClick={() => setTab(name)}>{name}</button>)}</div>}
       <ErrorMessage>{action.error}</ErrorMessage>
       {uncertain && !action.busy && <p role="status">The request response is unconfirmed. Refresh before another change.</p>}
-      <section className="card" id="requests">
+            <section className="card" id="requests" hidden={matches && tab !== 'Connections'}>
         <h3>Connection requests</h3>
         <ResourceState
           loading={people.loading}
@@ -109,8 +114,9 @@ export function Activity() {
           </div>
         ))}
       </section>
-      <section className="card section">
+      <section className="card section" hidden={matches && tab !== 'Connections'}>
         <h3>Your connections</h3>
+        <ResourceState loading={people.loading} error={people.error} reload={people.reload}/>
         {people.value && !people.value.connected.length && (
           <p>Find your first connection in Discover.</p>
         )}
@@ -131,7 +137,7 @@ export function Activity() {
           </div>
         ))}
       </section>
-      <section className="card section">
+      <section className="card section" hidden={matches && tab !== 'Upcoming'}>
         <h3>Suggested event groups</h3>
         <ResourceState
           loading={updates.loading}
@@ -172,6 +178,7 @@ export function Activity() {
           </div>
         ))}
       </section>
+      {matches && tab === 'Past' && <section className="card plans-empty"><Icon name="Events"/><h3>Past plans</h3><p>Past-plan history isn’t available yet.</p><Link className="btn light" to="/events">Explore events</Link></section>}
     </div>
   );
 }

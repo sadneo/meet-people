@@ -1,4 +1,6 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
+import { useState } from 'react';
+import './parity-public.css';
 import {
   legalDocuments,
   legalPublication,
@@ -6,6 +8,7 @@ import {
 import { Brand, Icon } from "./common";
 
 export function Landing() {
+  const [previewMode, setPreviewMode] = useState<'Friends' | 'Dating'>('Friends');
   return (
     <div className="welcome-site">
       <header className="welcome-header">
@@ -13,9 +16,7 @@ export function Landing() {
         <nav className="welcome-nav" aria-label="Website navigation">
           <Link to="/explore">Events</Link>
         </nav>
-        <Link className="welcome-open" to="/login">
-          Sign in ↗
-        </Link>
+        <a className="welcome-open" href="#install">Get Pebble</a>
       </header>
       <main className="welcome-main">
         <section className="welcome-hero">
@@ -28,33 +29,24 @@ export function Landing() {
               and make plans.
             </h1>
             <div className="welcome-actions">
-              <Link className="welcome-primary" to="/login">
-                Get started ↗
-              </Link>
+              <a className="welcome-primary" href="#install">Get Pebble</a>
               <Link className="welcome-secondary" to="/explore">
                 Browse events
               </Link>
             </div>
           </div>
           <div className="welcome-visual">
-            <div className="welcome-preview-mode">
-              <span>
-                <Icon name="Friends" />
-                Friends
-              </span>
-              <span>
-                <Icon name="Dating" />
-                Dating
-              </span>
+            <div className="welcome-preview-mode" role="group" aria-label="Preview a matching mode">
+              {(['Friends', 'Dating'] as const).map(mode => <button type="button" key={mode} aria-pressed={previewMode === mode} onClick={() => setPreviewMode(mode)}><Icon name={mode}/>{mode}</button>)}
             </div>
             <div className="welcome-profile">
               <img
-                src="/pebble/alex.jpg"
-                alt="Illustrative profile on Pebble"
+                src={previewMode === 'Friends' ? '/pebble/alex.jpg' : '/pebble/maya.jpg'}
+                alt={`Illustrative ${previewMode} profile, not an available account`}
               />
               <div className="welcome-profile-shade" />
               <div className="welcome-profile-info">
-                <h3>Your next hello.</h3>
+                <h3>{previewMode === 'Friends' ? 'Alex, 22' : 'Maya, 21'}</h3>
               </div>
             </div>
           </div>
@@ -68,8 +60,16 @@ export function Landing() {
             />
           </div>
           <div className="welcome-community-copy">
-            <h2>Grow your garden.</h2>
+            <h2>Grow your garden</h2>
           </div>
+        </section>
+        <section id="install" className="welcome-install" aria-labelledby="install-title">
+          <h2 id="install-title">Take Pebble with you.</h2>
+          <p>Meet people and find a group for your next event in the Pebble app.</p>
+          <h3>Android — coming soon</h3>
+          <p>Installation details will be available here when Pebble is ready to download.</p>
+          <p className="muted">iOS is planned.</p>
+          <Link className="welcome-secondary" to="/explore">Browse events while you wait</Link>
         </section>
       </main>
       <footer className="welcome-footer">
@@ -78,6 +78,7 @@ export function Landing() {
           <Link to="/privacy">Privacy</Link>
           <Link to="/terms">Terms</Link>
           <Link to="/cookies">Cookies</Link>
+          <a href={`mailto:${legalPublication.contactEmail}`}>Safety</a>
         </div>
       </footer>
     </div>
@@ -85,11 +86,13 @@ export function Landing() {
 }
 export function Legal({ kind }: { kind: "terms" | "privacy" | "cookies" }) {
   const document = legalDocuments[kind];
+  const source = useLocation().state?.authFrom;
+  const back = source === '/login' || source === '/register' ? source : '/';
   return (
     <div className="legal-page">
       <header className="legal-header">
         <Brand />
-        <Link to="/">Back to Pebble</Link>
+        <Link to={back}>{back === '/' ? 'Back to Pebble' : 'Back to sign in'}</Link>
       </header>
       <main className="legal-content">
         <h1>{document.title}</h1>

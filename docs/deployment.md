@@ -1,23 +1,23 @@
 # Deployment and hosting
 
 This is the setup, release and recovery runbook. Workflow behavior lives in
-`.github/workflows/{checks,ci,release}.yml`; generated Hosting/Auth settings come
+`.github/workflows/{checks,ci,prepare,release}.yml`; generated Hosting/Auth settings come
 from `scripts/configure-deployment.mjs`. For local setup, use
 [development onboarding](development-onboarding.md); for test commands, use
 [tests/README.md](../tests/README.md).
 
 ## Environments
 
-| URL | Firebase site | Backend | Developer toolbar |
-| --- | --- | --- | --- |
-| https://pebble.garden | `cse416-meet-people` | Production | Off |
-| https://web.dev.pebble.garden | `cse416-meet-people-dev` | Sandbox | On |
-| https://mobile.dev.pebble.garden | `cse416-meet-people-dev` | Sandbox | On |
-| https://cse416-meet-people-sandbox.web.app | `cse416-meet-people-sandbox` | Sandbox | Off |
+| URL | Firebase site | Product / artifact | Branch | Supabase | Developer toolbar |
+| --- | --- | --- | --- | --- | --- |
+| https://pebble.garden | `cse416-meet-people` | Web / `dist/web` | `main` | `pebble-production` | Off |
+| https://web.dev.pebble.garden | `cse416-meet-people-sandbox` | Web / `dist/web` | `dev` | `pebble-sandbox` | On |
+| https://mobile.dev.pebble.garden | `cse416-meet-people-dev` | Mobile / `dist/mobile` | `dev` | `pebble-sandbox` | On |
 
-Each site's `https://<site>.web.app` URL remains available. Both developer domains
-serve the same responsive build: layout follows viewport size, not hostname.
-Sandbox sessions/localStorage are separate per origin, but backend writes are shared.
+Each site's `https://<site>.web.app` URL serves the same product as its custom domain.
+Web stays responsive on desktop and phone browsers. Mobile is the authenticated
+application and the source for Capacitor Android and future iOS builds.
+Both dev products share sandbox data; sessions/localStorage remain separate per origin.
 
 | Environment | Supabase project | Reference | Region |
 | --- | --- | --- | --- |
@@ -38,34 +38,80 @@ API containers scale to zero, with a maximum of two instances per service.
 
 ## Releases
 
-All deployments come from **main**. A push deploys the same checked commit to
-production and sandbox through separate GitHub environments. Feature branches
-are tested on PRs and do not overwrite sandbox. Version tags are labels only.
+Pushes to **main deploy only production**; pushes to **dev deploy only sandbox**.
+The environments use separate GitHub settings and backends. Feature branches
+are tested on PRs and do not overwrite sandbox. Both sandbox builds use one
+resolved commit, one API deployment and one database.
 
-1. Open a PR into `main` or `dev`; `Pull request checks` runs reusable CI.
-2. Merge into `main`; `Deploy` resolves and checks the exact source SHA.
-3. The workflow builds an immutable API image, deploys Edge Functions, applies
-   migrations without development seeds, configures services and deploys Hosting.
-4. Every deployed URL must pass `pnpm test:hosted URL`. Failure fails the run.
+1. Open a PR into `dev` or `main`; `Pull request checks` runs full CI.
+2. Merge into `dev` to update both development domains; merge into `main` to update production.
+3. `Deploy` resolves one commit SHA and runs the same CI against that exact SHA.
+4. On `dev`, sandbox build preparation runs alongside CI. On `main`, release builds
+   start only after full CI passes. Only passing CI permits automatic publication.
+5. Deployment downloads frontend artifacts from the same workflow run and uses the
+   prepared API image by digest. It does not rebuild them. It deploys Edge Functions,
+   applies migrations without development seeds, configures services and deploys Hosting.
+6. Every deployed URL runs hosted smoke checks, even if another URL fails. Any
+   failed smoke check fails the run; it does not automatically roll back changes.
 
-CI covers types, lint, units, deployment controls, both toolbar builds, disposable
-database reset/generated types, SQL security, local integration, source/built
-browser tests and the Docker build. See the workflow result for current failures;
-past passing counts do not certify the current tree.
+Version tags are release labels only. Production pipelines queue as complete runs
+(`queue: max`, up to 100 pending), preventing faster builds from overtaking an
+already-running release. GitHub queues by arrival at the concurrency group, not
+strict commit chronology. Active releases are never automatically cancelled.
+Production and sandbox have independent deployment locks, covering mutations and
+smoke checks. Dev CI/builds run concurrently; only its deployment job is serialized.
+GitHub may replace pending sandbox deployments. Once a sandbox job acquires its
+lock, an automatic release must still match the current remote `dev` head or fail
+before making changes. Manual sandbox rollbacks deliberately bypass this freshness
+check. A push arriving after the freshness check does not interrupt an active deployment.
+Hosting sites publish sequentially because each site's `pinTag` updates the shared
+API service. Concurrent site publishing can cause Cloud Run resource-version conflicts.
 
-Deployment runs are serialized; active runs are never cancelled. Hosting sites
-publish sequentially because each site's `pinTag` updates the shared API service.
-Concurrent site publishing can cause Cloud Run resource-version conflicts.
+CI runs three independent lanes:
+
+- Static/unit/container: typecheck once, lint, unit tests and a Docker validation build.
+- Source browser: isolated source-mocked Playwright journeys, without a database dependency.
+- Integration: disposable database reset/generated types, SQL security, local integration,
+  deployment controls, optimized dev web/mobile and production web builds, and built-browser tests.
+
+Deployment checks leave the verified production-mode web frontend for the built-browser tests;
+the API compiles once outside Docker. Docker validation exports a GitHub Actions
+layer cache which release preparation reads. Production/sandbox frontend builds
+remain separate from local-test bundles because they embed different backend settings.
+The aggregate `Checks / CI` required check succeeds only if all three lanes pass.
+CI never resets a hosted database. Schema replay checks event filtering, pagination,
+details and service-role permissions on fresh and legacy databases. Built-browser
+checks also call the real events endpoint, so a missing RPC fails before deployment.
+
+The events HTTP 503 in release run `41255109334` came from a missing
+`public.public_live_events` RPC. Migration `20261031000000_public_live_events.sql`
+adds the shared list/detail function without changing stored event data. It was
+applied to sandbox and production on 2026-10-31 and recorded in both migration
+histories. Full hosted smoke checks passed on all three custom domains and all
+three Firebase `web.app` sites; real event list/detail requests returned HTTP 200.
+
+Before parallelization, full CI took 5m 21s on release run `41255109334` and
+8m 14s on PR run `41255092586`. The release then spent roughly 2m 30s–3m deploying
+before failing its hosted events check. Use these as the baseline; measure the
+first successful runs of the parallel pipeline before claiming a speedup.
 
 ### Manual sandbox deployment
 
-Run **Deploy** from workflow branch **main**. Source can be blank/`main` or a full
-commit SHA already on main; both sandbox sites are replaced.
+Actions → **Deploy** → **Run workflow**, using workflow branch **dev** or **main**:
+
+- Environment: `sandbox`
+- Source ref: `dev` (or blank), or a full commit SHA already on dev
+- Skip checks: off unless deliberately overriding
+- Override reason: required if skipping
 
 ```sh
-gh workflow run release.yml --ref main \
-  -f environment=sandbox -f source_ref=main
+gh workflow run release.yml --ref dev \
+  -f environment=sandbox -f source_ref=dev
 ```
+
+The source is resolved once, tested and deployed at that SHA. Commits outside dev
+are rejected. Both sandbox sites are replaced. The next successful dev deployment
+updates them again. Production changes only on main releases.
 
 ### Manual production override
 
@@ -82,7 +128,7 @@ Automatic runs cannot skip checks. Overrides still validate resource isolation,
 build, apply migrations and run hosted smoke checks. The summary records actor,
 SHA, reason, image, URLs and result. Repository write access permits workflow
 dispatch; admin merge bypass is a separate permission. Neither GitHub environment
-adds an approval prompt. OIDC uses the deployment workflow on main, without
+adds an approval prompt. OIDC uses the deployment workflow on the permitted branch, without
 downloaded service-account keys.
 
 ## Configuration
@@ -93,15 +139,35 @@ environments:
 
 | Location | Values |
 | --- | --- |
-| GitHub environment variables | `GCP_PROJECT_ID`, `GCP_REGION`, `GAR_REPOSITORY`, `GCP_DEPLOY_SA_EMAIL`, `GCP_WIF_PROVIDER`, `API_SERVICE`, `API_RUNTIME_ACCOUNT`, `API_SECRET`, `WORKER_JOB`, `WORKER_RUNTIME_ACCOUNT`, `FIREBASE_HOSTING_SITE_ID`, sandbox `FIREBASE_DEVTOOLS_SITE_ID`, `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
+| GitHub environment variables | `GCP_PROJECT_ID`, `GCP_REGION`, `GAR_REPOSITORY`, `GCP_DEPLOY_SA_EMAIL`, `GCP_WIF_PROVIDER`, `API_SERVICE`, `API_RUNTIME_ACCOUNT`, `API_SECRET`, `WORKER_JOB`, `WORKER_RUNTIME_ACCOUNT`, `FIREBASE_WEB_SITE_ID`, sandbox `FIREBASE_MOBILE_SITE_ID`, `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
 | GitHub environment secret | `SUPABASE_ACCESS_TOKEN`, with access to that environment's Supabase project |
 | GCP Secret Manager | `pebble-supabase-service-role` / `pebble-supabase-service-role-sandbox`, accessible to the matching API runtime identity |
 | Supabase Vault | `pebble_project_url`, `pebble_ingest_token`, `pebble_embed_secret` |
 | Supabase Edge secrets | `INGEST_TOKEN`, `EMBED_SHARED_SECRET`, optional `GEMINI_API_KEY` and `TICKETMASTER_API_KEY` |
 
+The sandbox OIDC provider permits only `release.yml` on `dev` or `main`, bound to
+the matching workflow ref, repository ID and sandbox environment. Main remains
+allowed for manual sandbox releases; the resolver still requires source ancestry
+on dev. Production OIDC remains main-only. After changing these policies, update
+the existing provider with the condition from `scripts/bootstrap-gcp.sh`; a full
+bootstrap is unnecessary for an existing environment. The existing sandbox
+provider was updated and read back successfully on 2026-10-31.
+
 `VITE_*` values are public and compiled into the frontend; never put private keys
 there. Changing them requires a rebuild. Sandbox must use its own Supabase ref/key:
 deployment validation rejects production database/site/secret targets.
+The frontend builds use explicit `VITE_DEV_TOOLS=false` / `true` and show
+branch/short SHA in the developer toolbar. Local-login helpers remain absent.
+Preparation rejects a mismatched branch or Supabase URL before building. Release
+artifacts include `build-info.json` with product, branch, commit and Supabase URL.
+Hosted smoke checks compare it with the intended release and verify the actual
+JavaScript's Supabase URL and web/mobile entry point.
+
+Site variables are `FIREBASE_WEB_SITE_ID=cse416-meet-people` in production;
+`FIREBASE_WEB_SITE_ID=cse416-meet-people-sandbox` and
+`FIREBASE_MOBILE_SITE_ID=cse416-meet-people-dev` in sandbox. These variables were
+configured in GitHub on 2026-11-01. Legacy Hosting/Devtools variables remain for
+older workflow revisions; the new workflow uses the explicit product names.
 
 The workflow uses `supabase link` and CLI-managed database credentials through the
 discovered pooler. The old `SUPABASE_DB_URL` secret is not consumed.
@@ -109,7 +175,10 @@ discovered pooler. The old `SUPABASE_DB_URL` secret is not consumed.
 `scripts/configure-deployment.mjs` creates ignored `firebase.deploy.json` and
 `hosting/deployment/supabase/config.toml`. The generated Auth configuration enables
 signup with email confirmation and secure password changes. It allows callback
-and reset routes on the environment's custom domains and `web.app` origins.
+and reset routes on the environment's custom domains and `web.app` origins, plus
+the existing `com.cse416.meetpeople://app/` native callback/reset routes. Sandbox's
+default Auth URL is `https://mobile.dev.pebble.garden`; production's remains
+`https://pebble.garden`. Mobile clients request their explicit callback destination.
 Do not push local development `supabase/config.toml` to hosted projects.
 
 ### Recreate infrastructure
@@ -175,7 +244,8 @@ Use forward migrations for installed databases, rather than rewriting history.
 
 ## Custom domains
 
-Attach `pebble.garden` to `cse416-meet-people`, and both dev domains to
+Attach `pebble.garden` to `cse416-meet-people`, `web.dev.pebble.garden` to
+`cse416-meet-people-sandbox`, and `mobile.dev.pebble.garden` to
 `cse416-meet-people-dev`, as serving domains rather than redirects. Keep Porkbun's
 nameservers and copy Firebase's exact required records:
 
@@ -183,7 +253,7 @@ nameservers and copy Firebase's exact required records:
 | --- | --- | --- |
 | A | Leave blank | `199.36.158.100` |
 | TXT | Leave blank | `hosting-site=cse416-meet-people` |
-| CNAME | `web.dev` | `cse416-meet-people-dev.web.app` |
+| CNAME | `web.dev` | `cse416-meet-people-sandbox.web.app` |
 | CNAME | `mobile.dev` | `cse416-meet-people-dev.web.app` |
 
 Add any `_acme-challenge` TXT records supplied by Firebase's current verification
@@ -194,13 +264,23 @@ frontend deployment does not create them.
 
 After HTTPS is active, apply generated Auth settings and verify enabled OAuth
 origins. Production's Site URL is `https://pebble.garden`; sandbox's is
-`https://web.dev.pebble.garden`. Each app requests authentication links for its own
+`https://mobile.dev.pebble.garden`. Each mobile client requests authentication links for its own
 origin. Run `pnpm test:hosted URL` for each domain before updating the uptime probe.
 
-Last verified **2026-10-31**: production and mobile passed hosted smoke checks.
-The web dev CNAME/challenge TXT resolved publicly, with Firebase verification/HTTPS
-still pending. Retain the earlier `desktop.dev.pebble.garden` mapping until web dev
-passes. These checks do not establish interactive Google sign-in or email delivery.
+Last verified **2026-10-31**, after the events RPC migration: all three custom
+domains and all three Firebase `web.app` sites passed hosted smoke checks.
+Earlier web dev DNS/HTTPS and events HTTP 503 blockers are resolved. These checks
+do not establish interactive Google sign-in or email delivery.
+
+On 2026-11-01, the dev-web domain connection was created on the sandbox site and
+its old developer-site connection removed after sandbox ownership became active.
+All three domain connections report active host, ownership and certificate states.
+Cached dev-web “Site Not Found” responses cleared after cloning and releasing the
+existing sandbox version: release `1793555205800000`, version `ab6a70028da4c739`,
+with the original API tag `fh-05af2c491dd8059c` preserved. Hosted smoke checks passed
+on all three custom domains after the move. These checks cover the existing
+deployed applications; product separation and the updated Auth defaults become
+live when the updated workflows/code are released from their respective branches.
 
 ### Firebase "Site Not Found" with an active domain
 
@@ -214,7 +294,8 @@ releasing the already-active version directly, so a new clone is required.
 
 ## Recovery and verification
 
-- Redeploy a previously deployed SHA on main, or restore a prior Hosting release.
+- Redeploy a previously deployed SHA on the destination branch (`main` for
+  production, `dev` for sandbox), or restore a prior Hosting release.
   Its pinned rewrite follows the paired API revision, not default Cloud Run traffic.
 - If the direct Cloud Run URL also needs rollback, move its traffic to the prior
   revision. Retain image digests and tagged revisions needed by Hosting releases.
