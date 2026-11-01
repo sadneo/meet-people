@@ -1,12 +1,17 @@
-# Parent-only event group queue SQL candidate
+# Historical event group queue SQL candidate
+
+This is the original review artifact. The installable migration now lives at
+`supabase/migrations/20261009060000_event_group_queue.sql`; deploy through the
+[deployment runbook](../../docs/deployment.md), not by replaying this candidate.
+The mechanisms and test limitations below describe the original review.
 
 ## Files / execution boundary
 
-- `docs/event-group-queue-migration.sql`: additive candidate with all ten RPCs.
+- `supabase/candidates/event-group-queue-migration.sql`: additive candidate with all ten RPCs.
   Intended parent install path:
   `supabase/migrations/20261009060000_event_group_queue.sql`. This task does not
   write that path or change old migrations.
-- `tests/event-group-queue.sql`: single rollback-only behavioral test transaction.
+- `tests/integration/sql/event-group-queue.sql`: single rollback-only behavioral test transaction.
   **This repaired revision is not executed or SQL-validated here**, and not run
   by Vitest/Playwright. Parent reported the preceding draft passed in a schema-only
   disposable DB, subsequently removed; that is not evidence for these repairs.
@@ -30,8 +35,8 @@ authenticated makes ranking fail closed.
 The parent supplies its disposable connection locally; do not paste credentials:
 
 ```sh
-psql "$DISPOSABLE_DB_URL" -X -v ON_ERROR_STOP=1 -f docs/event-group-queue-migration.sql
-psql "$DISPOSABLE_DB_URL" -X -v ON_ERROR_STOP=1 -f tests/event-group-queue.sql
+psql "$DISPOSABLE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/candidates/event-group-queue-migration.sql
+psql "$DISPOSABLE_DB_URL" -X -v ON_ERROR_STOP=1 -f tests/integration/sql/event-group-queue.sql
 ```
 
 Candidate has atomic BEGIN/COMMIT. Test has BEGIN/ROLLBACK and explicitly enables

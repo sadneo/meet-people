@@ -8,14 +8,13 @@ save a matching profile, **Find a group to go with**, persisted waiting state /
 suggestion of **2–4** people, not a confirmed group, invitation, RSVP, connection
 or chat. There is no email/push delivery or event-local email reentry.
 
-**An uninstalled additive SQL candidate now exists** at
-`docs/event-group-queue-migration.sql`, with behavioral test source at
-`tests/event-group-queue.sql`. See [SQL README](event-group-queue-sql-README.md) for
-exact parent-only commands, dependencies, mechanisms, tradeoffs and unknowns.
-The parent reported the preceding draft passed schema-only disposable tests and
-removed that DB. This repaired SQL revision has not been run/SQL-validated here
-or applied to an app database; prior draft evidence does not validate the repairs.
-Existing profile and listing-compatibility migrations are not this contract.
+The installable SQL lives at
+`supabase/migrations/20261009060000_event_group_queue.sql`, with behavioral tests at
+`tests/integration/sql/event-group-queue.sql`. The original candidate and its
+[review notes](../supabase/candidates/event-group-queue-sql-README.md) are retained
+under `supabase/candidates/`; they are historical, not another installation path.
+The contracts and source-only verification below describe the original slice;
+see [deployment](deployment.md) for current release operation.
 Missing RPCs return an honest 503; there is no production fixture/fallback queue.
 Background processing remains disabled. Joining does not claim a group was found.
 Mocked UI/transport tests are not live persistence, secure ranking or provider proof.
