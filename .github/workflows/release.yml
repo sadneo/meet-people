@@ -121,8 +121,8 @@ jobs:
       API_SECRET: ${{ vars.API_SECRET }}
       WORKER_JOB: ${{ vars.WORKER_JOB }}
       WORKER_RUNTIME_ACCOUNT: ${{ vars.WORKER_RUNTIME_ACCOUNT }}
-      FIREBASE_HOSTING_SITE_ID: ${{ vars.FIREBASE_HOSTING_SITE_ID }}
-      FIREBASE_DEVTOOLS_SITE_ID: ${{ vars.FIREBASE_DEVTOOLS_SITE_ID }}
+      FIREBASE_WEB_SITE_ID: ${{ vars.FIREBASE_WEB_SITE_ID }}
+      FIREBASE_MOBILE_SITE_ID: ${{ vars.FIREBASE_MOBILE_SITE_ID }}
       SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
       SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
@@ -178,22 +178,27 @@ jobs:
       - name: Deploy disabled event worker (no execution or schedule)
         run: sh scripts/deploy-worker.sh
       # Each site's pinTag updates the shared Run service; publish sequentially.
-      - name: Deploy normal site and pin API revision
-        run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only "hosting:$FIREBASE_HOSTING_SITE_ID" --project "$GCP_PROJECT_ID" --non-interactive
-      - name: Deploy developer site and pin API revision
+      - name: Deploy web site and pin API revision
+        run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only "hosting:$FIREBASE_WEB_SITE_ID" --project "$GCP_PROJECT_ID" --non-interactive
+      - name: Deploy development mobile site and pin API revision
         if: env.DEPLOY_ENVIRONMENT == 'sandbox'
-        run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only "hosting:$FIREBASE_DEVTOOLS_SITE_ID" --project "$GCP_PROJECT_ID" --non-interactive
+        run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only "hosting:$FIREBASE_MOBILE_SITE_ID" --project "$GCP_PROJECT_ID" --non-interactive
       - name: Verify every deployed site and custom domain
         run: |
-          urls=("https://$FIREBASE_HOSTING_SITE_ID.web.app")
+          web_urls=("https://$FIREBASE_WEB_SITE_ID.web.app")
+          mobile_urls=()
           if [ "$DEPLOY_ENVIRONMENT" = sandbox ]; then
-            urls+=("https://$FIREBASE_DEVTOOLS_SITE_ID.web.app" https://web.dev.pebble.garden https://mobile.dev.pebble.garden)
+            web_urls+=(https://web.dev.pebble.garden)
+            mobile_urls+=("https://$FIREBASE_MOBILE_SITE_ID.web.app" https://mobile.dev.pebble.garden)
           else
-            urls+=(https://pebble.garden)
+            web_urls+=(https://pebble.garden)
           fi
           status=0
-          for url in "${urls[@]}"; do
-            pnpm test:hosted "$url" || status=1
+          for url in "${web_urls[@]}"; do
+            HOSTED_PRODUCT=web pnpm test:hosted "$url" || status=1
+          done
+          for url in "${mobile_urls[@]}"; do
+            HOSTED_PRODUCT=mobile pnpm test:hosted "$url" || status=1
           done
           exit "$status"
       - name: Deployment summary
@@ -207,8 +212,8 @@ jobs:
           node --input-type=module <<'JS'
           import { appendFileSync } from 'node:fs'
           const e = process.env
-          const lines = [`### ${e.DEPLOY_ENVIRONMENT} deployment: ${e.DEPLOY_RESULT}`, `- Actor: ${e.GITHUB_ACTOR}`, `- Branch: ${e.SOURCE_BRANCH}`, `- Commit: ${e.RELEASE_SHA}`, `- Checks skipped: ${e.SKIPPED_CHECKS}`, `- Override reason: ${JSON.stringify(e.OVERRIDE_REASON || '')}`, `- Site: https://${e.FIREBASE_HOSTING_SITE_ID}.web.app`, `- Image: ${e.API_IMAGE || 'not built'}`, '- Worker: disabled; not executed or scheduled']
-          if (e.DEPLOY_ENVIRONMENT === 'sandbox') lines.push(`- Developer site: https://${e.FIREBASE_DEVTOOLS_SITE_ID}.web.app`)
+          const lines = [`### ${e.DEPLOY_ENVIRONMENT} deployment: ${e.DEPLOY_RESULT}`, `- Actor: ${e.GITHUB_ACTOR}`, `- Branch: ${e.SOURCE_BRANCH}`, `- Commit: ${e.RELEASE_SHA}`, `- Checks skipped: ${e.SKIPPED_CHECKS}`, `- Override reason: ${JSON.stringify(e.OVERRIDE_REASON || '')}`, `- Web site: https://${e.FIREBASE_WEB_SITE_ID}.web.app`, `- Image: ${e.API_IMAGE || 'not built'}`, '- Worker: disabled; not executed or scheduled']
+          if (e.DEPLOY_ENVIRONMENT === 'sandbox') lines.push(`- Mobile site: https://${e.FIREBASE_MOBILE_SITE_ID}.web.app`)
           lines.push(`- Custom domains: ${e.DEPLOY_ENVIRONMENT === 'sandbox' ? 'https://web.dev.pebble.garden, https://mobile.dev.pebble.garden' : 'https://pebble.garden'}`)
           appendFileSync(e.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n')
           JS

@@ -1255,3 +1255,6 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
   .event-detail { min-height: 100dvh; border-radius: 0; padding: 24px; }
   .event-detail .event-cover { height: 180px; }
 }
+.welcome-install { max-width: 760px; margin: 0 auto; padding: 64px 24px; scroll-margin-top: 24px; }
+.welcome-install h2 { font-size: clamp(28px, 5vw, 42px); }
+.welcome-install p { line-height: 1.6; }

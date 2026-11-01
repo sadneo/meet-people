@@ -10,8 +10,10 @@ React shell styles live in `src/ui/`; the integrated
 Garden renderer lives in `src/features/garden/`, with artwork in `public/garden/`.
 Other frontend assets live in `public/pebble/`. The old prototype, design-system shell
 and route screens are no longer the application entry. The retained `src/alt` reference
-is not the integrated app. This document
-supersedes their earlier design directions. Product UI changes must follow it.
+is not the integrated app. Web and mobile have separate entry points in `src/web/`
+and `src/mobile/`. Web presents installation status and public events; mobile opens
+login when signed out. This document supersedes their earlier design directions.
+Product UI changes must follow it.
 
 ## Visual direction
 

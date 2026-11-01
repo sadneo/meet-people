@@ -8,16 +8,16 @@ from `scripts/configure-deployment.mjs`. For local setup, use
 
 ## Environments
 
-| URL | Firebase site | Backend | Developer toolbar |
-| --- | --- | --- | --- |
-| https://pebble.garden | `cse416-meet-people` | Production | Off |
-| https://web.dev.pebble.garden | `cse416-meet-people-dev` | Sandbox | On |
-| https://mobile.dev.pebble.garden | `cse416-meet-people-dev` | Sandbox | On |
-| https://cse416-meet-people-sandbox.web.app | `cse416-meet-people-sandbox` | Sandbox | Off |
+| URL | Firebase site | Product / artifact | Branch | Supabase | Developer toolbar |
+| --- | --- | --- | --- | --- | --- |
+| https://pebble.garden | `cse416-meet-people` | Web / `dist/web` | `main` | `pebble-production` | Off |
+| https://web.dev.pebble.garden | `cse416-meet-people-sandbox` | Web / `dist/web` | `dev` | `pebble-sandbox` | On |
+| https://mobile.dev.pebble.garden | `cse416-meet-people-dev` | Mobile / `dist/mobile` | `dev` | `pebble-sandbox` | On |
 
-Each site's `https://<site>.web.app` URL remains available. Both developer domains
-serve the same responsive build: layout follows viewport size, not hostname.
-Sandbox sessions/localStorage are separate per origin, but backend writes are shared.
+Each site's `https://<site>.web.app` URL serves the same product as its custom domain.
+Web stays responsive on desktop and phone browsers. Mobile is the authenticated
+application and the source for Capacitor Android and future iOS builds.
+Both dev products share sandbox data; sessions/localStorage remain separate per origin.
 
 | Environment | Supabase project | Reference | Region |
 | --- | --- | --- | --- |
@@ -72,9 +72,9 @@ CI runs three independent lanes:
 - Static/unit/container: typecheck once, lint, unit tests and a Docker validation build.
 - Source browser: isolated source-mocked Playwright journeys, without a database dependency.
 - Integration: disposable database reset/generated types, SQL security, local integration,
-  deployment controls, both optimized toolbar variants and built-browser tests.
+  deployment controls, optimized dev web/mobile and production web builds, and built-browser tests.
 
-Deployment checks leave the verified normal frontend for the built-browser tests;
+Deployment checks leave the verified production-mode web frontend for the built-browser tests;
 the API compiles once outside Docker. Docker validation exports a GitHub Actions
 layer cache which release preparation reads. Production/sandbox frontend builds
 remain separate from local-test bundles because they embed different backend settings.
@@ -139,7 +139,7 @@ environments:
 
 | Location | Values |
 | --- | --- |
-| GitHub environment variables | `GCP_PROJECT_ID`, `GCP_REGION`, `GAR_REPOSITORY`, `GCP_DEPLOY_SA_EMAIL`, `GCP_WIF_PROVIDER`, `API_SERVICE`, `API_RUNTIME_ACCOUNT`, `API_SECRET`, `WORKER_JOB`, `WORKER_RUNTIME_ACCOUNT`, `FIREBASE_HOSTING_SITE_ID`, sandbox `FIREBASE_DEVTOOLS_SITE_ID`, `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
+| GitHub environment variables | `GCP_PROJECT_ID`, `GCP_REGION`, `GAR_REPOSITORY`, `GCP_DEPLOY_SA_EMAIL`, `GCP_WIF_PROVIDER`, `API_SERVICE`, `API_RUNTIME_ACCOUNT`, `API_SECRET`, `WORKER_JOB`, `WORKER_RUNTIME_ACCOUNT`, `FIREBASE_WEB_SITE_ID`, sandbox `FIREBASE_MOBILE_SITE_ID`, `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
 | GitHub environment secret | `SUPABASE_ACCESS_TOKEN`, with access to that environment's Supabase project |
 | GCP Secret Manager | `pebble-supabase-service-role` / `pebble-supabase-service-role-sandbox`, accessible to the matching API runtime identity |
 | Supabase Vault | `pebble_project_url`, `pebble_ingest_token`, `pebble_embed_secret` |
@@ -158,6 +158,16 @@ there. Changing them requires a rebuild. Sandbox must use its own Supabase ref/k
 deployment validation rejects production database/site/secret targets.
 The frontend builds use explicit `VITE_DEV_TOOLS=false` / `true` and show
 branch/short SHA in the developer toolbar. Local-login helpers remain absent.
+Preparation rejects a mismatched branch or Supabase URL before building. Release
+artifacts include `build-info.json` with product, branch, commit and Supabase URL.
+Hosted smoke checks compare it with the intended release and verify the actual
+JavaScript's Supabase URL and web/mobile entry point.
+
+Site variables are `FIREBASE_WEB_SITE_ID=cse416-meet-people` in production;
+`FIREBASE_WEB_SITE_ID=cse416-meet-people-sandbox` and
+`FIREBASE_MOBILE_SITE_ID=cse416-meet-people-dev` in sandbox. These variables were
+configured in GitHub on 2026-11-01. Legacy Hosting/Devtools variables remain for
+older workflow revisions; the new workflow uses the explicit product names.
 
 The workflow uses `supabase link` and CLI-managed database credentials through the
 discovered pooler. The old `SUPABASE_DB_URL` secret is not consumed.
@@ -165,7 +175,10 @@ discovered pooler. The old `SUPABASE_DB_URL` secret is not consumed.
 `scripts/configure-deployment.mjs` creates ignored `firebase.deploy.json` and
 `hosting/deployment/supabase/config.toml`. The generated Auth configuration enables
 signup with email confirmation and secure password changes. It allows callback
-and reset routes on the environment's custom domains and `web.app` origins.
+and reset routes on the environment's custom domains and `web.app` origins, plus
+the existing `com.cse416.meetpeople://app/` native callback/reset routes. Sandbox's
+default Auth URL is `https://mobile.dev.pebble.garden`; production's remains
+`https://pebble.garden`. Mobile clients request their explicit callback destination.
 Do not push local development `supabase/config.toml` to hosted projects.
 
 ### Recreate infrastructure
@@ -231,7 +244,8 @@ Use forward migrations for installed databases, rather than rewriting history.
 
 ## Custom domains
 
-Attach `pebble.garden` to `cse416-meet-people`, and both dev domains to
+Attach `pebble.garden` to `cse416-meet-people`, `web.dev.pebble.garden` to
+`cse416-meet-people-sandbox`, and `mobile.dev.pebble.garden` to
 `cse416-meet-people-dev`, as serving domains rather than redirects. Keep Porkbun's
 nameservers and copy Firebase's exact required records:
 
@@ -239,7 +253,7 @@ nameservers and copy Firebase's exact required records:
 | --- | --- | --- |
 | A | Leave blank | `199.36.158.100` |
 | TXT | Leave blank | `hosting-site=cse416-meet-people` |
-| CNAME | `web.dev` | `cse416-meet-people-dev.web.app` |
+| CNAME | `web.dev` | `cse416-meet-people-sandbox.web.app` |
 | CNAME | `mobile.dev` | `cse416-meet-people-dev.web.app` |
 
 Add any `_acme-challenge` TXT records supplied by Firebase's current verification
@@ -250,13 +264,23 @@ frontend deployment does not create them.
 
 After HTTPS is active, apply generated Auth settings and verify enabled OAuth
 origins. Production's Site URL is `https://pebble.garden`; sandbox's is
-`https://web.dev.pebble.garden`. Each app requests authentication links for its own
+`https://mobile.dev.pebble.garden`. Each mobile client requests authentication links for its own
 origin. Run `pnpm test:hosted URL` for each domain before updating the uptime probe.
 
 Last verified **2026-10-31**, after the events RPC migration: all three custom
 domains and all three Firebase `web.app` sites passed hosted smoke checks.
 Earlier web dev DNS/HTTPS and events HTTP 503 blockers are resolved. These checks
 do not establish interactive Google sign-in or email delivery.
+
+On 2026-11-01, the dev-web domain connection was created on the sandbox site and
+its old developer-site connection removed after sandbox ownership became active.
+All three domain connections report active host, ownership and certificate states.
+Cached dev-web “Site Not Found” responses cleared after cloning and releasing the
+existing sandbox version: release `1793555205800000`, version `ab6a70028da4c739`,
+with the original API tag `fh-05af2c491dd8059c` preserved. Hosted smoke checks passed
+on all three custom domains after the move. These checks cover the existing
+deployed applications; product separation and the updated Auth defaults become
+live when the updated workflows/code are released from their respective branches.
 
 ### Firebase "Site Not Found" with an active domain
 

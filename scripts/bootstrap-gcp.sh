@@ -78,9 +78,9 @@ gh variable set API_RUNTIME_ACCOUNT --repo "$GITHUB_REPOSITORY" --env "$ENVIRONM
 gh variable set API_SECRET --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "pebble-supabase-service-role$SUFFIX"
 gh variable set WORKER_JOB --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "pebble-event-group-worker$SUFFIX"
 gh variable set WORKER_RUNTIME_ACCOUNT --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "$WORKER"
-gh variable set FIREBASE_HOSTING_SITE_ID --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "$GCP_PROJECT_ID$SUFFIX"
+gh variable set FIREBASE_WEB_SITE_ID --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "$GCP_PROJECT_ID$SUFFIX"
 if [ "$ENVIRONMENT" = sandbox ]; then
-  gh variable set FIREBASE_DEVTOOLS_SITE_ID --repo "$GITHUB_REPOSITORY" --env sandbox --body "$GCP_PROJECT_ID-dev"
+  gh variable set FIREBASE_MOBILE_SITE_ID --repo "$GITHUB_REPOSITORY" --env sandbox --body "$GCP_PROJECT_ID-dev"
 fi
 
 if [ "$ENVIRONMENT" = production ] && [ -z "$(gcloud monitoring uptime list-configs --project="$GCP_PROJECT_ID" --filter='displayName=pebble-api-health' --format='value(name)')" ]; then

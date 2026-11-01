@@ -2,9 +2,9 @@
 
 ## Product policy
 
-The app has no signed-out product preview. Signed-out `/` renders the public welcome
-page; signed-in `/` renders protected Home. Marketing, legal and guest-event pages
-remain public, as do `/login`, `/register`, `/auth/callback`, `/auth/forgot-password`,
+Mobile has no signed-out product preview. Signed-out `/` opens `/login`;
+signed-in `/` renders protected Home. Marketing and guest events belong to the
+separate web entry point. Mobile legal pages remain public, as do `/login`, `/register`, `/auth/callback`, `/auth/forgot-password`,
 `/forgot-password` and `/reset-password`. Home, Events, Community (including
 `/prototype/yzcommunity`), Matchmaking/Friends/Dating, Messages, Profile, Settings,
 Intro, onboarding, planning and unknown routes are protected.

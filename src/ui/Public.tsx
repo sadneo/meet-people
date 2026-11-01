@@ -16,9 +16,7 @@ export function Landing() {
         <nav className="welcome-nav" aria-label="Website navigation">
           <Link to="/explore">Events</Link>
         </nav>
-        <Link className="welcome-open" to="/login">
-          Sign in <Icon name="External" />
-        </Link>
+        <a className="welcome-open" href="#install">Get Pebble</a>
       </header>
       <main className="welcome-main">
         <section className="welcome-hero">
@@ -31,9 +29,7 @@ export function Landing() {
               and make plans.
             </h1>
             <div className="welcome-actions">
-              <Link className="welcome-primary" to="/login">
-                Get started <Icon name="ArrowRight" />
-              </Link>
+              <a className="welcome-primary" href="#install">Get Pebble</a>
               <Link className="welcome-secondary" to="/explore">
                 Browse events
               </Link>
@@ -66,6 +62,14 @@ export function Landing() {
           <div className="welcome-community-copy">
             <h2>Grow your garden</h2>
           </div>
+        </section>
+        <section id="install" className="welcome-install" aria-labelledby="install-title">
+          <h2 id="install-title">Take Pebble with you.</h2>
+          <p>Meet people and find a group for your next event in the Pebble app.</p>
+          <h3>Android — coming soon</h3>
+          <p>Installation details will be available here when Pebble is ready to download.</p>
+          <p className="muted">iOS is planned.</p>
+          <Link className="welcome-secondary" to="/explore">Browse events while you wait</Link>
         </section>
       </main>
       <footer className="welcome-footer">

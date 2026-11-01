@@ -3,7 +3,10 @@
 The `yz/prototype-integration` working tree brings the service-connected alternate
 frontend into parity with the finalized, read-only `Pebble-Garden-Asset-Work`.
 `docs/DESIGN.md` is the product-design authority. `src/main.tsx` now loads the
-React screens in `src/ui/` through `src/App.tsx`; the standalone reference is not the application entry.
+shared React screens in `src/ui/`. Web routes live in `src/web/App.tsx`; mobile
+routes live in `src/mobile/App.tsx`. The `dev` branch publishes separate sandbox-backed
+web/mobile builds; `main` publishes production web. See `docs/deployment.md`.
+The standalone reference is not the application entry.
 
 The local development navigator sits in its own normal-flow strip above the app,
 not over mobile actions or message composers. It remains absent from normal
@@ -12,7 +15,8 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 
 | Route | Current behavior |
 | --- | --- |
-| `/`, `/welcome` | Public marketing; signed-in `/` opens Garden after account readiness |
+| Web `/`, `/welcome` | Public marketing and installation status, independent of session |
+| Mobile `/`, `/welcome` | Signed-out entry opens login; signed-in entry opens Garden after account readiness |
 | `/login`, `/register` | Supabase email/password, email link and Google sign-in |
 | `/auth/callback`, `/reset-password` | Explicit grant verification and URL scrubbing |
 | `/auth/forgot-password`, `/forgot-password` | Real recovery email request |
@@ -20,7 +24,7 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/home`, `/community` | Integrated pixel-art Garden; account-keyed browser inventory, placement and unique Geode unlocks (not server ownership) |
 | `/matchmaking` | Passive Friends/Dating recommendations, consent and search preferences |
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
-| `/explore`, `/explore/:id` | Public event reads; sign-in link for group participation |
+| Web `/explore`, `/explore/:id` | Public event reads; installation link for group participation |
 | `/messages`, `/messages/chat?conversation=…` | Saved inbox, history, read state and idempotent sends |
 | `/messages/requests` | Standalone private requests view; live acceptance, decline and safety; Close returns to Messages |
 | `/profile` | Prototype overview, saved-profile Preview, Settings gear, identity/interests/adult Dating editors and search-preference links. URL-selected editor tabs support Back/Forward. `?section=settings` contains the five existing settings categories and sign-out; category Back returns there. |
