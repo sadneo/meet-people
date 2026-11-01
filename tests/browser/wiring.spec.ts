@@ -8,7 +8,7 @@ test("public entry and private routes use the new frontend with real sign-in gat
   await wiringFixture(page, { guest: true });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /Meet new friends/ }),
+     page.getByRole("button", { name: "Continue with email", exact: true }),
   ).toBeVisible();
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/login\?returnTo=/);
@@ -127,17 +127,11 @@ test("Dating starts with confirmed consent and uses the live Dating request endp
   ).toBe(true);
 });
 
-test("public events come from the API and private group controls require sign-in", async ({
+test("mobile event details require sign-in", async ({
   page,
 }) => {
   await wiringFixture(page, { guest: true });
-  await page.goto("/explore");
-  await expect(
-    page.getByRole("heading", { name: "Campus coffee walk" }),
-  ).toBeVisible();
-  await page.getByRole("link", { name: "Campus coffee walk: see event and people", exact: true }).click();
-  await expect(page.getByText("Meet at the library.")).toBeVisible();
-  await page.getByRole("link", { name: "Sign in to find a group" }).click();
+  await page.goto(`/events/${eventId}`);
   await expect(page).toHaveURL(/\/login\?returnTo=/);
 });
 

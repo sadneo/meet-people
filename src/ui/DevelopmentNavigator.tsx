@@ -1,17 +1,17 @@
-import { useRef } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { getLocalDevelopmentEnvironment, isLocalDevelopment } from '../auth/localDevelopment'
-import { useSession } from '../auth/useSession'
-import { updateGarden } from '../features/garden/state'
 
-const views = [
-  { group: 'Public', pages: [['Landing page', '/welcome'], ['Sign in', '/login'], ['Register', '/register'], ['Password recovery', '/forgot-password'], ['Guest events', '/explore']] },
-  { group: 'App', pages: [['Garden', '/home'], ['Discover', '/matchmaking'], ['Events', '/events'], ['Messages', '/messages'], ['Requests', '/messages/requests'], ['Profile', '/profile'], ['Settings', '/settings'], ['Activity / Matches', '/activity'], ['Onboarding', '/onboarding']] },
+const mobileViews = [
+  { group: 'Account', pages: [['Sign in', '/login'], ['Register', '/register'], ['Password recovery', '/forgot-password']] },
+  { group: 'Mobile', pages: [['Garden', '/home'], ['Discover', '/matchmaking'], ['Events', '/events'], ['Messages', '/messages'], ['Requests', '/messages/requests'], ['Profile', '/profile'], ['Settings', '/settings'], ['Activity / Matches', '/activity'], ['Onboarding', '/onboarding']] },
+]
+const legalViews = [
   { group: 'Legal', pages: [['Privacy', '/privacy'], ['Terms', '/terms'], ['Cookies', '/cookies']] },
 ]
 
-export default function DevelopmentNavigator() {
-  const { session } = useSession()
+export default function DevelopmentNavigator({ product = 'mobile', children }: { product?: 'web' | 'mobile'; children?: ReactNode }) {
+  const views = [...(product === 'web' ? [{ group: 'Web', pages: [['Landing page', '/'], ['Guest events', '/explore']] }] : mobileViews), ...legalViews]
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const details = useRef<HTMLDetailsElement>(null)
@@ -46,10 +46,10 @@ export default function DevelopmentNavigator() {
               {group.pages.map(([label, path]) => <option key={path} value={path}>{label}</option>)}
             </optgroup>)}
           </select>
-          <small className="devhint">Private views require sign-in. This navigator does not bypass account setup.</small>
-          {session && <button type="button" className="btn light" onClick={() => updateGarden(session.user.id, {type:'demo-funds'})}>Add 1,000 test Pebbles</button>}
+          {product === 'mobile' && <small className="devhint">Private views require sign-in. This navigator does not bypass account setup.</small>}
+          {children}
           <div className="devquick">
-            {[['Landing page', '/welcome'], ['Sign in', '/login'], ['Discover', '/matchmaking'], ['Garden', '/home']].map(([label, path]) => <button key={path} type="button" onClick={() => jump(path)}>{label}</button>)}
+            {views[0].pages.map(([label, path]) => <button key={path} type="button" onClick={() => jump(path)}>{label}</button>)}
           </div>
         </div>
       </details>

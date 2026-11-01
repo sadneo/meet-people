@@ -63,13 +63,20 @@ test('Profile navigation leaves a deep-linked editor and follows browser history
  await expect(page.getByRole('heading',{name:'Profile',exact:true})).toBeVisible()
 })
 
-test('marketing preview switches modes; policy Back preserves non-secret auth text',async({page})=>{
+test('web marketing preview switches modes and offers installation information',async({page})=>{
+ await page.route('**/src/mobile/main.tsx',route=>route.fulfill({contentType:'application/javascript',body:'import "/src/main.tsx"'}))
  await wiringFixture(page,{guest:true});await page.goto('/')
  const modes=page.getByRole('group',{name:'Preview a matching mode'})
  await modes.getByRole('button',{name:'Dating'}).click()
  await expect(modes.getByRole('button',{name:'Dating'})).toHaveAttribute('aria-pressed','true')
  await expect(page.locator('.welcome-profile img')).toHaveAttribute('src','/pebble/maya.jpg')
- await page.getByRole('link',{name:/Get started/}).click()
+ await page.getByRole('link',{name:'Get Pebble',exact:true}).first().click()
+ await expect(page.getByRole('heading',{name:'Android — coming soon'})).toBeVisible()
+ await expect(page.getByRole('link',{name:/Sign in|Get started/})).toHaveCount(0)
+})
+
+test('mobile policy Back preserves non-secret auth text',async({page})=>{
+ await wiringFixture(page,{guest:true});await page.goto('/login')
  await expect(page.getByText('Sign in or create an account to find your people.')).toBeVisible()
  await page.getByLabel('Email',{exact:true}).fill('review@example.test')
  await page.locator('.auth-footer').getByRole('link',{name:'Privacy',exact:true}).click()
@@ -98,6 +105,7 @@ for(const width of [390,1280])test(`prototype profile overview, preview, setting
 })
 
 test('Events accepts new responses without counts and Reset restores All without a stuck loader',async({page})=>{
+ await page.route('**/src/mobile/main.tsx',route=>route.fulfill({contentType:'application/javascript',body:'import "/src/main.tsx"'}))
  await wiringFixture(page,{guest:true})
  const event={id:eventId,title:'A real API-shaped event',description:null,category:'Music',starts_at:'2026-11-03T17:00:00Z',ends_at:null,location_name:'Campus',address:null,city:null,image_url:null,source:'Campus',source_url:null,status:'active',distance_miles:null}
  await page.route('**/api/events?*',route=>route.fulfill({json:{events:new URL(route.request().url()).searchParams.has('category')?[]:[event],categories:['Music','Food'],page:1,hasMore:false}}))

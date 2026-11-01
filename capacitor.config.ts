@@ -5,8 +5,8 @@ const config: CapacitorConfig = {
   // If you change it, change APP_SCHEME in src/platform/native.ts and the manifest too.
   appId: 'com.cse416.meetpeople',
   appName: 'Pebble',
-  // Matches build.outDir in vite.config.ts.
-  webDir: 'dist/web',
+  // Matches build.outDir in vite.mobile.config.ts (Android and future iOS).
+  webDir: 'dist/mobile',
   server: {
     // WebView origin becomes https://localhost (this is what the API's CORS allow-list expects).
     androidScheme: 'https',
