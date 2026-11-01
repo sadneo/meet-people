@@ -4,13 +4,18 @@ The `wiring` branch replaces the old frontend with the alternate Pebble design.
 `docs/DESIGN.md` is the product-design authority. `src/main.tsx` now loads the
 React screens in `src/ui/` through `src/App.tsx`; there is no second demo server.
 
+The local development navigator sits in its own normal-flow strip above the app,
+not over mobile actions or message composers. It remains absent from normal
+production builds. Discover shows a saved search-area label only after a location
+reference exists; Profile home does not stand in for an unconfirmed search area.
+
 | Route | Current behavior |
 | --- | --- |
 | `/`, `/welcome` | Public marketing; signed-in `/` opens Garden after account readiness |
 | `/login`, `/register` | Supabase email/password, email link and Google sign-in |
 | `/auth/callback`, `/reset-password` | Explicit grant verification and URL scrubbing |
 | `/auth/forgot-password`, `/forgot-password` | Real recovery email request |
-| `/onboarding` | Guided four-stone journey from the original dev flow, with a welcome scene and confirmed completion screen. About you (identity, private birthdate, home area), interests (3–5, at least 3 provided), social intentions, then weekly availability, general plan preferences and an explicit saved timezone. Each chapter persists and resumes from confirmed account data. Dating and group/event queues retain separate opt-in. |
+| `/onboarding` | Guided four-stone journey from the original dev flow, with a welcome scene and confirmed completion screen. About you (identity, private birthdate, home area), interests (1–5, premade or custom; at most 2 custom), social intentions, then weekly availability, general plan preferences and an explicit saved timezone. Each chapter persists and resumes from confirmed account data. Dating and group/event queues retain separate opt-in. |
 | `/home`, `/community` | Local floating garden |
 | `/matchmaking` | Passive Friends/Dating recommendations, consent and search preferences |
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
@@ -26,6 +31,16 @@ React screens in `src/ui/` through `src/App.tsx`; there is no second demo server
 Private routes wait for session hydration and persisted account readiness. A
 signed-in account with missing chapters resumes onboarding; account read failures
 block entry with retry and sign-out. Unknown routes pass through the same gate.
+Profile photo selection/removal is staged with the profile draft: Cancel discards
+it and Save changes performs the revisioned photo write after profile/detail
+saves. These resources are not an atomic transaction; partial or uncertain saves
+stay explicit and require read-only reconciliation before another photo write.
+Timezone/sharing controls retain their separately labeled immediate-save behavior
+in the editor. Privacy and the editor expose the same canonical schedule-sharing
+opt-in; the legacy account availability flag is preserved but not presented as a
+second consent gate. Device-location permission is separate from profile home
+and each discovery mode's confirmed search area, and is requested only by the
+explicit location action.
 Garden and the other signed-in destinations share one account loader and shell.
 An account-scoped TanStack Query cache retains display reads and decoded private
 photos across navigation, with background refresh and short freshness windows.
@@ -41,6 +56,16 @@ Versioned preference writes keep their compare-and-swap/readback behavior. Faile
 or uncertain mutations require read-only reconciliation before another write.
 Message retries reuse the same client request ID. Passive recommendations never
 enroll someone in the separate Messages group queue.
+An open conversation refreshes its display history every four seconds while the
+tab is visible, and rechecks on return. Polling stops when the conversation
+unmounts. Drafts and loaded history remain during background refresh; stale or
+failed permission reads cannot authorize sends. Automatic reads never retry a
+message send, and read acknowledgements are deduplicated by message sequence.
+The one-interest readiness policy requires additive migration
+`20261101000000_one_interest_minimum.sql` on existing databases before rolling out
+the relaxed client rule. Existing profiles remain intact; five-total/two-custom
+caps and matchmaking weights are unchanged. Shared-interest badges use scoring's
+normalization/aliases and count distinct shared topics.
 Friends reads an owner-only setup status before requesting recommendations. It
 shows specific guidance for the supported age range (18–99), disabled discovery,
 missing preferences, or a search area that needs confirmation. Eligibility changes

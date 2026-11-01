@@ -1,6 +1,6 @@
 import { MatchingSchedule } from './MatchingSchedule';
 import { DatingPreferencesPanel } from './Preferences';
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
 import {
   SaveAccountSchema,
@@ -51,7 +51,7 @@ export function Interests({
   const [custom, setCustom] = useState("");
   return (
     <fieldset>
-      <legend className={compact ? 'sr-only' : undefined}>Interests · choose at least three from the provided list</legend>
+      <legend className={compact ? 'sr-only' : undefined}>Interests · choose at least one from the list or your own</legend>
       <div className="interest-chips">
         {[...new Set([...suggestions, ...value])].map((label) => (
           <button
@@ -277,7 +277,7 @@ export function PhotoEditor({ compact = false }: { compact?: boolean }) {
           type="file"
           id={inputId}
           accept="image/jpeg,image/png,image/webp"
-          disabled={action.busy}
+          disabled={action.busy || photo.loading || !!photo.error || reconcile}
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
         />
       </label>
@@ -301,6 +301,7 @@ export function PhotoEditor({ compact = false }: { compact?: boolean }) {
           disabled={
             !photo.snapshot?.hasPhoto ||
             photo.loading ||
+            !!photo.error ||
             action.busy ||
             reconcile
           }
@@ -313,8 +314,7 @@ export function PhotoEditor({ compact = false }: { compact?: boolean }) {
             secondary
             disabled={action.busy}
             onClick={() => {
-              photo.reload();
-              setReconcile(false);
+              void photo.reload().then(saved => { if (saved) setReconcile(false); });
             }}
           >
             Reload photo before retrying
@@ -372,6 +372,14 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
   done: () => void;
 }) {
   const current = useCurrent(), formId = useId();
+  const photo = useProfilePhoto(), photoInputId = useId();
+  const [photoDraft, setPhotoDraft] = useState<{ file: File | null; revision: number; preview: string | null } | null>(null);
+  const [photoReconcile, setPhotoReconcile] = useState(false);
+  const saveLock = useRef(false);
+  useEffect(() => {
+    const url = photoDraft?.preview;
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [photoDraft]);
   const [source, setSource] = useState(initial.profile);
   const [profile, setProfile] = useState(() => structuredClone(initial.profile!));
   const [facts, setFacts] = useState(() => structuredClone(initialFacts.facts));
@@ -383,10 +391,24 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
   }
   const update = (value: Partial<MatchingProfile>) => setProfile(before => ({ ...before, ...value }));
   const busy = saving || current.busy || factsResource.busy;
+  function stagePhoto(file: File | null) {
+    if (busy || photo.loading || photo.error || !photo.snapshot || photoReconcile) return;
+    if (file && (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024 || file.size === 0)) {
+      setError('Choose a JPEG, PNG or WebP image up to 5 MB.');
+      return;
+    }
+    setError('');
+    setPhotoDraft({ file, revision: photo.snapshot.revision, preview: file ? URL.createObjectURL(file) : null });
+  }
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || saveLock.current) return;
     setError('');
+    if (photoReconcile || photoDraft && (!photo.client || photo.loading || photo.error || !photo.snapshot || photoDraft.revision !== photo.snapshot.revision)) {
+      setPhotoReconcile(true);
+      setError('Reload the saved photo before saving again. Other profile drafts are still here.');
+      return;
+    }
     const parsed = SaveAccountSchema.safeParse({ ...current.account!, profile });
     const optional = ProfileFactsSchema.safeParse(facts);
     if (!parsed.success || !optional.success) {
@@ -398,19 +420,48 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
       setError('Reload optional details before saving again. Your draft is still here.');
       return;
     }
+    saveLock.current = true;
     setSaving(true);
+    let savedDetails = false;
+    let photoAttempted = false;
     try {
       if (JSON.stringify(profile) !== JSON.stringify(current.account?.profile) && !await current.save(parsed.data)) return;
       if (factsChanged && !await factsResource.save({ expectedRevision: initialFacts.revision, facts: optional.data })) {
-        setError('Your main profile is saved, but optional details could not be confirmed. Reload those details before trying again.');
+        setError('Your main profile is saved, but optional details could not be confirmed. The photo has not been changed. Reload optional details before trying again.');
         return;
       }
+      savedDetails = true;
+      if (photoDraft) {
+        setPhotoReconcile(true);
+        photoAttempted = true;
+        await photo.client!.save(photoDraft.file, photoDraft.revision, crypto.randomUUID());
+        setPhotoDraft(null);
+        window.dispatchEvent(new CustomEvent(photoChangedEvent, { detail: current.session.user.id }));
+        if (!await photo.reload()) {
+          setError('Profile details and photo are saved, but the photo preview could not be refreshed. Reload the saved photo before continuing.');
+          return;
+        }
+        setPhotoReconcile(false);
+      }
       done();
-    } finally { setSaving(false); }
+    } catch (failure) {
+      setError(photoAttempted
+        ? `${savedDetails ? 'Profile details are saved. ' : ''}The photo change could not be confirmed and may already be saved. Reload the saved photo before retrying. ${failure instanceof Error ? failure.message : ''}`
+        : 'Profile details could not be confirmed. Reload account and optional details before retrying. The photo has not been changed.');
+    } finally { saveLock.current = false; setSaving(false); }
   }
   return <div className="profile-editor">
     <div className="account-edit-fields">
-      {section === 'basics' && <PhotoEditor compact/>}
+      {section === 'basics' && <section className="profile-photo-editor">
+        <div className="profile-edit-photo">
+          <Avatar name={profile.display_name} url={photoDraft ? photoDraft.preview : photo.url} large/>
+          <div><label className="account-edit-text" htmlFor={photoInputId}>Edit Photo</label>{(photoDraft ? !!photoDraft.file : photo.snapshot?.hasPhoto) && <button className="account-edit-text is-danger" aria-label="Remove photo" type="button" disabled={busy || photo.loading || !!photo.error || photoReconcile} onClick={() => stagePhoto(null)}>Remove</button>}</div>
+        </div>
+        <ResourceState loading={photo.loading} error={photo.error} reload={() => { void photo.reload(); }}/>
+        <label className="sr-only">Choose a photo<input id={photoInputId} type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || photo.loading || !!photo.error || !photo.snapshot || photoReconcile} onChange={event => { const file = event.target.files?.[0]; if (file) stagePhoto(file); event.target.value = ''; }}/></label>
+      </section>}
+      {photoDraft && <p className="account-note">Photo {photoDraft.file ? 'selection' : 'removal'} will be saved with Save changes.</p>}
+      {photoReconcile && <ActionButton secondary disabled={busy || photo.loading} onClick={() => { void photo.reload().then(saved => { if (saved) { setPhotoDraft(null); setPhotoReconcile(false); setError('Saved photo reloaded. Any unsaved photo selection was discarded.'); } }); }}>Reload saved photo and discard photo draft</ActionButton>}
       <form id={formId} className="profile-draft" onSubmit={event => void save(event)}>
         <fieldset disabled={busy || !current.available}>
           <div hidden={section !== 'basics'}>

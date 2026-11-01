@@ -16,7 +16,7 @@ import './onboarding.css'
 // confirmed account data; the old prototype's rewards and fixtures are omitted.
 const chapters = [
   { label: 'About you', title: 'Start with you.', description: 'A name, a little introduction, and the place you call home.' },
-  { label: 'Your interests', title: 'Your kind of things.', description: 'Pick 3–5 interests, including at least 3 from the list. You can add up to 2 of your own.' },
+  { label: 'Your interests', title: 'Your kind of things.', description: 'Pick 1–5 interests from the list or your own. You can add up to 2 custom interests.' },
   { label: 'Your people', title: 'What brings you here?', description: 'Choose what you’d enjoy doing with someone new.' },
   { label: 'Your week', title: 'Make room for a hello.', description: 'Choose the times and kinds of plans that work for you.' },
 ]

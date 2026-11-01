@@ -28,6 +28,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test:unit
+      - run: node --test tools/qa-real-users/*.test.mjs
       - uses: docker/setup-buildx-action@v3
       - name: Validate API image
         uses: docker/build-push-action@v6

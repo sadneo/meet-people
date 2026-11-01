@@ -73,6 +73,27 @@ test('Discover renders public facts and consented coarse availability, with no f
   await expect(profile.getByText('University of Michigan', { exact: true })).toHaveCount(0)
 })
 
+for (const interest of ['coffee', 'sci-fi']) test(`shared-interest badges normalize a single custom label: ${interest}`, async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 })
+  await wiringFixture(page)
+  const candidateInterest = interest === 'coffee' ? 'Coffee' : 'Science fiction'
+  await page.route('**/api/matchmaking/friends/recommendations', route => route.fulfill({ json: {
+    algorithmVersion: 'friends-rules-v1', candidates: [{ id: peer, name: 'Taylor', age: 23, city: 'Campus', bio: null, avatar: null,
+      photoRevision: 0, interests: interest === 'sci-fi' ? [candidateInterest, 'sci-fi'] : [candidateInterest], areaDistanceMiles: 2 }],
+  } }))
+  await page.goto('/profile?section=interests')
+  for (const label of ['Coffee', 'Art', 'Music']) await page.getByRole('button', { name: label, exact: true }).click()
+  await page.getByLabel('Add your own', { exact: true }).fill(interest)
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible()
+  await page.goto('/matchmaking')
+  const profile = page.locator('.discovery-profile:visible')
+  await expect(profile.getByText('1 in common', { exact: true })).toBeVisible()
+  await expect(profile.locator('.dating-interest.in-common').first()).toContainText(candidateInterest)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
 test('profile decision animation guards repeated taps and sends one request', async ({ page }) => {
   const fixture = await wiringFixture(page)
   await page.goto('/matchmaking')

@@ -429,7 +429,10 @@ test("profile photo uploads binary data through revisioned private storage", asy
         "base64",
       ),
     });
-  await page.getByRole("button", { name: "Upload photo", exact: true }).click();
+  expect(fixture.calls.filter(call => call.path.endsWith('/profile-photo') && call.method === 'PUT')).toHaveLength(0);
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Remove photo", exact: true }),
   ).toBeEnabled();
