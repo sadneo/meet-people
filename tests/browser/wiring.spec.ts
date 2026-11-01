@@ -477,6 +477,7 @@ test("garden purchases use the new renderer without calling an invented economy 
   await page.getByRole("button", {name:"Add 1,000 test Pebbles"}).click();
   await page.getByRole("complementary", {name:"Development navigation"}).locator("summary").click();
   await page.getByRole("button", { name: /Build with/ }).click();
+  await page.locator('summary[aria-label="Decorations"]').click();
   await page
     .locator(".garden-shop-item")
     .filter({ hasText: "Garden Bench" })

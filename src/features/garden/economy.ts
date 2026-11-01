@@ -89,9 +89,10 @@ export function resetPurchases(community: Community): Community {
 }
 
 export const buildSections = [
-  { name: 'Rare Finds', items: upgrades.filter(item => ['garnet', 'sapphire', 'emerald', 'citrine'].includes(item.id)) },
-  { name: 'Landscape', items: landscapeUpgrades },
-  { name: 'Village Decorations', items: upgrades.filter(item => !isLandscapeUpgrade(item.id) && !isGeode(item.id) && !['garnet', 'sapphire', 'emerald', 'citrine'].includes(item.id)) },
+  { name: 'Landscape', icon: 'landscape', items: landscapeUpgrades },
+  { name: 'Buildings', icon: 'building', items: upgrades.filter(item => ['cottage', 'hall'].includes(item.id)) },
+  { name: 'Decorations', icon: 'flower', items: upgrades.filter(item => !isLandscapeUpgrade(item.id) && !isGeode(item.id) && !['garnet', 'sapphire', 'emerald', 'citrine', 'cottage', 'hall'].includes(item.id)) },
+  { name: 'Rare Pebbles', icon: 'gem', items: upgrades.filter(item => ['garnet', 'sapphire', 'emerald', 'citrine'].includes(item.id)) },
 ]
 
 export function openGeode(community: Community, random: number): Community {

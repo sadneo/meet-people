@@ -7,9 +7,9 @@ export type Positions = Partial<Record<MovableId, Position>>
 export const defaultPlacements: Record<MovableId, [number, number, number]> = {
   pebble: [706, 673, 112], friend: [879, 741, 82], 'friend-two': [638, 744, 70],
   'base-bench': [909, 671, 180], 'base-cottage': [550, 483, 310],
-  flowers: [275, 650, 105], bench: [540, 840, 145], lanterns: [1030, 790, 100],
-  picnic: [760, 873, 135], bridge: [1066, 628, 145], garden: [935, 830, 115],
-  cafe: [260, 575, 145], stage: [886, 416, 155], cottage: [970, 420, 150], hall: [638, 380, 170],
+  flowers: [275, 650, 105], bench: [540, 840, 145], lanterns: [1030, 790, 82],
+  picnic: [760, 873, 155], bridge: [1066, 628, 170], garden: [935, 830, 160],
+  cafe: [260, 575, 140], stage: [886, 416, 210], cottage: [470, 545, 280], hall: [700, 455, 350],
   amethyst: [650, 550, 92], 'rose-quartz': [750, 600, 92], aquamarine: [650, 700, 92], pyrite: [800, 700, 92],
   garnet: [475, 651, 92], sapphire: [793, 777, 92], emerald: [788, 491, 92], citrine: [626, 827, 92],
 }
