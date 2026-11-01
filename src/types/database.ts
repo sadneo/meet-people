@@ -1513,6 +1513,31 @@ export type Database = {
       profile_text: { Args: { p_id: string }; Returns: string }
       project_dating_candidate: { Args: { target_in: string }; Returns: Json }
       project_friends_candidates: { Args: { targets_in: Json }; Returns: Json }
+      public_live_events: {
+        Args: {
+          p_category?: string
+          p_id?: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          address: string
+          category: string
+          city: string
+          description: string
+          ends_at: string
+          id: string
+          image_url: string
+          latitude: number
+          location_name: string
+          longitude: number
+          source: string
+          source_url: string
+          starts_at: string
+          status: string
+          title: string
+        }[]
+      }
       publish_search_location_place: {
         Args: { place_in: Json }
         Returns: undefined

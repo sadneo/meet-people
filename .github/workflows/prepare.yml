@@ -1,0 +1,95 @@
+name: Prepare release
+
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+      source_branch:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+    outputs:
+      image:
+        value: ${{ jobs.prepare.outputs.image }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ inputs.environment }}
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    env:
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      VITE_BUILD_SHA: ${{ inputs.source_sha }}
+      VITE_BUILD_BRANCH: ${{ inputs.source_branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Require frontend environment configuration
+        run: test -n "$VITE_SUPABASE_URL" && test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
+      - name: Build normal frontend
+        run: VITE_DEV_TOOLS=false pnpm build:web
+      - name: Build developer frontend
+        if: inputs.environment == 'sandbox'
+        run: |
+          mv dist/web dist/web-standard
+          pnpm build:web:devtools
+          mv dist/web dist/web-devtools
+          mv dist/web-standard dist/web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-${{ inputs.environment }}-${{ inputs.source_sha }}
+          overwrite: true
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA_EMAIL }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Authenticate registry
+        env:
+          GCP_REGION: ${{ vars.GCP_REGION || 'us-east4' }}
+        run: gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
+      - name: Resolve image name
+        id: tag
+        env:
+          REGION: ${{ vars.GCP_REGION || 'us-east4' }}
+          PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          REPOSITORY: ${{ vars.GAR_REPOSITORY }}
+          SERVICE: ${{ vars.API_SERVICE }}
+        run: echo "name=$REGION-docker.pkg.dev/$PROJECT/$REPOSITORY/$SERVICE" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and upload API image without deploying
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.tag.outputs.name }}:${{ inputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          cache-from: type=gha,scope=api
+          # CI owns the shared cache; avoid concurrent dev writers replacing it.
+      - name: Record immutable image
+        id: image
+        env:
+          IMAGE: ${{ steps.tag.outputs.name }}@${{ steps.build.outputs.digest }}
+        run: echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
