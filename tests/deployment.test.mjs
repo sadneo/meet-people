@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 import { test } from 'node:test'
-import { resolveDeployment } from '../scripts/resolve-deployment.mjs'
+import { assertCurrentDeployment, resolveDeployment } from '../scripts/resolve-deployment.mjs'
 import { deploymentConfiguration } from '../scripts/configure-deployment.mjs'
 
-test('both environments deploy main; manual overrides require a reason and main ancestry', () => {
+test('main deploys only production; dev deploys only sandbox; manual sources belong to the destination branch', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-deployment-'))
   const git = args => execFileSync('git', ['-C', directory, ...args], {
     encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
@@ -19,6 +19,10 @@ test('both environments deploy main; manual overrides require a reason and main 
     git(['commit', '--allow-empty', '-m', 'main'])
     const main = git(['rev-parse', 'HEAD'])
     git(['update-ref', 'refs/remotes/origin/main', main])
+    git(['checkout', '-b', 'dev'])
+    git(['commit', '--allow-empty', '-m', 'dev'])
+    const dev = git(['rev-parse', 'HEAD'])
+    git(['update-ref', 'refs/remotes/origin/dev', dev])
     git(['checkout', '-b', 'feature/demo'])
     git(['commit', '--allow-empty', '-m', 'feature'])
     const feature = git(['rev-parse', 'HEAD'])
@@ -28,18 +32,43 @@ test('both environments deploy main; manual overrides require a reason and main 
     assert.equal(resolveDeployment({ ...env, OVERRIDE_REASON: 'Known baseline test failures' }, git).sha, main)
     assert.throws(() => resolveDeployment({ ...env, SOURCE_REF: feature, SKIP_CHECKS: 'false' }, git))
     assert.throws(() => resolveDeployment({ ...env, SOURCE_REF: 'main', SKIP_CHECKS: 'false' }, git), /full commit SHA/)
-    assert.throws(() => resolveDeployment({ ...env, GITHUB_REF: 'refs/heads/dev' }, git), /workflow on main/)
+    assert.throws(() => resolveDeployment({ ...env, GITHUB_REF: 'refs/heads/dev' }, git), /Production must use the workflow on main/)
+    assert.throws(() => resolveDeployment({ ...env, SOURCE_REF: dev, SKIP_CHECKS: 'false' }, git))
     assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'feature/demo', SKIP_CHECKS: 'false' }, git), /full commit SHA/)
     assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: feature, SKIP_CHECKS: 'false' }, git))
     const sandbox = resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: '', SKIP_CHECKS: 'false' }, git)
-    assert.equal(sandbox.sha, main)
-    assert.equal(sandbox.branch, 'main')
-    assert.deepEqual(JSON.parse(sandbox.environments), ['sandbox'])
+    assert.equal(sandbox.sha, dev)
+    assert.equal(sandbox.branch, 'dev')
+    assert.equal(sandbox.environment, 'sandbox')
+    assert.equal(resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'dev', SKIP_CHECKS: 'false', GITHUB_REF: 'refs/heads/dev' }, git).sha, dev)
+    assert.equal(resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: main, SKIP_CHECKS: 'false' }, git).sha, main, 'Manual rollback accepts an ancestor of dev')
+    assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'main', SKIP_CHECKS: 'false' }, git), /full commit SHA/)
     const automatic = resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main', GITHUB_SHA: main, SKIP_CHECKS: 'true' }, git)
     assert.equal(automatic.skip_checks, 'false', 'Automatic deployments cannot skip checks')
-    assert.deepEqual(JSON.parse(automatic.environments), ['production', 'sandbox'])
-    assert.throws(() => resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/dev', GITHUB_SHA: feature }, git), /workflow on main/)
+    assert.equal(automatic.environment, 'production')
+    assert.equal(automatic.branch, 'main')
+    const automaticDev = resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/dev', GITHUB_SHA: dev, SKIP_CHECKS: 'true', DEPLOY_ENVIRONMENT: 'production' }, git)
+    assert.deepEqual(automaticDev, { sha: dev, branch: 'dev', environment: 'sandbox', skip_checks: 'false' })
+    assert.throws(() => resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/dev', GITHUB_SHA: feature }, git))
+    assert.throws(() => resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/feature/demo', GITHUB_SHA: feature }, git), /workflow on main or dev/)
+    assert.throws(() => resolveDeployment({ ...env, GITHUB_EVENT_NAME: 'pull_request' }, git), /Unsupported/)
+    assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'invalid' }, git), /Choose production or sandbox/)
   } finally { rmSync(directory, { recursive: true, force: true }) }
+})
+
+test('superseded automatic sandbox releases cannot mutate the environment; manual rollbacks remain available', () => {
+  const sha = 'a'.repeat(40)
+  const env = { GITHUB_EVENT_NAME: 'push', DEPLOY_ENVIRONMENT: 'sandbox', RELEASE_SHA: sha }
+  const git = args => {
+    assert.deepEqual(args, ['ls-remote', '--exit-code', 'origin', 'refs/heads/dev'])
+    return `${sha}\trefs/heads/dev`
+  }
+  assertCurrentDeployment(env, git)
+  assert.throws(() => assertCurrentDeployment({ ...env, RELEASE_SHA: 'b'.repeat(40) }, git), /Superseded sandbox release/)
+  assert.throws(() => assertCurrentDeployment(env, () => { throw new Error('Remote unavailable') }), /Remote unavailable/)
+  const noLookup = () => { throw new Error('Unexpected branch lookup') }
+  assertCurrentDeployment({ ...env, GITHUB_EVENT_NAME: 'workflow_dispatch' }, noLookup)
+  assertCurrentDeployment({ ...env, DEPLOY_ENVIRONMENT: 'production' }, noLookup)
 })
 
 test('sandbox sites share only the sandbox backend and Auth callbacks', () => {

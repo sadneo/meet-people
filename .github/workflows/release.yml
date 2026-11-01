@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
     inputs:
       environment:
@@ -11,7 +11,7 @@ on:
         options: [sandbox, production]
         default: sandbox
       source_ref:
-        description: 'Commit SHA already on main. Sandbox defaults to latest main; production requires a full SHA.'
+        description: 'Sandbox: dev or its full SHA (default latest dev). Production: full SHA already on main.'
         type: string
         default: ''
       skip_checks:
@@ -26,10 +26,11 @@ on:
 permissions:
   contents: read
 
-# Keep backend, migrations and both frontends in one serialized deployment.
-# Pending runs can be superseded; an active deployment is never cancelled.
+# Queue complete production pipelines, preserving release order even if CI times vary.
+# Dev runs have independent groups; only their environment-changing job is locked.
 concurrency:
-  group: deploy
+  group: release-${{ (github.event_name == 'push' && github.ref == 'refs/heads/main' || inputs.environment == 'production') && 'production' || github.run_id }}
+  queue: max
   cancel-in-progress: false
 
 jobs:
@@ -39,7 +40,6 @@ jobs:
       sha: ${{ steps.source.outputs.sha }}
       branch: ${{ steps.source.outputs.branch }}
       environment: ${{ steps.source.outputs.environment }}
-      environments: ${{ steps.source.outputs.environments }}
       skip_checks: ${{ steps.source.outputs.skip_checks }}
     steps:
       - uses: actions/checkout@v4
@@ -65,24 +65,54 @@ jobs:
     with:
       source_sha: ${{ needs.resolve.outputs.sha }}
 
-  deploy:
+  prepare-dev:
+    name: Prepare sandbox
+    needs: resolve
+    if: needs.resolve.outputs.environment == 'sandbox'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/prepare.yml
+    with:
+      source_sha: ${{ needs.resolve.outputs.sha }}
+      source_branch: ${{ needs.resolve.outputs.branch }}
+      environment: sandbox
+
+  prepare-production:
+    name: Prepare production
     needs: [resolve, checks]
     if: >-
       always() && !cancelled() && needs.resolve.result == 'success' &&
+      needs.resolve.outputs.environment == 'production' &&
       (needs.checks.result == 'success' ||
        (needs.resolve.outputs.skip_checks == 'true' && needs.checks.result == 'skipped'))
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/prepare.yml
+    with:
+      source_sha: ${{ needs.resolve.outputs.sha }}
+      source_branch: ${{ needs.resolve.outputs.branch }}
+      environment: production
+
+  deploy:
+    needs: [resolve, checks, prepare-dev, prepare-production]
+    if: >-
+      always() && !cancelled() && needs.resolve.result == 'success' &&
+      (needs.checks.result == 'success' ||
+       (needs.resolve.outputs.skip_checks == 'true' && needs.checks.result == 'skipped')) &&
+      (needs.prepare-dev.result == 'success' || needs.prepare-production.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        environment: ${{ fromJSON(needs.resolve.outputs.environments) }}
-    environment: ${{ matrix.environment }}
+    environment: ${{ needs.resolve.outputs.environment }}
+    concurrency:
+      group: deploy-${{ needs.resolve.outputs.environment }}
+      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write
     env:
-      DEPLOY_ENVIRONMENT: ${{ matrix.environment }}
+      DEPLOY_ENVIRONMENT: ${{ needs.resolve.outputs.environment }}
       GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       GCP_REGION: ${{ vars.GCP_REGION || 'us-east4' }}
       GAR_REPOSITORY: ${{ vars.GAR_REPOSITORY }}
@@ -100,6 +130,7 @@ jobs:
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       RELEASE_SHA: ${{ needs.resolve.outputs.sha }}
+      API_IMAGE: ${{ needs.prepare-dev.outputs.image || needs.prepare-production.outputs.image }}
       VITE_BUILD_SHA: ${{ needs.resolve.outputs.sha }}
       VITE_BUILD_BRANCH: ${{ needs.resolve.outputs.branch }}
       EVENT_GROUP_WORKER_ENABLED: 'false'
@@ -114,6 +145,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Reject superseded automatic sandbox releases before making changes
+        run: node scripts/resolve-deployment.mjs --check-current
       - run: pnpm install --frozen-lockfile
       - name: Validate isolated deployment settings
         run: node scripts/configure-deployment.mjs
@@ -122,27 +155,17 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOY_SA_EMAIL }}
       - uses: google-github-actions/setup-gcloud@v3
-      - run: gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
+      - name: Download this run's prepared frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-${{ needs.resolve.outputs.environment }}-${{ needs.resolve.outputs.sha }}
+          path: dist
+      - name: Require a prepared immutable image
+        run: test -n "$API_IMAGE" && test "${API_IMAGE#*@sha256:}" != "$API_IMAGE"
       - name: Link database and preview migrations
         run: |
           pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
           pnpm exec supabase db push --linked --dry-run
-      - name: Build immutable API image
-        run: |
-          IMAGE="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPOSITORY/$API_SERVICE:$RELEASE_SHA"
-          docker build --tag "$IMAGE" .
-          docker push "$IMAGE"
-          DIGEST=$(gcloud artifacts docker images describe "$IMAGE" --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)')
-          echo "API_IMAGE=${IMAGE%:*}@$DIGEST" >> "$GITHUB_ENV"
-      - name: Build normal frontend
-        run: VITE_DEV_TOOLS=false pnpm build:web
-      - name: Preserve normal build and build developer variant
-        if: env.DEPLOY_ENVIRONMENT == 'sandbox'
-        run: |
-          mv dist/web dist/web-standard
-          pnpm build:web:devtools
-          mv dist/web dist/web-devtools
-          mv dist/web-standard dist/web
       - name: Deploy authenticated Edge Functions
         run: |
           pnpm exec supabase functions deploy embed-interest --project-ref "$SUPABASE_PROJECT_REF" --use-api
@@ -160,19 +183,19 @@ jobs:
       - name: Deploy developer site and pin API revision
         if: env.DEPLOY_ENVIRONMENT == 'sandbox'
         run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only "hosting:$FIREBASE_DEVTOOLS_SITE_ID" --project "$GCP_PROJECT_ID" --non-interactive
-      - name: Verify normal site
-        run: pnpm test:hosted "https://$FIREBASE_HOSTING_SITE_ID.web.app"
-      - name: Verify developer site
-        if: env.DEPLOY_ENVIRONMENT == 'sandbox'
-        run: pnpm test:hosted "https://$FIREBASE_DEVTOOLS_SITE_ID.web.app"
-      - name: Verify production domain
-        if: env.DEPLOY_ENVIRONMENT == 'production'
-        run: pnpm test:hosted https://pebble.garden
-      - name: Verify development domains
-        if: env.DEPLOY_ENVIRONMENT == 'sandbox'
+      - name: Verify every deployed site and custom domain
         run: |
-          pnpm test:hosted https://web.dev.pebble.garden
-          pnpm test:hosted https://mobile.dev.pebble.garden
+          urls=("https://$FIREBASE_HOSTING_SITE_ID.web.app")
+          if [ "$DEPLOY_ENVIRONMENT" = sandbox ]; then
+            urls+=("https://$FIREBASE_DEVTOOLS_SITE_ID.web.app" https://web.dev.pebble.garden https://mobile.dev.pebble.garden)
+          else
+            urls+=(https://pebble.garden)
+          fi
+          status=0
+          for url in "${urls[@]}"; do
+            pnpm test:hosted "$url" || status=1
+          done
+          exit "$status"
       - name: Deployment summary
         if: always()
         env:

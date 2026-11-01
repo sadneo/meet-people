@@ -50,7 +50,9 @@ gcloud secrets add-iam-policy-binding "pebble-supabase-service-role$SUFFIX" --pr
 if ! gcloud iam workload-identity-pools describe "$POOL" --location=global --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
   gcloud iam workload-identity-pools create "$POOL" --location=global --display-name="GitHub $ENVIRONMENT" --project="$GCP_PROJECT_ID" --quiet
 fi
-CONDITION="assertion.repository_id == '$GITHUB_REPOSITORY_ID' && assertion.environment == '$ENVIRONMENT' && assertion.workflow_ref == '$GITHUB_REPOSITORY/.github/workflows/release.yml@refs/heads/main' && assertion.ref == 'refs/heads/main'"
+REF_CONDITION="assertion.ref == 'refs/heads/main'"
+if [ "$ENVIRONMENT" = sandbox ]; then REF_CONDITION="assertion.ref in ['refs/heads/main', 'refs/heads/dev']"; fi
+CONDITION="assertion.repository_id == '$GITHUB_REPOSITORY_ID' && assertion.environment == '$ENVIRONMENT' && assertion.workflow_ref == '$GITHUB_REPOSITORY/.github/workflows/release.yml@' + assertion.ref && ($REF_CONDITION)"
 if ! gcloud iam workload-identity-pools providers describe "$PROVIDER" --workload-identity-pool="$POOL" --location=global --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
   gcloud iam workload-identity-pools providers create-oidc "$PROVIDER" --location=global --workload-identity-pool="$POOL" \
     --issuer-uri=https://token.actions.githubusercontent.com \

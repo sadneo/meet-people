@@ -194,6 +194,8 @@ the approved override procedure. `checks.yml` runs the reusable `ci.yml` suite
 on PRs into `main` and `dev`. `release.yml` calls the same suite for the exact
 resolved SHA on pushes, then deploys production (`main`) or both sandbox sites
 (`dev`) only after success. Required PR check: `Checks / CI`.
+Sandbox preparation runs alongside CI; production preparation waits for CI.
+Three CI lanes run independently, with one aggregate required result.
 
 The suite verifies types, lint, unit tests, deployment isolation/toolbar builds,
 a fresh local database reset/type check, SQL security, local auth, source and
@@ -207,16 +209,19 @@ bundle by intercepting `/src/supabase.ts`. Existing guest-avatar assertions in
 `app.spec.ts` also predate the new signed-out header; these are outside the
 hosting smoke suite and need updating with that UI's tests.
 
-Version tags are labels, not deployment triggers. The existing baseline has
-failing unit tests and lint errors, so normal deployments remain blocked until
-those are repaired. An explicit manual override is available; checks are not
-globally disabled and failed checks are never changed to success.
+Version tags are labels, not deployment triggers. Recent full CI runs pass.
+Hosted smoke checks currently fail because the events endpoint returns HTTP 503
+in both environments. An explicit manual CI override is available; hosted smoke
+checks remain mandatory and failed checks are never changed to success.
 
-Deployment authenticates with OIDC, pushes a commit-SHA image, resolves its
+Preparation authenticates with OIDC, uploads frontend bundles and pushes a
+run-specific commit-SHA image. Deployment reuses those bundles and the image
 digest, deploys Edge Functions, applies migrations without seeds, synchronizes
 service configuration, deploys Cloud Run, then Firebase with the pinned API.
 The final smoke check and workflow summary record the deployed version.
-Concurrent releases are serialized. Migrations must remain compatible with
+Production pipelines queue; sandbox locks only deployment and rejects superseded
+automatic releases before mutations. The environments have independent locks.
+Migrations must remain compatible with
 the preceding API revision; use additive changes and forward fixes.
 
 The hosted auth config enables public signup and requires email confirmation.

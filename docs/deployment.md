@@ -5,12 +5,12 @@
 | Site | Branch | API / database | Toolbar |
 | --- | --- | --- | --- |
 | https://pebble.garden | `main` | Production | Off |
-| https://web.dev.pebble.garden | `main` | Sandbox | On |
-| https://mobile.dev.pebble.garden | `main` | Same sandbox | On |
-| https://cse416-meet-people-sandbox.web.app | `main` | Same sandbox | Off |
+| https://web.dev.pebble.garden | `dev` | Sandbox | On |
+| https://mobile.dev.pebble.garden | `dev` | Same sandbox | On |
+| https://cse416-meet-people-sandbox.web.app | `dev` | Same sandbox | Off |
 
-All deployments come from **main**. A main push deploys the same checked commit
-to production and sandbox using separate GitHub environments and backends.
+Pushes to **main deploy only production**; pushes to **dev deploy only sandbox**.
+The environments use separate GitHub settings and backends.
 Feature branches are tested on PRs; they do not overwrite the sandbox.
 Both dev domains map to `cse416-meet-people-dev`, serving the same responsive
 developer build. Layout follows viewport size, not hostname. Production maps to
@@ -63,38 +63,58 @@ client settings, then verify an interactive sign-in on both sandbox sites.
 ## Normal operation
 
 1. Open a PR into `dev` or `main`; `Pull request checks` runs full CI.
-2. Merge into `main` to update production and both development domains.
+2. Merge into `dev` to update both development domains; merge into `main` to update production.
 3. `Deploy` resolves one commit SHA and runs the same CI against that exact SHA.
-4. Only a successful CI result permits an automatic deployment.
-5. Each deployed URL runs hosted smoke checks. A failed smoke check fails the run.
+4. On `dev`, sandbox build preparation runs alongside CI. On `main`, release builds
+   start only after full CI passes. Only passing CI permits automatic publication.
+5. Deployment downloads frontend artifacts from the same workflow run and uses the
+   prepared API image by digest. It does not rebuild them.
+6. Every deployed URL runs hosted smoke checks, even if another URL fails. Any
+   failed smoke check fails the run; it does not automatically roll back changes.
 
-Version tags are release labels only. Deployment workflows are serialized;
-active deployments are never cancelled, but GitHub concurrency can supersede a
-pending run. Production and sandbox jobs use separate resources and run independently.
+Version tags are release labels only. Production pipelines queue as complete runs
+(`queue: max`, up to 100 pending), preventing faster builds from overtaking an
+already-running release. GitHub queues by arrival at the concurrency group, not
+strict commit chronology. Active releases are never automatically cancelled.
+Production and sandbox have independent deployment locks, covering mutations and
+smoke checks. Dev CI/builds run concurrently; only its deployment job is serialized.
+GitHub may replace pending sandbox deployments. Once a sandbox job acquires its
+lock, an automatic release must still match the current remote `dev` head or fail
+before making changes. Manual sandbox rollbacks deliberately bypass this freshness
+check. A push arriving after the freshness check does not interrupt an active deployment.
 
-CI covers typecheck, lint, unit tests, deployment controls and both optimized
-toolbar variants, database reset/generated types, SQL security, local integration,
-source/built browser tests and Docker build. It uses a disposable local database,
-never a hosted reset. Baseline app unit/lint failures currently block normal
-deployment; they remain visible rather than being excluded or marked successful.
+CI runs three independent lanes:
+
+- Static/unit/container: typecheck once, lint, unit tests and a Docker validation build.
+- Source browser: isolated source-mocked Playwright journeys, without a database dependency.
+- Integration: disposable database reset/generated types, SQL security, local integration,
+  deployment controls, both optimized toolbar variants and built-browser tests.
+
+Deployment checks leave the verified normal frontend for the built-browser tests;
+the API compiles once outside Docker. Docker validation exports a GitHub Actions
+layer cache which release preparation reads. Production/sandbox frontend builds
+remain separate from local-test bundles because they embed different backend settings.
+The aggregate `Checks / CI` required check succeeds only if all three lanes pass.
+CI never resets a hosted database. Recent full CI runs pass; hosted release checks
+currently fail on `/api/events?limit=1` returning HTTP 503 in both environments.
 
 ## Manual sandbox deployment
 
-Actions → **Deploy** → **Run workflow**, using the workflow branch **main**:
+Actions → **Deploy** → **Run workflow**, using workflow branch **dev** or **main**:
 
 - Environment: `sandbox`
-- Source ref: `main` (or blank), or a full commit SHA already on main
+- Source ref: `dev` (or blank), or a full commit SHA already on dev
 - Skip checks: off unless deliberately overriding
 - Override reason: required if skipping
 
 ```sh
-gh workflow run release.yml --ref main \
-  -f environment=sandbox -f source_ref=main
+gh workflow run release.yml --ref dev \
+  -f environment=sandbox -f source_ref=dev
 ```
 
-The source is resolved once, tested and deployed at that SHA. Commits outside main
-are rejected. Both sandbox sites are replaced. The next successful main deployment
-updates them again.
+The source is resolved once, tested and deployed at that SHA. Commits outside dev
+are rejected. Both sandbox sites are replaced. The next successful dev deployment
+updates them again. Production changes only on main releases.
 
 ## Approved production override
 
@@ -129,6 +149,14 @@ service-account keys are needed. Each environment has its own provider/deployer.
 `scripts/bootstrap-gcp.sh` defaults to production; `DEPLOY_ENVIRONMENT=sandbox`
 creates the suffixed resources and environment-scoped GitHub variables. It does
 not create a Supabase project or populate service-role secrets.
+
+The sandbox OIDC provider permits only `release.yml` on `dev` or `main`, bound to
+the matching workflow ref, repository ID and sandbox environment. Main remains
+allowed for manual sandbox releases; the resolver still requires source ancestry
+on dev. Production OIDC remains main-only. After changing these policies, update
+the existing provider with the condition from `scripts/bootstrap-gcp.sh`; a full
+bootstrap is unnecessary for an existing environment. The existing sandbox
+provider was updated and read back successfully on 2026-10-31.
 
 `scripts/configure-deployment.mjs` generates ignored per-deployment Firebase and
 hosted Auth configuration, validates resource names and rejects production
@@ -173,13 +201,12 @@ security checks and preservation of existing contacts.
 Domain mapping is persistent cloud configuration; frontend deploys do not create
 it. Neither custom-domain setup nor DNS requires a new Supabase key.
 
-On 2026-10-31, Firebase confirmed active hosting, ownership and HTTPS certificates
+Earlier on 2026-10-31, Firebase confirmed active hosting, ownership and HTTPS certificates
 for `pebble.garden` and `mobile.dev.pebble.garden`. The original
 `desktop.dev.pebble.garden` mapping is also active. The requested replacement,
 `web.dev.pebble.garden`, was added to the same developer site but has no DNS record
 yet. Keep the existing desktop mapping until the replacement is verified.
-The sandbox OIDC provider accepts only the deployment workflow on main.
-The updated repository configuration has not been deployed.
+At that time, sandbox OIDC accepted only the deployment workflow on main.
 
 Verification: the mobile custom domain and production `web.app` URL pass the full
 hosted smoke test. Production's custom domain returns the app over one connection
@@ -199,10 +226,13 @@ Firebase returned these DNS records (Porkbun Host is relative to `pebble.garden`
 | TXT | `_acme-challenge.web.dev` | `O_G1qJ9wBB3U7BD210DVW0hlF7LL91imexz3JmnezEQ` |
 | TXT | `_acme-challenge.mobile.dev` | `C1Fo8d8atEgJU041seIlvoM0_8JCDieuM1WJIpYFaS4` |
 
-Only the `web.dev` CNAME and `_acme-challenge.web.dev` TXT records remain to be
-added in Porkbun. The dashboard returned HTTP 403 from the agent browser, so DNS
-changes require owner access. Public DNS already resolves the root and mobile
-hosts to Firebase's `199.36.158.100` address.
+At that inspection, the `web.dev` CNAME and `_acme-challenge.web.dev` TXT records
+still needed adding in Porkbun. The dashboard returned HTTP 403 from the agent
+browser. Later checks on 2026-10-31 reached `web.dev.pebble.garden`,
+`mobile.dev.pebble.garden` and `pebble.garden` over HTTPS and passed SPA, asset,
+health and email checks; all three
+failed the events database check with HTTP 503. The earlier DNS/cutover notes
+above are historical; the remaining observed smoke failure is the events endpoint.
 Certificate challenge values can rotate: re-read each Firebase custom domain's
 certificate verification requirements if validation is retried later.
 
@@ -211,10 +241,13 @@ development seeds. API containers scale to zero when idle, maximum two instances
 per service. Stored image versions, traffic, logs and API compute can incur costs;
 Supabase has separate billing. Budget alerts are not spending caps.
 
-`v1.0.4` took 2m 15s from trigger to completion. Budget 2–4 minutes for deployment
-plus full CI; measure successful CI runtime after existing failures are fixed.
+Before parallelization, full CI took 5m 21s on release run `41255109334` and
+8m 14s on PR run `41255092586`. The release then spent roughly 2m 30s–3m deploying
+before failing its hosted events check. Use these as the baseline; measure the
+first successful runs of the parallel pipeline before claiming a speedup.
 
-For rollback, manually deploy a previously deployed SHA on main. Hosting's API
+For rollback, manually deploy a previously deployed SHA on the destination branch
+(`main` for production, `dev` for sandbox). Hosting's API
 rewrite is pinned to its API revision. Rolling back code does **not** undo
 database migrations or already-persisted data; use additive migrations and forward
 fixes. Smoke-check failure is not an automatic rollback.
