@@ -1513,10 +1513,6 @@ export type Database = {
       profile_text: { Args: { p_id: string }; Returns: string }
       project_dating_candidate: { Args: { target_in: string }; Returns: Json }
       project_friends_candidates: { Args: { targets_in: Json }; Returns: Json }
-      publish_search_location_place: {
-        Args: { place_in: Json }
-        Returns: undefined
-      }
       public_live_events: {
         Args: {
           p_category?: string
@@ -1541,6 +1537,10 @@ export type Database = {
           status: string
           title: string
         }[]
+      }
+      publish_search_location_place: {
+        Args: { place_in: Json }
+        Returns: undefined
       }
       read_profile_photo: {
         Args: { owner_in: string; revision_in: number }
