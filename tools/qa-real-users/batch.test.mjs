@@ -9,6 +9,7 @@ import { stopServices } from './processes.mjs';
 import { supabaseConfig, validateMapsBudget, serviceEnvironment, redact } from './config.mjs';
 import { smoke } from './journeys.mjs';
 
+await mkdir('/tmp/opencode', { recursive: true });
 const root = await mkdtemp('/tmp/opencode/qa-batch-test-');
 after(() => rm(root, { recursive: true, force: true }));
 const id = '20261101-120000-1234abcd';
