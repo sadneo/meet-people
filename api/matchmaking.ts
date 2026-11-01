@@ -22,6 +22,17 @@ import { createSearchLocationsRouter } from './search-locations.js'
 import type { BrowserSearchLocation, ResolveSearchArea } from '../shared/search-locations.js'
 import type { SubmitSafetyReport } from '../shared/safety.js'
 import { createSafetyRouter } from './safety.js'
+import type { DatingScoringTransport } from './matching/dating-recommendations.js'
+import type { SaveDatingScoringSettings } from '../shared/dating-scoring.js'
+import type { FriendsScoringTransport } from './matching/friends-recommendations.js'
+import type { SaveMatchingScoringSettings } from '../shared/matching-scoring.js'
+import { createFriendsDiscoveryRouter } from './friends-discovery.js'
+import { createActiveFriendsRouter } from './active-friends.js'
+import type { ActiveFriendsWorker } from './matching/active-worker.js'
+import type { ActiveCommand } from '../shared/active-friends.js'
+import { createMatchingScheduleRouter } from './matching-schedule.js'
+import type { MapTicket } from '../shared/location-picker.js'
+import type { MapLocationProvider } from './google-search-locations.js'
 
 type RpcResponse = { data: unknown; error: { code?: string } | null }
 export interface UserContextTransport {
@@ -40,6 +51,18 @@ export interface UserContextTransport {
     profileDetails?(): PromiseLike<RpcResponse>
     saveProfileDetails?(details: SaveProfileDetails): PromiseLike<RpcResponse>
     friendsRuntime?(): PromiseLike<RpcResponse>
+    activeFriendsStatus?(): PromiseLike<RpcResponse>
+    activeFriendsCommand?(command: ActiveCommand): PromiseLike<RpcResponse>
+    activeFriendsGroups?(): PromiseLike<RpcResponse>
+    activeFriendsGroup?(group: string): PromiseLike<RpcResponse>
+    activeFriendsHistory?(group: string, before: number | null): PromiseLike<RpcResponse>
+    activeFriendsSend?(group: string, body: string, request: string): PromiseLike<RpcResponse>
+    activeFriendsRead?(group: string, seq: number): PromiseLike<RpcResponse>
+    projectFriendsCandidates?(targets: string[]): PromiseLike<RpcResponse>
+    friendsDiscoveryStatus?(): PromiseLike<RpcResponse>
+    friendsDiscoveryConnection?(target: string, action: 'request' | 'accept'): PromiseLike<RpcResponse>
+    matchingScoringSettings?(): PromiseLike<RpcResponse>
+    saveMatchingScoringSettings?(value: SaveMatchingScoringSettings): PromiseLike<RpcResponse>
     friendsSearchPreferences?(): PromiseLike<RpcResponse>
     saveFriendsSearchPreferences?(preferences: SaveFriendsSearchPreferences): PromiseLike<RpcResponse>
     detailedSettings?(): PromiseLike<RpcResponse>
@@ -47,6 +70,9 @@ export interface UserContextTransport {
     datingRuntime?(): PromiseLike<RpcResponse>
     setDatingEnabled?(value: DatingEnable): PromiseLike<RpcResponse>
     datingCandidate?(excludedIds: string[]): PromiseLike<RpcResponse>
+    projectDatingCandidate?(target: string): PromiseLike<RpcResponse>
+    datingScoringSettings?(): PromiseLike<RpcResponse>
+    saveDatingScoringSettings?(value: SaveDatingScoringSettings): PromiseLike<RpcResponse>
     requestDatingConnection?(target: string): PromiseLike<RpcResponse>
     datingAggregate?(): PromiseLike<RpcResponse>
     saveDatingAggregate?(aggregate: SaveDatingAggregate): PromiseLike<RpcResponse>
@@ -58,8 +84,11 @@ export interface UserContextTransport {
     resolveSearchArea?(request: ResolveSearchArea): PromiseLike<RpcResponse>
     browserSearchLocation?(request: BrowserSearchLocation): PromiseLike<RpcResponse>
     searchLocationReceipt?(mode: 'friends' | 'dating', reference: string): PromiseLike<RpcResponse>
+    mapSearchLocation?(mode: 'friends' | 'dating', reference: string): PromiseLike<RpcResponse>
+    confirmMapSearchLocation?(ticket: MapTicket): PromiseLike<RpcResponse>
     socialConnection?(target: string, action: 'get' | 'request' | 'accept' | 'remove'): PromiseLike<RpcResponse>
     socialConnectionList?(): PromiseLike<RpcResponse>
+    connectionRequestAllowance?(): PromiseLike<RpcResponse>
     socialInbox?(page: number): PromiseLike<RpcResponse>
     socialHistory?(conversation: string, before: number | null, after: number | null): PromiseLike<RpcResponse>
     socialSend?(conversation: string, body: string, requestId: string): PromiseLike<RpcResponse>
@@ -111,8 +140,11 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         resolveSearchArea: request => client.rpc('resolve_search_area', { resolution_in: request }),
         browserSearchLocation: request => client.rpc('issue_browser_search_location', { location_in: request }),
         searchLocationReceipt: (mode, reference) => client.rpc('get_search_location_receipt', { mode_in: mode, reference_in: reference }),
+        mapSearchLocation: (mode, reference) => client.rpc('get_search_location_map', { mode_in: mode, reference_in: reference }),
+        confirmMapSearchLocation: ticket => client.rpc('confirm_map_search_location', { ticket_in: ticket }),
         socialConnection: (target, action) => client.rpc('social_connection', { target_in: target, action_in: action }),
         socialConnectionList: () => client.rpc('social_connection_list'),
+        connectionRequestAllowance: () => client.rpc('get_connection_request_allowance'),
         socialInbox: page => client.rpc('social_inbox', { page_in: page }),
         socialHistory: (conversation, before, after) => client.rpc('social_history', { conversation_in: conversation, before_in: before, after_in: after }),
         socialSend: (conversation, body, requestId) => client.rpc('social_send', { conversation_in: conversation, body_in: body, request_in: requestId }),
@@ -125,7 +157,22 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         submitSafetyReport: report => client.rpc('submit_safety_report', { report_in: report }),
         ownerSafetyReport: requestId => client.rpc('get_owner_safety_report', { request_id_in: requestId }),
         friendsRuntime: () => client.rpc('get_friends_runtime'),
+        activeFriendsStatus: () => client.rpc('get_active_friends_status'),
+        activeFriendsCommand: command => client.rpc('active_friends_command', { command_in: command }),
+        activeFriendsGroups: () => client.rpc('get_active_friends_groups'),
+        activeFriendsGroup: group => client.rpc('get_active_friends_group', { group_in: group }),
+        activeFriendsHistory: (group, before) => client.rpc('active_friends_history', { group_in: group, before_in: before }),
+        activeFriendsSend: (group, body, request) => client.rpc('active_friends_send', { group_in: group, body_in: body, request_in: request }),
+        activeFriendsRead: (group, seq) => client.rpc('active_friends_read', { group_in: group, seq_in: seq }),
+        projectFriendsCandidates: targets => client.rpc('project_friends_candidates', { targets_in: targets }),
+        friendsDiscoveryStatus: () => client.rpc('get_friends_discovery_status'),
+        friendsDiscoveryConnection: (target, action) => client.rpc('friends_discovery_connection', { target_in: target, action_in: action }),
+        matchingScoringSettings: () => client.rpc('get_matching_scoring_settings'),
+        saveMatchingScoringSettings: value => client.rpc('save_matching_scoring_settings', { settings_in: value }),
         datingRuntime: () => client.rpc('get_dating_runtime'), setDatingEnabled: value => client.rpc('set_dating_enabled', { change_in: value }), datingCandidate: excludedIds => client.rpc('find_dating_candidate', { excluded_in: excludedIds }), requestDatingConnection: target => client.rpc('request_dating_connection', { target_in: target }),
+        projectDatingCandidate: target => client.rpc('project_dating_candidate', { target_in: target }),
+        datingScoringSettings: () => client.rpc('get_dating_scoring_settings'),
+        saveDatingScoringSettings: value => client.rpc('save_dating_scoring_settings', { settings_in: value }),
         profilePhotoReference: owner => client.rpc('get_profile_photo_reference', { owner_in: owner }),
         profilePhotoState: () => client.rpc('get_profile_photo_state'), saveProfilePhoto: value => client.rpc('save_profile_photo', { photo_in: value }), readProfilePhoto: (owner, revision) => client.rpc('read_profile_photo', { owner_in: owner, revision_in: revision }),
         join: qtype => client.rpc('join_queue', { qtype }), leave: () => client.rpc('leave_queue'), status: () => client.rpc('get_queue_status'), result: () => client.rpc('get_queue_match'), profile: () => client.rpc('get_matchmaking_profile'), save: profile => client.rpc('save_matchmaking_profile', { profile_in: profile }),
@@ -165,7 +212,7 @@ function validate<T>(schema: z.ZodType<T>, data: unknown): T {
   if (!parsed.success) throw new MatchingFailure(502, 'malformed', 'Matching service returned an invalid response.')
   return parsed.data
 }
-export function createMatchmakingRouter(transport: UserContextTransport | null) {
+export function createMatchmakingRouter(transport: UserContextTransport | null, datingScoring: DatingScoringTransport | null = null, friendsScoring: FriendsScoringTransport | null = null, activeWorker: ActiveFriendsWorker | null = null, mapLocations: MapLocationProvider | null = null, mapDailyLimit = 2000) {
   const router = Router()
   router.use(async (request, response, next) => {
     response.set('Cache-Control', 'no-store')
@@ -185,9 +232,12 @@ export function createMatchmakingRouter(transport: UserContextTransport | null) 
   router.use('/friends-search-preferences', createFriendsSearchPreferencesRouter())
   router.use('/detailed-settings', createDetailedSettingsRouter())
   router.use('/dating-preferences', createDatingRouter())
-  router.use('/dating', createDatingLiveRouter())
+  router.use('/dating', createDatingLiveRouter(datingScoring))
+  router.use('/friends', createFriendsDiscoveryRouter(friendsScoring))
+  router.use('/active-friends', createActiveFriendsRouter(activeWorker))
+  router.use('/schedule', createMatchingScheduleRouter())
   router.use('/safety', createSafetyRouter())
-  router.use('/search-locations', createSearchLocationsRouter())
+  router.use('/search-locations', createSearchLocationsRouter(mapLocations, mapDailyLimit))
   router.use('/profile-photo', createProfilePhotoRouter())
   const readAccount = async (response: Response) => {
     const read = actor(response).account

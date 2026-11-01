@@ -22,6 +22,8 @@ it('removes quick-login UI and anonymous Auth call sites from the production bun
     expect(chunks.length).toBeGreaterThan(0)
     const javascript = chunks.map(chunk => chunk.code).join('\n')
     expect(javascript).not.toContain('Quick sign in (local only)')
+    expect(javascript).not.toContain('Sign in as development user')
+    expect(javascript).not.toContain('/__dev/login')
     expect(javascript).not.toContain('Local development only:')
     expect(javascript).not.toContain('disposable local development session')
     expect(javascript).not.toContain('Could not complete local quick sign-in')

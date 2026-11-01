@@ -32,7 +32,7 @@ export function deferredDatingResponse() {
 export function enabledDatingSnapshot(): DatingAggregate {
   return {
     profileRevision: 4, searchRevision: 4,
-    profile: { ...emptyDatingProfile(), gender: 'Woman', sexuality: 'Straight', intent: 'Long-term relationship', style: 'Monogamy', heightInches: 60, enabled: true },
+    profile: { ...emptyDatingProfile(), gender: 'Woman', sexuality: 'Straight', intent: 'Long-term relationship', style: 'Monogamy', heightInches: 60, clarifiedTargets: ['Man'], enabled: true },
     search: { ageMin: 21, ageMax: 40, radiusMiles: 10, searchArea: { source: 'home', resolvedLocationRef: 'a0000000-0000-4000-8000-000000000001' } },
     eligibility: { asOf: '2026-10-19', adult: true, locationResolved: true }, effectiveEnabled: true,
   }

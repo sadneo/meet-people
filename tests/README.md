@@ -15,7 +15,7 @@ Run commands from the repository root. Use pnpm exclusively.
 
 ```sh
 pnpm test:unit
-pnpm test:unit tests/unit/auth.test.tsx
+pnpm test:unit tests/unit/unified-account-readback.test.tsx
 pnpm exec vitest list --config vite.config.ts --filesOnly
 ```
 
@@ -28,7 +28,7 @@ they do not require a real database.
 ```sh
 pnpm exec playwright install chromium
 pnpm test:browser
-pnpm test:browser tests/browser/auth.spec.ts
+pnpm test:browser tests/browser/wiring.spec.ts
 pnpm test:browser --list
 ```
 
@@ -86,10 +86,11 @@ selected by the built runner. Results use separate `test-results/` subdirectorie
 
 ## CI and historical reports
 
-`.github/workflows/checks.yml` selects unit verification, local integration,
-source-mocked browser journeys and built smoke separately. Its job remains
-disabled with `if: ${{ false }}`; the release verification gate is also disabled.
-No test hooks run automatically on local commits.
+`.github/workflows/checks.yml` calls the reusable `ci.yml` suite for PRs into
+`main` and `dev`. Releases run that same suite against the resolved source SHA;
+manual overrides require an explicit reason. See the
+[deployment runbook](../docs/deployment.md#releases). No test hooks run
+automatically on local commits.
 
 Older handoff/QA reports retain historical paths and commands. Translate
 `tests/<file>.test.*` to `tests/unit/`, `e2e/` to `tests/browser/`, SQL files to
@@ -97,3 +98,13 @@ Older handoff/QA reports retain historical paths and commands. Translate
 Use the commands above instead of retired `test:e2e`, `test:auth` and `test:built`.
 The old email-link/password-toggle tests and credential browser runner were removed;
 current email-first, session, callback, recovery and onboarding coverage is retained.
+
+## Current frontend coverage
+
+The `wiring` branch retires the previous screen implementations and their specific
+UI/visual assertions. `tests/browser/wiring.spec.ts` covers the replacement UI’s
+API flows, account gates, full onboarding, preference persistence, private photo
+upload, consent, manual Friends queue checks, message retry idempotency, safety
+and responsive navigation. Backend/client contracts and owner/session lifecycle
+unit tests are retained. See `docs/FRONTEND-WIRING.md` for boundaries and lint
+limitations. These mocked browser checks do not verify a deployed database.

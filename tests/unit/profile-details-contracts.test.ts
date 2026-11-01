@@ -34,7 +34,7 @@ it('validates complete atomic values/visibility, length bounds, unique languages
 })
 it('keeps SQL a source-only candidate with actor-bound CAS, private storage and explicit ACLs', () => {
   // Static assertions are NOT SQL execution, RLS, installation or concurrency evidence.
-  const sql = readFileSync('docs/profile-details-migration.sql', 'utf8')
+  const sql = readFileSync('supabase/schema-sources/profile-details-migration.sql', 'utf8')
   expect(sql).toContain('REVIEW CANDIDATE ONLY')
   expect(sql).toContain('auth.uid()')
   expect(sql).toContain("errcode='28000'")
@@ -52,7 +52,7 @@ it('keeps SQL a source-only candidate with actor-bound CAS, private storage and 
   expect(sql).not.toMatch(/\b(?:save_account|save_matchmaking_profile|http|embedding|service_role)\s*\(/i)
   expect(sql).not.toMatch(/grant\s+(?:select|insert|update|delete)\b/i)
   expect(sql.trim().endsWith('commit;')).toBe(true)
-  for (const path of ['docs/dev-account-reconciliation.sql', 'supabase/migrations/20261013120000_accounts.sql', 'supabase/migrations/20261018160000_account_profile_identity.sql']) {
+  for (const path of ['supabase/schema-sources/dev-account-reconciliation.sql', 'supabase/migrations/20261013120000_accounts.sql', 'supabase/migrations/20261018160000_account_profile_identity.sql']) {
     expect(readFileSync(path, 'utf8')).not.toContain('public.profile_details')
   }
 })
@@ -67,7 +67,7 @@ export const profileLanguageKeyCorpus = [
   ['\u200BEnglish\u200B', '\u200Benglish\u200B'], ['Ꭰꭰ', 'Ꭰꭰ'],
 ]
 it('uses the pinned comparison policy, preserves labels and pairs the SQL corpus/data exactly', () => {
-  const sql = readFileSync('docs/profile-details-migration.sql', 'utf8')
+  const sql = readFileSync('supabase/schema-sources/profile-details-migration.sql', 'utf8')
   const sqlCorpus = JSON.parse(sql.match(/key_corpus constant jsonb := '([^']+)'/)![1])
   expect(sqlCorpus).toEqual(profileLanguageKeyCorpus)
   expect(JSON.parse(sql.match(/fold_ranges constant jsonb := '([^']+)'/)![1])).toEqual(profileLanguageFoldRanges)
