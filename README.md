@@ -7,14 +7,8 @@ existing backend. See [frontend integration](docs/FRONTEND-WIRING.md),
 
 ## Hosting
 
-The app is live at https://cse416-meet-people.web.app. See
-[HOSTING-SETUP.md](HOSTING-SETUP.md) for email delivery, deployment credentials,
-Google/Gemini, billing, and outage notifications.
-
-`pebble.garden` is mapped to production but still returns intermittent Firebase
-404s; `mobile.dev.pebble.garden` passes hosted checks for the sandbox developer
-build. `web.dev.pebble.garden` awaits DNS/HTTPS activation. All three deploy from
-`main`. See [deployment setup](docs/deployment.md).
+Production: https://pebble.garden. See [deployment and hosting](docs/deployment.md)
+for sandbox domains, setup, releases, provider configuration and recovery.
 
 ## Develop
 
@@ -67,7 +61,7 @@ recorded in [the integration notes](docs/FRONTEND-WIRING.md).
 
 The built web app is in `dist/web`; the server is in `dist/api`.
 `pnpm start:api` starts the compiled API, and `pnpm preview` serves the built web app.
-For existing hosting setup, use [HOSTING-SETUP.md](HOSTING-SETUP.md).
+For hosting setup, use [the deployment runbook](docs/deployment.md).
 
 For labeled local test users, messaging, Dating and event-group queues, run
 `pnpm demo:populate --dry-run` to preview, then `pnpm demo:populate` to populate
