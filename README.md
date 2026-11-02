@@ -18,16 +18,30 @@ tools with `nix develop`.
 
 ```sh
 pnpm install --frozen-lockfile
+pnpm run doctor
 pnpm dev
 ```
+
+`pnpm run doctor` (or `pnpm dev:doctor`) checks local tools, configuration, ports, the owned Supabase database
+and core RPC signatures. It never installs packages, starts services, signs in,
+applies migrations, resets data or prints configuration values. Optional Maps,
+development-login metadata and worker-schema checks do not verify live provider,
+account or worker readiness. Occupied app ports are warnings, not failures.
+Use `pnpm run doctor --json` for structured results, or `pnpm run doctor --help` for usage.
+Use the explicit `run`: bare `pnpm doctor` may invoke pnpm's own package-manager
+diagnostics instead of this project's script.
+Failures exit 1; warnings alone exit 0. Diagnostics target only the fixed local
+`meet-people` database, never a configured remote backend.
 
 `pnpm dev` serves the public website on `http://127.0.0.1:3000` and the API on
 port 3001. Run `pnpm dev:mobile` alongside it for mobile on `http://127.0.0.1:3002`.
 Both frontends proxy `/api` to the same local API.
 
-Web (`src/web/App.tsx`) is the responsive public website: installation information,
-event browsing and legal pages. Android is coming soon; iOS is planned. It has no
-login or private destinations. Mobile (`src/mobile/App.tsx`) is the application,
+Web (`src/web/App.tsx`) is the desktop-first public website: a demo-matched landing
+page, event browsing and legal pages. Sign in opens the current mobile browser app
+at `https://mobile.dev.pebble.garden` (sandbox). Until an app listing exists, the
+Android badge opens Google Play's general store; the iOS badge is non-interactive.
+Web hosts no authentication forms or private destinations. Mobile (`src/mobile/App.tsx`) is the application,
 used by Capacitor Android and the browser preview. Signed-out startup opens login;
 returning sessions pass through account readiness to Garden or onboarding.
 

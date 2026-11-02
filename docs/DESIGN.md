@@ -15,6 +15,15 @@ and `src/mobile/`. Web presents installation status and public events; mobile op
 login when signed out. This document supersedes their earlier design directions.
 Product UI changes must follow it.
 
+The public web landing page follows the supplied `Pebble-Landing-Page.html`
+desktop composition: forest-green wordmark, split headline/profile hero, store
+badges and an interactive marketing Garden. Its React implementation and scoped
+styles live in `src/web/`. Sign in links to the current mobile browser sandbox;
+Google Play opens the general store until an app listing exists. The illustrated
+profiles and ephemeral, single-selection Garden preview are examples, not live
+accounts or saved account Garden state. Do not import the export's unrelated
+application/loading styles or embedded image data. Mobile entry remains unchanged.
+
 ## Visual direction
 
 Keep the alternate frontend’s quiet, warm composition and floating pixel garden.
