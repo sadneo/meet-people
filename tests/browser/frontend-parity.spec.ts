@@ -63,16 +63,22 @@ test('Profile navigation leaves a deep-linked editor and follows browser history
  await expect(page.getByRole('heading',{name:'Profile',exact:true})).toBeVisible()
 })
 
-test('web marketing preview switches modes and offers installation information',async({page})=>{
+test('web landing matches the supplied preview and links to mobile sign-in and Google Play',async({page})=>{
  await page.route('**/src/mobile/main.tsx',route=>route.fulfill({contentType:'application/javascript',body:'import "/src/main.tsx"'}))
  await wiringFixture(page,{guest:true});await page.goto('/')
  const modes=page.getByRole('group',{name:'Preview a matching mode'})
  await modes.getByRole('button',{name:'Dating'}).click()
  await expect(modes.getByRole('button',{name:'Dating'})).toHaveAttribute('aria-pressed','true')
- await expect(page.locator('.welcome-profile img')).toHaveAttribute('src','/pebble/maya.jpg')
- await page.getByRole('link',{name:'Get Pebble',exact:true}).first().click()
- await expect(page.getByRole('heading',{name:'Android — coming soon'})).toBeVisible()
- await expect(page.getByRole('link',{name:/Sign in|Get started/})).toHaveCount(0)
+  await expect(page.locator('.landing-profile img')).toHaveAttribute('src','/garden/preview-maya.jpg')
+  await expect(page.getByRole('link',{name:'Sign in',exact:true})).toHaveAttribute('href','https://mobile.dev.pebble.garden')
+  await expect(page.getByRole('link',{name:'Open Google Play for Android'})).toHaveAttribute('href','https://play.google.com/store/apps')
+  await expect(page.getByRole('status',{name:'iOS App Store: coming soon'})).toBeVisible()
+  await page.getByRole('button',{name:'Add trees to Garden preview'}).click()
+  await expect(page.locator('.landing-placement')).toHaveCount(1)
+  await page.getByRole('button',{name:'Add flowers to Garden preview'}).click()
+  await expect(page.getByRole('button',{name:'Add trees to Garden preview'})).toHaveAttribute('aria-pressed','false')
+  await page.getByRole('button',{name:'Remove flowers from Garden preview'}).click()
+  await expect(page.locator('.landing-placement')).toHaveCount(0)
 })
 
 test('mobile policy Back preserves non-secret auth text',async({page})=>{

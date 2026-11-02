@@ -2,7 +2,8 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
 import { SessionQueryProvider } from '../data/SessionQueryProvider'
 import { Events, EventDetail } from '../ui/Events'
-import { Landing, Legal } from '../ui/Public'
+import { Legal } from '../ui/Public'
+import { Landing } from './Landing'
 
 const DevelopmentNavigator = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS === 'true'
   ? lazy(() => import('../ui/DevelopmentNavigator'))

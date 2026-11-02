@@ -37,9 +37,11 @@ Failures exit 1; warnings alone exit 0. Diagnostics target only the fixed local
 port 3001. Run `pnpm dev:mobile` alongside it for mobile on `http://127.0.0.1:3002`.
 Both frontends proxy `/api` to the same local API.
 
-Web (`src/web/App.tsx`) is the responsive public website: installation information,
-event browsing and legal pages. Android is coming soon; iOS is planned. It has no
-login or private destinations. Mobile (`src/mobile/App.tsx`) is the application,
+Web (`src/web/App.tsx`) is the desktop-first public website: a demo-matched landing
+page, event browsing and legal pages. Sign in opens the current mobile browser app
+at `https://mobile.dev.pebble.garden` (sandbox). Until an app listing exists, the
+Android badge opens Google Play's general store; the iOS badge is non-interactive.
+Web hosts no authentication forms or private destinations. Mobile (`src/mobile/App.tsx`) is the application,
 used by Capacitor Android and the browser preview. Signed-out startup opens login;
 returning sessions pass through account readiness to Garden or onboarding.
 

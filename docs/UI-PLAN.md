@@ -15,7 +15,7 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 
 | Route | Current behavior |
 | --- | --- |
-| Web `/`, `/welcome` | Public marketing and installation status, independent of session |
+| Web `/`, `/welcome` | Desktop-first landing matching the supplied HTML; `/welcome` redirects to `/`. Sign in opens `https://mobile.dev.pebble.garden`; Android badge opens `https://play.google.com/store/apps`; iOS is coming soon. The existing `/#install` anchor targets store badges. Profile and Garden previews are local examples with no account writes. |
 | Mobile `/`, `/welcome` | Signed-out entry opens login; signed-in entry opens Garden after account readiness |
 | `/login`, `/register` | Supabase email/password, email link and Google sign-in |
 | `/auth/callback`, `/reset-password` | Explicit grant verification and URL scrubbing |
