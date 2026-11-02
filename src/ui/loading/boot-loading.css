@@ -1,0 +1,29 @@
+/* Shared by mobile's pre-JavaScript fallback and React startup gates. */
+main.pebble-boot.pebble-boot { position: relative; display: grid; place-items: center; min-height: 100dvh; width: 100%; max-width: none; margin: 0; padding: 40px 22px; overflow: hidden; background: #e4ebe0; color: #6c7763; isolation: isolate; font-family: Arial, sans-serif; box-sizing: border-box; }
+.pebble-boot .boot-center { position: relative; display: flex; flex-direction: column; align-items: center; width: min(100%,340px); transform: translateY(-16px); z-index: 1; }
+.pebble-boot .boot-world { position: relative; width: 340px; max-width: 100%; height: 160px; margin-bottom: 8px; --roll-distance: 110px; --roll-angle: 330deg; }
+.pebble-boot .boot-glow { position: absolute; width: 360px; height: 300px; left: 50%; top: 50%; transform: translate(-50%,-45%); background: radial-gradient(ellipse,#faf6e5c9 0,#f1f1df70 45%,transparent 72%); z-index: -1; }
+.pebble-boot .boot-roller { position: absolute; left: calc(50% - 64px); top: 28px; width: 128px; height: 104px; animation: boot-travel 5.8s cubic-bezier(.45,0,.55,1) infinite; will-change: transform; }
+.pebble-boot .boot-mascot { position: absolute; inset: 0; width: 128px; height: 104px; animation: boot-spin 5.8s cubic-bezier(.45,0,.55,1) infinite; transform-origin: 50% 52%; will-change: transform; }
+.pebble-boot .boot-mascot img { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.pebble-boot .boot-shadow { position: absolute; left: 30px; top: 94px; width: 68px; height: 7px; background: #89977629; border-radius: 50%; filter: blur(2px); }
+.pebble-boot .boot-wordmark { display: block; object-fit: contain; width: 170px; height: 76px; max-width: 65vw; }
+.pebble-boot .boot-status { display: flex; flex-direction: column; align-items: center; gap: 18px; margin-top: 8px; }
+.pebble-boot .boot-status > span { font-size: 12px; line-height: 1.6; letter-spacing: .1px; color: #69715f; }
+.pebble-boot .boot-cloud { position: absolute; color: #fffdf5; filter: drop-shadow(0 4px 0 #becdbb99); pointer-events: none; animation: boot-cloud-drift 16s ease-in-out infinite alternate; }
+.pebble-boot .boot-cloud svg { display: block; width: 100%; height: auto; }
+.pebble-boot .boot-cloud-one { width: 155px; left: 15%; top: 23%; }
+.pebble-boot .boot-cloud-two { width: 105px; right: 18%; top: 36%; animation-delay: -6s; }
+.pebble-boot .boot-cloud-three { width: 120px; left: 24%; bottom: 22%; animation-delay: -10s; opacity: .9; }
+.pebble-boot .boot-recovery { position: absolute; bottom: max(22px,env(safe-area-inset-bottom)); left: 22px; right: 22px; text-align: center; font-size: 13px; line-height: 1.6; visibility: hidden; animation: boot-help 0s 12s forwards; }
+.pebble-boot .boot-recovery a { display: inline-flex; align-items: center; min-height: 44px; color: #526948; text-decoration: underline; text-underline-offset: 3px; }
+.pebble-boot .boot-recovery a:focus-visible { outline: 2px solid #9d503d; outline-offset: 3px; }
+.pebble-boot .boot-noscript { position: absolute; bottom: 70px; left: 22px; right: 22px; text-align: center; }
+@keyframes boot-travel { 0%,8%,92%,100% { transform: translateX(calc(-1 * var(--roll-distance))); } 45%,55% { transform: translateX(var(--roll-distance)); } }
+@keyframes boot-spin { 0%,8%,92%,100% { transform: rotate(0deg); } 45%,55% { transform: rotate(var(--roll-angle)); } }
+@keyframes boot-cloud-drift { from { translate: -12px 0; } to { translate: 12px 0; } }
+@keyframes boot-help { to { visibility: visible; } }
+@media(max-width:650px) { main.pebble-boot.pebble-boot { padding: 40px 20px calc(40px + env(safe-area-inset-bottom,0px)); } .pebble-boot .boot-center { transform: translateY(-10px); } .pebble-boot .boot-cloud-one { width: 105px; left: -20px; top: 23%; } .pebble-boot .boot-cloud-two { width: 90px; right: -17px; top: 40%; } .pebble-boot .boot-cloud-three { width: 85px; left: 8%; bottom: 18%; } }
+@media(max-width:480px) { .pebble-boot .boot-world { width: 290px; --roll-distance: 80px; --roll-angle: 240deg; } }
+@media(max-height:540px) { .pebble-boot .boot-world { height: 135px; } .pebble-boot .boot-roller { top: 10px; } .pebble-boot .boot-center { transform: none; } .pebble-boot .boot-status { gap: 12px; margin-top: 0; } .pebble-boot .boot-wordmark { width: 140px; height: 62px; } .pebble-boot .boot-cloud-three { display: none; } }
+@media(prefers-reduced-motion:reduce) { .pebble-boot .boot-roller, .pebble-boot .boot-mascot, .pebble-boot .boot-cloud { animation: none !important; transform: none; will-change: auto; } }

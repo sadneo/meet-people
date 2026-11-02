@@ -1,4 +1,5 @@
 import { canShowDating } from './age-visibility'
+import { PageSkeleton } from './loading/PageSkeleton'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { connections } from '../features/connections/client'
@@ -222,7 +223,7 @@ function Feed({token,mode,enabled,revision,allowance,refreshStatus}:{token:strin
  if(!enabled)return null
  const notices=[...deck.outcomes.filter(item=>item.state!=='confirmed'),...deck.outcomes.filter(item=>item.state==='confirmed').slice(-1)]
  return <>
-   {deck.loading&&<p role="status" className={deck.cards.length ? 'sr-only' : undefined}>{deck.cards.length?'Loading more people…':'Finding people…'}</p>}
+    {deck.loading&&!deck.error&&(deck.cards.length ? <p role="status" className="sr-only">Loading more people…</p> : <PageSkeleton view="discover" label="Finding people…"/>)}
    <ErrorMessage>{deck.error}</ErrorMessage>
    {deck.error && <ActionButton secondary disabled={deck.loading} onClick={()=>{setupRefreshed.current=false;deck.reset()}}>Try again</ActionButton>}
   {deck.cards.slice(0,10).map((person,index)=><div className="discovery-card-slot" hidden={index!==0} key={person.id}><Candidate {...person} dating={mode==='Dating'} connectDisabled={allowance.blocked} onConnect={()=>void allowance.send(()=>deck.connect(person))} onSkip={()=>deck.advance(person)} onUndo={deck.undo} canUndo={deck.canUndo}/></div>)}
@@ -241,7 +242,7 @@ function Friends({token,revision,allowance}:{token:string;revision:string;allowa
   :reason==='discovery_off'?{title:'Friends, at your pace.',text:'Turn on Friend recommendations when you’re ready.',label:'Discovery settings',to:'/profile?section=discovery'}
   :reason==='location'?{title:'Confirm your search area again.',text:'Your saved Friends search area has expired or changed.',label:'Review Friends preferences',to:'/matchmaking?mode=friends&preferences=true'}
   :{title:'Set up Friends discovery.',text:'Choose your Friends preferences and confirm a search area to find people nearby.',label:'Set up Friends preferences',to:'/matchmaking?mode=friends&preferences=true'}
- return <><ResourceState loading={status.loading} error={status.error} reload={status.reload}/>
+  return <><ResourceState loading={status.loading} error={status.error} reload={status.reload} skeleton={<PageSkeleton view="discover" label="Checking Friends setup"/>}/>
   {status.value&&!status.value.eligible&&<section className="friends-waiting"><Icon name="Friends"/><h2>{guidance.title}</h2><p>{guidance.text}</p><Link className="btn light" to={guidance.to}>{guidance.label}</Link></section>}
  <Feed allowance={allowance} token={token} mode="Friends" enabled={status.value?.eligible===true} revision={revision} refreshStatus={status.reload}/></>
 }
@@ -259,7 +260,7 @@ function Dating({token,revision,allowance}:{token:string;revision:string;allowan
   :blocker==='location'?{title:'Confirm your Dating search area again.',text:'Your saved Dating search area has expired or changed.',label:'Review Dating preferences',to:'/matchmaking?mode=dating&preferences=true'}
   :blocker==='paused'?{title:'Dating, at your pace.',text:'Your setup is ready. Start Dating discovery when you want to participate.'}
   :{title:'Review your Dating setup.',text:'Your saved setup is not currently eligible for Dating discovery.',label:'Review Dating preferences',to:'/matchmaking?mode=dating&preferences=true'}
- return <><ResourceState loading={runtime.loading} error={runtime.error} reload={runtime.reload}/><ErrorMessage>{action.error}</ErrorMessage>
+  return <><ResourceState loading={runtime.loading} error={runtime.error} reload={runtime.reload} skeleton={<PageSkeleton view="discover" label="Checking Dating setup"/>}/><ErrorMessage>{action.error}</ErrorMessage>
   {value&&blocker&&<section className="friends-waiting"><Icon name="Dating"/><h2>{guidance.title}</h2><p>{guidance.text}</p>{guidance.to&&<Link className="btn light" to={guidance.to}>{guidance.label}</Link>}</section>}
  <Feed allowance={allowance} token={token} mode="Dating" enabled={!!value&&!blocker&&!uncertain} revision={`${revision}:${value?.aggregate.profileRevision??0}:${value?.aggregate.searchRevision??0}`} refreshStatus={runtime.reload}/>
  <div className="match-actions">{value&&(value.aggregate.profile.enabled||blocker==='paused')&&<ActionButton disabled={action.busy||uncertain} onClick={()=>void toggle()}>{value.aggregate.profile.enabled?'Pause Dating':'Start Dating discovery'}</ActionButton>}
@@ -287,7 +288,7 @@ export function Discover(){
   const revision=JSON.stringify([epoch,current.account?.profile])
   return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className="area-link" aria-label="Search area & preferences" onClick={()=>setPreferences(true)}>⌖ {area.loading ? 'Search area' : area.error ? 'Check search area' : area.value || 'Choose an area'} <span aria-hidden="true">⌄</span></button></div>
   <div className="discovertools"><div className="mode-toggle" role="group" aria-label="Matchmaking mode"><span className={`mode-toggle-indicator ${mode==='Dating'?'dating':''}`} aria-hidden="true"/>{(['Friends','Dating'] as const).filter(item=>item==='Friends'||adult).map(item=><button key={item} data-mode={item} className={mode===item?'selected':''} aria-pressed={mode===item} onClick={()=>setMode(item)}><Icon name={item}/>{item}</button>)}</div><div className="row"><button className="round" aria-label={`${mode} preferences`} onClick={()=>setPreferences(true)}><Icon name="DiscoveryPreferences"/></button><Link className="round discovery-activity" to="/matches" aria-label="Matches and activity"><Icon name="DiscoveryActivity" /></Link></div></div>
- <ResourceState loading={!allowance.value && allowance.checking} error={allowance.error} reload={()=>void allowance.refresh()}/>
+  <ResourceState loading={!allowance.value && allowance.checking} error={allowance.error} reload={()=>void allowance.refresh()} skeleton={<span className="sr-only" role="status">Checking request availability</span>}/>
  {allowance.limited ? <section className="friends-waiting discovery-request-limit" aria-labelledby="request-limit-title">
   <Icon name="Clock"/><h2 id="request-limit-title">You’ve reached today’s request limit.</h2>
   <p>You can send 10 new requests across Friends and Dating in 24 hours.</p>

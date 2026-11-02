@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Icon } from '../../ui/common'
+import { MediaImage } from '../../ui/loading/MediaImage'
 
 export function ProfilePreview() {
   const [mode, setMode] = useState<'Friends' | 'Dating'>('Friends')
@@ -22,7 +23,7 @@ export function ProfilePreview() {
       {(['Friends', 'Dating'] as const).map(item => <button type="button" key={item} aria-pressed={mode === item} onClick={() => select(item)}><Icon name={item}/><span>{item}</span></button>)}
     </div>
     <div className="landing-profile">
-      <img src={dating ? '/garden/preview-maya.jpg' : '/garden/preview-alex.jpg'} alt={`${dating ? 'Maya' : 'Alex'}, a fictional ${mode} profile in the demo`} width="800" height="1200" />
+      <MediaImage src={dating ? '/garden/preview-maya.jpg' : '/garden/preview-alex.jpg'} alt={`${dating ? 'Maya' : 'Alex'}, a fictional ${mode} profile in the demo`} width="800" height="1200" />
       <div className="landing-profile-shade" />
       <div className="landing-profile-info"><h3>{dating ? 'Maya, 21' : 'Alex, 22'}</h3></div>
     </div>

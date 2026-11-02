@@ -8,6 +8,8 @@ import {
   sourceLink,
 } from "../features/events/client";
 import { useCachedLoad } from "../data/useCachedLoad";
+import { PageSkeleton } from './loading/PageSkeleton';
+import { MediaImage } from './loading/MediaImage';
 import {
   ActionButton,
   Brand,
@@ -71,6 +73,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
         loading={resource.loading}
         error={resource.error}
         reload={resource.reload}
+        skeleton={<PageSkeleton view="events" label="Loading events"/>}
       />
       {resource.value && !resource.value.events.length && (
         <Empty title="No events here yet.">
@@ -80,14 +83,11 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
       <div className="eventgrid event-directory">
         {resource.value?.events.map((event) => (
             <Link className="event-card" key={event.id} to={`${publicView ? "/explore" : "/events"}/${event.id}`} aria-label={`${event.title}: see event and people`}>
-                <img
+                <MediaImage
                   className="event-image"
                   loading="lazy"
                   src={safeImage(event.image_url)}
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = "/images/event-placeholder.svg";
-                  }}
+                  fallback="/images/event-placeholder.svg"
                   alt=""
                   referrerPolicy="no-referrer"
                 />
@@ -176,19 +176,17 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
         loading={resource.loading}
         error={resource.error}
         reload={resource.reload}
+        skeleton={<PageSkeleton view="event" label="Loading event details"/>}
       />
       {event && (
         <>
           <header className="event-detail-header"><h1>{event.title}</h1><Link className="round" aria-label="Close event" to={publicView ? '/explore' : '/events'}>×</Link></header>
-          <img
+          <MediaImage
             className="event-cover"
             src={safeImage(event.image_url)}
             alt=""
             referrerPolicy="no-referrer"
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = "/images/event-placeholder.svg";
-            }}
+            fallback="/images/event-placeholder.svg"
           />
           <p className="event-detail-category">{event.category}</p>
           <p className="event-description">{event.description}</p>

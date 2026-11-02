@@ -33,6 +33,7 @@ import {
 import { useCurrent } from "./current";
 import { SafetyActions } from "./Safety";
 import { connections } from '../features/connections/client';
+import { PageSkeleton } from './loading/PageSkeleton';
 
 function inboxTime(value: string | undefined) {
   if (!value) return '';
@@ -99,11 +100,12 @@ export function Messages() {
           </div>
           <Link className="requests-link" to="/messages/requests"><span>Requests{activity.value && activity.value.incomingRequests > 0 && <span className="request-count">{activity.value.incomingRequests}</span>}</span><span aria-hidden="true">›</span></Link>
           <ResourceState
-            loading={inbox.loading}
+            loading={inbox.loading && !rows.length}
             error={inbox.error}
             reload={inbox.reload}
+            skeleton={<PageSkeleton view="inbox" label="Loading conversations"/>}
           />
-          <ResourceState loading={groups.loading} error={groups.error} reload={groups.reload}/>
+          <ResourceState loading={groups.loading && !inbox.loading && !rows.length} error={groups.error} reload={groups.reload} skeleton={<PageSkeleton view="inbox" label="Loading groups"/>}/>
           {inbox.value && groups.value && !inbox.value.conversations.length && !groups.value.groups.length && (
             <Empty title="Your next conversation starts with a hello.">
               <Link to="/matchmaking">Find people</Link>
@@ -345,6 +347,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, sa
           loading={history.loading}
           error={history.error}
           reload={history.reload}
+          skeleton={<PageSkeleton view="chat" label="Loading conversation"/>}
         />
         <ErrorMessage>{readError}</ErrorMessage>
         {olderCursor !== null &&

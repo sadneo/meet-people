@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { MediaImage } from '../../ui/loading/MediaImage'
 
 // Same atlas/crops and low-resolution canvases as the supplied landing demo.
 const items = [
@@ -42,7 +43,7 @@ export function GardenPreview() {
   return <section className="landing-community">
     <div className="landing-garden-art">
       <div className="landing-build-scene" id="landing-build-scene" role="img" aria-label={`A customizable pixel Garden${item ? `, with ${item.name.toLowerCase()} added` : ''}`}>
-        <img src="/garden/marketing-garden.png" alt="" width="1498" height="1050" loading="lazy"/>
+        <MediaImage src="/garden/marketing-garden.png" alt="" width="1498" height="1050" loading="lazy"/>
         {item && <span key={item.id} className="landing-placement" style={{ left: `${item.x}%`, top: `${item.y}%` } as CSSProperties} aria-hidden="true"><Sprite item={item}/></span>}
       </div>
     </div>

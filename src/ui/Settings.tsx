@@ -13,6 +13,7 @@ import { useCurrent } from "./current";
 import { Blocklist } from "./Safety";
 import { settingsCategories } from './settings-navigation';
 import { MatchingSchedule } from './MatchingSchedule';
+import { PageSkeleton } from './loading/PageSkeleton';
 
 function MasterSettings({ category }: { category: 'discovery' | 'notifications' }) {
   const current = useCurrent(),
@@ -302,9 +303,10 @@ export function ProfileSettings({ section }: { section: string }) {
           <section className="account-panel">
             <h3>{category[1]} preferences</h3>
             <ResourceState
-              loading={detailed.loading}
+              loading={detailed.loading && !detailed.snapshot}
               error={detailed.error}
               reload={() => void detailed.reload()}
+              skeleton={<PageSkeleton view="settings" label="Loading saved preferences"/>}
             />
             {detailed.snapshot && (
                 <DetailedForm
