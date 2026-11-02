@@ -18,8 +18,20 @@ tools with `nix develop`.
 
 ```sh
 pnpm install --frozen-lockfile
+pnpm run doctor
 pnpm dev
 ```
+
+`pnpm run doctor` (or `pnpm dev:doctor`) checks local tools, configuration, ports, the owned Supabase database
+and core RPC signatures. It never installs packages, starts services, signs in,
+applies migrations, resets data or prints configuration values. Optional Maps,
+development-login metadata and worker-schema checks do not verify live provider,
+account or worker readiness. Occupied app ports are warnings, not failures.
+Use `pnpm run doctor --json` for structured results, or `pnpm run doctor --help` for usage.
+Use the explicit `run`: bare `pnpm doctor` may invoke pnpm's own package-manager
+diagnostics instead of this project's script.
+Failures exit 1; warnings alone exit 0. Diagnostics target only the fixed local
+`meet-people` database, never a configured remote backend.
 
 `pnpm dev` serves the public website on `http://127.0.0.1:3000` and the API on
 port 3001. Run `pnpm dev:mobile` alongside it for mobile on `http://127.0.0.1:3002`.
