@@ -15,9 +15,14 @@ export interface EventGroupWorkerTransport {
 }
 const SettingsSchema = z.object({ enabled: z.boolean(), scoringEnabled: z.boolean(), workerId: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/), maxJobs: z.number().int().min(1).max(5), timeoutMs: z.number().int().min(1).max(15000), leaseSeconds: z.number().int().min(120).max(600) })
 export type WorkerSettings = z.infer<typeof SettingsSchema>
+export type WorkerDiagnostic = {
+  stage: 'configuration' | 'transport' | 'claim' | 'rank' | 'fail' | 'complete' | 'reconcile'
+  reason: 'timeout' | 'invalid_response' | 'request_failed'
+}
+class WorkerTimeout extends Error {}
 async function timed<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined
-  try { return await Promise.race([operation, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Uncertain RPC outcome')), timeoutMs) })]) }
+  try { return await Promise.race([operation, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new WorkerTimeout('Uncertain RPC outcome')), timeoutMs) })]) }
   finally { clearTimeout(timer) }
 }
 export function selectGroupMembers(job: EventGroupJob, raw: unknown): string[] | null {
@@ -31,11 +36,18 @@ export function selectGroupMembers(job: EventGroupJob, raw: unknown): string[] |
   }
   return members.length >= 2 ? members : null
 }
-export async function runEventGroupCycle(settings: WorkerSettings, factory: () => Promise<EventGroupWorkerTransport>) {
+export async function runEventGroupCycle(settings: WorkerSettings, factory: () => Promise<EventGroupWorkerTransport>, onDiagnostic?: (diagnostic: WorkerDiagnostic) => void) {
   // These gates precede factory invocation, SDK import, configuration or network.
   if (settings.enabled !== true || settings.scoringEnabled !== true) return { state: 'paused' as const, processed: 0 }
-  const config = SettingsSchema.parse(settings)
-  const rpc = await factory()
+  // Only fixed codes reach the observer, never errors, jobs, identities or tokens.
+  // A failing log sink must not alter lease/reconciliation behavior.
+  const report = (stage: WorkerDiagnostic['stage'], error: unknown) => {
+    try { onDiagnostic?.({ stage, reason: error instanceof WorkerTimeout ? 'timeout' : error instanceof z.ZodError ? 'invalid_response' : 'request_failed' }) } catch { /* Observability is not control flow. */ }
+  }
+  let config: WorkerSettings
+  try { config = SettingsSchema.parse(settings) } catch (error) { report('configuration', error); throw error }
+  let rpc: EventGroupWorkerTransport
+  try { rpc = await factory() } catch (error) { report('transport', error); throw error }
   let processed = 0
   for (let index = 0; index < config.maxJobs; index++) {
     let job: EventGroupJob
@@ -43,27 +55,32 @@ export async function runEventGroupCycle(settings: WorkerSettings, factory: () =
       const claimed = await timed(rpc.claim(config.workerId, config.leaseSeconds), config.timeoutMs)
       if (claimed === null) break
       job = JobSchema.parse(claimed)
-    } catch { return { state: 'uncertain' as const, processed } }
+    } catch (error) { report('claim', error); return { state: 'uncertain' as const, processed } }
     let members: string[] | null
     try { members = selectGroupMembers(job, await timed(rpc.rank(job), config.timeoutMs)) }
-    catch {
-      try { FailedSchema.parse(await timed(rpc.fail(job, 'scoring_uncertain'), config.timeoutMs)) } catch { /* Lease/reconciliation remains parent-owned. */ }
+    catch (error) {
+      report('rank', error)
+      try { FailedSchema.parse(await timed(rpc.fail(job, 'scoring_uncertain'), config.timeoutMs)) } catch (error) { report('fail', error) /* Lease/reconciliation remains parent-owned. */ }
       return { state: 'uncertain' as const, processed }
     }
     if (!members) {
       try { FailedSchema.parse(await timed(rpc.fail(job, 'no_candidates'), config.timeoutMs)) }
-      catch { return { state: 'uncertain' as const, processed } }
+      catch (error) { report('fail', error); return { state: 'uncertain' as const, processed } }
       continue
     }
     try {
       z.object({ state: z.literal('completed') }).parse(await timed(rpc.complete(job, members), config.timeoutMs))
       processed++
-    } catch {
+    } catch (error) {
+      report('complete', error)
       try {
         const result = z.object({ state: z.enum(['completed', 'leased', 'expired', 'failed']) }).parse(await timed(rpc.reconcile(job), config.timeoutMs))
         if (result.state === 'completed') processed++
-        else if (result.state === 'leased') FailedSchema.parse(await timed(rpc.fail(job, 'completion_uncertain'), config.timeoutMs))
-      } catch { /* No retries, guessed completion, or competing actor calls. */ }
+        else if (result.state === 'leased') {
+          try { FailedSchema.parse(await timed(rpc.fail(job, 'completion_uncertain'), config.timeoutMs)) }
+          catch (error) { report('fail', error) }
+        }
+      } catch (error) { report('reconcile', error) /* No retries, guessed completion, or competing actor calls. */ }
       return { state: 'uncertain' as const, processed }
     }
   }

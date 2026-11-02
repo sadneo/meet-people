@@ -2,6 +2,9 @@
 
 Run commands from the repository root. Use pnpm exclusively.
 
+`pnpm test:doctor` tests the read-only development diagnostics using injected
+filesystem, subprocess and port probes; no real credentials or services are used.
+
 | Directory | Command | Boundary |
 | --- | --- | --- |
 | `tests/unit/` | `pnpm test:unit` | Vitest logic, React components/hooks, mocked transports and source-contract checks |

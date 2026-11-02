@@ -6,6 +6,9 @@
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names web,api \"pnpm dev:web\" \"pnpm dev:api\"",
+    "doctor": "node scripts/doctor.mjs",
+    "dev:doctor": "node scripts/doctor.mjs",
+    "test:doctor": "node --test tests/doctor.test.mjs",
     "dev:web": "vite",
     "dev:alt": "node src/alt/serve.mjs",
     "dev:api": "tsx watch --env-file-if-exists=.env.local api/server.ts",
