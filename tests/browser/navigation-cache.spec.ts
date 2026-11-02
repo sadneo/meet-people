@@ -102,6 +102,7 @@ test('sign-out clears private reads before signing into the account again', asyn
   await page.goto('/messages')
   await expect(page.getByText('Taylor', { exact: true })).toBeVisible()
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Profile', exact: true }).click()
+  await page.locator('.pagehead').getByRole('link', { name: 'Settings', exact: true }).click()
   await page.getByRole('link', { name: 'Sign out of Pebble', exact: true }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page).toHaveURL(/\/login$/)

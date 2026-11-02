@@ -98,14 +98,14 @@ test('environment precedence, public keys and secret variable names are checked 
   assert.equal(check(report, 'VITE_SUPABASE_PUBLISHABLE_KEY').status, 'fail')
   assert.equal(check(report, 'browser-secrets').status, 'fail')
   assert.equal(check(report, 'api-proxy').status, 'warn')
-  assert.deepEqual(ports, [3000, 4001])
+  assert.deepEqual(ports, [3000, 3002, 4001])
   assert.ok(!JSON.stringify(report).includes(secret))
 })
 
 test('optional capabilities, occupied ports and newer Node versions are warnings rather than failures', async () => {
   const { options } = fixture({ node: '26.0.0', probe: async () => true })
   const report = await diagnose(options)
-  for (const id of ['node', 'maps', 'port:web', 'port:api']) assert.equal(check(report, id).status, 'warn')
+  for (const id of ['node', 'maps', 'port:web', 'port:mobile', 'port:api']) assert.equal(check(report, id).status, 'warn')
   assert.equal(report.summary.fail, 0)
 })
 

@@ -44,9 +44,13 @@ export async function provisionDevelopmentAccount(existing?: { accountId: string
       profile: { username: 'pebble_development', display_name: 'Development User', bio: 'Local development account', avatar_url: null, interests: ['Coffee', 'Art', 'Music'], birthdate: '2000-01-01', location_city: 'Stony Brook', availability: [{ dow: 1, start_time: '09:00:00', end_time: '17:00:00' }] },
       preferences: { intents: ['Make friends'], usual: ['Afternoons'], distance: 'Nearby', group: 'Either' }, completed: [0, 1, 2, 3],
     })
-    const count = Math.min(4, (current.data?.completed?.length ?? 0) + 1)
-    const saved = await actor.rpc('save_account', { account_in: { ...account, completed: account.completed.slice(0, count) } })
-    if (saved.error) throw saved.error
+    // The account RPC permits one new chapter per save. Finish the bounded
+    // sequence before authenticateDevelopmentAccount requires all four.
+    const first = Math.min(4, (current.data?.completed?.length ?? 0) + 1)
+    for (let count = first; count <= 4; count++) {
+      const saved = await actor.rpc('save_account', { account_in: { ...account, completed: account.completed.slice(0, count) } })
+      if (saved.error) throw saved.error
+    }
   }
   return credentials
 }

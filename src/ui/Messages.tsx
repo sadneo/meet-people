@@ -150,7 +150,7 @@ export function Messages() {
           )}
         </aside>
         {selected ? (
-          <Chat key={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} initialDraft={drafts[draftKey] ?? ''} saveDraft={value => setDrafts(previous => {
+          <Chat key={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} connectionLabel={rows.find(row => row.id === selected)?.label ?? ''} initialDraft={drafts[draftKey] ?? ''} saveDraft={value => setDrafts(previous => {
             const next = { ...previous };
             if (value) next[draftKey] = value; else delete next[draftKey];
             return next;
@@ -165,9 +165,10 @@ export function Messages() {
     </section>
   );
 }
-function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: string; changed: () => void; isGroup?: boolean; initialDraft: string; saveDraft: (value: string) => void }) {
+function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, saveDraft }: { id: string; changed: () => void; isGroup?: boolean; connectionLabel?: string; initialDraft: string; saveDraft: (value: string) => void }) {
   const [group,setGroup]=useState<ActiveGroup|null>(null)
   const [removeOpen, setRemoveOpen] = useState(false);
+  const [peopleOpen, setPeopleOpen] = useState(false);
   const historyElement = useRef<HTMLDivElement>(null), lastVisibleMessage = useRef<string | null>(null);
   const current = useCurrent()
   const token = current.session.access_token
@@ -297,10 +298,10 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
           <Icon name="Back" />
         </Link>
         {others[0] && <PersonPhoto id={others[0].id} name={others[0].display_name} fallback={others[0].avatar_url} />}
-        <h3>
+        <button className="chat-identity-button" type="button" aria-label="View conversation members" onClick={() => setPeopleOpen(true)}><h3>
           {group?.name || others.map((person) => person.display_name).join(", ") ||
             "Conversation"}
-        </h3>
+        </h3>{connectionLabel && <span className={`connection-kind ${connectionLabel === 'Dating' ? 'dating' : ''}`}>{connectionLabel}</span>}</button>
         <details className="chat-options" onKeyDown={event => {
           if (event.key === 'Escape') {
             event.currentTarget.open = false;
@@ -309,6 +310,7 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
         }}>
           <summary className="round" aria-label="Conversation options and safety"><Icon name="More" /></summary>
           <div className="chat-options-menu">
+          <ActionButton secondary onClick={() => setPeopleOpen(true)}>View people</ActionButton>
           <ActionButton
           secondary
           disabled={action.busy}
@@ -326,6 +328,7 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
           </div>
         </details>
       </header>
+      {peopleOpen && <Modal title={isGroup ? 'Group members' : 'Conversation members'} close={() => setPeopleOpen(false)}><div className="conversation-members">{history.value?.participants.map(person => <div className="row item" key={person.id}><PersonPhoto id={person.id} name={person.display_name} fallback={person.avatar_url}/><div><b>{person.id === current.session.user.id ? 'You' : person.display_name}</b></div>{person.id !== current.session.user.id && <SafetyActions id={person.id} name={person.display_name}/>}</div>)}</div></Modal>}
       {removeOpen && others[0] && <Modal title="Remove connection?" close={() => setRemoveOpen(false)}>
         <p>Remove your connection with {others[0].display_name}? This does not block the account or erase saved messages.</p>
         <ErrorMessage>{action.error}</ErrorMessage>
@@ -416,7 +419,7 @@ function Chat({ id, changed, isGroup=false, initialDraft, saveDraft }: { id: str
           {action.busy ? "…" : uncertain ? "Retry same message" : <Icon name="Send" />}
         </button>
       </form>
-      <p id="message-keyboard-help" className="account-note">
+      <p id="message-keyboard-help" className="sr-only">
         Enter to send · Shift+Enter for a new line.
       </p>
       {uncertain && (

@@ -86,7 +86,7 @@ jobs:
       - run: pnpm env:local
       - run: pnpm test:integration
       - run: pnpm exec playwright install --with-deps chromium
-      # Deployment checks leave the verified normal frontend in dist/web.
+      # Deployment checks validate dev web/mobile and leave production-mode web in dist/web.
       - run: pnpm test:deployment
       - run: pnpm build:api
       - name: Browser tests against verified production-mode artifacts

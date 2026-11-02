@@ -33,9 +33,15 @@ diagnostics instead of this project's script.
 Failures exit 1; warnings alone exit 0. Diagnostics target only the fixed local
 `meet-people` database, never a configured remote backend.
 
-Vite serves the app on `http://127.0.0.1:3000` and proxies `/api` to the Express
-server on port 3001. The new frontend is the main app; there is no separate
-alternate demo server.
+`pnpm dev` serves the public website on `http://127.0.0.1:3000` and the API on
+port 3001. Run `pnpm dev:mobile` alongside it for mobile on `http://127.0.0.1:3002`.
+Both frontends proxy `/api` to the same local API.
+
+Web (`src/web/App.tsx`) is the responsive public website: installation information,
+event browsing and legal pages. Android is coming soon; iOS is planned. It has no
+login or private destinations. Mobile (`src/mobile/App.tsx`) is the application,
+used by Capacitor Android and the browser preview. Signed-out startup opens login;
+returning sessions pass through account readiness to Garden or onboarding.
 
 The browser requires `VITE_SUPABASE_URL` and
 `VITE_SUPABASE_PUBLISHABLE_KEY`. The server requires its existing Supabase URL,
@@ -63,6 +69,7 @@ pnpm typecheck
 pnpm test:unit
 pnpm test:browser
 pnpm build:web
+pnpm build:mobile
 pnpm build:api
 pnpm lint
 ```
@@ -71,8 +78,14 @@ Browser tests use synthetic API/session fixtures. Database and hosted checks are
 separate; see [test commands](tests/README.md). Current full-lint limitations are
 recorded in [the integration notes](docs/FRONTEND-WIRING.md).
 
-The built web app is in `dist/web`; the server is in `dist/api`.
-`pnpm start:api` starts the compiled API, and `pnpm preview` serves the built web app.
+The website builds to `dist/web`, mobile to `dist/mobile`, and the server to `dist/api`.
+`pnpm start:api` starts the compiled API. `pnpm preview` serves web;
+`pnpm preview:mobile` serves mobile. `pnpm build:android` builds mobile using the
+existing Android environment mode and syncs it to Capacitor. Both products have
+optional `build:web:devtools` / `build:mobile:devtools` variants.
+Releases from `dev` publish web to `web.dev.pebble.garden` and mobile to
+`mobile.dev.pebble.garden`, both using `pebble-sandbox`. Releases from `main`
+publish web to `pebble.garden` using `pebble-production`.
 For hosting setup, use [the deployment runbook](docs/deployment.md).
 
 For labeled local test users, messaging, Dating and event-group queues, run

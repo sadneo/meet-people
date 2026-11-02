@@ -79,12 +79,13 @@ export async function diagnose({ directory = root, env = process.env, node = pro
   const maps = browser.VITE_GOOGLE_MAPS_API_KEY && server.GOOGLE_MAPS_SERVER_API_KEY && /^[a-f0-9]{64}$/i.test(server.SEARCH_LOCATION_SIGNING_KEY ?? '') && server.GOOGLE_MAPS_STORAGE_APPROVED === 'true'
   add('maps', maps ? 'pass' : 'warn', maps ? 'Maps configuration is present; provider restrictions and DB signing key are not verified.' : 'Optional Maps setup is incomplete. See docs/google-search-locations.md; no provider requests were made.')
 
-  for (const [name, raw] of [['web', env.VITE_PORT ?? 3000], ['api', env.PORT ?? files['.env.local']?.PORT ?? 3001]]) {
+  for (const [name, raw] of [['web', env.VITE_PORT ?? 3000], ['mobile', env.VITE_PORT ?? 3002], ['api', env.PORT ?? files['.env.local']?.PORT ?? 3001]]) {
     const port = Number(raw)
     if (!Number.isInteger(port) || port < 1 || port > 65535) { add(`port:${name}`, 'fail', `Invalid ${name} port configuration.`); continue }
     const busy = await probe(port)
     add(`port:${name}`, busy === false ? 'pass' : 'warn', busy === false ? `${name} port ${port} is available.` : busy ? `${name} port ${port} is occupied; this may be your running app. Ownership was not verified.` : `${name} port ${port} could not be checked.`)
   }
+  if (env.VITE_PORT !== undefined) add('frontend-ports', 'warn', 'VITE_PORT overrides both web and mobile ports. Unset it when running both with their distinct default ports, or set it per command.')
   if (String(env.API_PORT ?? 3001) !== String(server.PORT ?? 3001)) add('api-proxy', 'warn', 'API_PORT (Vite proxy) and PORT (API listener) differ. Align them before pnpm dev.')
 
   // Match scripts/supabase.sh's rootless Podman socket fallback without changing global configuration.

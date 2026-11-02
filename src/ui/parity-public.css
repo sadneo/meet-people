@@ -1,0 +1,57 @@
+/* Keep the prototype's public composition with real authentication links. */
+.welcome-preview-mode button { min-height:38px; }
+.welcome-preview-mode button[aria-pressed=true] { background:#e7eddf;color:#285640; }
+.welcome-preview-mode button[aria-pressed=true]:last-child { background:#f2e1e6;color:#80475c; }
+.welcome-open .ui-icon { width:17px;height:17px; }
+.welcome-primary .ui-icon { width:19px;height:19px; }
+.welcome-footer a { text-decoration:none;font-size:12px;color:#756c60;padding:12px 0; }
+.welcome-footer a:hover { text-decoration:underline;text-underline-offset:4px; }
+.welcome-footer .brand { width:110px; }
+.auth-introduction { color:var(--muted);font-size:13px;line-height:1.6;margin:-10px 0 24px; }
+.auth-account-link { display:block;text-align:center;font-size:13px;margin:18px 0;text-underline-offset:4px; }
+body:has(main.onboarding) { background:#f1e6da; }
+main.onboarding { max-width:480px;min-height:100dvh;margin:0 auto;padding:40px 24px;background:#f1e6da; }
+.onboarding>a:first-child { display:flex;justify-content:center;margin-bottom:30px; }
+.onboarding>a:first-child .brand { width:130px; }
+.onboarding>h1 { font-size:28px;line-height:1.2;margin:22px 0; }
+.onboarding input,.onboarding textarea,.onboarding select { min-height:50px;background:#fffdf9;font-size:16px; }
+.onboarding textarea { resize:vertical; }
+.onboarding .account-form>.btn { width:100%;margin:8px 0 22px; }
+.onboarding>.text-link { display:block;text-align:center;font-size:13px;color:#85796e; }
+@media(max-width:480px) { .welcome-footer>div { gap:18px;flex-wrap:wrap; } }
+
+/* Reused from QuiteKewl’s wiring branch: editable email and native password visibility. */
+.auth-recovery-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  column-gap: 12px;
+  margin-top: 8px;
+}
+.auth-recovery-options > button,
+.auth-recovery-options > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  font-size: 13px;
+}
+.auth-recovery-options > button { color: var(--muted); }
+.auth-recovery-options + .auth-submit { margin-top: 8px; }
+.password-input-control { position: relative; }
+.password-field .password-input-control > input { padding-right: 52px; }
+.password-input-control > .password-visibility-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--muted);
+}
+.password-visibility-toggle:hover { color: var(--ink); }
+.password-visibility-toggle .ui-icon { width: 20px; height: 20px; }

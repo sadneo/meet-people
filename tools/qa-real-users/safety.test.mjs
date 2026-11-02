@@ -8,6 +8,7 @@ import {
 } from './state.mjs';
 
 // No lifecycle or Docker imports: these tests must never manage real resources.
+await mkdir('/tmp/opencode', { recursive: true });
 const fixture = await mkdtemp('/tmp/opencode/qa-safety-');
 after(async () => { await rm(fixture, { recursive: true, force: true }); });
 const id = '20261031-120000-0123abcd';

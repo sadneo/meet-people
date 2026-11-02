@@ -1,3 +1,5 @@
+import { canShowDating, meetsMinimumAge } from './age-visibility'
+import './parity-account.css'
 import { MatchingSchedule } from './MatchingSchedule';
 import { DatingPreferencesPanel } from './Preferences';
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
@@ -23,6 +25,7 @@ import {
   Icon,
   ErrorMessage,
   ResourceState,
+  Modal,
 } from "./common";
 import { useCurrent } from "./current";
 import { ProfileSettings, ProfileSettingsLinks } from './Settings';
@@ -332,11 +335,25 @@ export function Profile() {
     );
   const photo = useProfilePhoto();
   const [search, setSearch] = useSearchParams();
-  const requestedSection = search.get('section');
-  const [section, setSection] = useState<'basics' | 'interests' | 'dating' | null>(() => requestedSection === 'basics' || requestedSection === 'interests' || requestedSection === 'dating' ? requestedSection : null);
-  function closeEditor() { setSection(null); if(search.has('section'))setSearch({}, {replace:true}); void facts.reload(); }
+  const [preview, setPreview] = useState(false);
+  const adult = canShowDating(current.account?.profile?.birthdate);
+  const requestedSection = search.get('section') === 'dating' && !adult ? 'basics' : search.get('section');
+  const section = requestedSection === 'basics' || requestedSection === 'interests' || requestedSection === 'dating' ? requestedSection : null;
+  function setSection(value: 'basics' | 'interests' | 'dating') {
+    const next = new URLSearchParams(search);
+    next.set('section', value);
+    setSearch(next);
+  }
+  function closeEditor() {
+    const next = new URLSearchParams(search);
+    next.delete('section');
+    setSearch(next, {replace:true});
+    void facts.reload();
+  }
   const profile = current.account?.profile;
   const settingsCategory = settingsCategories.find(category => category[0] === requestedSection);
+  if (requestedSection === 'settings')
+    return <div className="account-page settings-page"><div className="pagehead"><h2>Settings</h2></div><div className="settings-profile-summary"><Avatar name={profile?.display_name ?? ''} url={photo.url}/><div><b>{profile?.display_name}</b><p>{current.session.user.email}</p></div></div><ProfileSettingsLinks/><Link className="account-logout" to="/logout">Sign out of Pebble</Link></div>;
   if (settingsCategory)
     return <ProfileSettings key={settingsCategory[0]} section={settingsCategory[0]}/>;
   if (requestedSection === 'friends-preferences' || requestedSection === 'dating-preferences')
@@ -345,21 +362,36 @@ export function Profile() {
     <div className="account-page profile-page live-profile">
       <div className="pagehead">
         <h2>{section ? 'Edit profile' : 'Profile'}</h2>
+        <div className="row"><button type="button" className="btn light small" onClick={() => setPreview(true)}>Preview</button>{!section && <Link className="round" aria-label="Settings" to="/profile?section=settings"><Icon name="Settings"/></Link>}</div>
       </div>
       {!section ? <div className="profile-overview">
-        <div className="profile-summary"><Avatar name={profile?.display_name ?? ''} url={photo.url} large/><div><h3>{profile?.display_name}</h3><p>{profile?.location_city || 'Add your home area'}</p></div></div>
+        <div className="profile-summary"><Avatar name={profile?.display_name ?? ''} url={photo.url} large/><div><h3>{profile?.display_name}</h3><p>{profile?.location_city || 'Add your home area'}</p></div><button className="account-edit-text" aria-label="Edit profile" onClick={() => setSection('basics')}>Edit</button></div>
         <p className="profile-saved-bio">{profile?.bio || 'Add a little about yourself.'}</p>
-        <div className="account-group"><button className="account-row" aria-label="Edit profile" onClick={() => setSection('basics')}><span className="account-row-icon"><Icon name="Profile"/></span><span className="account-row-copy"><b>Edit profile</b><small>About you, interests, availability & Dating details</small></span><Icon name="ChevronRight"/></button></div>
-        <ProfileSettingsLinks/>
-        <Link className="account-logout" to="/logout">Sign out of Pebble</Link>
+        <div className="account-group">
+          <button className="account-row" onClick={() => setSection('basics')}><span className="account-row-icon"><Icon name="Profile"/></span><span className="account-row-copy"><b>About you</b><small>Photo, bio, home & personal details</small></span><Icon name="ChevronRight"/></button>
+          <button className="account-row" onClick={() => setSection('interests')}><span className="account-row-icon"><Icon name="Events"/></span><span className="account-row-copy"><b>Interests & availability</b><small>{profile?.interests.length ?? 0} interests · {profile?.availability.length ?? 0} saved time windows</small></span><Icon name="ChevronRight"/></button>
+          {adult && <button className="account-row" onClick={() => setSection('dating')}><span className="account-row-icon"><Icon name="Dating"/></span><span className="account-row-copy"><b>Dating details</b><small>Your identity & intentions</small></span><Icon name="ChevronRight"/></button>}
+        </div>
+        <p className="account-note">{adult ? 'Profile details are shared. Your Friends and Dating search preferences stay separate.' : 'Your profile and Friends search preferences stay separate.'}</p>
+        <div className="account-group">
+          <Link className="account-row" to="/matchmaking?mode=friends&preferences=true"><span className="account-row-icon"><Icon name="Friends"/></span><span className="account-row-copy"><b>Friends preferences</b><small>Who you’d like to meet & search area</small></span><Icon name="ChevronRight"/></Link>
+          {adult && <Link className="account-row" to="/matchmaking?mode=dating&preferences=true"><span className="account-row-icon"><Icon name="Dating"/></span><span className="account-row-copy"><b>Dating preferences</b><small>Who you’d like to date & search area</small></span><Icon name="ChevronRight"/></Link>}
+        </div>
       </div> : <>
-        {(section === 'basics' || section === 'interests' || section === 'dating') && <div className="account-segments" role="group" aria-label="Profile sections">{(['basics', 'interests', 'dating'] as const).map((tab, i) => <button key={tab} aria-pressed={section === tab} onClick={() => setSection(tab)}>{['About You', 'Interests & Availability', 'Dating Profile'][i]}</button>)}</div>}
+        {(section === 'basics' || section === 'interests' || section === 'dating') && <div className="account-segments" role="group" aria-label="Profile sections">{(['basics', 'interests', 'dating'] as const).filter(tab => tab !== 'dating' || adult).map((tab, i) => <button key={tab} aria-pressed={section === tab} onClick={() => setSection(tab)}>{['About You', 'Interests & Availability', 'Dating Profile'][i]}</button>)}</div>}
         <div hidden={section !== 'basics' && section !== 'interests'}>
           <ResourceState loading={facts.loading} error={facts.error} reload={() => void facts.reload()}/>
           {facts.details && <ProfileDraft initial={current.account!} initialFacts={facts.details} factsResource={facts} section={section === 'interests' ? 'interests' : 'basics'} done={closeEditor}/>}
         </div>
-        {section === 'dating' && <section className="account-edit-fields"><DatingPreferencesPanel view="profile" done={closeEditor}/></section>}
+        {adult && section === 'dating' && <section className="account-edit-fields"><DatingPreferencesPanel view="profile" done={closeEditor}/></section>}
       </>}
+      {preview && <Modal className="account-preview-modal" title="Your profile" close={() => setPreview(false)}>
+        <p className="account-note">Preview of your saved profile. Your full schedule and birthdate stay private.</p>
+        <div className="own-profile-photo"><Avatar name={profile?.display_name ?? ''} url={photo.url} large/><div><h2>{profile?.display_name}</h2><p>{profile?.location_city}</p></div></div>
+        {profile?.bio && <section className="own-preview-section"><h3>About you</h3><p>{profile.bio}</p></section>}
+        {!!profile?.interests.length && <section className="own-preview-section"><h3>Interests</h3><div className="own-preview-interests">{profile.interests.map(interest => <span className="chip" key={interest}>{interest}</span>)}</div></section>}
+        {facts.details && <dl className="own-profile-facts">{(['education', 'occupation', 'languages'] as const).filter(key => facts.details!.facts.visibility[key] && facts.details!.facts[key].length).map(key => <div key={key}><dt>{key[0].toUpperCase() + key.slice(1)}</dt><dd>{Array.isArray(facts.details!.facts[key]) ? (facts.details!.facts[key] as string[]).join(', ') : facts.details!.facts[key]}</dd></div>)}</dl>}
+      </Modal>}
     </div>
   );
 }
@@ -413,6 +445,10 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
     const optional = ProfileFactsSchema.safeParse(facts);
     if (!parsed.success || !optional.success) {
       setError(!parsed.success ? parsed.error.issues[0].message : !optional.success ? optional.error.issues[0].message : 'Check your profile.');
+      return;
+    }
+    if (profile.birthdate && !meetsMinimumAge(profile.birthdate)) {
+      setError("You must be at least 13 to use Pebble.");
       return;
     }
     const factsChanged = JSON.stringify(optional.data) !== JSON.stringify(initialFacts.facts);

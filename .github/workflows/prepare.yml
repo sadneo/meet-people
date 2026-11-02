@@ -28,6 +28,7 @@ jobs:
     outputs:
       image: ${{ steps.image.outputs.image }}
     env:
+      DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
       VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       VITE_BUILD_SHA: ${{ inputs.source_sha }}
@@ -44,16 +45,17 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Require frontend environment configuration
-        run: test -n "$VITE_SUPABASE_URL" && test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
-      - name: Build normal frontend
+        run: node scripts/configure-deployment.mjs --validate-frontend
+      - name: Build production web
+        if: inputs.environment == 'production'
         run: VITE_DEV_TOOLS=false pnpm build:web
-      - name: Build developer frontend
+      - name: Build development web and mobile
         if: inputs.environment == 'sandbox'
         run: |
-          mv dist/web dist/web-standard
           pnpm build:web:devtools
-          mv dist/web dist/web-devtools
-          mv dist/web-standard dist/web
+          pnpm build:mobile:devtools
+      - name: Record frontend product, source and backend
+        run: node scripts/configure-deployment.mjs --write-build-info
       - uses: actions/upload-artifact@v4
         with:
           name: frontend-${{ inputs.environment }}-${{ inputs.source_sha }}

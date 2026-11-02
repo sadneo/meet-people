@@ -19,3 +19,11 @@ it('shows the explicitly enabled developer variant with its build identity', () 
   expect(screen.getByRole('complementary', { name: 'Development navigation' })).toBeTruthy()
   expect(screen.getByText('wiring · ab05a54 · Changes may be saved')).toBeTruthy()
 })
+
+it('limits the web navigator to public website pages', () => {
+  vi.stubEnv('VITE_DEV_TOOLS', 'true')
+  render(<MemoryRouter><DevelopmentNavigator product="web" /></MemoryRouter>)
+  expect(screen.getByRole('option', { name: 'Guest events' })).toBeTruthy()
+  expect(screen.queryByRole('option', { name: 'Sign in' })).toBeNull()
+  expect(screen.queryByRole('option', { name: 'Garden' })).toBeNull()
+})

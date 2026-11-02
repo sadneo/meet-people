@@ -1,7 +1,6 @@
 # Local development sign-in
 
-With local Supabase running and `.env.local` configured, click **Sign in as
-development user**. The development-only Vite endpoint creates a confirmed,
+With local Supabase running and `.env.local` configured, click **Sign in as dev**. The development-only Vite endpoint creates a confirmed,
 marked local account with a starter profile on first use, then returns a verified
 session. Later sign-ins reuse the account and preserve its completed profile.
 
@@ -22,3 +21,22 @@ Account identity: `pebble-development@example.test`, UUID
 `pebble_development=local-development-v1`. Cleanup can target this marked local
 account through local Supabase Studio; deleting the credential file alone does
 not delete the account. No other demo users or matchmaking queues are created.
+
+## Windows and troubleshooting
+
+Windows credential reads validate NTFS ownership and access rules: only the current
+user, SYSTEM and Administrators may have access, and reparse-point files are refused.
+Unix still requires the current owner and mode 0600. No credential permissions are
+silently relaxed. The local endpoint keeps its same-origin, loopback and development-only guards.
+
+If provisioning is unavailable, start Docker Desktop and check that the existing
+local Supabase containers are running. Restart `pnpm dev` after changing local
+configuration. Do not reset the database or delete the credential file as a login fix.
+The Windows reader previously rejected valid files because it relied on Unix
+`getuid()` and mode bits; this has been corrected. First-time provisioning now
+saves all four required onboarding chapters sequentially before verifying readiness.
+A failed chapter stops the operation; a completed account is not overwritten.
+
+On October 31, 2026, the existing local account passed the real browser button,
+returned HTTP 200 and remained signed in after reload. This is a local result,
+not evidence about hosted sign-in or deployment readiness.

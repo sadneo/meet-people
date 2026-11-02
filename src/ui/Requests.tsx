@@ -1,3 +1,4 @@
+import { canShowDating } from './age-visibility'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { connections } from '../features/connections/client'
@@ -53,7 +54,7 @@ export function Requests() {
     <ResourceState loading={people.loading} error={people.error} reload={people.reload} />
     {uncertain && !action.busy && <div className="requests-reconcile"><p role="status">The response could not be confirmed. Reload requests before trying again.</p><ActionButton secondary onClick={() => void reconcile()}>Reload requests</ActionButton></div>}
     {people.value && people.value.incoming.length === 0 && <p className="muted">No pending requests.</p>}
-    {people.value && people.value.incoming.length > 0 && sections.filter(section => section.mode !== 'earlier' || section.people.length > 0).map(section => <details className={`requests-group ${section.mode}`} key={section.mode} open>
+    {people.value && people.value.incoming.length > 0 && sections.filter(section => section.mode !== 'dating' || canShowDating(current.account?.profile?.birthdate)).filter(section => section.mode !== 'earlier' || section.people.length > 0).map(section => <details className={`requests-group ${section.mode}`} key={section.mode} open>
       <summary><Icon name={section.icon} /><span>{section.title}</span><span className="request-count">{section.people.length}</span><span className="requests-chevron" aria-hidden="true">⌄</span></summary>
       {section.people.length === 0 && <p className="muted requests-group-empty">No pending {section.title.toLowerCase()} {section.mode === 'dating' ? 'likes' : 'requests'}.</p>}
       {section.mode === 'earlier' && <p className="muted requests-group-empty">The original mode wasn’t recorded for these older requests.</p>}
