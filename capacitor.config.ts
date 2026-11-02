@@ -31,6 +31,8 @@ const config: CapacitorConfig = {
   plugins: {
     // Capacitor 8 injects --safe-area-inset-* variables, which design-system/tokens.css already reads.
     SystemBars: { insetsHandling: 'css' },
+    CapacitorHttp: { enabled: true },
+
   },
 }
 
