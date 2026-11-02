@@ -64,7 +64,7 @@ test('Profile navigation leaves a deep-linked editor and follows browser history
 })
 
 test('web landing matches the supplied preview and links to mobile sign-in and Google Play',async({page})=>{
- await page.route('**/src/mobile/main.tsx',route=>route.fulfill({contentType:'application/javascript',body:'import "/src/main.tsx"'}))
+ await page.route('**/src/mobile/main.tsx*',route=>route.fulfill({contentType:'application/javascript',body:'import "/src/main.tsx"'}))
  await wiringFixture(page,{guest:true});await page.goto('/')
  const modes=page.getByRole('group',{name:'Preview a matching mode'})
  await modes.getByRole('button',{name:'Dating'}).click()
@@ -111,7 +111,7 @@ for(const width of [390,1280])test(`prototype profile overview, preview, setting
 })
 
 test('Events accepts new responses without counts and Reset restores All without a stuck loader',async({page})=>{
- await page.route('**/src/mobile/main.tsx',route=>route.fulfill({contentType:'application/javascript',body:'import "/src/main.tsx"'}))
+ await page.route('**/src/mobile/main.tsx*',route=>route.fulfill({contentType:'application/javascript',body:'import "/src/main.tsx"'}))
  await wiringFixture(page,{guest:true})
  const event={id:eventId,title:'A real API-shaped event',description:null,category:'Music',starts_at:'2026-11-03T17:00:00Z',ends_at:null,location_name:'Campus',address:null,city:null,image_url:null,source:'Campus',source_url:null,status:'active',distance_miles:null}
  await page.route('**/api/events?*',route=>route.fulfill({json:{events:new URL(route.request().url()).searchParams.has('category')?[]:[event],categories:['Music','Food'],page:1,hasMore:false}}))

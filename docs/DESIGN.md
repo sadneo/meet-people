@@ -24,6 +24,25 @@ profiles and ephemeral, single-selection Garden preview are examples, not live
 accounts or saved account Garden state. Do not import the export's unrelated
 application/loading styles or embedded image data. Mobile entry remains unchanged.
 
+## Loading and media readiness
+
+The mobile cold-start/session/initial-account gates use the rolling-Pebble design
+from `Pebble-Loading-Page.html`, implemented in `src/ui/loading/`. The same static
+markup/CSS is included in mobile HTML before JavaScript; public web HTML remains
+unchanged. This is a real pending state, never a timed splash or a navigation
+destination. Ready content replaces it immediately. After a prolonged wait, an
+explicit reload link appears; no automatic authentication or mutation retries are
+added. Cold startup omits the demo's prototype-host Back button.
+
+Normal navigation retains the app shell. Unresolved Events, Discover, Messages,
+requests/activity and profile/settings regions use matching skeleton layouts.
+Cached content stays visible during background reads; skeletons never grant write
+permissions or replace conflict/uncertain-save guidance. Image placeholders are
+local to the image and end on load/decode or an error fallback. Garden keeps its
+sky/island skeleton until required artwork has produced its first successful
+canvas frame, with an explicit artwork-only retry on failure. Skeleton shapes are
+decorative with one status per region. Reduced motion stops decorative animation.
+
 ## Visual direction
 
 Keep the alternate frontend’s quiet, warm composition and floating pixel garden.

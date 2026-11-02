@@ -1,0 +1,26 @@
+.page-skeleton { width: 100%; min-width: 0; pointer-events: none; }
+.skeleton-shape { display: block; background: #e9e2d8; border-radius: 8px; animation: skeleton-breathe 1.8s ease-in-out infinite; }
+.skeleton-line { height: 14px; width: 82%; margin: 12px 0; }
+.skeleton-line.short { width: 48%; }
+.skeleton-card { min-width: 0; overflow: hidden; border-radius: 16px; background: #f2ece3; }
+.skeleton-cover { width: 100%; aspect-ratio: 1.7; border-radius: 16px; }
+.skeleton-copy { padding: 14px; }
+.skeleton-row { display: flex; gap: 14px; align-items: center; min-height: 90px; padding: 16px; border-bottom: 1px solid var(--line,#e7dfd5); }
+.skeleton-row > div { min-width: 0; flex: 1; }
+.skeleton-avatar { height: 48px; width: 48px; border-radius: 50%; flex: none; }
+.skeleton-feature { max-width: 760px; margin: 0 auto 24px; }
+.skeleton-feature.discover { max-width: 610px; }
+.skeleton-feature.discover .skeleton-cover { aspect-ratio: auto; height: clamp(370px,60dvh,600px); border-radius: 24px; }
+.skeleton-feature.event .skeleton-cover { aspect-ratio: auto; height: 240px; }
+.skeleton-chat { min-height: 300px; padding: 12px; }
+.skeleton-bubble { width: 65%; height: 56px; margin: 22px 0; border-radius: 18px; }
+.skeleton-bubble.own { margin-left: auto; width: 55%; }
+.skeleton-garden { position: absolute; inset: 0; z-index: 1; background: #e8efed; }
+.skeleton-garden-scene { display: grid; place-items: center; height: 100dvh; }
+.skeleton-island { width: min(65vw,620px); height: min(32vw,300px); background: #cbd9cd; clip-path: polygon(50% 0,100% 42%,100% 58%,50% 100%,0 58%,0 42%); }
+img.media-pending { color: transparent; background-color: #e9e2d8; }
+.photo-pending { display: inline-block; flex: none; width: 48px; height: 48px; border-radius: 50%; background: #e9e2d8; animation: skeleton-breathe 1.8s ease-in-out infinite; }
+.photo-pending.large { width: 75px; height: 75px; }
+.initial-avatar.photo-pending { background: #e9e2d8; }
+@keyframes skeleton-breathe { 0%,100% { opacity: .65; } 50% { opacity: 1; } }
+@media(prefers-reduced-motion:reduce) { .skeleton-shape, .photo-pending { animation: none; } }

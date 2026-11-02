@@ -5,6 +5,7 @@ import { connections } from "../features/connections/client";
 import { matchmakingClient } from "../features/matchmaking/client";
 import { useAction } from "./hooks";
 import { useCachedLoad } from '../data/useCachedLoad';
+import { PageSkeleton } from './loading/PageSkeleton';
 import {
   ActionButton,
   PersonPhoto,
@@ -59,6 +60,7 @@ export function Activity() {
           loading={people.loading}
           error={people.error}
           reload={people.reload}
+          skeleton={<PageSkeleton view="list" label="Loading connections"/>}
         />
         {people.value && !people.value.incoming.length && (
           <p>No pending requests.</p>
@@ -116,7 +118,7 @@ export function Activity() {
       </section>
       <section className="card section" hidden={matches && tab !== 'Connections'}>
         <h3>Your connections</h3>
-        <ResourceState loading={people.loading} error={people.error} reload={people.reload}/>
+        <ResourceState loading={people.loading} error={people.error} reload={people.reload} skeleton={<PageSkeleton view="list" label="Loading connections"/>}/>
         {people.value && !people.value.connected.length && (
           <p>Find your first connection in Discover.</p>
         )}
@@ -143,6 +145,7 @@ export function Activity() {
           loading={updates.loading}
           error={updates.error}
           reload={updates.reload}
+          skeleton={<PageSkeleton view="list" label="Loading activity"/>}
         />
         {updates.value && !updates.value.notifications.length && (
           <Empty title="No suggested groups yet." />

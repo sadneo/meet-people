@@ -36,6 +36,13 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 Private routes wait for session hydration and persisted account readiness. A
 signed-in account with missing chapters resumes onboarding; account read failures
 block entry with retry and sign-out. Unknown routes pass through the same gate.
+Mobile's unresolved initial session/account uses the shared branded startup
+screen, also supplied as a mobile-only pre-JavaScript HTML fallback. Navigation
+inside the shell uses region-specific skeletons only when data is unavailable;
+background reads retain cached content and existing write-permission gates. Media
+placeholders resolve per image, not per page. Garden waits for its first drawn
+frame. Failures surface recovery rather than an indefinite skeleton; no minimum
+splash duration or automatic write/authentication retries are introduced.
 Profile photo selection/removal is staged with the profile draft: Cancel discards
 it and Save changes performs the revisioned photo write after profile/detail
 saves. These resources are not an atomic transaction; partial or uncertain saves

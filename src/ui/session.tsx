@@ -8,6 +8,7 @@ import { useUnifiedAccount } from "../auth/useUnifiedAccount";
 import { safeReturnTo } from "../auth/returnTo";
 import { supabase } from "../supabase";
 import { ActionButton, Brand, ResourceState } from "./common";
+import { BootLoading } from './loading/BootLoading';
 
 export function Private({ session }: { session: Session | null }) {
   const location = useLocation();
@@ -33,6 +34,7 @@ function AccountLoader({
 }) {
   const account = useUnifiedAccount(session.access_token),
     location = useLocation();
+  if (!account.account && account.loading && !account.error) return <BootLoading />;
   if (!account.account)
     return (
       <main className="auth-screen">

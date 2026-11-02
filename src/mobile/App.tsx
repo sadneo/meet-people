@@ -32,6 +32,7 @@ import { Requests } from "../ui/Requests";
 import { Activity } from "../ui/Activity";
 import { Garden } from "../features/garden/Garden";
 import { retainGardenFor } from '../features/garden/state';
+import { BootLoading } from '../ui/loading/BootLoading';
 import { Legal } from "../ui/Public";
 import { useAction } from "../ui/hooks";
 import {
@@ -40,7 +41,6 @@ import {
   Empty,
   ErrorMessage,
   Icon,
-  Loading,
 } from "../ui/common";
 
 const DevelopmentNavigator = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS === 'true'
@@ -153,10 +153,7 @@ export default function App() {
   useEffect(() => { if (ready) retainGardenFor(session?.user.id ?? null) }, [ready, session?.user.id]);
   if (!ready)
     return (
-      <main className="auth-screen">
-        <Brand />
-        <Loading />
-      </main>
+      <BootLoading />
     );
   return (
     <SessionQueryProvider scope={session?.user.id ?? "public"}>

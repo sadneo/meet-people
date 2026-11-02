@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
   // The standard isolated suite enters mobile; this suite explicitly tests public web.
-  await page.route('**/src/mobile/main.tsx', route => route.fulfill({ contentType: 'application/javascript', body: 'import "/src/main.tsx"' }))
+  await page.route('**/src/mobile/main.tsx*', route => route.fulfill({ contentType: 'application/javascript', body: 'import "/src/main.tsx"' }))
 })
 
 for (const width of [1440, 1024, 768, 481, 480, 479, 390, 320]) {
