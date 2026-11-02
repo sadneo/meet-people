@@ -45,9 +45,10 @@ const eventsClient = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null
 app.use('/api/events', eventsLimiter, createEventsRouter(eventsClient))
-app.use('/api/auth', createAuthRouter(eventsClient))
+app.use('/api/auth', createAuthRouter(eventsClient, env.QA_AUTH_EMAIL_REQUESTS_PER_WINDOW))
 app.use('/api/account', createAccountRouter(eventsClient))
 app.use('/api/push', createPushRouter(eventsClient))
+
 const ownerTransport = env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY
   ? createUserContextTransport({ url: env.SUPABASE_URL, publicKey: env.SUPABASE_PUBLISHABLE_KEY, verificationKey: env.SUPABASE_SERVICE_ROLE_KEY })
   : null

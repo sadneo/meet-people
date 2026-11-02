@@ -5,19 +5,26 @@ import { accountFixture, requiredPreferences } from './complete-profile-fixture'
 
 const account = accountFixture({ username: 'interest-fixture', display_name: 'Fixture', bio: null, avatar_url: null, ...requiredPreferences });
 it.each([
+  ['Coffee'],
+  ['Ceramics'],
+  ['Custom one', 'Custom two'],
+  ['Coffee', 'Custom one', 'Custom two'],
   ['Coffee', 'Art', 'Music'],
   ['Coffee', 'Art', 'Music', 'Outdoors', 'Gaming'],
   ['Coffee', 'Art', 'Music', 'Custom one', 'Custom two'],
-])('accepts provided choices with up to two custom interests: %j', (...interests) => {
+])('accepts one or more premade or custom interests within the caps: %j', (...interests) => {
   expect(interestSelectionProblem(interests)).toBe('');
   expect(SaveAccountSchema.safeParse({ ...account, profile: { ...account.profile, interests } }).success).toBe(true);
+  expect(completedAccountChapters({ ...account, profile: { ...account.profile!, interests } })).toEqual([0, 1, 2, 3]);
 });
 it.each([
+  [],
+  ['   '],
+  ['x'.repeat(121)],
   ['Coffee', 'Art', 'Music', 'Food', 'Gaming', 'Movies'],
   ['Coffee', 'Art', 'Custom one', 'Custom two', 'Custom three'],
-  ['Coffee', 'Custom one', 'Custom two'],
   ['Coffee', 'Coffee', 'Art'],
-])('rejects excess interests and custom substitutions for the provided minimum: %j', (...interests) => {
+])('rejects missing, invalid, duplicate or excess interests: %j', (...interests) => {
   expect(interestSelectionProblem(interests)).not.toBe('');
   const value = { ...account, profile: { ...account.profile, interests } };
   expect(SaveAccountSchema.safeParse(value).success).toBe(false);

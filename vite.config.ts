@@ -10,7 +10,7 @@ export default defineConfig({
   build: {
     outDir: 'dist/web',
   },
-  server: {
+  server: { watch: { ignored: ['**/tmp/**', '**/Pebble-Garden-Asset-Work/**', '**/Pebble-Starter/**'] },
     host: '127.0.0.1',
     port: Number(process.env.VITE_PORT ?? 3000),
     strictPort: true,

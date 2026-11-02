@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { SkyGarden, type GardenState } from "./garden.js";
@@ -30,3 +31,7 @@ export function Garden() {
     </>
   );
 }
+=======
+// Native React Garden port; the surrounding shell and services remain the team's latest UI.
+export { Garden } from '../features/garden/Garden'
+>>>>>>> dev

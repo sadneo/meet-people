@@ -1,0 +1,53 @@
+/* The prototype's social layouts, with the live service controls retained. */
+.plans-page { max-width:none;margin:0; }
+.plans-page>.eyebrow { margin:22px 0 8px;font-size:10px; }
+.plans-page>.pagehead h2 { max-width:700px;font-size:30px;line-height:1.2; }
+.plans-page>.pagehead>.btn { padding:10px 16px;font-size:13px; }
+.plans-page .tabs { display:flex;flex-wrap:wrap;gap:8px;margin:28px 0 25px; }
+.plans-page .tabs button { min-height:44px;padding:10px 20px;border:1px solid var(--line);border-radius:40px;background:#fffdf9; }
+.plans-page .tabs button.active { background:#3d3833;color:#fffdf9; }
+.plans-page .plans-empty { padding:30px;text-align:center; }
+.plans-empty>.ui-icon { width:32px;height:32px;color:var(--muted);margin-bottom:16px; }
+.event-group-heading { display:flex;align-items:center;gap:10px; }
+.group-search-spinner { display:inline-block;width:16px;height:16px;flex:0 0 16px;border:2px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:group-search-spin .8s linear infinite; }
+@keyframes group-search-spin { to { transform:rotate(1turn); } }
+.active-friends-flow>.card,.group-proposal.card { border-radius:20px;background:#fffdf9; }
+.active-friends-flow>label { display:block;font-size:14px;margin:24px 0; }
+.group-search-summary { border-top:1px solid var(--line);padding-top:20px;margin-top:8px; }
+.group-search-summary h3 { font-size:16px;margin:0 0 6px; }
+.group-search-summary p { font-size:13px;color:var(--muted); }
+.group-search-summary>.btn { width:100%;min-height:44px; }
+.group-schedule { border-top:1px solid var(--line);padding-top:16px; }
+.group-schedule>summary { min-height:44px;cursor:pointer;font-weight:600;font-size:13px; }
+.active-friends-flow input[type=range] { display:block;width:100%;accent-color:#9d503d;margin:20px 0; }
+.active-friends-flow>.row { flex-wrap:wrap;gap:10px;margin:20px 0; }
+.group-roster { list-style:none;padding:0; }
+.group-roster>li { padding:14px 0;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap; }
+.group-controls { border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0; }
+.group-controls>summary { cursor:pointer;font-weight:600;min-height:30px; }
+.group-controls>.btn { margin:5px 8px 5px 0; }
+.live-chat .composer textarea { font-size:16px;resize:none;min-height:44px;max-height:140px; }
+.chat-identity-button { flex:1;min-width:0;text-align:left;padding:8px 0; }
+.chat-identity-button h3 { margin:0 0 5px;font-size:14px; }
+.chat-identity-button .connection-kind { display:block;font-size:10px; }
+.conversation-members .item { gap:14px; }
+.conversation-members .item>.safety-actions { margin-left:auto; }
+.messaging-page .live-message,.messaging-page .live-message.mine { padding:0;background:transparent;border-radius:0; }
+.messaging-page .live-message>p { padding:12px 16px;background:#efeae3;border-radius:17px 17px 17px 4px;font-size:14px;line-height:1.5; }
+.messaging-page .live-message.mine>p { background:#e9d7c9;border-radius:17px 17px 4px 17px; }
+.messaging-page .live-message>time { padding:0 3px;font-size:9px; }
+.messaging-page .live-message.mine>time { text-align:right; }
+.messaging-page .live-message>.sender-name { display:block;margin:0 3px 6px;color:var(--muted); }
+.messaging-page .chat-options>summary { background:transparent;border:0; }
+.messaging-page .live-composer { padding:12px;flex:none; }
+.messaging-page .live-composer textarea { min-height:44px;border:0;border-radius:24px;padding:12px 18px;background:var(--cream);font-size:16px;line-height:20px; }
+.live-chat>p.sr-only { margin:0; }
+.event-detail .event-detail-header h1 { font-family:inherit;font-size:24px;font-weight:700;letter-spacing:-.8px; }
+@media(max-width:800px) {
+ .messaging-page.chat-selected .live-messages { height:calc(100dvh - 160px - env(safe-area-inset-bottom)); }
+ body:has(.messaging-page.chat-selected) .development-navigator { bottom:calc(90px + env(safe-area-inset-bottom)); }
+ .messaging-page .chat-header { gap:8px; }
+ .messaging-page .chat-back { width:28px;flex:none; }
+}
+@media(max-width:650px) { .plans-page>.pagehead { align-items:flex-start;gap:12px; } .plans-page>.pagehead>.btn { min-width:44px; } }
+@media(prefers-reduced-motion:reduce) { .group-search-spinner { animation:none; } }

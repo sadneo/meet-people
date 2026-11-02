@@ -20,6 +20,19 @@ for (const path of ['/', '/events', '/login', '/auth/callback', '/reset-password
     const script = await fetch(new URL(asset, origin), { signal: AbortSignal.timeout(60000) })
     assert.equal(script.status, 200)
     assert.match(script.headers.get('cache-control') ?? '', /immutable/)
+    if (process.env.HOSTED_PRODUCT) {
+      assert.ok(['web', 'mobile'].includes(process.env.HOSTED_PRODUCT), 'Choose web or mobile')
+      const infoResponse = await fetch(new URL('/build-info.json', origin), { signal: AbortSignal.timeout(60000) })
+      assert.equal(infoResponse.status, 200, 'Release build identity missing')
+      const info = await infoResponse.json()
+      assert.equal(info.product, process.env.HOSTED_PRODUCT, 'Wrong product deployed to this domain')
+      assert.equal(info.branch, process.env.VITE_BUILD_BRANCH, 'Wrong source branch')
+      assert.equal(info.sha, process.env.RELEASE_SHA, 'Wrong release commit')
+      assert.equal(info.supabaseUrl, process.env.VITE_SUPABASE_URL, 'Wrong backend configuration')
+      const javascript = await script.text()
+      assert.ok(javascript.includes(info.supabaseUrl), 'JavaScript must use the declared Supabase project')
+      assert.equal(javascript.includes('Continue with email'), info.product === 'mobile', 'Wrong frontend entry point')
+    }
   }
 }
 const health = await fetch(new URL('/api/health', origin), { signal: AbortSignal.timeout(60000) })

@@ -8,7 +8,7 @@ test("public entry and private routes use the new frontend with real sign-in gat
   await wiringFixture(page, { guest: true });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /Meet new friends/ }),
+     page.getByRole("button", { name: "Continue with email", exact: true }),
   ).toBeVisible();
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/login\?returnTo=/);
@@ -127,17 +127,11 @@ test("Dating starts with confirmed consent and uses the live Dating request endp
   ).toBe(true);
 });
 
-test("public events come from the API and private group controls require sign-in", async ({
+test("mobile event details require sign-in", async ({
   page,
 }) => {
   await wiringFixture(page, { guest: true });
-  await page.goto("/explore");
-  await expect(
-    page.getByRole("heading", { name: "Campus coffee walk" }),
-  ).toBeVisible();
-  await page.getByRole("link", { name: "Campus coffee walk: see event and people", exact: true }).click();
-  await expect(page.getByText("Meet at the library.")).toBeVisible();
-  await page.getByRole("link", { name: "Sign in to find a group" }).click();
+  await page.goto(`/events/${eventId}`);
   await expect(page).toHaveURL(/\/login\?returnTo=/);
 });
 
@@ -316,12 +310,12 @@ test("garden renders the new canvas, supports local building and cleans up on na
   page.on("pageerror", (error) => failures.push(error.message));
   await wiringFixture(page);
   await page.goto("/");
-  await expect(page.locator("#sky-canvas")).toBeVisible();
+  await expect(page.locator(".garden-canvas")).toBeVisible();
   await page.getByRole("button", { name: /Build with/ }).click();
   await expect(
-    page.getByRole("dialog", { name: "Garden inventory" }),
+    page.getByRole("dialog", { name: "Your garden" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Close panel" }).click();
+  await page.getByRole("button", { name: "Close Garden inventory" }).click();
   await page.getByRole("link", { name: "Discover", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Discover", exact: true }),
@@ -379,7 +373,7 @@ test("email-first sign-in installs the real SDK session before entering the app"
     .getByLabel("Password", { exact: true })
     .fill("Synthetic-fixture-password-1!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.locator("#sky-canvas")).toBeVisible();
+  await expect(page.locator(".garden-canvas")).toBeVisible();
   expect(
     fixture.calls.some(
       (call) => call.path === "/api/auth/email" && call.method === "POST",
@@ -429,7 +423,10 @@ test("profile photo uploads binary data through revisioned private storage", asy
         "base64",
       ),
     });
-  await page.getByRole("button", { name: "Upload photo", exact: true }).click();
+  expect(fixture.calls.filter(call => call.path.endsWith('/profile-photo') && call.method === 'PUT')).toHaveLength(0);
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Remove photo", exact: true }),
   ).toBeEnabled();
@@ -470,16 +467,20 @@ test("garden purchases use the new renderer without calling an invented economy 
   page.on("pageerror", (error) => errors.push(error.message));
   const fixture = await wiringFixture(page);
   await page.goto("/");
+  await page.getByRole("complementary", {name:"Development navigation"}).locator("summary").click();
+  await page.getByRole("button", {name:"Add 1,000 test Pebbles"}).click();
+  await page.getByRole("complementary", {name:"Development navigation"}).locator("summary").click();
   await page.getByRole("button", { name: /Build with/ }).click();
+  await page.locator('summary[aria-label="Decorations"]').click();
   await page
-    .locator(".builditem")
+    .locator(".garden-shop-item")
     .filter({ hasText: "Garden Bench" })
     .getByRole("button", { name: "Build", exact: true })
     .click();
-  await expect(page.locator(".sky-balance b")).toHaveText("225");
+  await expect(page.locator(".garden-balance strong")).toHaveText("985");
   await page.getByRole('link', { name: 'Discover', exact: true }).click();
   await page.getByRole('link', { name: 'Garden', exact: true }).click();
-  await expect(page.locator('.sky-balance b')).toHaveText('225');
+  await expect(page.locator('.garden-balance strong')).toHaveText('985');
 
   expect(
     fixture.calls.some((call) =>

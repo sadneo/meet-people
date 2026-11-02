@@ -12,6 +12,7 @@ app.use(express.json())
 app.use('/api/auth', createAuthRouter(client))
 app.use('/limited', createAuthRouter(client))
 app.use('/unconfigured', createAuthRouter(null))
+app.use('/qa-bounded', createAuthRouter(client, 20))
 const server = app.listen(0, '127.0.0.1')
 let url: string
 beforeAll(async () => {
@@ -54,4 +55,12 @@ it('limits automated enumeration and cannot be bypassed with forwarded addresses
   expect(response.status).toBe(429)
   expect(Number(response.headers.get('retry-after'))).toBeGreaterThan(0)
   expect(databaseFetch.mock.calls.length).toBe(count)
+})
+
+it('supports an explicit finite QA limit without removing throttling', async () => {
+  for (let i = 0; i < 20; i++) expect((await post('/qa-bounded/email')).status).toBe(200)
+  const response = await post('/qa-bounded/email')
+  expect(response.status).toBe(429)
+  expect(Number(response.headers.get('retry-after'))).toBeGreaterThan(0)
+  for (const invalid of [0, -1, 301, 1.5, Infinity]) expect(() => createAuthRouter(client, invalid)).toThrow()
 })

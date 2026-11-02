@@ -39,9 +39,12 @@ export function interestCounts(selected: string[]) {
 }
 export function interestSelectionProblem(selected: string[], requireMinimum = true) {
   if (selected.length > interestLimit) return 'Choose up to 5 interests.';
-  const counts = interestCounts(selected);
+  const labels = selected.map(label => label.trim());
+  if (labels.some(label => !label || label.length > interestLabelLimit)) return 'Use an interest between 1 and 120 characters.';
+  if (new Set(labels).size !== labels.length) return 'Choose unique interests.';
+  const counts = interestCounts(labels);
   if (counts.custom > customInterestLimit) return 'Choose up to 2 custom interests.';
-  if (requireMinimum && counts.provided < 3) return 'Choose at least 3 interests from the provided list.';
+  if (requireMinimum && labels.length < 1) return 'Choose at least one interest.';
   return '';
 }
 export function interestAdditionProblem(raw: string, selected: string[]) {

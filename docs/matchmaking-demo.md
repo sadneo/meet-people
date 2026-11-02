@@ -31,11 +31,12 @@ all genders. Nonbinary/custom identities and unclear sexuality labels require
 clarification in Dating Profile; pronouns never determine gender. Apply
 `20261029000300_dating_automatic_targets.sql` to existing canonical stacks.
 
-Profiles allow at most five interests, including at least three from the provided
-catalogue and at most two custom interests. The picker and canonical save/readiness
-checks share this policy. `20261029000400_profile_interest_limits.sql` installs the
-database checks without deleting or replacing old labels; an older nonconforming
-profile must update its selection to complete onboarding or save again.
+Profiles require at least one interest, either from the catalogue or custom, with
+at most five total and two custom interests. The picker and canonical save/readiness
+checks share this policy. Apply `20261101000000_one_interest_minimum.sql` after
+`20261029000400_profile_interest_limits.sql` to relax the database minimum without
+deleting or replacing existing labels. Scoring weights are unchanged; shared-interest
+badges use the same normalization and curated aliases as matchmaking.
 
 ## Local prerequisites
 

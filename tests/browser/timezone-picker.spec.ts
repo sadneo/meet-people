@@ -20,14 +20,14 @@ test('mobile timezone selection saves immediately and hides scrollbars without d
   await expect(select).toBeEnabled();
   await expect(select).toHaveValue('');
   expect(writes).toBe(0);
-  await expect(page.getByRole('button', { name: 'Save timezone', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Save timezone & sharing', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Reload timezone', exact: true })).toHaveCount(0);
   await select.selectOption('America/New_York');
   await expect.poll(() => writes).toBe(1);
   await expect(select).toBeEnabled();
   await expect(select).toHaveValue('America/New_York');
   expect(writes).toBe(1);
-  await page.getByRole('checkbox', { name: 'Show shared availability', exact: true }).check();
+  await page.getByRole('checkbox', { name: 'Allow shared-time explanations', exact: true }).check();
   await expect.poll(() => writes).toBe(2);
   await expect(select).toBeEnabled();
   expect(state.showAvailability).toBe(true);

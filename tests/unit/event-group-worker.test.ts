@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { createEventGroupWorkerTransport, runEventGroupCycle, selectGroupMembers, type EventGroupWorkerTransport } from '../../api/event-group-worker'
+import { createEventGroupWorkerTransport, runEventGroupCycle, selectGroupMembers, type EventGroupWorkerTransport, type WorkerDiagnostic } from '../../api/event-group-worker'
 
 const anchor = 'a0000000-0000-4000-8000-000000000001'
 const other = 'a0000000-0000-4000-8000-000000000002'
@@ -7,12 +7,66 @@ const job = { jobId: anchor, leaseToken: other, eventId: other, anchorId: anchor
 const settings = { enabled: true, scoringEnabled: true, workerId: 'test-worker', maxJobs: 2, timeoutMs: 20, leaseSeconds: 120 }
 const transport = (): EventGroupWorkerTransport => ({ claim: vi.fn().mockResolvedValueOnce(job).mockResolvedValue(null), rank: vi.fn().mockResolvedValue([{ profile_id: other }]), complete: vi.fn().mockResolvedValue({ state: 'completed' }), fail: vi.fn().mockResolvedValue({ state: 'failed' }), reconcile: vi.fn().mockResolvedValue({ state: 'completed' }) })
 afterEach(() => { vi.useRealTimers() })
+it('emits only fixed claim timeout codes, never raw errors or lease identities', async () => {
+  const rpc = transport(), events: WorkerDiagnostic[] = []
+  vi.mocked(rpc.claim).mockReset().mockReturnValue(new Promise(() => {}))
+  expect(await runEventGroupCycle(settings, async () => rpc, value => events.push(value))).toEqual({ state: 'uncertain', processed: 0 })
+  expect(events).toEqual([{ stage: 'claim', reason: 'timeout' }])
+  expect(rpc.claim).toHaveBeenCalledTimes(1)
+  expect(rpc.rank).not.toHaveBeenCalled()
+})
+it('distinguishes malformed claim responses from transport failures without copying private details', async () => {
+  for (const malformed of [true, false]) {
+    const rpc = transport(), events: WorkerDiagnostic[] = []
+    if (malformed) vi.mocked(rpc.claim).mockReset().mockResolvedValue({ secret: 'PRIVATE_SENTINEL', leaseToken: 'PRIVATE_TOKEN' })
+    else vi.mocked(rpc.claim).mockReset().mockRejectedValue(new Error('PRIVATE_SENTINEL PRIVATE_TOKEN'))
+    await runEventGroupCycle(settings, async () => rpc, value => events.push(value))
+    expect(events).toEqual([{ stage: 'claim', reason: malformed ? 'invalid_response' : 'request_failed' }])
+    expect(JSON.stringify(events)).not.toContain('PRIVATE')
+    expect(rpc.rank).not.toHaveBeenCalled()
+  }
+})
+it('reports rank and failure-recording stages independently without another ranking attempt', async () => {
+  const rpc = transport(), events: WorkerDiagnostic[] = []
+  vi.mocked(rpc.rank).mockRejectedValue(new Error('PRIVATE_TOKEN'))
+  vi.mocked(rpc.fail).mockResolvedValue({ state: 'PRIVATE_SENTINEL' })
+  expect(await runEventGroupCycle(settings, async () => rpc, value => events.push(value))).toEqual({ state: 'uncertain', processed: 0 })
+  expect(events).toEqual([{ stage: 'rank', reason: 'request_failed' }, { stage: 'fail', reason: 'invalid_response' }])
+  expect(rpc.rank).toHaveBeenCalledTimes(1)
+  expect(rpc.complete).not.toHaveBeenCalled()
+})
+it('reports completion and reconciliation separately, retaining no-replay semantics', async () => {
+  const rpc = transport(), events: WorkerDiagnostic[] = []
+  vi.mocked(rpc.complete).mockRejectedValue(new Error('PRIVATE_TOKEN'))
+  vi.mocked(rpc.reconcile).mockRejectedValue(new Error('PRIVATE_SENTINEL'))
+  expect(await runEventGroupCycle(settings, async () => rpc, value => events.push(value))).toEqual({ state: 'uncertain', processed: 0 })
+  expect(events).toEqual([{ stage: 'complete', reason: 'request_failed' }, { stage: 'reconcile', reason: 'request_failed' }])
+  expect(rpc.complete).toHaveBeenCalledTimes(1)
+  expect(rpc.reconcile).toHaveBeenCalledTimes(1)
+  expect(rpc.fail).not.toHaveBeenCalled()
+})
+it('a throwing diagnostic observer cannot interrupt completion reconciliation or trigger retries', async () => {
+  const rpc = transport()
+  vi.mocked(rpc.complete).mockRejectedValue(new Error('PRIVATE_TOKEN'))
+  expect(await runEventGroupCycle(settings, async () => rpc, () => { throw new Error('log sink failed') })).toEqual({ state: 'uncertain', processed: 1 })
+  expect(rpc.reconcile).toHaveBeenCalledTimes(1)
+  expect(rpc.complete).toHaveBeenCalledTimes(1)
+  expect(rpc.rank).toHaveBeenCalledTimes(1)
+})
+it('reports factory and configuration failures while preserving the original rejection', async () => {
+  const events: WorkerDiagnostic[] = [], failure = new Error('PRIVATE_SENTINEL'), factory = vi.fn().mockRejectedValue(failure)
+  await expect(runEventGroupCycle(settings, factory, value => events.push(value))).rejects.toBe(failure)
+  await expect(runEventGroupCycle({ ...settings, maxJobs: 99 }, factory, value => events.push(value))).rejects.toThrow()
+  expect(events).toEqual([{ stage: 'transport', reason: 'request_failed' }, { stage: 'configuration', reason: 'invalid_response' }])
+  expect(factory).toHaveBeenCalledTimes(1)
+})
 it('worker gates run before constructing transport or invoking any SDK/network operations', async () => {
-  const factory = vi.fn()
+  const factory = vi.fn(), observer = vi.fn()
   for (const [enabled, scoringEnabled] of [[false, false], [true, false], [false, true]]) {
-    expect(await runEventGroupCycle({ ...settings, enabled, scoringEnabled }, factory)).toMatchObject({ state: 'paused', processed: 0 })
+    expect(await runEventGroupCycle({ ...settings, enabled, scoringEnabled }, factory, observer)).toMatchObject({ state: 'paused', processed: 0 })
   }
   expect(factory).not.toHaveBeenCalled()
+  expect(observer).not.toHaveBeenCalled()
 })
 it('preserves rank order, includes the leased anchor, deduplicates and caps proposals at four', () => {
   const third = 'a0000000-0000-4000-8000-000000000003', fourth = 'a0000000-0000-4000-8000-000000000004', fifth = 'a0000000-0000-4000-8000-000000000005'

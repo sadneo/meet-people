@@ -1,3 +1,5 @@
+import { canShowDating } from './age-visibility'
+import { PageSkeleton } from './loading/PageSkeleton'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { connections } from '../features/connections/client'
@@ -14,6 +16,7 @@ import { matchingClient } from './matching-client'
 import { useDiscoveryDeck } from './useDiscoveryDeck'
 import { useRequestAllowance, type RequestAllowanceControl } from './useRequestAllowance'
 import { useQueryClient } from '@tanstack/react-query'
+import { canonicalInterest, interestSelectionProblem } from '../../shared/interests'
 export function Connect({
   id,
   dating = false,
@@ -114,6 +117,17 @@ function Candidate({
   sharedAvailability?: DiscoveryPerson['sharedAvailability'];
 }) {
   const current = useCurrent();
+  const [selectedInterest, setSelectedInterest] = useState<string | null>(null);
+  const [interestError, setInterestError] = useState('');
+  async function toggleInterest() {
+    if (!selectedInterest || !current.account?.profile || current.busy || !current.available) return;
+    const own = current.account.profile.interests;
+    const next = own.includes(selectedInterest) ? own.filter(item => item !== selectedInterest) : [...own, selectedInterest];
+    const problem = interestSelectionProblem(next);
+    if (problem) { setInterestError(problem); return; }
+    if (await current.save({ ...current.account, profile: { ...current.account.profile, interests: next } })) setSelectedInterest(null);
+    else setInterestError('Your interests could not be confirmed. Reload your saved profile before trying again.');
+  }
   const content = useRef<HTMLDivElement>(null), moving = useRef(false), live = useRef(true), animation = useRef<Animation | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   useEffect(() => {
@@ -145,7 +159,9 @@ function Candidate({
       if (live.current) setTransitioning(false);
     }
   }
-  const shared = interests.filter(interest => current.account?.profile?.interests.includes(interest));
+  const viewerInterests = new Set(current.account?.profile?.interests.map(canonicalInterest) ?? []);
+  const shared = interests.filter(interest => viewerInterests.has(canonicalInterest(interest)));
+  const sharedCount = new Set(shared.map(canonicalInterest)).size;
   const sortedInterests = [...shared, ...interests.filter(interest => !shared.includes(interest))];
   return (
     <article className={`dating-focus discovery-profile ${dating ? 'dating-profile' : 'friends-focus'}`}>
@@ -171,10 +187,10 @@ function Candidate({
       <div className="dating-profile-body">
         {bio && <section><h3>About {name}</h3><p>{bio}</p></section>}
         <section>
-          <div className="dating-section-heading"><h3>Interests</h3>{shared.length > 0 && <span>{shared.length} in common</span>}</div>
-          <div className="dating-interest-list">{sortedInterests.map(interest => <span key={interest} className={`dating-interest ${shared.includes(interest) ? 'in-common' : ''}`}>
+          <div className="dating-section-heading"><h3>Interests</h3>{sharedCount > 0 && <span>{sharedCount} in common</span>}</div>
+          <div className="dating-interest-list">{sortedInterests.map(interest => <button type="button" key={interest} onClick={() => { setSelectedInterest(interest); setInterestError(''); }} className={`dating-interest ${shared.includes(interest) ? 'in-common' : ''}`}>
             {shared.includes(interest) && <Icon name="Check" />}{interest}{shared.includes(interest) && <span className="sr-only"> · shared interest</span>}
-          </span>)}</div>
+          </button>)}</div>
         </section>
         {sharedAvailability && <section className="dating-overlap" aria-label="Shared availability">
           <Icon name="Clock" />
@@ -195,6 +211,7 @@ function Candidate({
         <button type="button" className="photo-action primary" aria-label={dating ? 'Send Dating request' : 'Connect'} title={dating ? 'Send Dating request' : 'Send friend request'} disabled={transitioning || connectDisabled} onClick={() => void decide('connect')}><Icon name={dating ? 'Dating' : 'AddFriend'} /></button>
       </div> : <Connect id={id} dating={dating} />}
     </div>
+    {selectedInterest && <Modal title={selectedInterest} close={() => setSelectedInterest(null)}><p>{shared.includes(selectedInterest) ? `You and ${name} both enjoy ${selectedInterest}.` : `${name} enjoys ${selectedInterest}.`}</p><ErrorMessage>{interestError}</ErrorMessage><div className="row wrap"><ActionButton disabled={current.busy || !current.available} onClick={() => void toggleInterest()}>{shared.includes(selectedInterest) ? 'Remove from my interests' : 'Add to my interests'}</ActionButton><Link className="btn light" to="/profile?section=interests">Edit your interests</Link></div></Modal>}
     </article>
   );
 }
@@ -206,7 +223,7 @@ function Feed({token,mode,enabled,revision,allowance,refreshStatus}:{token:strin
  if(!enabled)return null
  const notices=[...deck.outcomes.filter(item=>item.state!=='confirmed'),...deck.outcomes.filter(item=>item.state==='confirmed').slice(-1)]
  return <>
-   {deck.loading&&<p role="status" className={deck.cards.length ? 'sr-only' : undefined}>{deck.cards.length?'Loading more people…':'Finding people…'}</p>}
+    {deck.loading&&!deck.error&&(deck.cards.length ? <p role="status" className="sr-only">Loading more people…</p> : <PageSkeleton view="discover" label="Finding people…"/>)}
    <ErrorMessage>{deck.error}</ErrorMessage>
    {deck.error && <ActionButton secondary disabled={deck.loading} onClick={()=>{setupRefreshed.current=false;deck.reset()}}>Try again</ActionButton>}
   {deck.cards.slice(0,10).map((person,index)=><div className="discovery-card-slot" hidden={index!==0} key={person.id}><Candidate {...person} dating={mode==='Dating'} connectDisabled={allowance.blocked} onConnect={()=>void allowance.send(()=>deck.connect(person))} onSkip={()=>deck.advance(person)} onUndo={deck.undo} canUndo={deck.canUndo}/></div>)}
@@ -225,7 +242,7 @@ function Friends({token,revision,allowance}:{token:string;revision:string;allowa
   :reason==='discovery_off'?{title:'Friends, at your pace.',text:'Turn on Friend recommendations when you’re ready.',label:'Discovery settings',to:'/profile?section=discovery'}
   :reason==='location'?{title:'Confirm your search area again.',text:'Your saved Friends search area has expired or changed.',label:'Review Friends preferences',to:'/matchmaking?mode=friends&preferences=true'}
   :{title:'Set up Friends discovery.',text:'Choose your Friends preferences and confirm a search area to find people nearby.',label:'Set up Friends preferences',to:'/matchmaking?mode=friends&preferences=true'}
- return <><ResourceState loading={status.loading} error={status.error} reload={status.reload}/>
+  return <><ResourceState loading={status.loading} error={status.error} reload={status.reload} skeleton={<PageSkeleton view="discover" label="Checking Friends setup"/>}/>
   {status.value&&!status.value.eligible&&<section className="friends-waiting"><Icon name="Friends"/><h2>{guidance.title}</h2><p>{guidance.text}</p><Link className="btn light" to={guidance.to}>{guidance.label}</Link></section>}
  <Feed allowance={allowance} token={token} mode="Friends" enabled={status.value?.eligible===true} revision={revision} refreshStatus={status.reload}/></>
 }
@@ -243,7 +260,7 @@ function Dating({token,revision,allowance}:{token:string;revision:string;allowan
   :blocker==='location'?{title:'Confirm your Dating search area again.',text:'Your saved Dating search area has expired or changed.',label:'Review Dating preferences',to:'/matchmaking?mode=dating&preferences=true'}
   :blocker==='paused'?{title:'Dating, at your pace.',text:'Your setup is ready. Start Dating discovery when you want to participate.'}
   :{title:'Review your Dating setup.',text:'Your saved setup is not currently eligible for Dating discovery.',label:'Review Dating preferences',to:'/matchmaking?mode=dating&preferences=true'}
- return <><ResourceState loading={runtime.loading} error={runtime.error} reload={runtime.reload}/><ErrorMessage>{action.error}</ErrorMessage>
+  return <><ResourceState loading={runtime.loading} error={runtime.error} reload={runtime.reload} skeleton={<PageSkeleton view="discover" label="Checking Dating setup"/>}/><ErrorMessage>{action.error}</ErrorMessage>
   {value&&blocker&&<section className="friends-waiting"><Icon name="Dating"/><h2>{guidance.title}</h2><p>{guidance.text}</p>{guidance.to&&<Link className="btn light" to={guidance.to}>{guidance.label}</Link>}</section>}
  <Feed allowance={allowance} token={token} mode="Dating" enabled={!!value&&!blocker&&!uncertain} revision={`${revision}:${value?.aggregate.profileRevision??0}:${value?.aggregate.searchRevision??0}`} refreshStatus={runtime.reload}/>
  <div className="match-actions">{value&&(value.aggregate.profile.enabled||blocker==='paused')&&<ActionButton disabled={action.busy||uncertain} onClick={()=>void toggle()}>{value.aggregate.profile.enabled?'Pause Dating':'Start Dating discovery'}</ActionButton>}
@@ -255,7 +272,8 @@ export function Discover(){
   const allowance=useRequestAllowance()
   const current=useCurrent(),[epoch,setEpoch]=useState(0),[preferencesBusy,setPreferencesBusy]=useState(false)
   const [search,setSearch]=useSearchParams()
-  const mode=search.get('mode')==='dating'?'Dating':'Friends', preferences=search.get('preferences')==='true'
+  const adult=canShowDating(current.account?.profile?.birthdate)
+  const mode=adult&&search.get('mode')==='dating'?'Dating':'Friends', preferences=search.get('preferences')==='true'
   function setMode(value:'Friends'|'Dating'){setSearch(before=>{const next=new URLSearchParams(before);next.set('mode',value.toLowerCase());return next},{replace:true})}
   function setPreferences(open:boolean){if(!open)cache.removeQueries({queryKey:['discovery-deck']});setSearch(before=>{const next=new URLSearchParams(before);if(open)next.set('preferences','true');else next.delete('preferences');return next},{replace:true})}
   const token = current.session.access_token, home = current.account?.profile?.location_city;
@@ -264,12 +282,13 @@ export function Discover(){
     const saved = mode === 'Friends'
       ? (await friendsPreferencesClient(token).read(signal)).preferences?.searchArea
       : (await datingLiveClient(token).status(signal)).aggregate.search?.searchArea;
-    return saved?.source === 'temporary' ? saved.areaLabel : saved?.source === 'home' ? home : null;
+    if (!saved?.resolvedLocationRef) return null;
+    return saved.source === 'temporary' ? saved.areaLabel : saved.source === 'home' ? home : null;
   }, [mode, token, epoch, home]));
   const revision=JSON.stringify([epoch,current.account?.profile])
-  return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className="area-link" aria-label="Search area & preferences" onClick={()=>setPreferences(true)}>⌖ {area.loading || area.error ? 'Search area' : area.value || 'Search area'} <span aria-hidden="true">⌄</span></button></div>
-  <div className="discovertools"><div className="mode-toggle" role="group" aria-label="Matchmaking mode"><span className={`mode-toggle-indicator ${mode==='Dating'?'dating':''}`} aria-hidden="true"/>{(['Friends','Dating'] as const).map(item=><button key={item} data-mode={item} className={mode===item?'selected':''} aria-pressed={mode===item} onClick={()=>setMode(item)}><Icon name={item}/>{item}</button>)}</div><div className="row"><button className="round" aria-label={`${mode} preferences`} onClick={()=>setPreferences(true)}><Icon name="DiscoveryPreferences"/></button><Link className="round discovery-activity" to="/matches" aria-label="Matches and activity"><Icon name="DiscoveryActivity" /></Link></div></div>
- <ResourceState loading={!allowance.value && allowance.checking} error={allowance.error} reload={()=>void allowance.refresh()}/>
+  return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className="area-link" aria-label="Search area & preferences" onClick={()=>setPreferences(true)}>⌖ {area.loading ? 'Search area' : area.error ? 'Check search area' : area.value || 'Choose an area'} <span aria-hidden="true">⌄</span></button></div>
+  <div className="discovertools"><div className="mode-toggle" role="group" aria-label="Matchmaking mode"><span className={`mode-toggle-indicator ${mode==='Dating'?'dating':''}`} aria-hidden="true"/>{(['Friends','Dating'] as const).filter(item=>item==='Friends'||adult).map(item=><button key={item} data-mode={item} className={mode===item?'selected':''} aria-pressed={mode===item} onClick={()=>setMode(item)}><Icon name={item}/>{item}</button>)}</div><div className="row"><button className="round" aria-label={`${mode} preferences`} onClick={()=>setPreferences(true)}><Icon name="DiscoveryPreferences"/></button><Link className="round discovery-activity" to="/matches" aria-label="Matches and activity"><Icon name="DiscoveryActivity" /></Link></div></div>
+  <ResourceState loading={!allowance.value && allowance.checking} error={allowance.error} reload={()=>void allowance.refresh()} skeleton={<span className="sr-only" role="status">Checking request availability</span>}/>
  {allowance.limited ? <section className="friends-waiting discovery-request-limit" aria-labelledby="request-limit-title">
   <Icon name="Clock"/><h2 id="request-limit-title">You’ve reached today’s request limit.</h2>
   <p>You can send 10 new requests across Friends and Dating in 24 hours.</p>
@@ -277,7 +296,7 @@ export function Discover(){
   <div className="row wrap"><Link className="btn" to="/messages">Go to Messages</Link><Link className="btn light" to="/messages/requests">View incoming requests</Link><ActionButton secondary disabled={allowance.checking || allowance.busy} onClick={()=>void allowance.refresh()}>Check availability</ActionButton></div>
  </section> : <>
  <div hidden={mode!=='Friends'}><Friends allowance={allowance} key={current.session.user.id} token={current.session.access_token} revision={revision}/></div>
- <div hidden={mode!=='Dating'}><Dating allowance={allowance} key={current.session.user.id} token={current.session.access_token} revision={revision}/></div>
+ {adult&&<div hidden={mode!=='Dating'}><Dating allowance={allowance} key={current.session.user.id} token={current.session.access_token} revision={revision}/></div>}
  </>}
   {preferences&&<Modal className={mode==='Friends'?'friends-preferences-modal':'dating-preferences-modal'} title={`${mode} preferences`} close={()=>{if(!preferencesBusy){setPreferences(false);setEpoch(value=>value+1)}}}>{mode==='Friends'?<FriendsPreferencesPanel onSavingChange={setPreferencesBusy} done={()=>{setPreferences(false);setEpoch(value=>value+1)}}/>:<DatingPreferencesPanel onSavingChange={setPreferencesBusy} done={()=>{setPreferences(false);setEpoch(value=>value+1)}}/>}</Modal>}
  </div>

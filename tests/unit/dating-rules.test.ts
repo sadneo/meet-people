@@ -16,6 +16,17 @@ const pool = (): DatingScoringPool => ({ viewer: signals, candidates: [candidate
 const publicCandidate = (id: string) => ({ id, name: 'Alex', age: 23, city: 'Campus', bio: 'Bio', avatar: null, photoRevision: 0, interests: ['Coffee'], areaDistanceMiles: 1, heightInches: null, gender: null, sexuality: null, intent: 'Long-term relationship', style: 'Monogamy' })
 
 describe('rules-based Dating signals', () => {
+  it('supports one custom interest with unchanged weights and no overlap requirement', () => {
+    const input = pool()
+    input.viewer = { ...signals, interests: ['sci-fi'] }
+    input.candidates[0].interests = ['Science fiction']
+    input.candidates[1].interests = ['Ceramics']
+    const ranked = rankDatingPool(input)
+    expect(ranked).toHaveLength(2)
+    expect(ranked[0].components.interests).toBe(1)
+    expect(ranked[1].components.interests).toBe(0)
+    expect(ranked[0].score - ranked[1].score).toBeCloseTo(0.3)
+  })
   it('matches normalized custom interests and curated aliases once, without fuzzy or subtopic matching', () => {
     expect(interestSimilarity([' Boardgames ', 'BOARD GAMES', '  Ceramic   sculpture '], ['board-games', 'ceramic sculpture'])).toEqual({ score: 1, sharedCount: 2 })
     expect(interestSimilarity(['Hiking'], ['Hikng'])).toEqual({ score: 0, sharedCount: 0 })

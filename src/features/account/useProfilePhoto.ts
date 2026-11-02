@@ -29,6 +29,6 @@ export function useProfilePhoto(peer?:{owner:string;revision?:number}){
   },
  })
  const {refetch}=query
- const reload=useCallback(()=>{void refetch()},[refetch])
+ const reload=useCallback(async()=>{const result=await refetch();return result.isError?null:result.data?.snapshot??null},[refetch])
  return{snapshot:query.data?.snapshot??null,url:query.isError?null:query.data?.url??null,error:query.error instanceof Error?query.error.message:'',loading:!!client&&(query.isPending||query.isFetching),reload,client,owner}
 }

@@ -40,7 +40,7 @@ export function MatchingSchedule({ token, disabled, onSaved, compact = false, on
     try {
       const next = await client.saveSchedule({ expectedRevision: saved.revision, timeZone: nextZone || null, showAvailability: nextVisible }, abort.signal)
       if (!active.current || abort.signal.aborted) return
-      setSaved(next); setZone(next.timeZone ?? ''); setVisible(next.showAvailability); setMessage('Weekly timezone saved.'); onSaved()
+      setSaved(next); setZone(next.timeZone ?? ''); setVisible(next.showAvailability); setMessage('Timezone and sharing preference saved.'); onSaved()
     } catch (failure) {
       if (active.current && !abort.signal.aborted) {
         setSaved(null); setError(failure instanceof Error ? failure.message : 'Reload Schedule settings before trying again.')
@@ -48,8 +48,8 @@ export function MatchingSchedule({ token, disabled, onSaved, compact = false, on
     } finally { if (active.current && !abort.signal.aborted) { locked.current = false; setBusy(false) } }
   }
   return <details className="matching-schedule" open={expanded} onToggle={event => { setExpanded(event.currentTarget.open); if (!compact && event.currentTarget.open && !saved && !busy) void load() }}>
-    <summary hidden={compact}>Availability timezone</summary>
-    {!compact && <p>Choose the timezone for your saved weekly availability so we can calculate shared time. Your exact schedule stays private. Shared-time explanations require everyone’s permission.</p>}
+    <summary hidden={compact}>Timezone & shared availability</summary>
+    <p className="account-note">{compact ? 'Timezone and sharing changes save immediately. Weekly time windows save with the rest of this form. ' : 'Choose the timezone for your saved weekly availability. '}Discovery shows only a coarse shared-time summary when both people allow it. Group proposals can show a common time when everyone allows it, never your full weekly schedule.</p>
     {busy && <p role="status">Loading or saving Schedule settings…</p>}
     {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
     <label htmlFor={id}>Timezone</label>
@@ -57,10 +57,10 @@ export function MatchingSchedule({ token, disabled, onSaved, compact = false, on
       <option value="" disabled>Select a timezone</option>
       {zones.map(option => <option key={option.value} value={option.value}>{option.label}{option.device ? ' · Your device' : ''}</option>)}
     </select> : <input id={id} disabled={!saved || busy || disabled} value={zone} placeholder="America/New_York" onChange={event => setZone(event.target.value)} />}
-    <label className="check"><input type="checkbox" checked={visible} disabled={!saved || busy || disabled} onChange={event=>{setVisible(event.target.checked);if(compact)void save(zone,event.target.checked)}}/>{compact ? 'Show shared availability' : 'Allow shared-time explanations'}</label>
+    <label className="check"><input type="checkbox" checked={visible} disabled={!saved || busy || disabled} onChange={event=>{setVisible(event.target.checked);if(compact)void save(zone,event.target.checked)}}/>Allow shared-time explanations</label>
     <div className="row">
       {(!compact || error) && <button type="button" className="btn light" disabled={busy || disabled} onClick={() => void load()}>Reload timezone</button>}
-      {!compact && <button type="button" className="btn light" disabled={!saved || busy || disabled} onClick={() => void save()}>Save timezone</button>}
+      {!compact && <button type="button" className="btn light" disabled={!saved || busy || disabled} onClick={() => void save()}>Save timezone & sharing</button>}
     </div>
   </details>
 }

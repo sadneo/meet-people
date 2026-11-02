@@ -7,7 +7,7 @@ for (const width of [320, 390]) {
     const fixture = await wiringFixture(page);
     await page.goto('/profile');
     await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeVisible();
-    await expect(page.locator('.account-row')).toHaveCount(6);
+    await expect(page.locator('.account-row')).toHaveCount(5);
     await page.screenshot({ path: testInfo.outputPath('profile-hub.png'), fullPage: true });
     await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
     await expect(page.locator('.profile-draft textarea').first()).toHaveCSS('resize', 'none');
@@ -20,9 +20,15 @@ for (const width of [320, 390]) {
     }
     await page.getByLabel('Display name', { exact: true }).fill('Unsaved name');
     await page.getByRole('button', { name: 'Interests & Availability', exact: true }).click();
-    const from = await page.getByLabel('From', { exact: true }).first().boundingBox();
-    const until = await page.getByLabel('Until', { exact: true }).first().boundingBox();
-    const day = await page.getByRole('combobox', { name: 'Day', exact: true }).first().boundingBox();
+    // Measure one layout frame: the lazy, normal-flow dev strip can shift all
+    // controls together between separate browser round trips.
+    const [from, until, day] = await page.locator('.availability-inputs').first().evaluate(element => {
+      const times = element.querySelectorAll('input[type="time"]');
+      return [times[0], times[1], element.querySelector('select')!].map(control => {
+        const { x, y, width, height } = control.getBoundingClientRect();
+        return { x, y, width, height };
+      });
+    });
     expect(Math.abs(from!.y - until!.y)).toBeLessThan(2);
     expect(from!.x + from!.width).toBeLessThanOrEqual(until!.x);
     expect(day!.y + day!.height).toBeLessThanOrEqual(from!.y);
@@ -35,6 +41,6 @@ for (const width of [320, 390]) {
     await expect(page.locator('.profile-summary h3')).not.toHaveText('Unsaved name');
     expect(fixture.calls.filter(call => call.method === 'PUT')).toHaveLength(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await expect(page.getByRole('button', { name: 'Preview', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Preview', exact: true })).toBeVisible();
   });
 }

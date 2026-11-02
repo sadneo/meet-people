@@ -1,0 +1,22 @@
+/* Shared prototype navigation adapted to React links, without replacing routes. */
+.app-navigation .sub>a { font-weight:500; }
+.app-navigation .sub>a.active { background:transparent;color:var(--green); }
+.shell>main.mobile-dating-main { padding-top:30px; }
+.profile-summary>.account-edit-text { margin-left:auto;flex:none; }
+.live-profile .pagehead .round { display:grid;place-items:center; }
+.development-navigator { pointer-events:none; }
+.development-navigator summary,.development-navigator .devpanel { pointer-events:auto; }
+.account-back { text-decoration:none; }
+@media(min-width:801px) {
+ .app-navigation>.sub { margin-top:30px;padding-top:25px; }
+ .shell>main:has(>.plans-page) { align-self:start;padding-top:56px; }
+}
+@media(max-width:650px) {
+ dialog.account-modal { width:100%;max-width:none;height:100dvh;max-height:100dvh;inset:0;margin:0;border-radius:0;padding:24px 24px calc(24px + env(safe-area-inset-bottom));background:#fff; }
+ dialog.account-modal .modalhead { background:#fff; }
+}
+@media(max-width:800px) {
+ .app-navigation .sub { display:none; }
+ .shell>main.mobile-dating-main { padding-top:20px; }
+ .shell>main:has(>.plans-page) { padding-top:28px; }
+}

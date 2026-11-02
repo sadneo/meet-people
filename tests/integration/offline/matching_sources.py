@@ -39,4 +39,5 @@ SOURCES = [
     'supabase/migrations/20261029000300_dating_automatic_targets.sql',
     'supabase/migrations/20261029000400_profile_interest_limits.sql',
     'supabase/migrations/20261030000000_google_search_locations.sql',
+    'supabase/migrations/20261101000000_one_interest_minimum.sql',
 ]

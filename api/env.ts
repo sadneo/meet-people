@@ -20,11 +20,22 @@ export const ApiEnvSchema = z
     SEARCH_LOCATION_SIGNING_KEY: z.string().regex(/^[a-f0-9]{64}$/i).optional(),
     GOOGLE_MAPS_STORAGE_APPROVED: z.enum(['true', 'false']).default('false'),
     GOOGLE_MAPS_REQUESTS_PER_DAY: z.coerce.number().int().min(1).max(100000).default(2000),
+    QA_RUN_ID: z.string().regex(/^\d{8}-\d{6}-[a-f0-9]{8}$/).optional(),
+    QA_AUTH_EMAIL_REQUESTS_PER_WINDOW: z.coerce.number().int().min(1).max(300).optional(),
   })
   .refine(
      (env) => Boolean(env.SUPABASE_URL) === Boolean(env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_PUBLISHABLE_KEY),
-    'SUPABASE_URL requires a server or public Supabase key, and keys require a URL.',
+     'SUPABASE_URL requires a server or public Supabase key, and keys require a URL.',
   )
+  .refine((env) => {
+    if (env.QA_AUTH_EMAIL_REQUESTS_PER_WINDOW === undefined) return true
+    if (env.NODE_ENV !== 'development' || !env.QA_RUN_ID || !env.SUPABASE_URL) return false
+    try {
+      const url = new URL(env.SUPABASE_URL), port = Number(url.port)
+      return url.protocol === 'http:' && url.hostname === '127.0.0.1' && !url.username && !url.password
+        && port >= 55421 && port <= 55601 && (port - 55421) % 20 === 0
+    } catch { return false }
+  }, { path: ['QA_AUTH_EMAIL_REQUESTS_PER_WINDOW'], message: 'QA email limits require a development QA run and an isolated loopback QA Supabase port.' })
 
 export function parseApiEnv(input: unknown) {
   const result = ApiEnvSchema.safeParse(input)

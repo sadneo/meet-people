@@ -54,9 +54,9 @@ test('email stays editable at the password step and recovery options sit immedia
   await page.getByLabel('Password', { exact: true }).fill('Synthetic-fixture-password-1!')
   expect((await options.boundingBox())!.y + (await options.boundingBox())!.height).toBeLessThan((await signIn.boundingBox())!.y)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  await page.screenshot({ path: '/tmp/pebble-login-editable-email.png', fullPage: true })
+  await page.screenshot({ path: test.info().outputPath('login-editable-email.png'), fullPage: true })
   await signIn.click()
-  await expect(page.locator('#sky-canvas')).toBeVisible()
+  await expect(page.locator('.garden-canvas')).toBeVisible()
   expect(fixture.calls.filter(call => call.path === '/api/auth/email')).toHaveLength(2)
 })
 

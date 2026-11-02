@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type 
 import { ModalLayerContext } from './modal-layer';
 import { Link } from "react-router";
 import { useProfilePhoto } from "../features/account/useProfilePhoto";
+import { MediaImage } from './loading/MediaImage';
 
 export function Brand() {
   return (
@@ -64,6 +65,7 @@ export function ActionButton({
 }
 export function Icon({ name }: { name: string }) {
   const paths: Record<string, ReactNode> = {
+    External: <path d="M7 17 17 7M7 7h10v10" />,
     Back: <path d="m15 18-6-6 6-6" />,
     ChevronRight: <path d="m9 6 6 6-6 6" />,
     Eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></>,
@@ -148,7 +150,7 @@ export function Avatar({
     (/^https:\/\//i.test(url) || url.startsWith("blob:")) &&
     failed !== url;
   return safe ? (
-    <img
+    <MediaImage
       className={`portrait ${large ? "large-avatar" : ""}`}
       src={url}
       alt={name}
@@ -178,6 +180,7 @@ export function PersonPhoto({
   large?: boolean;
 }) {
   const photo = useProfilePhoto({ owner: id, revision });
+  if (photo.loading && !photo.url && !photo.snapshot && !fallback && !photo.error && revision !== 0) return <span className={`initial-avatar photo-pending ${large ? 'large-avatar large' : ''}`} role="img" aria-label={`${name}: photo loading`} />;
   return <Avatar name={name} url={photo.url ?? fallback} large={large} />;
 }
 export function Modal({
@@ -257,14 +260,16 @@ export function ResourceState({
   loading,
   error,
   reload,
+  skeleton,
 }: {
   loading: boolean;
   error: string;
   reload: () => void;
+  skeleton?: ReactNode;
 }) {
   return (
     <>
-      {loading && <Loading />}
+      {loading && !error && (skeleton ?? <Loading />)}
       <ErrorMessage>{error}</ErrorMessage>
       {error && (
         <ActionButton secondary onClick={reload}>

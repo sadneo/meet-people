@@ -5,7 +5,7 @@ const profile = { username: 'explicit', display_name: 'Explicit', bio: null, ava
 const account = { ...emptyAccount, profile, preferences: { ...emptyAccount.preferences, intents: ['Make friends'], distance: 'Nearby' as const, group: 'Either' as const }, completed: [0, 1, 2, 3] }
 it('requires all persisted fields for claimed completion, while bio/photo remain optional', () => {
   expect(SaveAccountSchema.safeParse(account).success).toBe(true)
-  for (const patch of [{ interests: ['Coffee'] }, { birthdate: null }, { location_city: '' }, { availability: [] }]) expect(SaveAccountSchema.safeParse({ ...account, profile: { ...profile, ...patch } }).success).toBe(false)
+  for (const patch of [{ interests: [] }, { birthdate: null }, { location_city: '' }, { availability: [] }]) expect(SaveAccountSchema.safeParse({ ...account, profile: { ...profile, ...patch } }).success).toBe(false)
   for (const patch of [{ intents: [] }, { distance: '' }, { group: '' }]) expect(SaveAccountSchema.safeParse({ ...account, preferences: { ...account.preferences, ...patch } }).success).toBe(false)
 })
 it('reads historical completion markers without granting readiness or permitting incomplete saves', () => {

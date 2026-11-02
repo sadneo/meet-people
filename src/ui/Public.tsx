@@ -1,95 +1,20 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
+import './parity-public.css';
 import {
   legalDocuments,
   legalPublication,
 } from "../features/public/legal-content";
-import { Brand, Icon } from "./common";
+import { Brand } from "./common";
 
-export function Landing() {
-  return (
-    <div className="welcome-site">
-      <header className="welcome-header">
-        <Brand />
-        <nav className="welcome-nav" aria-label="Website navigation">
-          <Link to="/explore">Events</Link>
-        </nav>
-        <Link className="welcome-open" to="/login">
-          Sign in ↗
-        </Link>
-      </header>
-      <main className="welcome-main">
-        <section className="welcome-hero">
-          <div className="welcome-copy">
-            <h1>
-              <span className="welcome-headline-brand">Meet new friends,</span>
-              <br />
-              find a date,
-              <br />
-              and make plans.
-            </h1>
-            <div className="welcome-actions">
-              <Link className="welcome-primary" to="/login">
-                Get started ↗
-              </Link>
-              <Link className="welcome-secondary" to="/explore">
-                Browse events
-              </Link>
-            </div>
-          </div>
-          <div className="welcome-visual">
-            <div className="welcome-preview-mode">
-              <span>
-                <Icon name="Friends" />
-                Friends
-              </span>
-              <span>
-                <Icon name="Dating" />
-                Dating
-              </span>
-            </div>
-            <div className="welcome-profile">
-              <img
-                src="/pebble/alex.jpg"
-                alt="Illustrative profile on Pebble"
-              />
-              <div className="welcome-profile-shade" />
-              <div className="welcome-profile-info">
-                <h3>Your next hello.</h3>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className="welcome-community">
-          <div className="welcome-garden-art">
-            <img
-              src="/pebble/square-garden-cutout.png"
-              alt="Pebble’s floating pixel garden"
-              loading="lazy"
-            />
-          </div>
-          <div className="welcome-community-copy">
-            <h2>Grow your garden.</h2>
-          </div>
-        </section>
-      </main>
-      <footer className="welcome-footer">
-        <Brand />
-        <div>
-          <Link to="/privacy">Privacy</Link>
-          <Link to="/terms">Terms</Link>
-          <Link to="/cookies">Cookies</Link>
-        </div>
-      </footer>
-    </div>
-  );
-}
 export function Legal({ kind }: { kind: "terms" | "privacy" | "cookies" }) {
   const document = legalDocuments[kind];
+  const source = useLocation().state?.authFrom;
+  const back = source === '/login' || source === '/register' ? source : '/';
   return (
     <div className="legal-page">
       <header className="legal-header">
         <Brand />
-        <Link to="/">Back to Pebble</Link>
+        <Link to={back}>{back === '/' ? 'Back to Pebble' : 'Back to sign in'}</Link>
       </header>
       <main className="legal-content">
         <h1>{document.title}</h1>

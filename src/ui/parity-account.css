@@ -1,0 +1,26 @@
+/* Account overview and saved-profile preview from the finalized prototype. */
+.live-profile .pagehead>.row { gap:8px; }
+.live-profile .pagehead .round { display:grid;place-items:center;background:#eee6db;text-decoration:none; }
+.live-profile .own-profile-photo>.account-edit-text { margin-left:auto; }
+.live-profile .profile-summary>.account-edit-text { margin-left:auto; }
+.account-group>a.account-row { display:flex;text-decoration:none; }
+.settings-profile-summary { display:flex;align-items:center;gap:16px;margin:26px 0 34px; }
+.settings-profile-summary p { font-size:13px;color:var(--muted);margin:5px 0 0; }
+.settings-profile-summary .avatar { width:52px;height:52px; }
+.account-preview-modal .own-profile-photo { align-items:center; }
+.account-preview-modal .own-profile-photo h2 { margin:0 0 6px; }
+.account-preview-modal .own-preview-section { margin-top:25px; }
+.account-preview-modal .own-preview-section h3 { font-size:16px; }
+.own-preview-interests { display:flex;flex-wrap:wrap;gap:8px; }
+.own-profile-facts { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px; }
+.own-profile-facts dt { font-size:12px;color:var(--muted);margin-bottom:6px; }
+.own-profile-facts dd { margin:0; }
+.credential-settings>details { border-bottom:1px solid var(--line); }
+.credential-settings>details>summary { display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px;min-height:80px;list-style:none;cursor:pointer; }
+.credential-settings>details>summary::-webkit-details-marker { display:none; }
+.credential-settings>details>summary>span { display:grid;gap:6px; }
+.credential-settings>details>summary b { font-size:14px; }
+.credential-settings>details>summary small { font-size:12px;color:var(--muted); }
+.credential-settings>details[open]>summary>.ui-icon { rotate:90deg; }
+.credential-settings>details>form { padding:0 20px 20px; }
+.credential-settings>.account-error,.credential-settings>p[role=status] { margin:16px 20px; }

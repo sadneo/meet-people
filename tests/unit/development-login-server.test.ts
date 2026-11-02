@@ -6,6 +6,10 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { developmentLoginEnabled, developmentLoginPlugin, developmentLoginHandler, authenticateDevelopmentAccount, parseDevelopmentCredentials, readDevelopmentCredentials } from '../../dev/development-login'
 
+vi.mock('../../dev/private-development-file', () => ({ validatePrivateDevelopmentFile: async (_path: string, stat: { uid: number; mode: number }) => {
+  if (stat.uid !== 1000 || (stat.mode & 0o7777) !== 0o600) throw new Error('Invalid credential file permissions')
+} }))
+
 const files = vi.hoisted(() => ({ open: vi.fn() }))
 vi.mock('node:fs/promises', () => files)
 beforeEach(() => { files.open.mockReset().mockRejectedValue(new Error('Synthetic missing file')) })
@@ -52,17 +56,17 @@ it('fake credential file enforces owner-only permissions, fixed path, bounded re
   const text = JSON.stringify(credentials)
   const close = vi.fn()
   const read = vi.fn(async (buffer: Buffer) => { buffer.write(text); return { bytesRead: Buffer.byteLength(text) } })
-  files.open.mockResolvedValue({ stat: async () => ({ isFile: () => true, uid: process.getuid!(), mode: 0o100600, size: text.length }), read, close })
+  files.open.mockResolvedValue({ stat: async () => ({ isFile: () => true, uid: 1000, mode: 0o100600, size: text.length }), read, close })
   expect(await readDevelopmentCredentials()).toEqual(credentials)
-  expect(files.open.mock.calls[0][0]).toMatch(/\/\.local\/share\/pebble\/development-account\.json$/)
-  expect(files.open.mock.calls[0][1] & constants.O_NOFOLLOW).toBe(constants.O_NOFOLLOW)
+  expect(files.open.mock.calls[0][0]).toMatch(/[\\/]\.local[\\/]share[\\/]pebble[\\/]development-account\.json$/)
+  if (constants.O_NOFOLLOW !== undefined) expect(files.open.mock.calls[0][1] & constants.O_NOFOLLOW).toBe(constants.O_NOFOLLOW)
   expect(read.mock.calls[0][0]).toHaveLength(8193)
   expect(close).toHaveBeenCalledTimes(1)
 })
 it.each(['missing', 'permissions', 'owner', 'directory', 'oversized', 'malformed', 'growing', 'symlink'])('fails closed on fake credential file: %s', async failure => {
   const close = vi.fn(), read = vi.fn(async (buffer: Buffer) => { buffer.write('{broken'); return { bytesRead: failure === 'growing' ? 8193 : 7 } })
   if (!['missing', 'symlink'].includes(failure)) files.open.mockResolvedValue({
-    stat: async () => ({ isFile: () => failure !== 'directory', uid: process.getuid!() + (failure === 'owner' ? 1 : 0), mode: failure === 'permissions' ? 0o644 : 0o600, size: failure === 'oversized' ? 8193 : 10 }), read, close,
+    stat: async () => ({ isFile: () => failure !== 'directory', uid: 1000 + (failure === 'owner' ? 1 : 0), mode: failure === 'permissions' ? 0o644 : 0o600, size: failure === 'oversized' ? 8193 : 10 }), read, close,
   })
   await expect(readDevelopmentCredentials()).rejects.toThrow()
   if (!['missing', 'symlink'].includes(failure)) expect(close).toHaveBeenCalledTimes(1)

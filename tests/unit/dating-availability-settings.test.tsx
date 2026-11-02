@@ -18,7 +18,7 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 function open() {
-  const details = screen.getByText('Availability timezone').parentElement as HTMLDetailsElement
+  const details = screen.getByText('Timezone & shared availability').parentElement as HTMLDetailsElement
   details.open = true; fireEvent(details, new Event('toggle'))
 }
 it('reads only when opened, requires a chosen timezone and preserves hidden availability', async () => {
@@ -32,8 +32,8 @@ it('reads only when opened, requires a chosen timezone and preserves hidden avai
   expect(fetch).toHaveBeenCalledOnce()
   expect(new Headers(fetch.mock.calls[0][1]?.headers).get('Authorization')).toBe('Bearer owner-token')
   fireEvent.change(input, { target: { value: 'America/New_York' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Save timezone' }))
-  await screen.findByText('Weekly timezone saved.')
+  fireEvent.click(screen.getByRole('button', { name: 'Save timezone & sharing' }))
+  await screen.findByText('Timezone and sharing preference saved.')
   expect(stored).toEqual({ revision: 1, timeZone: 'America/New_York', showAvailability: false })
   expect(onSaved).toHaveBeenCalledOnce()
 })
@@ -43,12 +43,12 @@ it('requires a read after an uncertain save and does not automatically retry a w
   await waitFor(() => expect((screen.getByLabelText('Timezone') as HTMLInputElement).disabled).toBe(false))
   fireEvent.change(screen.getByLabelText('Timezone'), { target: { value: 'America/New_York' } })
   failSave = true
-  fireEvent.click(screen.getByRole('button', { name: 'Save timezone' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save timezone & sharing' }))
   await screen.findByRole('alert')
-  expect((screen.getByRole('button', { name: 'Save timezone' }) as HTMLButtonElement).disabled).toBe(true)
+  expect((screen.getByRole('button', { name: 'Save timezone & sharing' }) as HTMLButtonElement).disabled).toBe(true)
   expect(fetch.mock.calls.filter(call => call[1]?.method === 'PUT')).toHaveLength(1)
   fireEvent.click(screen.getByRole('button', { name: 'Reload timezone' }))
-  await waitFor(() => expect((screen.getByRole('button', { name: 'Save timezone' }) as HTMLButtonElement).disabled).toBe(false))
+  await waitFor(() => expect((screen.getByRole('button', { name: 'Save timezone & sharing' }) as HTMLButtonElement).disabled).toBe(false))
   expect(fetch.mock.calls.filter(call => call[1]?.method === 'PUT')).toHaveLength(1)
 })
 it('offers a compact timezone dropdown and saves only after an explicit selection', async () => {
@@ -59,10 +59,10 @@ it('offers a compact timezone dropdown and saves only after an explicit selectio
   await waitFor(() => expect(select.disabled).toBe(false))
   expect(select.value).toBe('')
   expect(fetch.mock.calls.filter(call => call[1]?.method === 'PUT')).toHaveLength(0)
-  expect(screen.queryByRole('button', { name: 'Save timezone' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Save timezone & sharing' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Reload timezone' })).toBeNull()
   fireEvent.change(select, { target: { value: 'America/New_York' } })
-  await screen.findByText('Weekly timezone saved.')
+  await screen.findByText('Timezone and sharing preference saved.')
   expect(stored).toEqual({ revision: 1, timeZone: 'America/New_York', showAvailability: false })
   expect(onSaved).toHaveBeenCalledOnce()
 })

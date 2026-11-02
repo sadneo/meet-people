@@ -41,17 +41,17 @@ export function ActiveFriends({ close, changed }: { close: () => void; changed: 
   {status?.proposal?<ProposalReview key={status.proposal.id} status={status} disabled={disabled} mutate={mutate}/>:status?.state==='formed'&&status.groupId?
    <div className="card"><h3>Your group is ready.</h3><Link className="btn" onClick={close} to={`/messages/chat?group=${encodeURIComponent(status.groupId)}`}>Open group chat</Link><ActionButton secondary disabled={disabled} onClick={()=>void refresh()}>Refresh search status</ActionButton></div>:
    active?<div className="card" role="status"><h3>Looking for a group…</h3><p>Different interests are welcome. You’ll review the full roster before joining.</p><div className="row"><ActionButton disabled={disabled} onClick={()=>void mutate('check')}>Check for a group</ActionButton><ActionButton secondary disabled={disabled} onClick={()=>void mutate('cancel')}>Cancel search</ActionButton></div></div>:
-   <><p>Your ideal size. Everyone confirms the final group before a chat starts.</p>
+   <><section className="group-search-summary"><h3>Find a group</h3><p>You + {ideal} new friends</p><ActionButton disabled={disabled||!status?.enabled||current.busy} onClick={()=>void mutate('join',{preferredNewFriends:ideal,minimumGroupSize:2,maximumGroupSize:ideal+1,allowExistingGroups:allowExisting})}>Find a group</ActionButton></section>
     {status?.lastOutcome&&<p role="status">{status.lastOutcome==='expired'?'The previous proposal expired.':'The previous search ended.'}</p>}
     <label htmlFor="active-group-size">New friends · You + {ideal}<input id="active-group-size" type="range" min={1} max={8} value={ideal} disabled={disabled} onChange={event=>setIdeal(+event.target.value)}/></label>
     <label className="check"><input type="checkbox" checked={allowExisting} disabled={disabled} onChange={event=>setAllowExisting(event.target.checked)}/>Open to joining an existing group</label>
     <p className="muted">We may offer a smaller group of at least two. Everyone must accept that exact roster.</p>
-    <ActionButton disabled={disabled||!status?.enabled||current.busy} onClick={()=>void mutate('join',{preferredNewFriends:ideal,minimumGroupSize:2,maximumGroupSize:ideal+1,allowExistingGroups:allowExisting})}>Find a group</ActionButton>
+
     {status&&!status.enabled&&<p role="status">Group search is not available right now.</p>}
    </>}
   <div className="row"><ActionButton secondary disabled={busy||loading} onClick={()=>void refresh()}>Refresh search status</ActionButton><ActionButton secondary disabled={busy} onClick={()=>setPreferences(value=>!value)}>Search preferences</ActionButton></div>
   {preferences&&<FriendsPreferencesPanel done={()=>{setPreferences(false);void refresh()}}/>}
-  <MatchingSchedule token={current.session.access_token} disabled={disabled} onSaved={()=>void refresh()}/>
+  <details className="group-schedule"><summary>Availability &amp; timezone</summary><MatchingSchedule token={current.session.access_token} disabled={disabled} onSaved={()=>void refresh()}/></details>
  </div>
 }
 function ProposalReview({status,disabled,mutate}:{status:ActiveStatus;disabled:boolean;mutate:(action:ActiveCommand['action'],data:Record<string,unknown>)=>Promise<void>}){
