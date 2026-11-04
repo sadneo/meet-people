@@ -26,7 +26,16 @@ Commit the updated `pnpm-lock.yaml` (the Dockerfile installs with `--frozen-lock
    notifications: store it in Secret Manager and never commit it.
 
 ## 3. Database
-`supabase/migrations/20261029000000_push_notifications.sql` and `20261029010000_push_accepted_and_match.sql` create
+The push migrations use forward timestamps because sandbox already has migrations
+through `20261101000000`. Deployment run `41780284969` stopped at the dry-run:
+the original `20261029000050` and `20261029010000` versions were confirmed pending,
+not applied. Only those pending files were moved; the executable SQL and dependency
+order are unchanged. No hosted data reset, migration-history repair or blanket
+`--include-all` is required for sandbox. If another environment has already applied
+the old versions, inspect and reconcile its ledger separately before deploying;
+do not blindly replay them or reset the database.
+
+`supabase/migrations/20261104060000_push_notifications.sql` and `20261104060100_push_accepted_and_match.sql` create
 `push_devices`, `push_outbox`, the triggers and `push_claim`. Apply them: `pnpm exec supabase db push` (hosted) or reset your local database.
 If your newest existing migration has a later timestamp, rename this file with a newer one first.
 
@@ -69,5 +78,5 @@ Use a real phone, or an emulator image that includes **Google Play** (plain AOSP
 - Sent for: new messages, new connection requests, accepted connection requests (to the person who asked), and
   dating matches (to the person who sent the request). A dating request that has not been accepted is deliberately
   **not** announced, so nobody learns who liked them before matching. Part 2 lives in
-  `supabase/migrations/20261029010000_push_accepted_and_match.sql`; apply it after the first migration.
+  `supabase/migrations/20261104060100_push_accepted_and_match.sql`; apply it after the first migration.
 - The alert uses the app icon. A dedicated white notification icon can be added later.

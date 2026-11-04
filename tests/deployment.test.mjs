@@ -246,3 +246,22 @@ test('release preparation and smoke receive only the sandbox public Maps key fro
     assert.ok(!workflow.includes('secrets.SEARCH_LOCATION_SIGNING_KEY'))
   }
 })
+
+test('pending Android push migrations follow the existing hosted migration head in dependency order', () => {
+  // Sandbox's failed dry-run confirmed these two migrations had never been applied.
+  // Fresh-database replay alone cannot catch an older pending file on a hosted DB.
+  const hostedHead = '20261101000000'
+  const names = readdirSync('supabase/migrations').filter(name => name.endsWith('.sql')).sort()
+  const pending = names.filter(name => /_push_(notifications|accepted_and_match)\.sql$/.test(name))
+  assert.deepEqual(pending, [
+    '20261104060000_push_notifications.sql',
+    '20261104060100_push_accepted_and_match.sql',
+  ])
+  assert.ok(pending.every(name => name.slice(0, 14) > hostedHead), 'Pending push migrations must not predate the deployed ledger')
+  assert.ok(readFileSync(`supabase/migrations/${pending[0]}`, 'utf8').includes('create table if not exists public.push_outbox'))
+  assert.ok(readFileSync(`supabase/migrations/${pending[1]}`, 'utf8').includes('alter table public.push_outbox'))
+  const release = readFileSync('.github/workflows/release.yml', 'utf8')
+  assert.ok(release.includes('supabase db push --linked --dry-run'))
+  assert.ok(release.includes('supabase db push --linked --yes'))
+  assert.ok(!release.includes('--include-all'), 'Do not bypass migration-order review for all future releases')
+})

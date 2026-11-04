@@ -1,5 +1,5 @@
 -- Push notifications, part 2: "connection accepted" and "dating match".
--- Builds on 20261029000000_push_notifications.sql.
+-- Builds on 20261104060000_push_notifications.sql.
 
 alter table public.push_outbox drop constraint if exists push_outbox_kind_check;
 alter table public.push_outbox add constraint push_outbox_kind_check
