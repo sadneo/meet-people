@@ -67,6 +67,7 @@ function Chapter({ initial, chapter, advance, onBusyChange }: { initial: Account
   const current = useCurrent(), action = useAction()
   const [source, setSource] = useState(initial), [draft, setDraft] = useState(() => structuredClone(initial))
   const [scheduleBusy, setScheduleBusy] = useState(false)
+  const [scheduleReady, setScheduleReady] = useState(false)
   const [timezoneError, setTimezoneError] = useState('')
   const title = useRef<HTMLHeadingElement>(null)
   if (source !== initial) { setSource(initial); setDraft(structuredClone(initial)) }
@@ -78,7 +79,7 @@ function Chapter({ initial, chapter, advance, onBusyChange }: { initial: Account
   const disabled = action.busy || current.busy || current.loading
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (scheduleBusy) return
+    if (scheduleBusy || chapter === 3 && !scheduleReady) return
     setTimezoneError('')
     await action.run(async () => {
       if ((chapter === 0 || chapter === 3) && (!profile.birthdate || profile.birthdate > new Date().toISOString().slice(0, 10))) throw new Error('Enter a valid birthdate in the past.')
@@ -119,10 +120,10 @@ function Chapter({ initial, chapter, advance, onBusyChange }: { initial: Account
         <Availability value={profile.availability} change={availability => update({ availability })}/>
       </>}
     </fieldset>
-    {chapter === 3 && <section className="onboarding-timezone"><h3>Which timezone is your week in?</h3><MatchingSchedule token={current.session.access_token} disabled={disabled} onSaved={() => setTimezoneError('')} onBusyChange={setScheduleBusy} compact/></section>}
+    {chapter === 3 && <section className="onboarding-timezone"><h3>Your week’s timezone</h3><MatchingSchedule token={current.session.access_token} disabled={disabled} onSaved={() => setTimezoneError('')} onBusyChange={setScheduleBusy} onReadyChange={setScheduleReady} compact autoDetectTimezone/></section>}
     <ErrorMessage>{timezoneError || action.error || current.error}</ErrorMessage>
     {current.error && <ActionButton secondary disabled={disabled} onClick={current.reload}>Reload account and replace draft before saving again</ActionButton>}
-    <button className="btn onboarding-continue" disabled={disabled || scheduleBusy || !current.available}>{disabled ? 'Saving…' : chapter === 3 ? 'Finish setup' : 'Save & continue'}<Icon name="ArrowRight"/></button>
+    <button className="btn onboarding-continue" disabled={disabled || scheduleBusy || chapter === 3 && !scheduleReady || !current.available}>{disabled ? 'Saving…' : chapter === 3 ? 'Finish setup' : 'Save & continue'}<Icon name="ArrowRight"/></button>
     {chapter === 2 && <p className="muted onboarding-save-note">{canShowDating(profile.birthdate) ? 'Dating participation and each group or event queue have their own opt-in.' : 'Each group or event queue has its own opt-in.'}</p>}
   </form>
 }

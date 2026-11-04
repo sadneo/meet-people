@@ -1,3 +1,12 @@
+import { MatchingScoringSettingsSchema } from '../../../shared/matching-scoring'
+
+export function deviceTimezone(): string | null {
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    return zone && MatchingScoringSettingsSchema.shape.timeZone.safeParse(zone).success ? zone : null
+  } catch { return null }
+}
+
 const commonLabels: Record<string, string> = {
   'America/New_York': 'Eastern Time · New York',
   'America/Chicago': 'Central Time · Chicago',
@@ -11,9 +20,10 @@ const commonLabels: Record<string, string> = {
 
 export function timezoneOptions(savedZone: string) {
   const fallback = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Asia/Kolkata', 'Asia/Shanghai', 'Asia/Tokyo', 'Australia/Sydney'];
-  const zones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : fallback;
-  const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return [...new Set(['UTC', ...zones, deviceZone, savedZone].filter(Boolean))].map(value => {
+  let zones = fallback;
+  try { if (typeof Intl.supportedValuesOf === 'function') zones = Intl.supportedValuesOf('timeZone'); } catch { /* Keep manual choices available. */ }
+  const deviceZone = deviceTimezone();
+  return [...new Set(['UTC', ...zones, deviceZone, savedZone].filter((value): value is string => !!value))].map(value => {
     const parts = value.split('/');
     const name = commonLabels[value] ?? `${parts.at(-1)!.replaceAll('_', ' ')}${parts.length > 1 ? ` · ${parts[0]}` : ''}`;
     let offset = '';

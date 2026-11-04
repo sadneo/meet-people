@@ -20,7 +20,7 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/login`, `/register` | Supabase email/password, email link and Google sign-in |
 | `/auth/callback`, `/reset-password` | Explicit grant verification and URL scrubbing |
 | `/auth/forgot-password`, `/forgot-password` | Real recovery email request |
-| `/onboarding` | Guided four-stone journey from the original dev flow, with a welcome scene and confirmed completion screen. About you (identity, private birthdate, home area), interests (1–5, premade or custom; at most 2 custom), social intentions, then weekly availability, general plan preferences and an explicit saved timezone. Each chapter persists and resumes from confirmed account data. Dating and group/event queues retain separate opt-in. |
+| `/onboarding` | Guided four-stone journey from the original dev flow, with a welcome scene and confirmed completion screen. About you (identity, private birthdate, home area), interests (1–5, premade or custom; at most 2 custom), social intentions, then weekly availability, general plan preferences and an automatically detected, editable saved timezone. Each chapter persists and resumes from confirmed account data. Dating and group/event queues retain separate opt-in. |
 | `/home`, `/community` | Integrated pixel-art Garden; account-keyed browser inventory, placement and unique Geode unlocks (not server ownership) |
 | `/matchmaking` | Passive Friends/Dating recommendations, consent and search preferences |
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
@@ -47,6 +47,11 @@ Profile photo selection/removal is staged with the profile draft: Cancel discard
 it and Save changes performs the revisioned photo write after profile/detail
 saves. These resources are not an atomic transaction; partial or uncertain saves
 stay explicit and require read-only reconciliation before another photo write.
+Onboarding preselects and immediately saves a valid device timezone only when no
+timezone is already saved, preserving sharing consent. The picker remains editable;
+unavailable detection falls back to manual selection. Automatic saves are read back
+before readiness; failures require explicit read-only reload, not automatic retries.
+Finish setup still checks the persisted timezone. Profile/Privacy do not autodetect.
 Timezone/sharing controls retain their separately labeled immediate-save behavior
 in the editor. Privacy and the editor expose the same canonical schedule-sharing
 opt-in; the legacy account availability flag is preserved but not presented as a

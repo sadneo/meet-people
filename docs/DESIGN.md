@@ -24,6 +24,16 @@ profiles and ephemeral, single-selection Garden preview are examples, not live
 accounts or saved account Garden state. Do not import the export's unrelated
 application/loading styles or embedded image data. Mobile entry remains unchanged.
 
+## Onboarding timezone
+
+In Your week, use the device’s valid named timezone (or UTC) when the account has
+no saved timezone. Keep the timezone picker visible and editable; never replace a
+saved choice or change sharing consent through detection. Save using the current
+schedule revision and confirm with a readback. When detection is unavailable,
+leave manual selection available. Failed or unconfirmed saves require explicit
+reload before another attempt or completion; never loop automatic writes.
+Detection is onboarding-only, not a default for Profile or Privacy settings.
+
 ## Loading and media readiness
 
 The mobile cold-start/session/initial-account gates use the rolling-Pebble design

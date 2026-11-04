@@ -12,6 +12,10 @@ const fits = async (page: Page) => expect(await page.evaluate(() => document.doc
 
 for (const width of [320, 1280]) {
   test(`the restored stone journey saves and resumes real chapters at ${width}px`, async ({ page }) => {
+    await page.addInitScript(() => {
+      const original = Intl.DateTimeFormat.prototype.resolvedOptions
+      Intl.DateTimeFormat.prototype.resolvedOptions = function () { return { ...original.call(this), timeZone: 'America/New_York' } }
+    })
     await page.setViewportSize({ width, height: width === 320 ? 640 : 900 })
     await page.emulateMedia({ reducedMotion: 'reduce' })
     const fixture = await wiringFixture(page, { fresh: true })
@@ -55,11 +59,9 @@ for (const width of [320, 1280]) {
     await page.getByRole('combobox', { name: 'Group preference', exact: true }).selectOption('Either')
     await page.getByRole('button', { name: 'Add a time window' }).click()
     await expect(page.getByRole('button', { name: 'Finish setup' })).toBeEnabled()
-    await page.getByRole('button', { name: 'Finish setup' }).click()
-    await expect(page.getByRole('alert')).toContainText('Choose a timezone')
     expect(fixture.getAccount().completed).toEqual([0, 1, 2])
-    await page.getByRole('combobox', { name: 'Timezone', exact: true }).selectOption('America/New_York')
-    await expect(page.getByText('Timezone and sharing preference saved.', { exact: true })).toBeVisible()
+    await expect(page.getByRole('combobox', { name: 'Timezone', exact: true })).toHaveValue('America/New_York')
+    await expect(page.getByText('Device timezone saved. You can change it below.', { exact: true })).toBeVisible()
     await fits(page)
     await page.screenshot({ path: test.info().outputPath(`pebble-onboarding-week-${width}.png`), fullPage: true })
     await page.getByRole('button', { name: 'Finish setup' }).click()
@@ -95,6 +97,53 @@ test('an unconfirmed chapter save keeps the draft and requires reconciliation be
   await expect(page.getByRole('heading', { name: 'Your kind of things.' })).toBeVisible()
   expect(writes).toBe(1)
 })
+
+for (const scenario of ['saved', 'manual', 'failed'] as const) {
+  test(`onboarding timezone supports ${scenario} recovery without replacing saved choices`, async ({ page }) => {
+    await page.addInitScript(({ failDetection }) => {
+      const original = Intl.DateTimeFormat.prototype.resolvedOptions
+      Intl.DateTimeFormat.prototype.resolvedOptions = function () {
+        if (failDetection) throw new Error('No device timezone')
+        return { ...original.call(this), timeZone: 'Asia/Tokyo' }
+      }
+    }, { failDetection: scenario === 'manual' })
+    const fixture = await wiringFixture(page)
+    const account = { ...fixture.getAccount(), profile: { ...fixture.getAccount().profile!, availability: [] }, completed: [0, 1, 2] }
+    await page.route('**/api/matchmaking/account', route => route.request().method() === 'GET' ? route.fulfill({ json: account }) : route.fallback())
+    let schedule = { revision: 4, timeZone: scenario === 'saved' ? 'Europe/London' : null as string | null, showAvailability: true }
+    let writes = 0
+    await page.route('**/api/matchmaking/schedule', route => {
+      if (route.request().method() === 'PUT') {
+        writes++
+        if (scenario === 'failed') return route.abort()
+        const input = route.request().postDataJSON()
+        expect(input.expectedRevision).toBe(schedule.revision)
+        schedule = { revision: schedule.revision + 1, timeZone: input.timeZone, showAvailability: input.showAvailability }
+      }
+      return route.fulfill({ json: schedule })
+    })
+    await page.goto('/onboarding')
+    const select = page.getByRole('combobox', { name: 'Timezone', exact: true })
+    if (scenario === 'failed') {
+      await expect(page.getByRole('alert')).toContainText('Reload timezone')
+      await expect(page.getByRole('button', { name: 'Finish setup' })).toBeDisabled()
+      await page.getByRole('button', { name: 'Reload timezone' }).click()
+      await expect(select).toBeEnabled()
+      expect(writes).toBe(1)
+    } else {
+      await expect(select).toBeEnabled()
+      await expect(select).toHaveValue(scenario === 'saved' ? 'Europe/London' : '')
+      expect(writes).toBe(0)
+      await select.selectOption('America/Chicago')
+      await expect(page.getByText('Timezone and sharing preference saved.', { exact: true })).toBeVisible()
+      expect(schedule.timeZone).toBe('America/Chicago')
+      expect(schedule.showAvailability).toBe(true)
+      await page.reload()
+      await expect(select).toHaveValue('America/Chicago')
+      expect(writes).toBe(1)
+    }
+  })
+}
 
 test('interest limits and empty intent validation use current rules', async ({ page }) => {
   await wiringFixture(page, { incomplete: true })
