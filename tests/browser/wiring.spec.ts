@@ -137,7 +137,8 @@ test("mobile event details require sign-in", async ({
 
 test("event groups automatically show a suggested group without replaying the join", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
-  await page.clock.install();
+  // The fixture starts at 2026-11-03T17:00Z; keep it upcoming independently of the runner date.
+  await page.clock.install({ time: new Date('2026-11-03T12:00:00Z') });
   await wiringFixture(page);
   let queued = false, groupReady = false;
   const methods: string[] = [];
@@ -176,6 +177,16 @@ test("event groups automatically show a suggested group without replaying the jo
   const readsAfterLeaving = methods.filter(method => method === "GET").length;
   await page.clock.fastForward(10000);
   expect(methods.filter(method => method === "GET")).toHaveLength(readsAfterLeaving);
+});
+
+test("event group joining stays closed after the fixture event starts", async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-11-04T12:00:00Z') });
+  const fixture = await wiringFixture(page);
+  await page.goto(`/events/${eventId}`);
+  await expect(page.getByRole('heading', { name: 'Group matching closed', exact: true })).toBeVisible();
+  await expect(page.getByText('Group matching is closed for this event.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Join group queue', exact: true })).toHaveCount(0);
+  expect(fixture.calls.filter(call => call.path.endsWith('/group-queue') && call.method !== 'GET')).toHaveLength(0);
 });
 
 test("messages load saved history and send with an idempotency key", async ({

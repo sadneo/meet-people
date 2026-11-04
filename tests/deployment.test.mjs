@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
@@ -121,21 +121,25 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
 })
 
 test('frontend builds reject the wrong branch, project, missing key or unresolved commit', () => {
-  const env = { DEPLOY_ENVIRONMENT: 'sandbox', VITE_BUILD_BRANCH: 'dev', VITE_BUILD_SHA: 'a'.repeat(40), VITE_SUPABASE_URL: 'https://wixdiotkntapwrbibaom.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'public-key' }
+  const env = { DEPLOY_ENVIRONMENT: 'sandbox', VITE_BUILD_BRANCH: 'dev', VITE_BUILD_SHA: 'a'.repeat(40), VITE_SUPABASE_URL: 'https://wixdiotkntapwrbibaom.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'public-key', VITE_GOOGLE_MAPS_API_KEY: 'test-browser-key' }
   assert.deepEqual(validateFrontendConfiguration(env), { branch: 'dev', sha: env.VITE_BUILD_SHA, supabaseUrl: env.VITE_SUPABASE_URL })
   assert.throws(() => validateFrontendConfiguration({ ...env, VITE_BUILD_BRANCH: 'main' }), /dev/)
   assert.throws(() => validateFrontendConfiguration({ ...env, VITE_SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co' }), /matching Supabase/)
   assert.throws(() => validateFrontendConfiguration({ ...env, VITE_BUILD_SHA: 'dev' }), /commit SHA/)
   assert.throws(() => validateFrontendConfiguration({ ...env, VITE_SUPABASE_PUBLISHABLE_KEY: '' }), /public key/)
+  for (const missing of [undefined, '', '   ']) {
+    assert.throws(() => validateFrontendConfiguration({ ...env, VITE_GOOGLE_MAPS_API_KEY: missing }), /Maps browser key/)
+  }
   assert.throws(() => validateFrontendConfiguration({ ...env, DEPLOY_ENVIRONMENT: 'other' }), /sandbox or production/)
   const production = { ...env, DEPLOY_ENVIRONMENT: 'production', VITE_BUILD_BRANCH: 'main', VITE_SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co' }
   assert.equal(validateFrontendConfiguration(production).branch, 'main')
+  assert.equal(validateFrontendConfiguration({ ...production, VITE_GOOGLE_MAPS_API_KEY: '' }).branch, 'main', 'Production does not require sandbox Maps configuration')
   assert.throws(() => validateFrontendConfiguration({ ...production, VITE_BUILD_BRANCH: 'dev' }), /main/)
   assert.throws(() => validateFrontendConfiguration({ ...production, VITE_SUPABASE_URL: env.VITE_SUPABASE_URL }), /matching Supabase/)
 })
 
 test('dev web and mobile include their own screens and toolbar; production web excludes mobile and development controls', () => {
-  const env = { ...process.env, DEPLOY_ENVIRONMENT: 'sandbox', VITE_BUILD_BRANCH: 'dev', VITE_BUILD_SHA: 'a'.repeat(40), VITE_SUPABASE_URL: 'https://wixdiotkntapwrbibaom.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'test-public-key' }
+  const env = { ...process.env, DEPLOY_ENVIRONMENT: 'sandbox', VITE_BUILD_BRANCH: 'dev', VITE_BUILD_SHA: 'a'.repeat(40), VITE_SUPABASE_URL: 'https://wixdiotkntapwrbibaom.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', VITE_GOOGLE_MAPS_API_KEY: 'test-browser-maps-key', GOOGLE_MAPS_SERVER_API_KEY: 'private-server-key-must-not-be-bundled', SEARCH_LOCATION_SIGNING_KEY: 'private-signing-key-must-not-be-bundled' }
   const bundle = (product = 'web') => readdirSync(`dist/${product}/assets`).filter(file => file.endsWith('.js')).map(file => readFileSync(`dist/${product}/assets/${file}`, 'utf8')).join('\n')
   execFileSync('pnpm', ['build:web:devtools'], { stdio: 'inherit', env })
   assert.ok(bundle().includes('Development navigation'))
@@ -145,10 +149,14 @@ test('dev web and mobile include their own screens and toolbar; production web e
   assert.ok(bundle('mobile').includes('Development navigation'))
   assert.ok(bundle('mobile').includes('Continue with email'))
   assert.ok(!bundle('mobile').includes('/__dev/login'))
+  assert.ok(bundle('mobile').includes(env.VITE_GOOGLE_MAPS_API_KEY), 'Public Maps key is compiled into mobile')
   execFileSync('node', ['scripts/configure-deployment.mjs', '--write-build-info'], { stdio: 'inherit', env })
   for (const product of ['web', 'mobile']) {
     assert.deepEqual(JSON.parse(readFileSync(`dist/${product}/build-info.json`, 'utf8')), { branch: 'dev', sha: env.VITE_BUILD_SHA, supabaseUrl: env.VITE_SUPABASE_URL, product })
     assert.ok(bundle(product).includes(env.VITE_SUPABASE_URL))
+    assert.ok(!bundle(product).includes(env.GOOGLE_MAPS_SERVER_API_KEY))
+    assert.ok(!bundle(product).includes(env.SEARCH_LOCATION_SIGNING_KEY))
+    assert.ok(!readFileSync(`dist/${product}/build-info.json`, 'utf8').includes('Maps'))
   }
   execFileSync('pnpm', ['build:web'], { stdio: 'inherit', env: { ...process.env, VITE_DEV_TOOLS: 'false' } })
   assert.ok(!bundle().includes('Development navigation'))
@@ -157,7 +165,7 @@ test('dev web and mobile include their own screens and toolbar; production web e
 
 test('hosted smoke checks reject incorrect product, branch, commit, backend and frontend bundles', () => {
   const info = { branch: 'dev', sha: 'a'.repeat(40), supabaseUrl: 'https://wixdiotkntapwrbibaom.supabase.co', product: 'mobile' }
-  function smoke(overrides = {}, javascript = `${info.supabaseUrl} Continue with email`) {
+  function smoke(overrides = {}, javascript = `${info.supabaseUrl} Continue with email test-browser-key`) {
     const mock = `globalThis.fetch = async input => {
       const path = new URL(input).pathname;
       const body = path === '/build-info.json' ? ${JSON.stringify({ ...info, ...overrides })}
@@ -173,7 +181,7 @@ test('hosted smoke checks reject incorrect product, branch, commit, backend and 
       });
     };`
     return execFileSync('node', ['--import', `data:text/javascript,${encodeURIComponent(mock)}`, 'tests/integration/hosted/test-hosted.mjs', 'https://example.test'], {
-      env: { ...process.env, HOSTED_PRODUCT: 'mobile', VITE_BUILD_BRANCH: info.branch, RELEASE_SHA: info.sha, VITE_SUPABASE_URL: info.supabaseUrl },
+      env: { ...process.env, HOSTED_PRODUCT: 'mobile', VITE_BUILD_BRANCH: info.branch, RELEASE_SHA: info.sha, VITE_SUPABASE_URL: info.supabaseUrl, VITE_GOOGLE_MAPS_API_KEY: 'test-browser-key' },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
   }
@@ -183,4 +191,58 @@ test('hosted smoke checks reject incorrect product, branch, commit, backend and 
   }
   assert.throws(() => smoke({}, 'https://wacgxhsdhrqigrmqaonc.supabase.co Continue with email'))
   assert.throws(() => smoke({}, info.supabaseUrl))
+  assert.throws(() => smoke({}, `${info.supabaseUrl} Continue with email`), /Command failed/, 'Missing Maps key must fail the mobile hosted smoke')
+})
+
+test('sandbox API deployment merges Maps references and static egress; production never inherits sandbox configuration', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'pebble-maps-deploy-'))
+  try {
+    // The script can invoke only this mock gcloud; no network or credentials are used.
+    const mock = join(directory, 'gcloud')
+    writeFileSync(mock, '#!/usr/bin/env node\nconsole.log(JSON.stringify(process.argv.slice(2)))\n')
+    chmodSync(mock, 0o755)
+    const base = {
+      ...process.env, PATH: `${directory}:${process.env.PATH}`,
+      DEPLOY_ENVIRONMENT: 'sandbox', GCP_PROJECT_ID: 'cse416-meet-people', GCP_REGION: 'us-east4',
+      API_SERVICE: 'pebble-api-sandbox', API_SECRET: 'pebble-supabase-service-role-sandbox',
+      API_RUNTIME_ACCOUNT: 'pebble-api-sandbox@cse416-meet-people.iam.gserviceaccount.com',
+      API_IMAGE: `example.test/api@sha256:${'a'.repeat(64)}`,
+      SUPABASE_URL: 'https://wixdiotkntapwrbibaom.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'public-key',
+    }
+    const deploy = env => JSON.parse(execFileSync('sh', ['scripts/deploy-api.sh'], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }))
+    const args = deploy(base)
+    assert.deepEqual(args.slice(0, 3), ['run', 'deploy', 'pebble-api-sandbox'])
+    assert.ok(args.includes('--network=pebble-sandbox-egress'))
+    assert.ok(args.includes('--subnet=pebble-sandbox-egress-us-east4'))
+    assert.ok(args.includes('--vpc-egress=all-traffic'))
+    const vars = args.find(arg => arg.startsWith('--update-env-vars='))
+    assert.ok(vars.includes('GOOGLE_MAPS_STORAGE_APPROVED=true'))
+    assert.ok(vars.includes('GOOGLE_MAPS_REQUESTS_PER_DAY=2000'))
+    assert.ok(vars.includes(`SUPABASE_URL=${base.SUPABASE_URL}`))
+    assert.ok(args.includes('--update-secrets=SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role-sandbox:latest,GOOGLE_MAPS_SERVER_API_KEY=pebble-google-maps-server-key-sandbox:1,SEARCH_LOCATION_SIGNING_KEY=pebble-search-location-signing-key-sandbox:1'))
+    assert.ok(!args.some(arg => arg.startsWith('--set-env-vars=') || arg.startsWith('--set-secrets=')))
+    assert.ok(!args.join(' ').includes('VITE_GOOGLE_MAPS_API_KEY'))
+    const production = deploy({ ...base, DEPLOY_ENVIRONMENT: 'production', API_SERVICE: 'pebble-api', API_SECRET: 'pebble-supabase-service-role', API_RUNTIME_ACCOUNT: 'pebble-api@cse416-meet-people.iam.gserviceaccount.com', SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co' })
+    assert.ok(production.includes('--set-secrets=SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role:latest'))
+    assert.ok(!production.join(' ').includes('sandbox'))
+    assert.ok(!production.some(arg => /GOOGLE_MAPS|SEARCH_LOCATION|--network=|--subnet=|--vpc-egress=/.test(arg)))
+    for (const overrides of [
+      { API_SERVICE: 'pebble-api' }, { API_SECRET: 'pebble-supabase-service-role' },
+      { API_RUNTIME_ACCOUNT: 'pebble-api@cse416-meet-people.iam.gserviceaccount.com' },
+      { SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co' },
+      { GCP_PROJECT_ID: 'other-project' }, { GCP_REGION: 'us-east1' },
+      { DEPLOY_ENVIRONMENT: 'typo' }, { DEPLOY_ENVIRONMENT: 'production' }, { DEPLOY_ENVIRONMENT: '' },
+    ]) assert.throws(() => deploy({ ...base, ...overrides }))
+  } finally { rmSync(directory, { recursive: true, force: true }) }
+})
+
+test('release preparation and smoke receive only the sandbox public Maps key from GitHub variables', () => {
+  const prepare = readFileSync('.github/workflows/prepare.yml', 'utf8')
+  const release = readFileSync('.github/workflows/release.yml', 'utf8')
+  assert.ok(prepare.includes("VITE_GOOGLE_MAPS_API_KEY: ${{ inputs.environment == 'sandbox' && vars.VITE_GOOGLE_MAPS_API_KEY || '' }}"))
+  assert.ok(release.includes("VITE_GOOGLE_MAPS_API_KEY: ${{ needs.resolve.outputs.environment == 'sandbox' && vars.VITE_GOOGLE_MAPS_API_KEY || '' }}"))
+  for (const workflow of [prepare, release]) {
+    assert.ok(!workflow.includes('secrets.GOOGLE_MAPS_SERVER_API_KEY'))
+    assert.ok(!workflow.includes('secrets.SEARCH_LOCATION_SIGNING_KEY'))
+  }
 })

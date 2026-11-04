@@ -163,6 +163,61 @@ artifacts include `build-info.json` with product, branch, commit and Supabase UR
 Hosted smoke checks compare it with the intended release and verify the actual
 JavaScript's Supabase URL and web/mobile entry point.
 
+### Sandbox Maps deployment
+
+Sandbox Maps activation was approved by the project owner during setup. No
+production Maps activation is included. Configure **GitHub environment `sandbox`
+→ Variables → `VITE_GOOGLE_MAPS_API_KEY`** with the public, website-restricted
+`Pebble Map Browser` key. `prepare.yml` explicitly passes it to the frontend build;
+preparation fails before building if it is missing. Private Maps/signing values
+stay in Secret Manager and must never become `VITE_*` variables or build secrets.
+
+`scripts/deploy-api.sh` declares the approved sandbox configuration:
+
+| Runtime setting | Sandbox value |
+| --- | --- |
+| `GOOGLE_MAPS_SERVER_API_KEY` | Secret Manager `pebble-google-maps-server-key-sandbox`, version `1` |
+| `SEARCH_LOCATION_SIGNING_KEY` | Secret Manager `pebble-search-location-signing-key-sandbox`, version `1` |
+| `GOOGLE_MAPS_STORAGE_APPROVED` | `true` |
+| `GOOGLE_MAPS_REQUESTS_PER_DAY` | `2000` per API process, not an account-wide spending cap |
+| Direct VPC network / subnet | `pebble-sandbox-egress` / `pebble-sandbox-egress-us-east4` |
+| VPC egress | `all-traffic`, region `us-east4` |
+
+The operator-created router `pebble-sandbox-egress-router` and NAT
+`pebble-sandbox-egress-nat` use the reserved address `pebble-sandbox-egress-ip`
+(`136.23.87.38`). Restrict the server key to that outbound IP and Places API (New)
+and Geocoding API. The browser key uses Maps JavaScript API and website restrictions,
+including `https://mobile.dev.pebble.garden/*`; retain localhost only as needed.
+Authorize additional hosted origins separately if testing there (for example the
+Firebase `web.app` alias); do not widen the key to arbitrary websites.
+
+The sandbox runtime account must have Secret Accessor on both secrets. The default
+Cloud Run service agent needs its standard same-project Direct VPC permissions.
+This release does not create infrastructure, change IAM, read secret payloads or
+install/rotate database signing keys. Before rollout, the operator must install
+the **same signing bytes** in sandbox's `location_private.map_signing_key` and
+schedule the owner-only purge at least every 15 minutes. See
+[Google search locations](google-search-locations.md) for the privacy/retention gate.
+
+Sandbox uses `--update-env-vars` and `--update-secrets` to retain unrelated runtime
+settings while explicitly reconciling the listed Maps settings on every release.
+Production retains its existing deployment arguments and does not receive sandbox
+keys, approval or networking. Secret versions are pinned: rotation requires updating
+the references and, for the signing secret, coordinating the database value.
+
+Merging into `dev` runs checks, prepares both sandbox products, deploys the API and
+publishes Firebase Hosting with `pinTag`. Opening a PR alone does not deploy. The
+mobile hosted smoke verifies the built JavaScript includes the expected browser
+key; it does not issue billable Google requests or prove authenticated save flows.
+After deployment, test search, pin movement, confirm, reopen and permission-denied
+behavior on `mobile.dev.pebble.garden`. Monitor purge job execution and Google quotas.
+
+Emergency disable: set `GOOGLE_MAPS_STORAGE_APPROVED=false` on Cloud Run and route
+Hosting to that revision; **pause releases or change the declared approval in
+`deploy-api.sh` too**, otherwise the next sandbox release restores `true`. Keep the
+purge job running. NAT and its reserved IP continue incurring charges independently
+of the activation flag. Production is not part of this rollout.
+
 Site variables are `FIREBASE_WEB_SITE_ID=cse416-meet-people` in production;
 `FIREBASE_WEB_SITE_ID=cse416-meet-people-sandbox` and
 `FIREBASE_MOBILE_SITE_ID=cse416-meet-people-dev` in sandbox. These variables were

@@ -118,6 +118,13 @@ References:
 
 ## Verification and rollout
 
+For the approved hosted sandbox configuration, public browser build variable,
+pinned server/signing secret references and static outbound network, see
+[Sandbox Maps deployment](deployment.md#sandbox-maps-deployment). PRs do not deploy;
+merges into `dev` publish the API and both sandbox Hosting sites. The release
+declares the activation flag, so an emergency runtime disable must also be
+reflected in deployment configuration before another release.
+
 Automated provider tests intercept Google HTTP; browser tests intercept the map
 renderer and APIs; SQL acceptance uses signed synthetic tickets in a network-none
 disposable database. These are not evidence of Google credentials, billing or live

@@ -128,6 +128,7 @@ jobs:
       SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      VITE_GOOGLE_MAPS_API_KEY: ${{ needs.resolve.outputs.environment == 'sandbox' && vars.VITE_GOOGLE_MAPS_API_KEY || '' }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       RELEASE_SHA: ${{ needs.resolve.outputs.sha }}
       API_IMAGE: ${{ needs.prepare-dev.outputs.image || needs.prepare-production.outputs.image }}
