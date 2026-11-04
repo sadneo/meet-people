@@ -76,7 +76,9 @@ export function Auth({
           !("exists" in value) ||
           typeof value.exists !== "boolean"
         )
-          throw new Error("Could not check your email. Try again.");
+          throw new Error(
+  `Could not check your email (HTTP ${response.status} from ${response.url}): ${JSON.stringify(value).slice(0, 120)}`,
+);
         if (!alive.current) return;
         if (value.exists) setStage("password");
         else navigate(`/register?${new URLSearchParams({ email, returnTo })}`);

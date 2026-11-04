@@ -5,8 +5,8 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  // The standalone reference app has its own checks; see src/alt/README.md.
   { ignores: ['dist/', 'supabase/.temp/', '.claude/', 'qa/', 'src/alt/'] },
+
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
