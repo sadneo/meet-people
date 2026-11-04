@@ -1,4 +1,4 @@
-package com.cse416.meetpeople;
+package garden.pebble.android;
 
 import com.getcapacitor.BridgeActivity;
 

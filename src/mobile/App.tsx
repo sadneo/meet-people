@@ -42,6 +42,7 @@ import {
   ErrorMessage,
   Icon,
 } from "../ui/common";
+import PushBridge from "../platform/PushBridge";
 
 const DevelopmentNavigator = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS === 'true'
   ? lazy(() => import('./DevelopmentNavigator'))
@@ -158,6 +159,7 @@ export default function App() {
   return (
     <SessionQueryProvider scope={session?.user.id ?? "public"}>
       <NativeBridge />
+      <PushBridge />
       {DevelopmentNavigator && <Suspense fallback={null}><DevelopmentNavigator /></Suspense>}
       <Routes>
         <Route path="/welcome" element={<Navigate replace to="/" />} />
