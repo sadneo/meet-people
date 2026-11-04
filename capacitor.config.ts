@@ -16,7 +16,7 @@ const cleartext = usesCleartextBackend()
 const config: CapacitorConfig = {
   // Must be globally unique on Google Play and can never change after publishing.
   // If you change it, change APP_SCHEME in src/platform/native.ts and the manifest too.
-  appId: 'com.cse416.meetpeople',
+  appId: 'garden.pebble.android',
   appName: 'Pebble',
   // Matches build.outDir in vite.mobile.config.ts (Android and future iOS).
   webDir: 'dist/mobile',

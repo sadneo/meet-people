@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 
 const shell = process.platform === 'win32' // pnpm is a .cmd shim on Windows
 const env = { ...process.env, CAP_ANDROID_MODE: 'android-dev' } // read by capacitor.config.ts
-for (const args of [['exec', 'vite', 'build', '--mode', 'android-dev'], ['exec', 'cap', 'sync', 'android']]) {
+for (const args of [['exec', 'vite', 'build', '--config', 'vite.mobile.config.ts', '--mode', 'android-dev'], ['exec', 'cap', 'sync', 'android']]) {
   const result = spawnSync('pnpm', args, { stdio: 'inherit', env, shell })
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
