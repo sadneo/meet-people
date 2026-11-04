@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { supabase } from '../../supabase'
-import { Button } from '../prototype/ui'
+import { ActionButton } from '../../ui/common'
 import { deleteMyAccount } from './account-deletion-client'
 import './delete-account.css'
 
@@ -40,8 +40,8 @@ export function DeleteAccountPanel({ close }: { close: () => void }) {
     </label>
     {error && <p role="alert">{error}</p>}
     <div className="pt-delete-account-actions">
-      <Button secondary disabled={busy} onClick={close}>Keep my account</Button>
-      <Button disabled={!ready} onClick={() => void submit()}>{busy ? 'Deleting…' : 'Delete my account'}</Button>
+      <ActionButton secondary disabled={busy} onClick={close}>Keep my account</ActionButton>
+      <ActionButton disabled={!ready} onClick={() => void submit()}>{busy ? 'Deleting…' : 'Delete my account'}</ActionButton>
     </div>
   </div>
 }
