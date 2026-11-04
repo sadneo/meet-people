@@ -35,8 +35,8 @@ pnpm env:local
 To keep your local data instead of resetting, run the fix and the two push migrations by hand (all are safe to repeat):
 ```
 docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < scripts/fix-local-auth-tokens.sql
-docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/migrations/20261029000000_push_notifications.sql
-docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/migrations/20261029010000_push_accepted_and_match.sql
+docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/migrations/20261104060000_push_notifications.sql
+docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/migrations/20261104060100_push_accepted_and_match.sql
 ```
 (`supabase_db_meet-people` comes from `project_id` in `supabase/config.toml`.)
 
