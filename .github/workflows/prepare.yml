@@ -31,6 +31,8 @@ jobs:
       DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
       VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      # Public, website-restricted browser key. Never pass server/signing secrets to builds.
+      VITE_GOOGLE_MAPS_API_KEY: ${{ inputs.environment == 'sandbox' && vars.VITE_GOOGLE_MAPS_API_KEY || '' }}
       VITE_BUILD_SHA: ${{ inputs.source_sha }}
       VITE_BUILD_BRANCH: ${{ inputs.source_branch }}
     steps:
