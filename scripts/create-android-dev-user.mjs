@@ -33,7 +33,9 @@ switch (result.status) {
     console.error(`       select id, email, deleted_at from auth.users where email ilike '%${email.split('@')[0]}%';`)
     console.error("     then remove the stale row (local database only): delete from auth.users where id = '<that id>';")
     process.exit(1)
+    break
   case 'list-failed':
+  {
     console.error(`The email ${email} is already taken, but Supabase could not read its user list ("${result.message}"), so the account could not be reset.`)
     console.error('This usually means seeded users have empty (NULL) token columns that the auth service cannot read. Either:')
     console.error('  1. Set a different VITE_DEV_LOGIN_EMAIL in .env.android-dev (e.g. android-dev-2@example.com), rerun this, then rebuild with pnpm android:dev; or')
@@ -41,5 +43,7 @@ switch (result.status) {
     const project = existsSync('supabase/config.toml') ? /^project_id\s*=\s*"([^"]+)"/m.exec(readFileSync('supabase/config.toml', 'utf8'))?.[1] : undefined
     console.error(`To see the real database error: docker logs supabase_auth_${project ?? '<project_id>'} --tail 40`)
     process.exit(1)
+    break
+  }
   default: console.error(result.message); process.exit(1)
 }

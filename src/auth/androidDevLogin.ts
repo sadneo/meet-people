@@ -17,7 +17,7 @@ export async function signInAndroidDevUser(client: SupabaseClient) {
   const email = import.meta.env.VITE_DEV_LOGIN_EMAIL as string | undefined
   const password = import.meta.env.VITE_DEV_LOGIN_PASSWORD as string | undefined
   if (!email || !password) throw new AndroidDevLoginError('not-configured')
-  let failure: { name?: string; message?: string; status?: number; code?: string } | null = null
+  let failure: { name?: string; message?: string; status?: number; code?: string } | null
   try {
     failure = (await client.auth.signInWithPassword({ email, password })).error
   } catch (thrown) {
