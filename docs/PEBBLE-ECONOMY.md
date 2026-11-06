@@ -84,7 +84,8 @@ clients cannot grant themselves test funds.
    a database. It requires existing Supabase Auth and `public.get_account()`.
    Then apply **`20261105010000_garden_social_rewards.sql`**. This additive migration
    preserves existing data and the original RPC logic behind a private wrapper;
-   it requires the existing native messaging and safety migrations. The earlier
+   it supports both existing native UUID and activated legacy bigint messaging
+   stores, with their existing safety migrations. The earlier
    installed migration was not edited. The new migration has NOT been applied to
    your app database; only an isolated test database. Until applied, existing rewards
    still work, social rewards stay disabled, and weekday history is not fabricated.

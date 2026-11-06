@@ -9,7 +9,13 @@ alter function garden_private.garden_account(jsonb) rename to account_v1;
 revoke all on function garden_private.account_v1(jsonb) from public,anon,authenticated;
 
 create function garden_private.social_candidates(actor uuid,returning_in boolean)
-returns table(peer uuid) language sql stable security definer set search_path='' as $$
+returns table(peer uuid) language plpgsql stable security definer set search_path='' as $$
+begin
+ -- The supported installations have different messaging stores. PL/pgSQL plans
+ -- only the selected branch, so UUID-only columns are never read on legacy stores.
+ if (select atttypid from pg_attribute where attrelid='public.conversations'::regclass
+     and attname='id' and not attisdropped)='uuid'::regtype then
+ return query
  with pairs as (
   select c.*,case when c.user_a=actor then c.user_b else c.user_a end other
   from public.connections c where actor in(c.user_a,c.user_b) and c.status='accepted'
@@ -40,6 +46,41 @@ returns table(peer uuid) language sql stable security definer set search_path=''
  select other from days group by other having count(*)>=2
   and max(last_a)-min(first_a)>=interval '24 hours' and max(last_b)-min(first_b)>=interval '24 hours'
  order by other;
+ elsif (select atttypid from pg_attribute where attrelid='public.conversations'::regclass
+     and attname='id' and not attisdropped)='bigint'::regtype then
+ return query
+ with pairs as (
+  select c.*,case when c.user_a=actor then c.user_b else c.user_a end other
+  from public.connections c where actor in(c.user_a,c.user_b) and c.status='accepted'
+  and not exists(select 1 from safety_private.revoked_connections r where r.connection_id=c.id)
+ ), eligible as (
+  select p.other,chat.id,greatest(coalesce(p.responded_at,p.created_at),chat.created_at,
+   case when returning_in then greatest(date_trunc('week',statement_timestamp() at time zone 'UTC') at time zone 'UTC',reward.created_at+interval '7 days')
+    else statement_timestamp()-interval '30 days' end) since
+  from pairs p
+  join auth.users a on a.id=actor and a.email_confirmed_at is not null and a.created_at<=statement_timestamp()-interval '7 days'
+  join auth.users b on b.id=p.other and b.email_confirmed_at is not null and b.created_at<=statement_timestamp()-interval '7 days'
+  -- Legacy direct conversations contain their two participants on the row;
+  -- they have no membership/hidden-history sequence table or group conversations.
+  join public.conversations chat on chat.user_a=p.user_a and chat.user_b=p.user_b
+  left join garden_private.ledger reward on reward.owner=actor and reward.key='connection:'||p.other
+  where social_private.contact_allowed(actor,p.other)
+   and ((not returning_in and reward.key is null) or (returning_in and reward.created_at<=statement_timestamp()-interval '7 days'))
+ ), days as (
+  select e.other,(m.created_at at time zone 'UTC')::date as check_day,
+   min(m.created_at) filter(where m.sender_id=actor) first_a,max(m.created_at) filter(where m.sender_id=actor) last_a,
+   min(m.created_at) filter(where m.sender_id=e.other) first_b,max(m.created_at) filter(where m.sender_id=e.other) last_b
+  from eligible e join public.messages m on m.conversation_id=e.id and m.sender_id in(actor,e.other)
+   and m.created_at>=e.since and m.created_at<=statement_timestamp()
+  group by e.other,(m.created_at at time zone 'UTC')::date
+  having count(distinct m.sender_id)=2
+ )
+ select other from days group by other having count(*)>=2
+  and max(last_a)-min(first_a)>=interval '24 hours' and max(last_b)-min(first_b)>=interval '24 hours'
+ order by other;
+ else raise exception 'Unsupported messaging store';
+ end if;
+end;
 $$;
 revoke all on function garden_private.social_candidates(uuid,boolean) from public,anon,authenticated;
 

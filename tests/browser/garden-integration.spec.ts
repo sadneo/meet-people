@@ -22,6 +22,11 @@ test('Garden aliases use the sky composition, active navigation and sliding inve
 })
 for(const width of [390,1280])test(`Garden integration: drag, undo, four geodes, reset, reload ${width}`,async({page},info)=>{
  await page.setViewportSize({width,height:860});const fixture=await wiringFixture(page);fixture.garden.seed({balance:2000,owned:[],earnedChapters:[]});await page.goto('/')
+ // A purchase is asynchronous even when its Build button click has completed.
+ await page.route('**/api/garden',async route=>{
+  if(route.request().method()==='POST'&&route.request().postDataJSON()?.action==='build')await new Promise(resolve=>setTimeout(resolve,200))
+  await route.fallback()
+ })
  await expect(page.getByRole('heading',{name:'Your Garden'})).toBeVisible();await expect(page.getByText('Growing your Garden…')).toHaveCount(0)
  await page.getByRole('button',{name:'Open Garden inventory'}).click()
  await page.locator('summary[aria-label="Random Pebbles"]').click()
@@ -31,6 +36,9 @@ for(const width of [390,1280])test(`Garden integration: drag, undo, four geodes,
  await page.getByRole('button',{name:'Open Garden inventory'}).click()
  await page.locator('summary[aria-label="Decorations"]').click()
  await page.locator('.garden-shop-item').filter({has:page.getByText('Garden Bench',{exact:true})}).getByRole('button',{name:'Build',exact:true}).click()
+ await expect(page.getByRole('dialog',{name:'Your garden',exact:true})).not.toBeVisible()
+ await expect(page.getByRole('group',{name:'Selected Garden item'})).toContainText('Garden Bench')
+ await expect(page.getByRole('button',{name:'Build with 1985 Pebbles',exact:true})).toBeEnabled()
  const canvas=page.locator('.garden-canvas'),box=(await canvas.boundingBox())!,scale=Math.max(.16,Math.min((box.width-36)/1320,Math.max(180,box.height-240)/820,.85))
  const x=box.x+box.width/2+(540-724)*scale,y=box.y+box.height*.47+(790-590)*scale
  await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+48,y-24,{steps:8});await page.mouse.up()
