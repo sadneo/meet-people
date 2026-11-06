@@ -395,6 +395,12 @@ verify_jwt = false
 [functions.ingest-sbengaged]
 verify_jwt = false
 
+[functions.ingest-nutrislice]
+verify_jwt = false
+
+[functions.ingest-sbu-hospital]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SBU menus · Test viewer</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div><p class="muted">Temporary test viewer</p><h1>SBU dining menus</h1></div>
+        <button id="refresh" type="button">Fetch fresh menus</button>
+      </header>
+      <p id="status" class="muted" role="status">Loading scraped menus…</p>
+      <form id="filters" aria-label="Filter menus">
+        <label>Source<select id="source"><option value="nutrislice">Nutrislice SBU</option><option value="hospital">Stony Brook Hospital</option></select></label>
+        <label>Location<select id="location"></select></label>
+        <label>Date<select id="date"></select></label>
+        <label>Menu<select id="menu"></select></label>
+        <label class="search">Find a dish<input id="search" type="search" placeholder="Search names, ingredients, or labels"></label>
+      </form>
+      <div class="results-heading"><p id="count"></p><a href="/api/menus" download="sbu-menu-data.json">Download JSON</a></div>
+      <section id="errors" aria-label="Source issues" hidden></section>
+      <section id="menus" aria-label="Menus" aria-busy="true"></section>
+      <footer>Real scraped menus. Expand a dish for details. Empty nutrition fields mean the source did not supply them. Menu types can contain overlapping dishes.</footer>
+    </main>
+  </body>
+</html>

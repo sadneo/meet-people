@@ -83,6 +83,8 @@ jobs:
         run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/seed-messaging.sql
       - name: Verify SQL security contracts
         run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/hosted-services.sql
+      - name: Verify dining menu snapshots and permissions
+        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/dining-menus.sql
       - run: pnpm env:local
       - run: pnpm test:integration
       - run: pnpm exec playwright install --with-deps chromium

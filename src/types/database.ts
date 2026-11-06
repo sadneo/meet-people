@@ -409,6 +409,57 @@ export type Database = {
         }
         Relationships: []
       }
+      dining_menus: {
+        Row: {
+          created_at: string
+          external_id: string
+          id: string
+          items: Json
+          last_synced_at: string
+          location_name: string
+          location_slug: string
+          menu_date: string
+          menu_name: string
+          menu_slug: string
+          notices: Json
+          source: string
+          source_url: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_id: string
+          id?: string
+          items?: Json
+          last_synced_at: string
+          location_name: string
+          location_slug: string
+          menu_date: string
+          menu_name: string
+          menu_slug: string
+          notices?: Json
+          source: string
+          source_url: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_id?: string
+          id?: string
+          items?: Json
+          last_synced_at?: string
+          location_name?: string
+          location_slug?: string
+          menu_date?: string
+          menu_name?: string
+          menu_slug?: string
+          notices?: Json
+          source?: string
+          source_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_group_members: {
         Row: {
           event_id: string
