@@ -1,3 +1,4 @@
+import { gardenFixture } from "./garden-fixture";
 import type { Page } from "@playwright/test";
 import { browserAccount, mockMatchingSession } from "./matchmaking-fixture";
 import { effectiveDetailedSettings } from "../../shared/detailed-settings";
@@ -419,5 +420,6 @@ export async function wiringFixture(
     );
   });
   await mockMatchingSession(page, !options.guest);
-  return { calls, sent, getAccount: () => account };
+  const garden=await gardenFixture(page);
+  return { calls, sent, garden, getAccount: () => account };
 }

@@ -1270,6 +1270,7 @@ export type Database = {
         Args: { action_in: string; target_in: string }
         Returns: Json
       }
+      garden_account: { Args: { command_in?: Json }; Returns: Json }
       get_account: { Args: never; Returns: Json }
       get_account_profile: { Args: never; Returns: Json }
       get_active_friends_group: { Args: { group_in: string }; Returns: Json }

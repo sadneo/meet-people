@@ -13,7 +13,7 @@ export type LandscapeId = typeof landscapeUpgrades[number]['id']
 export function isLandscapeUpgrade(id: UpgradeId): id is LandscapeId {
   return landscapeUpgrades.some(item => item.id === id)
 }
-// Review-only prices. Kept in one catalog so the team can tune them together.
+// Display prices mirror the authoritative Garden SQL catalog; api-garden.test.ts checks parity.
 export const upgrades = [
   { id: 'flowers', name: 'Wildflower Patch', cost: 10, icon: 'tree', detail: 'Little clusters of color in the grass.' },
   { id: 'bench', name: 'Garden Bench', cost: 15, icon: 'book', detail: 'A quiet seat for a little company.' },
