@@ -2,6 +2,28 @@ import { expect, test } from '@playwright/test'
 import { wiringFixture, user } from './wiring-fixture'
 
 test.use({ viewport: { width: 320, height: 568 }, reducedMotion: 'reduce' })
+// API contract stress only: the fixture does not establish PostgreSQL isolation.
+test('100 concurrent account build/refund cycles preserve acknowledged changes without reseeding',async({page,context})=>{
+ test.setTimeout(120_000)
+ const fixture=await wiringFixture(page)
+ fixture.garden.seed({balance:1000,owned:[],earnedChapters:[]})
+ await page.goto('/')
+ const second=await context.newPage();await wiringFixture(second);await second.goto('/')
+ for(const tab of [page,second])await expect(tab.getByRole('button',{name:'Open Garden inventory',exact:true})).toBeEnabled()
+ for(let cycle=0;cycle<100;cycle++)for(const type of ['build','remove-garden-item'] as const){
+  const results=await Promise.all([page,second].map((tab,index)=>tab.evaluate(async({owner,index,type})=>{
+   const path='/src/features/garden/state.ts';const {updateGarden}=await import(path)
+   return await updateGarden(owner,{type,id:index===0?'bench':'lanterns'})
+  },{owner:user,index,type})))
+  for(const result of results){
+   expect(result.saved).toBe(true);expect(result.cancelled).toBe(false)
+   expect(result.after.remote!.revision).toBe(result.before.remote!.revision+1)
+  }
+  expect(results[0].before.remote!.revision).not.toBe(results[1].before.remote!.revision)
+  const expected=type==='build'?{balance:965,owned:['bench','lanterns']}:{balance:1000,owned:[]}
+  expect({...fixture.garden.read(),owned:fixture.garden.read().owned.toSorted()}).toMatchObject(expected)
+ }
+})
 test('same-account tabs preserve purchases and update displayed balances',async({page,context})=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message))
  const fixture=await wiringFixture(page);await page.goto('/')
@@ -115,13 +137,12 @@ test('repeated quick two-tab purchases retain both purchases (50 exclusive-lock 
    const {updateGarden}=await import(path)
    return await updateGarden(owner,{type:'build',id:index===0?'bench':'lanterns'})
   },{owner:user,index})))
-  // Chromium can deliver another renderer's storage visibility after its lock result.
-  // Retry reads only: neither mutation is retried or sequenced by this assertion.
+  // Retry display-cache reads only; neither mutation is retried by this assertion.
   await expect.poll(()=>Promise.all([page,second].map(tab=>tab.evaluate(owner=>{
    const saved=JSON.parse(localStorage.getItem(`pebble:account-garden:v1:${owner}`)!)
    return {balance:saved.balance,owned:saved.owned.sort()}
   },user)))).toEqual([{balance:965,owned:['bench','lanterns']},{balance:965,owned:['bench','lanterns']}])
-  const saved=await page.evaluate(owner=>JSON.parse(localStorage.getItem(`pebble:account-garden:v1:${owner}`)!),user)
+  const saved=fixture.garden.read()
   if(saved.balance!==965||!saved.owned.includes('bench')||!saved.owned.includes('lanterns'))failures.push({attempt,saved,results})
   expect(results.some(result=>result.after.community.balance===965&&result.after.community.owned.length===2)).toBe(true)
  }

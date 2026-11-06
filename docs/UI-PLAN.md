@@ -33,6 +33,15 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/terms`, `/privacy`, `/cookies` | Existing policy content in the new visual layout |
 | `/logout` | Confirmed local session sign-out |
 
+Garden balances and ownership use the authenticated account service described in
+`docs/PEBBLE-ECONOMY.md`. Server revisions and transactions are authoritative;
+browser caches cannot credit a wallet or restore over a newer account change.
+Edits wait for confirmed account state and fail closed when the service is
+unavailable. The legacy IndexedDB transaction helper and its regression tests are
+retained for device-local data, but it is not the account wallet's write path.
+Previous device saves remain untouched and are not imported as trusted currency
+or ownership. Development funds remain explicitly temporary previews.
+
 Events keeps category selection inside the Filters dialog instead of wrapping
 category chips above the listings. A compact summary appears only when a category
 is selected. Category changes and Reset filters retain the page-one reset;
