@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
-import { supabase } from '../supabase'
 import { useSession } from './useSession'
 import { centralSignInPath } from './returnTo'
-import { unregisterPushToken } from '../platform/push'
+import { signOutLocally } from './signOut'
 
 export function useLogout() {
   const { session, ready } = useSession()
@@ -24,11 +23,7 @@ export function useLogout() {
     pending.current = true
     setBusy(true); setError('')
     try {
-      if (!supabase) throw new Error('Sign-out unavailable')
-      // Stop this phone receiving the account's notifications. Needs the session, so it goes first; failure must not block logout.
-      await Promise.race([unregisterPushToken().catch(() => undefined), new Promise(resolve => setTimeout(resolve, 3000))])
-      const { error } = await supabase.auth.signOut({ scope: 'local' })
-      if (error) throw error
+      await signOutLocally()
       // The SDK's SIGNED_OUT notification clears every existing useSession subscriber.
       // Do not invent a local session change or navigate on a failed sign-out.
       // Account identity changes intentionally unmount the old workspace.

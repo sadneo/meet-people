@@ -19,6 +19,7 @@ import {
 } from "../../shared/messaging";
 import { messagingRequest } from "../features/messaging/client";
 import { useCachedLoad } from "../data/useCachedLoad";
+import { useMessageDraft } from '../data/message-drafts';
 import { useAction } from "./hooks";
 import {
   ActionButton,
@@ -50,7 +51,6 @@ export function Messages() {
     selectedGroup = search.get("group"),
     selected = selectedGroup ?? search.get("conversation"),
     [query, setQuery] = useState(''),
-    [drafts, setDrafts] = useState<Record<string, string>>({}),
     [findGroup,setFindGroup] = useState(false),
     [page, setPage] = useState(1);
   const inbox = useCachedLoad(
@@ -152,11 +152,7 @@ export function Messages() {
           )}
         </aside>
         {selected ? (
-          <Chat key={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} connectionLabel={rows.find(row => row.id === selected)?.label ?? ''} initialDraft={drafts[draftKey] ?? ''} saveDraft={value => setDrafts(previous => {
-            const next = { ...previous };
-            if (value) next[draftKey] = value; else delete next[draftKey];
-            return next;
-          })} />
+          <Chat key={draftKey} draftKey={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} connectionLabel={rows.find(row => row.id === selected)?.label ?? ''} />
         ) : (
           <div className="chat-empty">
             <Icon name="Messages"/>
@@ -167,7 +163,7 @@ export function Messages() {
     </section>
   );
 }
-function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, saveDraft }: { id: string; changed: () => void; isGroup?: boolean; connectionLabel?: string; initialDraft: string; saveDraft: (value: string) => void }) {
+function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id: string; changed: () => void; isGroup?: boolean; connectionLabel?: string; draftKey: string }) {
   const [group,setGroup]=useState<ActiveGroup|null>(null)
   const [removeOpen, setRemoveOpen] = useState(false);
   const [peopleOpen, setPeopleOpen] = useState(false);
@@ -189,13 +185,12 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, sa
   const canSend = !!history.value?.canSend && !history.error && !history.refreshing;
   const historyPage=async(before:number)=>isGroup?matchingClient(token).history(id,before):messagingRequest(`/${encodeURIComponent(id)}/messages?before=${before}`,HistorySchema)
 
-  const [body, setBody] = useState(initialDraft),
-    [older, setOlder] = useState<Message[]>([]),
+  const { draft, store } = useMessageDraft(draftKey);
+  const { body, confirmed } = draft;
+  const sending = draft.status === 'pending', uncertain = sending || draft.status === 'uncertain';
+  const [older, setOlder] = useState<Message[]>([]),
     [cursor, setCursor] = useState<number | null>(null),
     [readError, setReadError] = useState("");
-  const [confirmed, setConfirmed] = useState<Message[]>([]),
-    retry = useRef<{ body: string; clientRequestId: string } | null>(null);
-  const [uncertain, setUncertain] = useState(false);
   const composer = useRef<HTMLTextAreaElement>(null),
     focusAfterSend = useRef(false);
   useEffect(() => {
@@ -217,7 +212,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, sa
     window.addEventListener('focus', refresh);
     return () => window.removeEventListener('focus', refresh);
   }, [reloadHistory]);
-  useEffect(()=>{const refresh=()=>{setOlder([]);setConfirmed([]);reloadHistory()};window.addEventListener('pebble:matching-changed',refresh);return()=>window.removeEventListener('pebble:matching-changed',refresh)},[reloadHistory])
+  useEffect(()=>{const refresh=()=>{setOlder([]);reloadHistory()};window.addEventListener('pebble:matching-changed',refresh);return()=>window.removeEventListener('pebble:matching-changed',refresh)},[reloadHistory])
   const messages = [
     ...new Map(
       [...older, ...(history.value?.messages ?? []), ...confirmed].map(
@@ -262,31 +257,13 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, sa
   }, [id, newest, changed, token, isGroup, history.refreshing, history.error, history.updatedAt]);
   async function send(event: FormEvent) {
     event.preventDefault();
-    await action.run(async () => {
-      if (!canSend || (!body.trim() && !retry.current)) return;
-      retry.current ??= {
-        body: body.trim(),
-        clientRequestId: crypto.randomUUID(),
-      };
-      setUncertain(true);
-      const saved = isGroup?await matchingClient(token).send(id,retry.current):await messagingRequest(`/${encodeURIComponent(id)}/messages`,MessageSchema,{body:retry.current});
-      if (!live.current) return;
-      if (
-        saved.conversation_id !== id ||
-        saved.sender_id !== current.session.user.id ||
-        saved.body !== retry.current.body
-      )
-        throw new Error(
-          "The message response could not be confirmed. Refresh messages before retrying.",
-        );
-      setConfirmed((value) => [...value, saved]);
-      retry.current = null;
-      setUncertain(false);
-      setBody("");
-      saveDraft('');
+    if (action.busy) return;
+    const saved = await store.send(draftKey, id, current.session.user.id, canSend, operation =>
+      isGroup ? matchingClient(token).send(id, operation) : messagingRequest(`/${encodeURIComponent(id)}/messages`, MessageSchema, { body: operation }));
+    if (saved && live.current) {
       history.reload();
       changed();
-    });
+    }
   }
   const others =
     history.value?.participants.filter(
@@ -317,7 +294,6 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, sa
           secondary
           disabled={action.busy}
           onClick={() => {
-            setConfirmed([]);
             history.reload();
           }}
         >
@@ -341,7 +317,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, sa
         }); }}>Remove connection</ActionButton>
         <ActionButton secondary disabled={action.busy} onClick={() => setRemoveOpen(false)}>Cancel</ActionButton>
       </Modal>}
-      {isGroup&&group&&<GroupControls group={group} changed={()=>{setOlder([]);setConfirmed([]);history.reload();changed()}}/>}
+      {isGroup&&group&&<GroupControls group={group} changed={()=>{setOlder([]);history.reload();changed()}}/>}
       <div className="chat-history" aria-label="Message history" role="log" aria-live="polite" ref={historyElement}>
         <ResourceState
           loading={history.loading}
@@ -388,6 +364,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, sa
         ))}
       </div>
       <ErrorMessage>{action.error}</ErrorMessage>
+      <ErrorMessage>{draft.error}</ErrorMessage>
       {history.value && !history.value.canSend && (
         <p>You can’t send messages in this conversation.</p>
       )}
@@ -403,7 +380,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, sa
           rows={1}
           placeholder="Message…"
           value={body}
-          onChange={(event) => { setBody(event.target.value); saveDraft(event.target.value); }}
+          onChange={(event) => store.edit(draftKey, event.target.value)}
           onKeyDown={(event) => {
             if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             event.preventDefault();
@@ -416,10 +393,10 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', initialDraft, sa
         />
         <button
           className={`btn message-send ${uncertain ? 'retry' : ''}`}
-          aria-label={action.busy ? 'Sending…' : uncertain ? 'Retry same message' : 'Send'}
-          disabled={!canSend || action.busy || !body.trim()}
+          aria-label={sending || action.busy ? 'Sending…' : uncertain ? 'Retry same message' : 'Send'}
+          disabled={!canSend || action.busy || sending || !body.trim()}
         >
-          {action.busy ? "…" : uncertain ? "Retry same message" : <Icon name="Send" />}
+          {sending || action.busy ? "…" : uncertain ? "Retry same message" : <Icon name="Send" />}
         </button>
       </form>
       <p id="message-keyboard-help" className="sr-only">

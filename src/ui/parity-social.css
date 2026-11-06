@@ -47,7 +47,7 @@
  .messaging-page.chat-selected .live-messages { height:calc(100dvh - 160px - env(safe-area-inset-bottom)); }
  body:has(.messaging-page.chat-selected) .development-navigator { bottom:calc(90px + env(safe-area-inset-bottom)); }
  .messaging-page .chat-header { gap:8px; }
- .messaging-page .chat-back { width:28px;flex:none; }
+ .messaging-page .chat-back { width:44px;flex:none; }
 }
 @media(max-width:650px) { .plans-page>.pagehead { align-items:flex-start;gap:12px; } .plans-page>.pagehead>.btn { min-width:44px; } }
 @media(prefers-reduced-motion:reduce) { .group-search-spinner { animation:none; } }

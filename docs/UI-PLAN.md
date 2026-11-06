@@ -33,6 +33,22 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/terms`, `/privacy`, `/cookies` | Existing policy content in the new visual layout |
 | `/logout` | Confirmed local session sign-out |
 
+Events keeps category selection inside the Filters dialog instead of wrapping
+category chips above the listings. A compact summary appears only when a category
+is selected. Category changes and Reset filters retain the page-one reset;
+Done, Escape and Close dismiss the existing dialog without changing that behavior.
+Category and page are URL-backed so detail/Close and Back/Forward preserve the
+directory search. The last successful category catalog remains in the session
+cache when a category's list request fails; the list still shows its real error.
+
+Android Back dismisses a modal's current layer first, then transient chat options,
+before navigating route history. Direct-link chats fall back to Messages; Garden
+and signed-out login roots minimize the app instead of revisiting auth history.
+The OS keyboard consumes its own first Back. System navigation is not hidden.
+Push opt-in updates tap handling within the session; registration has a bounded,
+cancelable lifecycle. Explicit local logout attempts server/native token cleanup
+before sign-out, with a three-second best-effort limit, without changing opt-in.
+
 Private routes wait for session hydration and persisted account readiness. A
 signed-in account with missing chapters resumes onboarding; account read failures
 block entry with retry and sign-out. Unknown routes pass through the same gate.
@@ -68,6 +84,12 @@ Versioned preference writes keep their compare-and-swap/readback behavior. Faile
 or uncertain mutations require read-only reconciliation before another write.
 Message retries reuse the same client request ID. Passive recommendations never
 enroll someone in the separate Messages group queue.
+Drafts and pending/unconfirmed send identities live in session-scoped memory,
+separately for direct and group conversations, across app-route navigation. A late
+confirmed response clears its draft even after leaving chat. Navigating or reading
+history never replays a send; an explicit retry retains the original request ID.
+Changing accounts or signing out clears this state. No message drafts or send IDs
+are added to persistent browser storage, and process restarts do not restore them.
 An open conversation refreshes its display history every four seconds while the
 tab is visible, and rechecks on return. Polling stops when the conversation
 unmounts. Drafts and loaded history remain during background refresh; stale or
