@@ -105,6 +105,6 @@ connections, messages and safety actions use existing APIs. Friends checks are
 manual and return one person at a time. Dating discovery requires its own explicit
 consent. Saved notification preferences do not prove notification delivery.
 
-Garden remains a local creative feature. The earlier demo’s simulated plans,
+Garden now has an account-backed economy; see [Pebble earning and activation](docs/PEBBLE-ECONOMY.md). Weekly scene history remains device-local. The earlier demo’s simulated plans,
 group growth, account export/deletion and support delivery are not presented as
 working backend operations. Policy pages provide the contact for manual requests.

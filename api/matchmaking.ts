@@ -1,4 +1,5 @@
 import { createDatingLiveRouter } from './dating-live.js'
+import type { GardenCommand } from '../shared/garden.js'
 import type { DatingEnable } from '../shared/dating-live.js'
 import { createProfilePhotoRouter } from './profile-photo.js'
 import type { ProfilePhotoWrite } from '../shared/profile-photo.js'
@@ -38,6 +39,7 @@ type RpcResponse = { data: unknown; error: { code?: string } | null }
 export interface UserContextTransport {
   verify(token: string): Promise<{ id: string } | null>
   actor(token: string): {
+    garden?(command: GardenCommand | null): PromiseLike<RpcResponse>
     join(qtype: 'matchmaking' | 'downtime'): PromiseLike<RpcResponse>
     leave(): PromiseLike<RpcResponse>
     status(): PromiseLike<RpcResponse>
@@ -126,6 +128,7 @@ export function createUserContextTransport(config: { url: string; publicKey: str
     actor(token) {
       const client = createClient(config.url, config.publicKey, { ...options, global: { fetch: config.fetch, headers: { Authorization: `Bearer ${token}` } } })
       return {
+        garden: command => client.rpc('garden_account', { command_in: command }),
         account: () => client.rpc('get_account'),
         saveAccount: account => client.rpc('save_account', { account_in: account }),
         profileDetails: () => client.rpc('get_profile_details'),

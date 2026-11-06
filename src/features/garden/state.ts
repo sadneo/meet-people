@@ -1,93 +1,138 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
 import { useCurrent } from '../../ui/current'
-import { COMMUNITY_STORAGE_KEY, parseCommunity, type Community } from './economy'
+import { COMMUNITY_STORAGE_KEY, loadCommunity, parseCommunity, type Community } from './economy'
 import { gardenReducer, type GardenAction } from './reducer'
 import { recordGardenDay } from './history'
-import { readGardenRecord, transactGarden, type GardenRecord } from './persistence'
+import { authorizedRequest } from '../../auth/authorizedRequest'
+import { GardenResponseSchema, type GardenResponse, type GardenCommand, type GardenRewardAction } from '../../../shared/garden'
 
-type GardenState={community:Community;storageAvailable:boolean;ready:boolean;revision:number}
+type GardenState = { community:Community; remote?:GardenResponse; pending:boolean; error:string; preview:boolean; generation:object; storageAvailable:boolean; undoRevision?:number }
 export type GardenTransaction={before:GardenState;after:GardenState;cancelled:boolean;saved:boolean}
 const cache=new Map<string,GardenState>(),listeners=new Set<()=>void>()
-const memoryOnly=new Set<string>(),scopes=new Map<string,object>(),loading=new Map<string,Promise<void>>()
-const channel=(()=>{try{return typeof BroadcastChannel==='undefined'?null:new BroadcastChannel('pebble:garden:commits:v1')}catch{return null}})()
+const queues=new Map<string,Promise<unknown>>(),controllers=new Map<string,Set<AbortController>>()
 let retainedOwner:string|null|undefined
-let accountGeneration=0
 const subscribe=(notify:()=>void)=>{listeners.add(notify);return()=>{listeners.delete(notify)}}
+const publish=(owner:string,state:GardenState)=>{cache.set(owner,state);for(const notify of listeners)notify()}
 export const gardenStorageKey=(owner:string)=>`${COMMUNITY_STORAGE_KEY}:${owner}`
+export const accountGardenKey=(owner:string)=>`pebble:account-garden:v1:${owner}`
 export function gardenFor(owner:string){
- if(!scopes.has(owner))scopes.set(owner,{})
  let state=cache.get(owner)
- if(!state){let community=parseCommunity(null);try{community=parseCommunity(localStorage.getItem(gardenStorageKey(owner)))}catch{/* A readable IndexedDB record may still exist. */}state={community,storageAvailable:true,ready:false,revision:-1};cache.set(owner,state)}
+ if(!state){state={community:loadCommunity(gardenStorageKey(owner)),pending:false,error:'',preview:false,generation:{},storageAvailable:true};cache.set(owner,state)}
  return state
 }
-export function retainGardenFor(owner:string|null){if(retainedOwner!==owner)accountGeneration++;retainedOwner=owner;for(const key of cache.keys())if(key!==owner){cache.delete(key);memoryOnly.delete(key);scopes.delete(key);loading.delete(key)}if(owner&&cache.has(owner)&&!cache.get(owner)!.ready){loading.delete(owner);void hydrateGarden(owner)}}
-function publish(owner:string,record:GardenRecord){
- const current=gardenFor(owner)
- if(record.revision<current.revision)return current
- if(current.ready&&current.storageAvailable&&record.revision===current.revision)return current
- const next={community:record.community,storageAvailable:true,ready:true,revision:record.revision}
- cache.set(owner,next)
- for(const notify of listeners)notify()
- return next
-}
-async function refreshGarden(owner:string){
- const scope=scopes.get(owner)
- if(!scope||memoryOnly.has(owner))return
- try{const record=await readGardenRecord(owner);if(record&&scopes.get(owner)===scope&&!memoryOnly.has(owner))publish(owner,record)}catch{/* Mutations and hydration surface unavailable storage. */}
-}
-if(channel)channel.onmessage=event=>{const owner=event.data?.owner;if(typeof owner==='string')void refreshGarden(owner)}
-if(typeof window!=='undefined')window.addEventListener('storage',event=>{
- try{if(event.storageArea&&event.storageArea!==localStorage)return}catch{return}
- for(const owner of cache.keys())if(event.key===null||event.key===gardenStorageKey(owner))void refreshGarden(owner)
-})
-async function changeGarden(owner:string,action?:GardenAction,expected?:Community):Promise<GardenTransaction>{
- const generation=accountGeneration,initial=cache.get(owner)??{community:parseCommunity(null),storageAvailable:false,ready:false,revision:-1}
- const active=()=>generation===accountGeneration&&(retainedOwner===undefined||retainedOwner===owner)
- const cancelled=():GardenTransaction=>({before:initial,after:initial,cancelled:true,saved:false})
- if(!active())return cancelled()
- gardenFor(owner)
- const reduce=(community:Community)=>!action||action.type==='restore-garden'&&(!expected||JSON.stringify(expected)!==JSON.stringify(community))?community:gardenReducer({community},action).community
- let committed:GardenTransaction|undefined
- try{
-  if(memoryOnly.has(owner)||!navigator.locks?.request)throw new Error('Safe Garden persistence unavailable')
-  return await navigator.locks.request(gardenStorageKey(owner),{mode:'exclusive'},async()=>{
-   if(!active())return cancelled()
-   const result=await transactGarden(owner,gardenStorageKey(owner),reduce,active)
-   if(!result||!active())return cancelled()
-   const before={community:result.before.community,storageAvailable:true,ready:true,revision:result.before.revision}
-   const next={community:result.after.community,storageAvailable:true,ready:true,revision:result.after.revision}
-   committed={before:result.before.revision===result.after.revision?next:before,after:next,cancelled:false,saved:true}
-   // Only committed IndexedDB state may update this compatibility mirror. Never
-   // use it as a transaction source after migration, even on storage events.
-   if(action)try{localStorage.setItem(gardenStorageKey(owner),JSON.stringify(result.after.community))}catch{/* The IndexedDB commit must not be undone or replayed. */}
-   const after=publish(owner,result.after)
-   committed={...committed,before:result.before.revision===result.after.revision?after:before,after}
-   if(action){recordGardenDay(owner,after.community);try{channel?.postMessage({owner,revision:result.after.revision})}catch{/* Storage events also refresh readers. */}}
-   return committed
-  })
- }catch{
-  if(!active())return cancelled()
-  if(committed)return committed
-  if(!memoryOnly.has(owner))try{const record=await readGardenRecord(owner);if(record&&active())publish(owner,record)}catch{/* Keep the readable in-memory/legacy baseline. */}
-  if(!active())return cancelled()
-  memoryOnly.add(owner)
-  const before=gardenFor(owner),after={...before,community:reduce(before.community),storageAvailable:false,ready:true}
-  cache.set(owner,after);window.dispatchEvent(new Event('pebble:garden-storage-unavailable'))
-  for(const notify of listeners)notify()
-  return {before,after,cancelled:false,saved:false}
+const active=(owner:string,scope:object)=>cache.get(owner)?.generation===scope&&(retainedOwner===undefined||retainedOwner===owner)
+export function retainGardenFor(owner:string|null){
+ retainedOwner=owner
+ for(const key of cache.keys())if(key!==owner){
+  for(const controller of controllers.get(key)??[])controller.abort()
+  cache.delete(key);queues.delete(key)
  }
 }
-export function updateGarden(owner:string,action:GardenAction,expected?:Community){return changeGarden(owner,action,expected)}
-export function hydrateGarden(owner:string){
- let pending=loading.get(owner)
- if(!pending){pending=changeGarden(owner).then(()=>{});loading.set(owner,pending)}
- return pending
+function enqueue<T>(owner:string,work:()=>Promise<T>):Promise<T>{
+ const next=(queues.get(owner)??Promise.resolve()).catch(()=>undefined).then(work)
+ queues.set(owner,next)
+ void next.finally(()=>{if(queues.get(owner)===next)queues.delete(owner)}).catch(()=>undefined)
+ return next
+}
+async function requestGarden(owner:string,scope:object,command?:GardenCommand){
+ if(!active(owner,scope))return null
+ const initial=gardenFor(owner)
+ publish(owner,{...initial,pending:true,error:''})
+ const controller=new AbortController(),timeout=window.setTimeout(()=>controller.abort(),15000)
+ if(!controllers.has(owner))controllers.set(owner,new Set())
+ controllers.get(owner)!.add(controller)
+ try{
+  const remote=await authorizedRequest('/api/garden',GardenResponseSchema,{body:command,signal:controller.signal,expectedUserId:owner})
+  if(!active(owner,scope))return null
+  if(controller.signal.aborted)throw new DOMException('Request cancelled','AbortError')
+  const community=parseCommunity(JSON.stringify(remote.community))
+  let storageAvailable=true
+  try{
+   const raw=JSON.stringify(community)
+   if(localStorage.getItem(accountGardenKey(owner))!==raw)localStorage.setItem(accountGardenKey(owner),raw)
+   storageAvailable=recordGardenDay(owner,community)
+  }catch{storageAvailable=false}
+  // Local storage is a display cache only. No browser write can credit the wallet.
+  const ownUndo=command&&!['check-in','profile-reward','connection-reward','keep-in-touch'].includes(command.action)
+  const preserveUndo=!initial.remote||initial.undoRevision===initial.remote.revision
+  const undoRevision=remote.canUndo&&(ownUndo||(preserveUndo&&(!!command||!initial.remote||initial.remote.revision===remote.revision)))?remote.revision:undefined
+  const after={...initial,community,remote,pending:false,error:'',preview:false,storageAvailable,undoRevision}
+  publish(owner,after)
+  return after
+ }catch{
+  if(active(owner,scope))publish(owner,{...initial,pending:false,error:'Your Garden could not be confirmed. Refresh before making another change.'})
+  return null
+ }finally{window.clearTimeout(timeout);controllers.get(owner)?.delete(controller)}
+}
+export function refreshGarden(owner:string){
+ const scope=gardenFor(owner).generation
+ return enqueue(owner,async()=> (await requestGarden(owner,scope))?.community??null)
+}
+// Storage events signal another tab; always fetch authority from the account service.
+if(typeof window!=='undefined')window.addEventListener('storage',event=>{
+ try{if(event.storageArea&&event.storageArea!==localStorage)return}catch{return}
+ for(const [owner,state] of cache)if(!state.preview&&active(owner,state.generation)&&(event.key===null||event.key===accountGardenKey(owner)))void refreshGarden(owner)
+})
+async function serialized<T>(owner:string,work:()=>Promise<T>):Promise<T>{
+ let entered=false,result:Promise<T>|undefined
+ const run=()=>{entered=true;result=work();return result}
+ try{
+  if(navigator.locks?.request)return await navigator.locks.request(accountGardenKey(owner),{mode:'exclusive'},run)
+ }catch{if(entered)return result!}
+ // Web Locks improve same-browser ordering, but PostgreSQL locks/revisions remain authoritative.
+ return run()
+}
+export function earnPebbles(owner:string,action:GardenRewardAction){
+ const scope=gardenFor(owner).generation
+ return enqueue(owner,()=>serialized(owner,async()=>{
+  if(!active(owner,scope))return null
+  const current=gardenFor(owner)
+  if(!current.remote||current.error||current.preview)return null
+  const before=await requestGarden(owner,scope)
+  if(!before?.remote)return null
+  return (await requestGarden(owner,scope,{action,revision:before.remote.revision,requestId:crypto.randomUUID()}))?.community??null
+ }))
+}
+export function updateGarden(owner:string,action:GardenAction,expected?:Community):Promise<GardenTransaction>{
+ const initial=gardenFor(owner),scope=initial.generation,expectedRevision=initial.remote?.revision
+ const cancelled=():GardenTransaction=>({before:initial,after:initial,cancelled:true,saved:false})
+ return enqueue(owner,()=>serialized(owner,async()=>{
+  if(!active(owner,scope))return cancelled()
+  let before=gardenFor(owner)
+  if((import.meta.env.DEV||import.meta.env.VITE_DEV_TOOLS==='true')&&(action.type==='demo-funds'||before.preview)){
+   const reduced=action.type==='restore-garden'&&(!expected||JSON.stringify(expected)!==JSON.stringify(before.community))?before:gardenReducer(before,action)
+   const after={...before,...reduced,preview:true,error:''}
+   publish(owner,after)
+   return {before,after,cancelled:false,saved:false}
+  }
+  if(!before.remote||before.error||action.type==='demo-funds')return cancelled()
+  const latest=await requestGarden(owner,scope)
+  if(!latest?.remote)return cancelled()
+  before=latest
+  if(action.type==='restore-garden'&&(latest.remote.revision!==expectedRevision||latest.undoRevision!==latest.remote.revision))return {before,after:before,cancelled:false,saved:false}
+  // Resolve relative keyboard movement only after queued predecessors and the latest account read.
+  const base={requestId:crypto.randomUUID(),revision:latest.remote.revision}
+  const command:GardenCommand=action.type==='build'?{...base,action:'build',id:action.id}
+   :action.type==='remove-garden-item'?{...base,action:'remove',id:action.id}
+   :action.type==='open-geode'?{...base,action:'geode'}
+   :action.type==='reset-purchases'?{...base,action:'reset'}
+   :action.type==='restore-garden'?{...base,action:'undo'}
+   :{...base,action:'move',id:action.id,position:gardenReducer(before,action).community.positions![action.id]!}
+  const after=await requestGarden(owner,scope,command)
+  return after?{before,after,cancelled:false,saved:true}:cancelled()
+ }))
 }
 export function useGarden(){
  const owner=useCurrent().session.user.id
  const state=useSyncExternalStore(subscribe,useCallback(()=>gardenFor(owner),[owner]))
- useEffect(()=>{void hydrateGarden(owner)},[owner])
- useEffect(()=>{if(state.ready&&state.storageAvailable)recordGardenDay(owner,state.community)},[owner,state.community,state.storageAvailable,state.ready])
- const scope=scopes.get(owner)
- return {owner,state,dispatch:(action:GardenAction)=>scopes.get(owner)!==scope||retainedOwner!==undefined&&retainedOwner!==owner?Promise.resolve({before:state,after:state,cancelled:true,saved:false}):updateGarden(owner,action,state.community)}
+ const scope=state.generation
+ useEffect(()=>{
+  void refreshGarden(owner)
+  const focus=()=>{const current=cache.get(owner);if(current&&active(owner,scope)&&!current.pending&&!current.preview)void refreshGarden(owner)}
+  const visible=()=>{if(document.visibilityState==='visible')focus()}
+  const timer=window.setInterval(visible,60000)
+  window.addEventListener('focus',focus);document.addEventListener('visibilitychange',visible)
+  return()=>{window.clearInterval(timer);window.removeEventListener('focus',focus);document.removeEventListener('visibilitychange',visible)}
+ },[owner,scope])
+ return {owner,state,dispatch:(action:GardenAction)=>active(owner,scope)?updateGarden(owner,action,state.community):Promise.resolve({before:state,after:state,cancelled:true,saved:false}),refresh:()=>active(owner,scope)?refreshGarden(owner):Promise.resolve(null),earn:(action:GardenRewardAction)=>active(owner,scope)?earnPebbles(owner,action):Promise.resolve(null),available:(!!state.remote||state.preview)&&!state.pending&&!state.error}
 }

@@ -1,5 +1,8 @@
 import { parseCommunity, type Community } from './economy'
 
+// Legacy device-local storage only. The account wallet uses /api/garden; these
+// records must never be imported as trusted account currency or ownership.
+
 export const GARDEN_DATABASE='pebble:garden:v1'
 const storeName='gardens'
 export type GardenRecord={owner:string;community:Community;revision:number}

@@ -21,7 +21,7 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/auth/callback`, `/reset-password` | Explicit grant verification and URL scrubbing |
 | `/auth/forgot-password`, `/forgot-password` | Real recovery email request |
 | `/onboarding` | Guided four-stone journey from the original dev flow, with a welcome scene and confirmed completion screen. About you (identity, private birthdate, home area), interests (1–5, premade or custom; at most 2 custom), social intentions, then weekly availability, general plan preferences and an explicit saved timezone. Each chapter persists and resumes from confirmed account data. Dating and group/event queues retain separate opt-in. |
-| `/home`, `/community` | Integrated pixel-art Garden; account-keyed browser inventory, placement and unique Geode unlocks (not server ownership) |
+| `/home`, `/community` | Integrated pixel-art Garden; account-backed inventory, placement, Random Pebble unlocks and capped earning rewards; weekly scene history stays device-local |
 | `/matchmaking` | Passive Friends/Dating recommendations, consent and search preferences |
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
 | Web `/explore`, `/explore/:id` | Public event reads; installation link for group participation |
@@ -33,14 +33,14 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/terms`, `/privacy`, `/cookies` | Existing policy content in the new visual layout |
 | `/logout` | Confirmed local session sign-out |
 
-Garden saves use owner-keyed IndexedDB readwrite transactions. Each account's
-legacy localStorage Garden imports once without deleting the legacy key; after
-migration, localStorage is only a compatibility mirror and cannot overwrite the
-authoritative save. The scene waits for storage hydration before enabling edits.
-Concurrent purchases/refunds reduce against the committed state, and stale Undo
-cannot restore over a newer change. Unavailable persistence enters explicitly
-unsaved, tab-local mode rather than acknowledging a durable save. Existing older
-tabs must reload after this upgrade; no server or cross-device sync is added.
+Garden balances and ownership use the authenticated account service described in
+`docs/PEBBLE-ECONOMY.md`. Server revisions and transactions are authoritative;
+browser caches cannot credit a wallet or restore over a newer account change.
+Edits wait for confirmed account state and fail closed when the service is
+unavailable. The legacy IndexedDB transaction helper and its regression tests are
+retained for device-local data, but it is not the account wallet's write path.
+Previous device saves remain untouched and are not imported as trusted currency
+or ownership. Development funds remain explicitly temporary previews.
 
 Events keeps category selection inside the Filters dialog instead of wrapping
 category chips above the listings. A compact summary appears only when a category
