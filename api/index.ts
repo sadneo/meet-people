@@ -1,4 +1,5 @@
 import express from 'express'
+import { createGardenRouter } from './garden.js'
 import { createClient } from '@supabase/supabase-js'
 import { env } from './env.js'
 import { createEventsRouter } from './events.js'
@@ -72,6 +73,7 @@ const mapLocations = env.GOOGLE_MAPS_STORAGE_APPROVED === 'true' && env.GOOGLE_M
 app.use('/api/matchmaking', boundedMatchingBodyError, createMatchmakingRouter(ownerTransport, datingScoring, friendsScoring, activeWorker, mapLocations, env.GOOGLE_MAPS_REQUESTS_PER_DAY))
 app.use('/api/connections', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'connections'))
 app.use('/api/conversations', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'conversations'))
+app.use('/api/garden', createGardenRouter(ownerTransport))
 
 app.get('/api/health', (_request, response) => {
   response.json(HealthResponseSchema.parse({ status: 'ok' }))

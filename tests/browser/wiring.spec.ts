@@ -471,16 +471,13 @@ test("detailed settings persist to their own revisioned resource", async ({
   ).toHaveLength(1);
 });
 
-test("garden purchases use the new renderer without calling an invented economy API", async ({
+test("garden purchases use the authenticated account economy and survive navigation", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   const fixture = await wiringFixture(page);
   await page.goto("/");
-  await page.getByRole("complementary", {name:"Development navigation"}).locator("summary").click();
-  await page.getByRole("button", {name:"Add 1,000 test Pebbles"}).click();
-  await page.getByRole("complementary", {name:"Development navigation"}).locator("summary").click();
   await page.getByRole("button", { name: /Build with/ }).click();
   await page.locator('summary[aria-label="Decorations"]').click();
   await page
@@ -488,16 +485,13 @@ test("garden purchases use the new renderer without calling an invented economy 
     .filter({ hasText: "Garden Bench" })
     .getByRole("button", { name: "Build", exact: true })
     .click();
-  await expect(page.locator(".garden-balance strong")).toHaveText("985");
+  await expect(page.locator(".garden-balance strong")).toHaveText("285");
   await page.getByRole('link', { name: 'Discover', exact: true }).click();
   await page.getByRole('link', { name: 'Garden', exact: true }).click();
-  await expect(page.locator('.garden-balance strong')).toHaveText('985');
+  await expect(page.locator('.garden-balance strong')).toHaveText('285');
 
-  expect(
-    fixture.calls.some((call) =>
-      /economy|reward|garden|purchase/.test(call.path),
-    ),
-  ).toBe(false);
+  expect(fixture.garden.calls.some(call=>call.method==='POST'&&call.body.action==='build'&&call.body.id==='bench')).toBe(true);
+  expect(fixture.garden.read().balance).toBe(285);
   expect(errors).toEqual([]);
 });
 

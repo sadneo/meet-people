@@ -1,7 +1,7 @@
-import {test,expect,type Page} from '@playwright/test'
+import {test,expect} from '@playwright/test'
 import {wiringFixture,user} from './wiring-fixture'
 import {mockMatchingSession} from './matchmaking-fixture'
-const key=`pebble:full-ui:community:v1:${user}`
+const key=`pebble:account-garden:v1:${user}`
 test('Garden aliases use the sky composition, active navigation and sliding inventory tray',async({page})=>{
  await page.setViewportSize({width:390,height:860});await wiringFixture(page)
  for(const path of ['/community','/home']){
@@ -20,18 +20,14 @@ test('Garden aliases use the sky composition, active navigation and sliding inve
  await page.getByRole('link',{name:'Discover people'}).click()
  await expect(page).toHaveURL(/\/matchmaking\?mode=friends/)
 })
-async function funds(page:Page){
- const menu=page.getByRole('complementary',{name:'Development navigation'})
- await menu.locator('summary').click();await page.getByRole('button',{name:'Add 1,000 test Pebbles'}).click();await page.getByRole('button',{name:'Add 1,000 test Pebbles'}).click();await menu.locator('summary').click()
-}
 for(const width of [390,1280])test(`Garden integration: drag, undo, four geodes, reset, reload ${width}`,async({page},info)=>{
- await page.setViewportSize({width,height:860});await wiringFixture(page);await page.goto('/')
+ await page.setViewportSize({width,height:860});const fixture=await wiringFixture(page);fixture.garden.seed({balance:2000,owned:[],earnedChapters:[]});await page.goto('/')
  await expect(page.getByRole('heading',{name:'Your Garden'})).toBeVisible();await expect(page.getByText('Growing your Garden…')).toHaveCount(0)
  await page.getByRole('button',{name:'Open Garden inventory'}).click()
  await page.locator('summary[aria-label="Random Pebbles"]').click()
  const geode=page.locator('.garden-shop-item').filter({has:page.getByText('Random pebble',{exact:true})})
- await expect(geode.getByRole('button',{name:'Open',exact:true})).toBeDisabled()
- await page.getByRole('button',{name:'Close Garden inventory'}).click();await funds(page)
+ await expect(geode.getByRole('button',{name:'Open',exact:true})).toBeEnabled()
+ await page.getByRole('button',{name:'Close Garden inventory'}).click()
  await page.getByRole('button',{name:'Open Garden inventory'}).click()
  await page.locator('summary[aria-label="Decorations"]').click()
  await page.locator('.garden-shop-item').filter({has:page.getByText('Garden Bench',{exact:true})}).getByRole('button',{name:'Build',exact:true}).click()
@@ -40,7 +36,7 @@ for(const width of [390,1280])test(`Garden integration: drag, undo, four geodes,
  await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+48,y-24,{steps:8});await page.mouse.up()
  await expect.poll(()=>page.evaluate(k=>JSON.parse(localStorage.getItem(k)!).positions?.bench,key)).not.toBeUndefined()
  await page.getByRole('button',{name:'Open Garden inventory'}).click()
- await page.getByRole('button',{name:'Undo Garden change'}).click();expect(await page.evaluate(k=>JSON.parse(localStorage.getItem(k)!).positions?.bench,key)).toBeUndefined()
+ await page.getByRole('button',{name:'Undo Garden change'}).click();await expect.poll(()=>page.evaluate(k=>JSON.parse(localStorage.getItem(k)!).positions?.bench,key)).toBeUndefined()
  await page.getByRole('button',{name:'Undo Garden change'}).click();await expect(page.getByText('2,000 Pebbles available')).toBeVisible();await page.getByRole('button',{name:'Close Garden inventory'}).click()
  for(let i=0;i<4;i++){
   await page.getByRole('button',{name:'Open Garden inventory'}).click();await geode.getByRole('button',{name:'Open',exact:true}).click()
@@ -57,7 +53,7 @@ for(const width of [390,1280])test(`Garden integration: drag, undo, four geodes,
 })
 
 test('Garden fixed landscape, reduced motion and account isolation',async({page},info)=>{
- await page.setViewportSize({width:1280,height:860});await wiringFixture(page);await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/');await funds(page)
+ await page.setViewportSize({width:1280,height:860});const fixture=await wiringFixture(page);fixture.garden.seed({balance:2000,owned:[],earnedChapters:[]});await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/')
  for(const name of ['River','Tree Cluster','Flower Meadow','Garnet']){
   await page.getByRole('button',{name:'Open Garden inventory'}).click()
   const category=page.locator(`summary[aria-label="${name==='Garnet'?'Rare Pebbles':'Landscape'}"]`)
@@ -75,7 +71,7 @@ test('Garden fixed landscape, reduced motion and account isolation',async({page}
  expect(await canvas.evaluate(el=>(el as HTMLCanvasElement).toDataURL())).not.toBe(before)
  const saved=await page.evaluate(k=>localStorage.getItem(k),key)
  await mockMatchingSession(page,true,0,{id:'a0000000-0000-4000-8000-000000000099',token:'other-fixture'});await page.reload()
- await expect(page.getByRole('button',{name:'Build with 0 Pebbles'})).toBeVisible()
+ await expect(page.getByRole('button',{name:'Build with 300 Pebbles'})).toBeVisible()
  expect(await page.evaluate(k=>localStorage.getItem(k),key)).toBe(saved)
  await mockMatchingSession(page);await page.reload();await expect(page.getByRole('button',{name:'Build with 1535 Pebbles'})).toBeVisible()
 })
@@ -83,7 +79,8 @@ test('Garden fixed landscape, reduced motion and account isolation',async({page}
 for(const width of [320,390,1280])test(`Garden catalog groups and compact history ${width}`,async({page},info)=>{
  await page.setViewportSize({width,height:width===320?640:800});await page.emulateMedia({reducedMotion:'reduce'})
  await page.clock.setFixedTime(new Date('2026-11-04T15:00:00'))
- await wiringFixture(page)
+ const fixture=await wiringFixture(page)
+ fixture.garden.seed({balance:900,owned:['cottage','hall','cafe','tree-cluster','river','garnet'],earnedChapters:[]})
  await page.addInitScript(({key,user})=>{
   localStorage.setItem(key,JSON.stringify({balance:900,owned:['cottage','hall','cafe','tree-cluster','river','garnet'],earnedChapters:[]}))
   localStorage.setItem(`pebble:garden-history:v1:${user}`,JSON.stringify({'2026-11-02':{owned:[],positions:{}},'2026-11-03':{owned:['cottage'],positions:{}}}))
