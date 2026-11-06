@@ -32,7 +32,8 @@ export function Garden() {
     return result
   }
   const [art,setArt]=useState<GardenArt|null>(null), [error,setError]=useState('')
-  const [sceneReady,setSceneReady]=useState(false), [artAttempt,setArtAttempt]=useState(0)
+  const [artReady,setSceneReady]=useState(false), [artAttempt,setArtAttempt]=useState(0)
+  const sceneReady=artReady&&state.ready
   const [selected,setSelected]=useState<MovableId|null>(null), [preview,setPreview]=useState<{ id: MovableId; point: Position }|null>(null)
   const [camera,setCamera]=useState({x:0,y:0,zoom:1})
   const [activityOpen,setActivityOpen]=useState(false), [historyPreview,setHistoryPreview]=useState<{day:string;snapshot:GardenSnapshot}|null>(null)

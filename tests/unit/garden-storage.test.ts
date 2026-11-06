@@ -2,15 +2,30 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { emptyCommunity } from '../../src/features/garden/economy'
-import { gardenFor, gardenStorageKey, retainGardenFor, updateGarden, useGarden } from '../../src/features/garden/state'
+import { gardenFor, gardenStorageKey, hydrateGarden, retainGardenFor, updateGarden, useGarden } from '../../src/features/garden/state'
+import * as persistence from '../../src/features/garden/persistence'
+import type { GardenRecord } from '../../src/features/garden/persistence'
 
 const current=vi.hoisted(()=>({owner:'garden-storage-test'}))
+const records=vi.hoisted(()=>new Map<string,GardenRecord>())
+vi.mock('../../src/features/garden/persistence',async()=>{
+ const {parseCommunity}=await import('../../src/features/garden/economy')
+ return {
+  readGardenRecord:async(owner:string)=>structuredClone(records.get(owner)??null),
+  transactGarden:async(owner:string,key:string,reduce:(community:GardenRecord['community'])=>GardenRecord['community'],active:()=>boolean)=>{
+   if(!active())return null
+   const before=structuredClone(records.get(owner)??{owner,community:parseCommunity(localStorage.getItem(key)),revision:0})
+   const community=reduce(before.community),after=JSON.stringify(community)===JSON.stringify(before.community)?before:{owner,community,revision:before.revision+1}
+   records.set(owner,structuredClone(after));return {before,after,cancelled:false}
+  },
+ }
+})
 vi.mock('../../src/ui/current',()=>({useCurrent:()=>({session:{user:{id:current.owner}}})}))
 
 const owner='garden-storage-test'
-const save=(balance:number,extra={})=>localStorage.setItem(gardenStorageKey(owner),JSON.stringify({...emptyCommunity,balance,...extra}))
+const save=(balance:number,extra={})=>{const community={...emptyCommunity,balance,...extra};localStorage.setItem(gardenStorageKey(owner),JSON.stringify(community));records.set(owner,{owner,community,revision:(records.get(owner)?.revision??-1)+1})}
 beforeEach(()=>{
- vi.restoreAllMocks();localStorage.clear();retainGardenFor(null);retainGardenFor(owner)
+ vi.restoreAllMocks();records.clear();localStorage.clear();retainGardenFor(null);retainGardenFor(owner)
  Object.defineProperty(navigator,'locks',{configurable:true,value:{request:vi.fn((_name:string,_options:LockOptions,callback:()=>unknown)=>Promise.resolve().then(callback))}})
 })
 
@@ -38,6 +53,7 @@ it('refreshes storage changes with stable snapshots and ignores other accounts',
  expect(gardenFor(owner)).toBe(original)
  save(985,{owned:['bench']})
  window.dispatchEvent(new StorageEvent('storage',{key:gardenStorageKey(owner),storageArea:localStorage}))
+ await vi.waitFor(()=>expect(gardenFor(owner).community.balance).toBe(985))
  const next=gardenFor(owner)
  expect(next.community.balance).toBe(985);expect(gardenFor(owner)).toBe(next)
  retainGardenFor('other');const other=gardenFor('other')
@@ -51,10 +67,12 @@ it('keeps the in-memory fallback when storage is denied and safely parses corrup
  save(1000);gardenFor(owner)
  vi.spyOn(Storage.prototype,'getItem').mockImplementation(()=>{throw new Error('denied')})
  vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw new Error('denied')})
+ vi.spyOn(persistence,'transactGarden').mockRejectedValue(new Error('denied'))
+ vi.spyOn(persistence,'readGardenRecord').mockRejectedValue(new Error('denied'))
  await updateGarden(owner,{type:'build',id:'bench'})
  await updateGarden(owner,{type:'build',id:'river'})
  expect(gardenFor(owner).community.balance).toBe(905)
- vi.restoreAllMocks();retainGardenFor(null);retainGardenFor(owner)
+ vi.restoreAllMocks();records.clear();retainGardenFor(null);retainGardenFor(owner)
  localStorage.setItem(gardenStorageKey(owner),'{broken')
  expect(gardenFor(owner).community).toEqual(emptyCommunity)
  await updateGarden(owner,{type:'demo-funds'})
@@ -81,6 +99,7 @@ it('refuses a stale whole-snapshot undo and keeps failed-write fallback across m
  await updateGarden(owner,{type:'restore-garden',community:before},expected)
  expect(gardenFor(owner).community).toMatchObject({balance:905,owned:['bench','river']})
  vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw new Error('quota')})
+ vi.spyOn(persistence,'transactGarden').mockRejectedValue(new Error('quota'))
  await updateGarden(owner,{type:'build',id:'flowers'})
  await updateGarden(owner,{type:'build',id:'lanterns'})
  expect(gardenFor(owner).community.balance).toBe(875)
@@ -88,6 +107,7 @@ it('refuses a stale whole-snapshot undo and keeps failed-write fallback across m
 it('returns the actual mutation base so rebased unlocks and undo do not use a stale render',async()=>{
  save(1000);current.owner=owner;retainGardenFor(owner)
  const hook=renderHook(()=>useGarden())
+ await act(async()=>{await hydrateGarden(owner)})
  save(700,{geodeUnlocks:['amethyst']})
  await act(async()=>{
   const result=await hook.result.current.dispatch({type:'open-geode',random:0})

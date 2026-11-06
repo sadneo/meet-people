@@ -33,6 +33,15 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/terms`, `/privacy`, `/cookies` | Existing policy content in the new visual layout |
 | `/logout` | Confirmed local session sign-out |
 
+Garden saves use owner-keyed IndexedDB readwrite transactions. Each account's
+legacy localStorage Garden imports once without deleting the legacy key; after
+migration, localStorage is only a compatibility mirror and cannot overwrite the
+authoritative save. The scene waits for storage hydration before enabling edits.
+Concurrent purchases/refunds reduce against the committed state, and stale Undo
+cannot restore over a newer change. Unavailable persistence enters explicitly
+unsaved, tab-local mode rather than acknowledging a durable save. Existing older
+tabs must reload after this upgrade; no server or cross-device sync is added.
+
 Events keeps category selection inside the Filters dialog instead of wrapping
 category chips above the listings. A compact summary appears only when a category
 is selected. Category changes and Reset filters retain the page-one reset;
