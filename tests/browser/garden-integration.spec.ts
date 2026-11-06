@@ -40,7 +40,7 @@ for(const width of [390,1280])test(`Garden integration: drag, undo, four geodes,
  await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+48,y-24,{steps:8});await page.mouse.up()
  await expect.poll(()=>page.evaluate(k=>JSON.parse(localStorage.getItem(k)!).positions?.bench,key)).not.toBeUndefined()
  await page.getByRole('button',{name:'Open Garden inventory'}).click()
- await page.getByRole('button',{name:'Undo Garden change'}).click();expect(await page.evaluate(k=>JSON.parse(localStorage.getItem(k)!).positions?.bench,key)).toBeUndefined()
+  await page.getByRole('button',{name:'Undo Garden change'}).click();await expect.poll(()=>page.evaluate(k=>JSON.parse(localStorage.getItem(k)!).positions?.bench,key)).toBeUndefined()
  await page.getByRole('button',{name:'Undo Garden change'}).click();await expect(page.getByText('2,000 Pebbles available')).toBeVisible();await page.getByRole('button',{name:'Close Garden inventory'}).click()
  for(let i=0;i<4;i++){
   await page.getByRole('button',{name:'Open Garden inventory'}).click();await geode.getByRole('button',{name:'Open',exact:true}).click()

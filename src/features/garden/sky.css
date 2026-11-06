@@ -7,6 +7,7 @@
 .integrated-sky-garden .garden-balance{padding:6px 13px 6px 9px;gap:7px;font-size:14px;border:1px solid #fffdf5;background:#fffdf0db;border-radius:24px;color:#333d32;box-shadow:0 5px 15px #57684b0c}
 .integrated-sky-garden .garden-balance img{width:28px;height:28px}
 .integrated-sky-garden .garden-balance strong{font-weight:600}
+.integrated-sky-garden .garden-storage-notice{position:absolute;z-index:3;top:104px;left:20px;right:20px;max-width:410px;margin:0;padding:12px 16px;border:1px solid #e7e7d9;border-radius:14px;background:#fffdf5;color:#9d503d;font-size:12px;line-height:1.5}
 .integrated-sky-garden .garden-bottom{left:33px;right:auto;bottom:29px;z-index:2}
 .integrated-sky-garden .garden-activity{display:flex;align-items:center;gap:12px;background:#fffdf0df;padding:13px 19px;border:1px solid #fffdf5;border-radius:19px;box-shadow:0 5px 20px #5363460c;text-align:left;color:#333d32}
 .integrated-sky-garden .garden-activity svg{color:#9d6e49;width:24px;height:24px}
@@ -29,7 +30,8 @@
 .integrated-sky-garden .garden-drawer header button{color:#526349}
 .garden-build-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 22px 13px;flex:none;font-size:11px;color:#8a917f}
 .garden-build-meta>span{display:flex;align-items:center;gap:8px;font-size:12px}.garden-build-meta img{width:30px;height:30px}.garden-build-meta button{color:#9d503d;font-size:11px;min-height:44px;background:none;border:0;cursor:pointer}
-.integrated-sky-garden .garden-drawer-body{padding:0 22px 22px;scrollbar-width:thin}
+.integrated-sky-garden .garden-drawer{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.integrated-sky-garden .garden-drawer-body{padding:0 22px 22px;flex:none;overflow:visible}
 .integrated-sky-garden .garden-drawer h3{font-family:inherit;font-size:14px;font-weight:600;color:#68785d}
 .integrated-sky-garden .garden-shop-item{gap:12px;padding:16px 0;border-color:#e7e7d9}
 .integrated-sky-garden .garden-shop-item canvas,.integrated-sky-garden .garden-shop-item>img{width:58px;height:58px;background:#e9eddb;border-radius:14px;padding:5px}
@@ -58,7 +60,7 @@
 .garden-keyboard-help summary{min-height:44px;align-content:center;cursor:pointer}
 .integrated-sky-garden .garden-drawer footer.garden-build-footer{display:flex;flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px;background:#fffdf5}
 .integrated-sky-garden .garden-build-footer .garden-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0}
-.integrated-sky-garden .garden-build-footer .garden-tools button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;padding:8px 4px;font-size:11px;border:1px solid #e7e7d9;border-radius:12px;white-space:nowrap;color:#526349}
+.integrated-sky-garden .garden-build-footer .garden-tools button{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:44px;padding:8px 4px;font-size:11px;border:1px solid #e7e7d9;border-radius:12px;white-space:normal;overflow-wrap:anywhere;color:#526349}
 .integrated-sky-garden .garden-build-footer .garden-tools button:last-child{color:#9d503d}
 .integrated-sky-garden .garden-build-footer small{text-align:center;max-width:none;color:#8a927c}
 .garden-week{width:310px;max-width:calc(100vw - 34px);padding:9px 12px 8px;background:#fffdf5;border:1px solid #fffdf9;border-radius:20px;box-shadow:0 8px 28px #31422e14}

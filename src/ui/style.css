@@ -6062,7 +6062,7 @@ body:has(.sky-garden-main) .devbar .devpanel {
   }
 }
 
-/* Events directory: wrapping categories and photo-first, consistently aligned cards. */
+/* Events directory: filters disclosed on demand and photo-first cards. */
 .events-page {
   --event-green: #285640;
   --event-sage: #eaf0df;
@@ -6077,10 +6077,13 @@ body:has(.sky-garden-main) .devbar .devpanel {
   font-size: 30px;
 }
 .event-filter-button {
-  width: 44px;
-  height: 44px;
-  padding: 11px;
-  border-radius: 50%;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 100px;
+  gap: 8px;
+  font-size: 13px;
+  flex-shrink: 0;
 }
 .event-filter-button .ui-icon {
   width: 21px;

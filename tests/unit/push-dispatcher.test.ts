@@ -106,7 +106,7 @@ describe('routeForPush', () => {
     expect(routeForPush('message')).toBe('/messages')
     expect(routeForPush('connection_request')).toBe('/messages')
     expect(routeForPush('connection_accepted')).toBe('/messages')
-    expect(routeForPush('dating_match')).toBe('/matchmaking?view=dating')
+    expect(routeForPush('dating_match')).toBe('/matchmaking?mode=dating')
     expect(routeForPush('https://evil.example')).toBeNull()
     expect(routeForPush(undefined)).toBeNull()
   })

@@ -9,6 +9,7 @@ export type GardenAction =
  | { type:'demo-funds' }
  | { type:'restore-garden'; community:Community }
  | { type:'move-community-item'; id:MovableId; position:Position }
+ | { type:'nudge-community-item'; id:MovableId; delta:Position }
 
 export function gardenReducer(state:{community:Community},action:GardenAction){
  const community=state.community
@@ -19,6 +20,11 @@ export function gardenReducer(state:{community:Community},action:GardenAction){
   case 'reset-purchases':return {community:resetPurchases(community)}
   case 'demo-funds':return {community:{...community,balance:Math.min(1_000_000,community.balance+1000)}}
   case 'restore-garden':return JSON.stringify(community.geodeUnlocks??[])===JSON.stringify(action.community.geodeUnlocks??[])?{community:action.community}:state
+  case 'nudge-community-item':{
+   if(!Object.hasOwn(defaultPlacements,action.id))return state
+   const [x,y]=defaultPlacements[action.id],point=community.positions?.[action.id]??(action.id==='pebble'?{x:724,y:610}:{x,y})
+   return gardenReducer(state,{type:'move-community-item',id:action.id,position:{x:point.x+action.delta.x,y:point.y+action.delta.y}})
+  }
   case 'move-community-item':
    if(!Object.hasOwn(defaultPlacements,action.id)||(action.id!=='pebble'&&!community.owned.includes(action.id as UpgradeId)))return state
    return {community:{...community,positions:{...community.positions,[action.id]:constrainPlacement(action.position,action.id)}}}

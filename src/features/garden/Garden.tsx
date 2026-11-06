@@ -12,6 +12,7 @@ import './garden.css'
 import { WeeklyActivity } from './WeeklyActivity'
 import { recordGardenDay, type GardenSnapshot } from './history'
 import { PageSkeleton } from '../../ui/loading/PageSkeleton'
+import { type GardenAction } from './reducer'
 
 function ArtPreview({ id }: { id: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -20,7 +21,16 @@ function ArtPreview({ id }: { id: string }) {
 }
 
 export function Garden() {
-  const { owner, state, dispatch } = useGarden(), community = state.community
+  const { owner, state, dispatch:dispatchGarden } = useGarden(), community = state.community
+  const [lastOwnChange,setLastOwnChange]=useState<typeof state|null>(null)
+  const dispatch=async(action:GardenAction)=>{
+    const result=await dispatchGarden(action)
+    if(result.cancelled)return result
+    const changed=result.before.community!==result.after.community,sameBase=JSON.stringify(result.before.community)===JSON.stringify(community)
+    setLastOwnChange(changed&&sameBase?result.after:null)
+    if(changed&&action.type!=='restore-garden'&&action.type!=='open-geode')setUndo(history=>[...(sameBase?history.slice(-19):[]),structuredClone(result.before.community)])
+    return result
+  }
   const [art,setArt]=useState<GardenArt|null>(null), [error,setError]=useState('')
   const [sceneReady,setSceneReady]=useState(false), [artAttempt,setArtAttempt]=useState(0)
   const [selected,setSelected]=useState<MovableId|null>(null), [preview,setPreview]=useState<{ id: MovableId; point: Position }|null>(null)
@@ -29,8 +39,7 @@ export function Garden() {
   const shownCommunity = historyPreview?.snapshot ?? community
   const activityPanel=useRef<HTMLDivElement>(null), activityTrigger=useRef<HTMLButtonElement>(null)
   const [undo,setUndo]=useState<Community[]>([])
-  const remember=()=>setUndo(history=>[...history.slice(-19),structuredClone(community)])
-  const storeRock=(id:UpgradeId)=>{remember();dispatch({type:'remove-garden-item',id})}
+  const storeRock=async(id:UpgradeId)=>{await dispatch({type:'remove-garden-item',id})}
   const [announcement,setAnnouncement]=useState(''), [reveal,setReveal]=useState<string|null>(null)
   const [inventoryOpen,setInventoryOpen]=useState(false), [friendIsland,setFriendIsland]=useState(false)
   const canvas=useRef<HTMLCanvasElement>(null), drawer=useRef<HTMLDialogElement>(null), reset=useRef<HTMLDialogElement>(null), revealDialog=useRef<HTMLDialogElement>(null)
@@ -96,21 +105,30 @@ export function Garden() {
   },[activityOpen])
   const open=()=>{if(!sceneReady||error)return;closeActivity();setInventoryOpen(true);drawer.current?.showModal()}
   const close=()=>{drawer.current?.close();setInventoryOpen(false);trigger.current?.focus({preventScroll:true})}
-  const buy=(id:UpgradeId)=>{remember();dispatch({type:'build',id});setAnnouncement(`${upgrades.find(x=>x.id===id)?.name} added.`);close();if(!isLandscapeUpgrade(id)){setSelected(id as MovableId);canvas.current?.focus({preventScroll:true})}}
-  const openGeode=()=>{
-    const remaining=geodeRocks.filter(rock=>!community.geodeUnlocks?.includes(rock.id));if(community.balance<300||!remaining.length)return
-    const random=crypto.getRandomValues(new Uint32Array(1))[0]/4294967296,rock=remaining[Math.floor(random*remaining.length)]
-    setUndo([]);dispatch({type:'open-geode',random});setReveal(rock.id);drawer.current?.close();setInventoryOpen(false);revealDialog.current?.showModal();setAnnouncement(`${rock.name} unlocked.`)
+  const buy=async(id:UpgradeId)=>{
+    const result=await dispatch({type:'build',id}),name=upgrades.find(x=>x.id===id)?.name
+    if(result.cancelled)return
+    if(result.before.community.owned.includes(id)||!result.after.community.owned.includes(id)){setAnnouncement(`${name} was not added. Your balance or inventory changed; check the updated garden.`);return}
+    setAnnouncement(`${name} added.${result.saved?'':' Not saved; changes last only in this tab.'}`);close();if(!isLandscapeUpgrade(id)){setSelected(id as MovableId);canvas.current?.focus({preventScroll:true})}
+  }
+  const openGeode=async()=>{
+    const random=crypto.getRandomValues(new Uint32Array(1))[0]/4294967296
+    const result=await dispatch({type:'open-geode',random})
+    if(result.cancelled)return
+    const rock=geodeRocks.find(rock=>result.after.community.geodeUnlocks?.includes(rock.id)&&!result.before.community.geodeUnlocks?.includes(rock.id))
+    if(!rock)return
+    setUndo([]);setReveal(rock.id);drawer.current?.close();setInventoryOpen(false);revealDialog.current?.showModal();setAnnouncement(`${rock.name} unlocked.${result.saved?'':' Not saved; changes last only in this tab.'}`)
   }
   const endDrag=(e:PointerEvent<HTMLCanvasElement>,cancel=false)=>{
     pointers.current.delete(e.pointerId);if(pointers.current.size<2)pinch.current=null
     const current=drag.current;if(current?.pointer!==e.pointerId)return
-    if(current.id&&!cancel&&(current.point.x!==current.origin.x||current.point.y!==current.origin.y)){remember();dispatch({type:'move-community-item',id:current.id,position:current.point})}
+    if(current.id&&!cancel&&(current.point.x!==current.origin.x||current.point.y!==current.origin.y))void dispatch({type:'move-community-item',id:current.id,position:current.point})
     drag.current=null;setPreview(null)
   }
   const unlocked=community.geodeUnlocks??[],revealed=geodeRocks.find(rock=>rock.id===reveal)
   return <section className="garden-workspace integrated-sky-garden" aria-label="Pebble Garden">
     <header className="garden-heading"><h1 className="garden-wordmark" aria-label="Your Garden"><img src="/pebble/pebble-wordmark.svg" width="216" height="96" alt=""/></h1><button className="garden-balance" disabled={!sceneReady||!!error} onClick={()=>open()} aria-label={`Build with ${community.balance} Pebbles`}><CurrencyIcon/><strong>{community.balance.toLocaleString()}</strong></button></header>
+    {!state.storageAvailable&&<p className="garden-storage-notice" role="alert">Changes aren't saved. They last only in this tab because local storage or safe locking is unavailable.</p>}
     {error&&<div className="garden-load"><p role="alert">{error}</p><button type="button" className="btn light" onClick={()=>{setError('');setArt(null);setSceneReady(false);setArtAttempt(value=>value+1)}}>Retry Garden artwork</button></div>}
     {!sceneReady&&!error&&<PageSkeleton view="garden" label="Growing your Garden…"/>}
     <canvas ref={canvas} className="garden-canvas" style={{visibility:sceneReady&&!error?'visible':'hidden'}} data-history-day={historyPreview?.day??'present'} tabIndex={sceneReady&&!error?0:-1} aria-busy={!sceneReady} aria-label="Garden. Drag a decoration to move it; drag empty space to pan. Arrow keys move the selected item, plus and minus zoom, Escape cancels a drag." onPointerDown={e=>{
@@ -131,14 +149,14 @@ export function Garden() {
       if(activityOpen)return;
       if(e.key==='Escape'){drag.current=null;setPreview(null);setSelected(null);return}
       if(e.key==='+'||e.key==='='||e.key==='-'){e.preventDefault();setCamera(c=>({...c,zoom:Math.max(.7,Math.min(2.5,c.zoom+(e.key==='-'?-.1:.1)))}));return}
-      if(selected&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();const[x,y]=defaultPlacements[selected],p=community.positions?.[selected]??(selected==='pebble'?{x:724,y:610}:{x,y});remember();dispatch({type:'move-community-item',id:selected,position:{x:p.x+(e.key==='ArrowLeft'?-12:e.key==='ArrowRight'?12:0),y:p.y+(e.key==='ArrowUp'?-12:e.key==='ArrowDown'?12:0)}})}
+      if(selected&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();void dispatch({type:'nudge-community-item',id:selected,delta:{x:e.key==='ArrowLeft'?-12:e.key==='ArrowRight'?12:0,y:e.key==='ArrowUp'?-12:e.key==='ArrowDown'?12:0}})}
     }}/>
     <div ref={islandTargets} className="garden-friend-islands" aria-label="Illustrative friend islands">{[0,1,2].map(i=><button disabled={!sceneReady||!!error} key={i} className={`garden-friend-island island-${i}`} aria-label="An island for a future friend" onClick={()=>setFriendIsland(true)}/>)}</div>
     {friendIsland&&<Modal title="Room for a new friend" close={()=>setFriendIsland(false)}><img className="garden-friend-preview" src="/pebble/square-garden-cutout.png" alt="Illustrative pixel garden"/><p>A little island is waiting. Meet someone new and grow your worlds together.</p><p className="mini muted">An illustration, not another person's private Garden.</p><Link className="btn" to="/matchmaking?mode=friends">Discover people</Link></Modal>}
-    {selected&&!activityOpen&&<div className="garden-selection" role="group" aria-label="Selected Garden item"><span>{selected==='pebble'?'Your Pebble':upgrades.find(item=>item.id===selected)?.name}</span>{selected!=='pebble'&&<button onClick={()=>{remember();dispatch({type:'remove-garden-item',id:selected as UpgradeId});setSelected(null)}}>{isGeode(selected)?'Return to inventory':'Remove & refund'}</button>}<button aria-label="Deselect item" onClick={()=>setSelected(null)}>×</button></div>}
+    {selected&&!activityOpen&&<div className="garden-selection" role="group" aria-label="Selected Garden item"><span>{selected==='pebble'?'Your Pebble':upgrades.find(item=>item.id===selected)?.name}</span>{selected!=='pebble'&&<button onClick={async()=>{const result=await dispatch({type:'remove-garden-item',id:selected as UpgradeId});if(!result.cancelled)setSelected(null)}}>{isGeode(selected)?'Return to inventory':'Remove & refund'}</button>}<button aria-label="Deselect item" onClick={()=>setSelected(null)}>×</button></div>}
     <div ref={activityPanel} className="garden-bottom">
       {activityOpen ? <WeeklyActivity owner={owner} community={community} preview={historyPreview?.day??null} onPreview={setHistoryPreview} close={()=>{closeActivity();requestAnimationFrame(()=>activityTrigger.current?.focus({preventScroll:true}))}}/> :
-        <button ref={activityTrigger} disabled={!sceneReady||!!error} className="garden-activity" aria-label="Open weekly Garden activity" aria-expanded={false} onClick={()=>{recordGardenDay(owner,community);setSelected(null);setPreview(null);drag.current=null;pointers.current.clear();setActivityOpen(true)}}><Icon name="history"/><span>Weekly Activity</span></button>}
+        <button ref={activityTrigger} disabled={!sceneReady||!!error} className="garden-activity" aria-label="Open weekly Garden activity" aria-expanded={false} onClick={()=>{if(state.storageAvailable)recordGardenDay(owner,community);setSelected(null);setPreview(null);drag.current=null;pointers.current.clear();setActivityOpen(true)}}><Icon name="history"/><span>Weekly Activity</span></button>}
     </div>
     <div className="garden-inventory-dock"><button ref={trigger} disabled={!sceneReady||!!error} className="garden-build" onClick={()=>open()} aria-label="Open Garden inventory" aria-expanded={inventoryOpen} aria-controls="garden-inventory-panel" onPointerDown={e=>{inventoryGesture.current=e.clientY;e.currentTarget.setPointerCapture(e.pointerId)}} onPointerMove={e=>{if(inventoryGesture.current!==null&&inventoryGesture.current-e.clientY>25){inventoryGesture.current=null;open()}}} onPointerUp={()=>{inventoryGesture.current=null}} onPointerCancel={()=>{inventoryGesture.current=null}}><span className="garden-inventory-handle"/><Icon name="build"/></button></div>
     <p className="garden-sr-only" role="status">{announcement}</p>
@@ -161,13 +179,13 @@ export function Garden() {
         <details className="garden-keyboard-help"><summary>Arrange with keyboard</summary><p>Select an item, then use the arrow keys on the Garden.</p>{['pebble',...community.owned.filter(id=>!isLandscapeUpgrade(id))].map(id=><button key={id} onClick={()=>{setSelected(id as MovableId);close();canvas.current?.focus({preventScroll:true})}}>Move {id}</button>)}</details>
       </div><footer className="garden-build-footer">
         <div className="garden-tools">
-          <button aria-label="Undo Garden change" disabled={!undo.length} onClick={()=>{const previous=undo.at(-1);if(previous){dispatch({type:'restore-garden',community:previous});setUndo(history=>history.slice(0,-1));setSelected(null);setAnnouncement('Garden change undone.')}}}><Icon name="back"/><span>Undo</span></button>
+          <button aria-label="Undo Garden change" disabled={!undo.length||lastOwnChange!==state} onClick={async()=>{const previous=undo.at(-1);if(previous){const result=await dispatch({type:'restore-garden',community:previous});if(result.cancelled)return;if(result.before.community===result.after.community){setUndo([]);setAnnouncement('Garden changed. Nothing was undone.');return}setUndo(history=>history.slice(0,-1));setSelected(null);setAnnouncement(`Garden change undone.${result.saved?'':' Not saved; changes last only in this tab.'}`)}}}><Icon name="back"/><span>Undo</span></button>
           <button aria-label="Reset Garden view" onClick={()=>{setCamera({x:0,y:0,zoom:1});close()}}><Icon name="refresh"/><span>Reset view</span></button>
           <button disabled={!community.owned.length&&!Object.keys(community.positions??{}).length} onClick={()=>reset.current?.showModal()}><Icon name="reset"/><span>Reset Garden</span></button>
-        </div><small>Saved on this device · No server sync</small>
+        </div><small>{state.storageAvailable?'Saved on this device · No server sync':'Not saved · Changes last only in this tab. Local storage or safe locking is unavailable.'}</small>
       </footer>
     </dialog>
-    <dialog ref={reset} className="garden-confirm" aria-labelledby="garden-reset-title"><h2 id="garden-reset-title">Start with a little space?</h2><p>Remove placed items and refund {purchaseRefund(community)} Pebbles. Collected Pebbles return to inventory for free. Their unlocks stay collected.</p><div><button autoFocus onClick={()=>reset.current?.close()}>Cancel</button><button onClick={()=>{remember();dispatch({type:'reset-purchases'});setSelected(null);setCamera({x:0,y:0,zoom:1});reset.current?.close();setAnnouncement('Garden reset. Collected Pebbles kept.')}}>Reset Garden</button></div></dialog>
+    <dialog ref={reset} className="garden-confirm" aria-labelledby="garden-reset-title"><h2 id="garden-reset-title">Start with a little space?</h2><p>Remove placed items and refund {purchaseRefund(community)} Pebbles. Collected Pebbles return to inventory for free. Their unlocks stay collected.</p><div><button autoFocus onClick={()=>reset.current?.close()}>Cancel</button><button onClick={async()=>{const result=await dispatch({type:'reset-purchases'});if(result.cancelled)return;setSelected(null);setCamera({x:0,y:0,zoom:1});reset.current?.close();setAnnouncement(`Garden reset. Collected Pebbles kept.${result.saved?'':' Not saved; changes last only in this tab.'}`)}}>Reset Garden</button></div></dialog>
     <dialog ref={revealDialog} className="garden-reveal" aria-labelledby="garden-reveal-title" onClose={()=>{setReveal(null);open()}}>{revealed&&<><p>A little discovery</p><ArtPreview id={revealed.id}/><h2 id="garden-reveal-title">{revealed.name}</h2><p>{revealed.description}</p><button className="btn" onClick={()=>revealDialog.current?.close()}>Keep in inventory</button></>}</dialog>
   </section>
 }
