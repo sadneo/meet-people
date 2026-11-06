@@ -1091,6 +1091,63 @@ export type Database = {
         }
         Relationships: []
       }
+      push_devices: {
+        Row: {
+          created_at: string
+          last_seen_at: string
+          platform: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          last_seen_at?: string
+          platform?: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          last_seen_at?: string
+          platform?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_outbox: {
+        Row: {
+          attempts: number
+          claimed_until: string | null
+          created_at: string
+          id: number
+          kind: string
+          ref: string
+          sent_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          claimed_until?: string | null
+          created_at?: string
+          id?: never
+          kind: string
+          ref?: string
+          sent_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          claimed_until?: string | null
+          created_at?: string
+          id?: never
+          kind?: string
+          ref?: string
+          sent_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       queue_entries: {
         Row: {
           joined_at: string | null
@@ -1264,6 +1321,7 @@ export type Database = {
         Args: { action_in: string; target_in: string }
         Returns: Json
       }
+      garden_account: { Args: { command_in?: Json }; Returns: Json }
       get_account: { Args: never; Returns: Json }
       get_account_profile: { Args: never; Returns: Json }
       get_active_friends_group: { Args: { group_in: string }; Returns: Json }
@@ -1592,6 +1650,19 @@ export type Database = {
       publish_search_location_place: {
         Args: { place_in: Json }
         Returns: undefined
+      }
+      push_claim: {
+        Args: {
+          p_lease_seconds: number
+          p_limit: number
+          p_max_attempts: number
+        }
+        Returns: {
+          attempts: number
+          id: number
+          kind: string
+          user_id: string
+        }[]
       }
       read_profile_photo: {
         Args: { owner_in: string; revision_in: number }

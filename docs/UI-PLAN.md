@@ -21,7 +21,7 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/auth/callback`, `/reset-password` | Explicit grant verification and URL scrubbing |
 | `/auth/forgot-password`, `/forgot-password` | Real recovery email request |
 | `/onboarding` | Guided four-stone journey from the original dev flow, with a welcome scene and confirmed completion screen. About you (identity, private birthdate, home area), interests (1–5, premade or custom; at most 2 custom), social intentions, then weekly availability, general plan preferences and an explicit saved timezone. Each chapter persists and resumes from confirmed account data. Dating and group/event queues retain separate opt-in. |
-| `/home`, `/community` | Integrated pixel-art Garden; account-keyed browser inventory, placement and unique Geode unlocks (not server ownership) |
+| `/home`, `/community` | Integrated pixel-art Garden; account-backed inventory, placement, Random Pebble unlocks and capped earning rewards; weekly scene history stays device-local |
 | `/matchmaking` | Passive Friends/Dating recommendations, consent and search preferences |
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
 | Web `/explore`, `/explore/:id` | Public event reads; installation link for group participation |
@@ -32,6 +32,31 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/activity`, `/matches` | Activity retains real updates. Matches & Plans presents Upcoming event proposals and Connections in prototype tabs; Past explicitly says history is not available. |
 | `/terms`, `/privacy`, `/cookies` | Existing policy content in the new visual layout |
 | `/logout` | Confirmed local session sign-out |
+
+Garden balances and ownership use the authenticated account service described in
+`docs/PEBBLE-ECONOMY.md`. Server revisions and transactions are authoritative;
+browser caches cannot credit a wallet or restore over a newer account change.
+Edits wait for confirmed account state and fail closed when the service is
+unavailable. The legacy IndexedDB transaction helper and its regression tests are
+retained for device-local data, but it is not the account wallet's write path.
+Previous device saves remain untouched and are not imported as trusted currency
+or ownership. Development funds remain explicitly temporary previews.
+
+Events keeps category selection inside the Filters dialog instead of wrapping
+category chips above the listings. A compact summary appears only when a category
+is selected. Category changes and Reset filters retain the page-one reset;
+Done, Escape and Close dismiss the existing dialog without changing that behavior.
+Category and page are URL-backed so detail/Close and Back/Forward preserve the
+directory search. The last successful category catalog remains in the session
+cache when a category's list request fails; the list still shows its real error.
+
+Android Back dismisses a modal's current layer first, then transient chat options,
+before navigating route history. Direct-link chats fall back to Messages; Garden
+and signed-out login roots minimize the app instead of revisiting auth history.
+The OS keyboard consumes its own first Back. System navigation is not hidden.
+Push opt-in updates tap handling within the session; registration has a bounded,
+cancelable lifecycle. Explicit local logout attempts server/native token cleanup
+before sign-out, with a three-second best-effort limit, without changing opt-in.
 
 Private routes wait for session hydration and persisted account readiness. A
 signed-in account with missing chapters resumes onboarding; account read failures
@@ -68,6 +93,12 @@ Versioned preference writes keep their compare-and-swap/readback behavior. Faile
 or uncertain mutations require read-only reconciliation before another write.
 Message retries reuse the same client request ID. Passive recommendations never
 enroll someone in the separate Messages group queue.
+Drafts and pending/unconfirmed send identities live in session-scoped memory,
+separately for direct and group conversations, across app-route navigation. A late
+confirmed response clears its draft even after leaving chat. Navigating or reading
+history never replays a send; an explicit retry retains the original request ID.
+Changing accounts or signing out clears this state. No message drafts or send IDs
+are added to persistent browser storage, and process restarts do not restore them.
 An open conversation refreshes its display history every four seconds while the
 tab is visible, and rechecks on return. Polling stops when the conversation
 unmounts. Drafts and loaded history remain during background refresh; stale or

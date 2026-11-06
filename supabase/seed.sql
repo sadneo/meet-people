@@ -295,3 +295,21 @@ insert into queue_entries (profile_id, queue_type) values
   ('77777777-7777-7777-7777-777777777777', 'dating'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'dating')
 on conflict (profile_id) do update set queue_type = excluded.queue_type;
+
+-- ============================================
+-- AUTH SERVICE COMPAT
+-- ============================================
+-- The users above are inserted straight into auth.users, leaving the token columns NULL.
+-- The auth service reads them as plain text and fails with "Database error finding users" (and
+-- cannot sign these users in). Setting NULL to '' fixes that. Columns a version lacks are skipped.
+do $$
+declare c text;
+begin
+  for c in select column_name from information_schema.columns
+    where table_schema = 'auth' and table_name = 'users'
+      and column_name in ('confirmation_token', 'recovery_token', 'email_change_token_new', 'email_change',
+                          'email_change_token_current', 'phone_change', 'phone_change_token', 'reauthentication_token')
+  loop
+    execute format('update auth.users set %1$I = '''' where %1$I is null', c);
+  end loop;
+end $$;

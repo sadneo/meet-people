@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "368545465466",
+    "project_id": "cse416-meet-people",
+    "storage_bucket": "cse416-meet-people.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:368545465466:android:0ad20cc3f28966857be7c3",
+        "android_client_info": {
+          "package_name": "garden.pebble.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "368545465466-cuoljq8g3e38r7mme7bv6ovi0pulb58q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7iyD8t76XopyLsXOy727USlboNuIe9fs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "368545465466-cuoljq8g3e38r7mme7bv6ovi0pulb58q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

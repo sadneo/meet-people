@@ -7,6 +7,7 @@ import type { DetailedSettings } from "../../shared/detailed-settings";
 import { supabase } from "../supabase";
 import { authCallbackUrl, validPassword } from "../auth/credential-policy";
 import { useDetailedSettings } from "../features/account/useDetailedSettings";
+import { PushNotificationsToggle } from "../features/account/PushNotificationsToggle";
 import { useAction } from "./hooks";
 import { ActionButton, ErrorMessage, Icon, ResourceState } from "./common";
 import { useCurrent } from "./current";
@@ -37,6 +38,7 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
   return (
     <section className="account-panel">
       <h3>{category === 'notifications' ? 'Activity notifications' : 'Discovery & location'}</h3>
+      {category === 'notifications' && <PushNotificationsToggle />}
       <form
         onSubmit={(event) => {
           event.preventDefault();

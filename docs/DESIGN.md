@@ -121,15 +121,23 @@ an unavailable state, never a synthetic production map.
 Garden uses the reference's #e8efed sky, pixel clouds, illustrative floating islands,
 forest-green wordmark and cream bottom Build tray. `features/garden/sky.css` loads
 after the general shell styles; do not restore the dotted workspace background.
-The collection card shows actual local unlocks rather than simulated weekly totals.
+Weekly Activity previews remain device-local and never claim real attendance or meetings.
 
-Garden remains a local creative scene. It does not claim real meetings, attendance,
-account rewards or another person’s garden history. Its local balance, purchases
-and unique Mystery Geode unlocks persist in this browser, keyed to the signed-in
-account; they are not synchronized to the server. New gardens start with a blank
-green platform and one Pebble. Landscape placement stays fixed; decorations can
-be dragged. Reset returns unlocked Geode rocks to free inventory without refunding
-their unlock cost or rerolling ownership. Test currency is development-only.
+Garden balances, purchases, placements and unique Random Pebble unlocks now use
+an authenticated account service. The server awards 300 starting Pebbles, a 100
+one-time onboarding reward, 20 per UTC-day check-in, and 50 on the fifth distinct
+check-in of a UTC week. Sustained mutual conversations can earn 30 once per peer
+(up to twice weekly), plus 20 for keeping in touch in a later week. A muted sage
+pole-free flag has a red dot only when a server-confirmed reward is claimable.
+Its compact cream sheet shows reward rows and seven UTC ledger-based check-in
+circles; fuller rules stay collapsed.
+See `docs/PEBBLE-ECONOMY.md` for activation and test boundaries. Purchases and
+rewards fail closed when the service is unavailable; no local currency fallback.
+New account gardens start blank with one Pebble. Landscape stays fixed; decorations
+can be dragged. Reset refunds actual regular purchases and returns collected rocks
+to free inventory without refunding or rerolling unlocks. Previous device saves
+are retained but are not imported as trusted ownership or currency. Development
+funds enter an explicitly labeled temporary preview, never the account wallet.
 Unsupported planning, group growth,
 provider sessions, support delivery, account export and account deletion must not
 show simulated success. Use the existing policy contact for manual data requests.

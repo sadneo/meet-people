@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useParams, useSearchParams } from "react-router";
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EventsResponseSchema, EventSchema } from "../../shared/events";
 import {
   eventRequest,
@@ -20,43 +21,55 @@ import {
 } from "./common";
 
 export function Events({ publicView = false }: { publicView?: boolean }) {
-  const [category, setCategory] = useState(""),
-    [page, setPage] = useState(1),
-    [filtersOpen, setFiltersOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const category = searchParams.get("category") ?? "";
+  const requestedPage = Number(searchParams.get("page") ?? 1);
+  const page = Number.isInteger(requestedPage) && requestedPage >= 1 && requestedPage <= 100 ? requestedPage : 1;
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const catalog = useQuery<string[]>({ queryKey: ["event-categories"], queryFn: skipToken });
   const resource = useCachedLoad(
     useCallback(
-      (signal) =>
-        eventRequest(
+      async (signal) => {
+        const result = await eventRequest(
           `?${new URLSearchParams({ page: String(page), limit: "12", ...(category ? { category } : {}) })}`,
           EventsResponseSchema,
           { signal },
-        ),
-      [category, page],
+        );
+        // Keep the last confirmed catalog separate from a category's list/error.
+        // The session query provider clears this cache when the account changes.
+        if (!signal.aborted) queryClient.setQueryData(["event-categories"], result.categories);
+        return result;
+      },
+      [category, page, queryClient],
     ),
     ["events", category, page], 30_000,
   );
-  const availableCategories = resource.value?.categories ?? [];
+  const availableCategories = catalog.data ?? resource.value?.categories ?? [];
   const creativeCategory = availableCategories.includes('Arts') && !availableCategories.includes('Creative') ? 'Arts' : 'Creative';
   const categories = [...new Set(['Music', 'Food', 'Outdoors', creativeCategory, 'Social', 'Workshops', ...availableCategories, ...(category ? [category] : [])])];
   const categoryLabel = (value: string) => value === 'Arts' ? 'Creative' : value;
+  function browse(value: string, nextPage: number) {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set("category", value);
+    else next.delete("category");
+    if (nextPage > 1) next.set("page", String(nextPage));
+    else next.delete("page");
+    if (next.toString() !== searchParams.toString()) setSearchParams(next);
+  }
   function selectCategory(value: string) {
-    setCategory(value);
-    setPage(1);
+    browse(value, 1);
   }
   const content = (
     <section className="events-page" aria-labelledby="events-title">
       <div className="pagehead">
         <h2 id="events-title">Events</h2>
-        <button type="button" className="btn light event-filter-button" aria-label="Filter events" onClick={() => setFiltersOpen(true)}>
-          <Icon name="Filter" />
+        <button type="button" className="btn light event-filter-button" aria-label="Filter events" aria-haspopup="dialog" aria-expanded={filtersOpen} aria-describedby={category ? 'event-filter-summary' : undefined} onClick={() => setFiltersOpen(true)}>
+          <Icon name="Filter" />Filters
         </button>
       </div>
       {publicView && <p className="mini muted">Explore events. Get Pebble to find a group to go with.</p>}
-      <div className="event-categories" role="group" aria-label="Event categories">
-        {['', ...categories].map(item => <button key={item} type="button" aria-pressed={category === item} className={category === item ? 'selected' : ''} onClick={() => selectCategory(item)}>
-          {category === item && <Icon name="Check" />}{categoryLabel(item) || 'All'}
-        </button>)}
-      </div>
+      {category && <p id="event-filter-summary" className="event-filter-summary">Category: {categoryLabel(category)}</p>}
       {filtersOpen && <Modal title="Filter events" close={() => setFiltersOpen(false)}>
         <label htmlFor="event-category-filter">Category</label>
         <select id="event-category-filter" value={category} onChange={event => selectCategory(event.target.value)}>
@@ -82,7 +95,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
       )}
       <div className="eventgrid event-directory">
         {resource.value?.events.map((event) => (
-            <Link className="event-card" key={event.id} to={`${publicView ? "/explore" : "/events"}/${event.id}`} aria-label={`${event.title}: see event and people`}>
+            <Link className="event-card" key={event.id} to={`${publicView ? "/explore" : "/events"}/${event.id}?${searchParams}`} aria-label={`${event.title}: see event and people`}>
                 <MediaImage
                   className="event-image"
                   loading="lazy"
@@ -113,15 +126,15 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
           <ActionButton
             secondary
             disabled={page <= 1 || resource.loading}
-            onClick={() => setPage((value) => value - 1)}
+            onClick={() => browse(category, page - 1)}
           >
             Previous
           </ActionButton>
           <span>Page {page}</span>
           <ActionButton
             secondary
-            disabled={!resource.value.hasMore || resource.loading}
-            onClick={() => setPage((value) => value + 1)}
+            disabled={page >= 100 || !resource.value.hasMore || resource.loading}
+            onClick={() => browse(category, page + 1)}
           >
             Next
           </ActionButton>
@@ -144,6 +157,8 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
   );
 }
 export function EventDetail({ publicView = false, renderGroup }: { publicView?: boolean; renderGroup?: (id: string, available: boolean) => ReactNode }) {
+  const location = useLocation();
+  const directory = `${publicView ? "/explore" : "/events"}${location.search}`;
   const { id = "" } = useParams(),
     resource = useCachedLoad(
       useCallback(
@@ -171,7 +186,7 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
     startsAt > now;
   return (
     <div className="event-detail">
-      {!event && <Link className="account-back" to={publicView ? "/explore" : "/events"}>‹ Events</Link>}
+      {!event && <Link className="account-back" to={directory}>‹ Events</Link>}
       <ResourceState
         loading={resource.loading}
         error={resource.error}
@@ -180,7 +195,7 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
       />
       {event && (
         <>
-          <header className="event-detail-header"><h1>{event.title}</h1><Link className="round" aria-label="Close event" to={publicView ? '/explore' : '/events'}>×</Link></header>
+          <header className="event-detail-header"><h1>{event.title}</h1><Link className="round" aria-label="Close event" to={directory}>×</Link></header>
           <MediaImage
             className="event-cover"
             src={safeImage(event.image_url)}

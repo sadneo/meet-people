@@ -1,9 +1,12 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createSessionQueryClient } from './query-client'
+import { createMessageDrafts, MessageDraftContext } from './message-drafts'
 
 export function SessionQueryProvider({ children, scope }: { children: ReactNode; scope: string }) {
   const [client] = useState(createSessionQueryClient)
+  const drafts = useMemo(() => createMessageDrafts(scope), [scope])
+  useEffect(() => () => drafts.clear(), [drafts])
   useEffect(() => {
     const activity = () => { void client.invalidateQueries({ predicate: query => ['inbox', 'groups', 'activity', 'connections'].includes(String(query.queryKey[0])) }) }
     const matching = () => {
@@ -25,5 +28,5 @@ export function SessionQueryProvider({ children, scope }: { children: ReactNode;
   // Clear between identities without remounting the in-progress sign-in form.
   // Private's account loader separately gates and remounts on each account ID.
   }, [client, scope])
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  return <QueryClientProvider client={client}><MessageDraftContext value={drafts}>{children}</MessageDraftContext></QueryClientProvider>
 }

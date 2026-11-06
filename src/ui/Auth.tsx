@@ -62,13 +62,20 @@ export function Auth({
       if (!supabase)
         throw new Error("Sign-in is unavailable. Try again later.");
       if (mode === "login" && stage === "email") {
-        const response = await fetch(apiUrl("/api/auth/email"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-          signal: AbortSignal.timeout(15000),
-        });
-        const value: unknown = await response.json();
+        let response: Response;
+        try {
+          response = await fetch(apiUrl("/api/auth/email"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+            signal: AbortSignal.timeout(15000),
+          });
+        } catch {
+          throw new Error('Could not check your email. Check your connection and try again.');
+        }
+        if (response.status === 429)
+          throw new Error('Too many email checks. Wait a moment and try again.');
+        const value: unknown = await response.json().catch(() => null);
         if (
           !response.ok ||
           !value ||
@@ -76,7 +83,7 @@ export function Auth({
           !("exists" in value) ||
           typeof value.exists !== "boolean"
         )
-          throw new Error("Could not check your email. Try again.");
+          throw new Error('Email checking is temporarily unavailable. Please try again shortly.');
         if (!alive.current) return;
         if (value.exists) setStage("password");
         else navigate(`/register?${new URLSearchParams({ email, returnTo })}`);
