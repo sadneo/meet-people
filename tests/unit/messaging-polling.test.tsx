@@ -1,9 +1,9 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { QueryClientProvider, focusManager } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router'
+import { focusManager } from '@tanstack/react-query'
+import { Link, MemoryRouter, Route, Routes } from 'react-router'
+import { SessionQueryProvider } from '../../src/data/SessionQueryProvider'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { Messages } from '../../src/ui/Messages'
-import { createSessionQueryClient } from '../../src/data/query-client'
 
 const api = vi.hoisted(() => ({ request: vi.fn(), group: vi.fn(), history: vi.fn(), read: vi.fn(), send: vi.fn(), groups: vi.fn() }))
 vi.mock('../../src/features/messaging/client', () => ({ messagingRequest: api.request }))
@@ -16,7 +16,6 @@ vi.mock('../../src/ui/common', async importOriginal => {
   return { ...original, PersonPhoto: () => null }
 })
 
-const clients: ReturnType<typeof createSessionQueryClient>[] = []
 const participants = [{ id: 'me', display_name: 'Me', last_read_seq: 0 }, { id: 'them', display_name: 'Friend', last_read_seq: 0 }]
 const message = (seq: number, sender_id = 'them') => ({ id: `message-${seq}`, conversation_id: 'chat', sender_id, body: `Message ${seq}`, seq, created_at: '2026-10-31T12:00:00Z' })
 let snapshot: { kind: 'direct'; canSend: boolean; messages: ReturnType<typeof message>[]; participants: typeof participants; nextCursor: number | null }
@@ -26,8 +25,10 @@ const historyCalls = () => api.request.mock.calls.filter(([path, , options]) => 
 const readCalls = () => api.request.mock.calls.filter(([path]) => path === '/chat/read')
 async function tick(ms = 20) { await act(async () => { await vi.advanceTimersByTimeAsync(ms) }) }
 function open(group = false) {
-  const client = createSessionQueryClient(); clients.push(client)
-  return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[`/messages/chat?${group ? 'group' : 'conversation'}=chat`]}><Messages /></MemoryRouter></QueryClientProvider>)
+  return render(<SessionQueryProvider scope="me"><MemoryRouter initialEntries={[`/messages/chat?${group ? 'group' : 'conversation'}=chat`]}><Messages /></MemoryRouter></SessionQueryProvider>)
+}
+function openNavigable() {
+  return render(<SessionQueryProvider scope="me"><MemoryRouter initialEntries={['/messages/chat?conversation=chat']}><Link to="/elsewhere">Other tab</Link><Link to="/messages/chat?conversation=chat">Open direct</Link><Link to="/messages/chat?group=chat">Open group</Link><Routes><Route path="/messages/*" element={<Messages />} /><Route path="/elsewhere" element={<p>Other tab content</p>} /></Routes></MemoryRouter></SessionQueryProvider>)
 }
 beforeEach(() => {
   vi.useFakeTimers()
@@ -54,7 +55,7 @@ beforeEach(() => {
   api.read.mockResolvedValue({})
 })
 afterEach(() => {
-  cleanup(); clients.splice(0).forEach(client => client.clear())
+  cleanup()
   vi.useRealTimers(); vi.restoreAllMocks()
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
   focusManager.setFocused(undefined)
@@ -199,4 +200,84 @@ it('retries failed read status on the next successful poll, then stops repeating
   expect(screen.queryByText(/Read status could not be saved/)).toBeNull()
   await tick(8000)
   expect(readCalls()).toHaveLength(2)
+})
+
+it('preserves a lost-ack operation across inbox and other tabs, blocks failed permissions, and retries only explicitly with the same ID', async () => {
+  const original = api.request.getMockImplementation()!
+  let attempts = 0
+  api.request.mockImplementation(async (...args) => {
+    if (args[0] === '/chat/messages' && args[2]?.body) {
+      attempts++
+      if (attempts === 1) {
+        snapshot = { ...snapshot, messages: [...snapshot.messages, { ...message(3, 'me'), body: args[2].body.body }] }
+        throw new Error('Lost acknowledgement')
+      }
+      return snapshot.messages.at(-1)
+    }
+    return original(...args)
+  })
+  openNavigable(); await tick()
+  fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: 'Repeated text' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' })); await tick()
+  fireEvent.click(screen.getByRole('link', { name: 'Back to conversations' })); await tick()
+  fireEvent.click(screen.getByRole('link', { name: 'Open direct' })); await tick()
+  expect(screen.getByRole('button', { name: 'Retry same message' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('link', { name: 'Other tab' })); await tick()
+  failHistory = true
+  fireEvent.click(screen.getByRole('link', { name: 'Open direct' })); await tick()
+  expect((screen.getByRole('button', { name: 'Retry same message' }) as HTMLButtonElement).disabled).toBe(true)
+  expect(attempts).toBe(1)
+  failHistory = false; await tick(4000)
+  expect(attempts).toBe(1)
+  fireEvent.click(screen.getByRole('button', { name: 'Retry same message' })); await tick()
+  const sends = api.request.mock.calls.filter(([, , options]) => options?.body?.clientRequestId)
+  expect(sends).toHaveLength(2)
+  expect(sends[0][2].body).toEqual(sends[1][2].body)
+  expect((screen.getByRole('textbox', { name: 'Message' }) as HTMLTextAreaElement).value).toBe('')
+  fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: 'Repeated text' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' })); await tick()
+  const repeated = api.request.mock.calls.filter(([, , options]) => options?.body?.clientRequestId)
+  expect(repeated[2][2].body.clientRequestId).not.toBe(repeated[1][2].body.clientRequestId)
+})
+
+it('keeps pending sends locked after remount and clears a late success even while another tab is open', async () => {
+  const original = api.request.getMockImplementation()!
+  let finish!: (value: ReturnType<typeof message>) => void
+  api.request.mockImplementation(async (...args) => {
+    if (args[0] === '/chat/messages' && args[2]?.body) return new Promise(resolve => { finish = resolve })
+    return original(...args)
+  })
+  openNavigable(); await tick()
+  fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: 'Message 3' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' })); await tick()
+  fireEvent.click(screen.getByRole('link', { name: 'Other tab' })); await tick()
+  fireEvent.click(screen.getByRole('link', { name: 'Open direct' })); await tick()
+  expect((screen.getByRole('button', { name: 'Sending…' }) as HTMLButtonElement).disabled).toBe(true)
+  fireEvent.submit((screen.getByRole('textbox', { name: 'Message' }) as HTMLTextAreaElement).form!)
+  expect(api.request.mock.calls.filter(([, , options]) => options?.body?.clientRequestId)).toHaveLength(1)
+  fireEvent.click(screen.getByRole('link', { name: 'Other tab' })); await tick()
+  await act(async () => { finish(message(3, 'me')) }); await tick()
+  fireEvent.click(screen.getByRole('link', { name: 'Open direct' })); await tick()
+  expect((screen.getByRole('textbox', { name: 'Message' }) as HTMLTextAreaElement).value).toBe('')
+  expect(screen.getByText('Message 3')).toBeTruthy()
+})
+
+it('retains group retries independently of a direct conversation with the same ID', async () => {
+  api.send.mockRejectedValueOnce(new Error('Lost acknowledgement')).mockResolvedValue(message(3, 'me'))
+  openNavigable(); await tick()
+  fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: 'Direct draft' } })
+  fireEvent.click(screen.getByRole('link', { name: 'Open group' })); await tick()
+  expect((screen.getByRole('textbox', { name: 'Message' }) as HTMLTextAreaElement).value).toBe('')
+  fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: 'Message 3' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' })); await tick()
+  fireEvent.click(screen.getByRole('link', { name: 'Other tab' })); await tick()
+  fireEvent.click(screen.getByRole('link', { name: 'Open direct' })); await tick()
+  expect((screen.getByRole('textbox', { name: 'Message' }) as HTMLTextAreaElement).value).toBe('Direct draft')
+  fireEvent.click(screen.getByRole('link', { name: 'Open group' })); await tick()
+  await tick(8000)
+  expect(api.send).toHaveBeenCalledTimes(1)
+  fireEvent.click(screen.getByRole('button', { name: 'Retry same message' })); await tick()
+  expect(api.send).toHaveBeenCalledTimes(2)
+  expect(api.send.mock.calls[0]).toEqual(api.send.mock.calls[1])
+  expect((screen.getByRole('textbox', { name: 'Message' }) as HTMLTextAreaElement).value).toBe('')
 })
