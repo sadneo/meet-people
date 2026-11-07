@@ -38,8 +38,7 @@ port 3001. Run `pnpm dev:mobile` alongside it for mobile on `http://127.0.0.1:30
 Both frontends proxy `/api` to the same local API.
 
 Web (`src/web/App.tsx`) is the desktop-first public website: a demo-matched landing
-page, event browsing and legal pages. Sign in opens the current mobile browser app
-at `https://mobile.dev.pebble.garden` (sandbox). Until an app listing exists, the
+page, event browsing and legal pages. It has no Sign in link. Until an app listing exists, the
 Android badge opens Google Play's general store; the iOS badge is non-interactive.
 Web hosts no authentication forms or private destinations. Mobile (`src/mobile/App.tsx`) is the application,
 used by Capacitor Android and the browser preview. Signed-out startup opens login;

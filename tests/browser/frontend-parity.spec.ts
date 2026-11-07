@@ -70,7 +70,6 @@ test('web landing matches the supplied preview and links to mobile sign-in and G
  await modes.getByRole('button',{name:'Dating'}).click()
  await expect(modes.getByRole('button',{name:'Dating'})).toHaveAttribute('aria-pressed','true')
   await expect(page.locator('.landing-profile img')).toHaveAttribute('src','/garden/preview-maya.jpg')
-  await expect(page.getByRole('link',{name:'Sign in',exact:true})).toHaveAttribute('href','https://mobile.dev.pebble.garden')
   await expect(page.getByRole('link',{name:'Open Google Play for Android'})).toHaveAttribute('href','https://play.google.com/store/apps')
   await expect(page.getByRole('status',{name:'iOS App Store: coming soon'})).toBeVisible()
   await page.getByRole('button',{name:'Add trees to Garden preview'}).click()

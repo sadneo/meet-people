@@ -4,8 +4,6 @@ import { GardenPreview } from './components/GardenPreview'
 import { ProfilePreview } from './components/ProfilePreview'
 import './landing.css'
 
-// The current browser app is the sandbox deployment; never transfer a session in the URL.
-const browserAppUrl = 'https://mobile.dev.pebble.garden'
 const googlePlayUrl = 'https://play.google.com/store/apps'
 
 function Wordmark() {
@@ -30,7 +28,6 @@ export function Landing() {
     <header className="landing-header">
       <Wordmark />
       <nav className="landing-nav" aria-label="Website navigation"><Link to="/explore">Events</Link></nav>
-      <a className="landing-signin" href={browserAppUrl}>Sign in <svg className="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a>
     </header>
     <main className="landing-main">
       <section className="landing-hero">

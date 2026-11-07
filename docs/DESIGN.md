@@ -18,7 +18,7 @@ Product UI changes must follow it.
 The public web landing page follows the supplied `Pebble-Landing-Page.html`
 desktop composition: forest-green wordmark, split headline/profile hero, store
 badges and an interactive marketing Garden. Its React implementation and scoped
-styles live in `src/web/`. Sign in links to the current mobile browser sandbox;
+styles live in `src/web/`. It has no Sign in link.
 Google Play opens the general store until an app listing exists. The illustrated
 profiles and ephemeral, single-selection Garden preview are examples, not live
 accounts or saved account Garden state. Do not import the export's unrelated
