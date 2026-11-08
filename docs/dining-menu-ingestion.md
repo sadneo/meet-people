@@ -81,8 +81,33 @@ before today. Smoke/partial/failed runs do not perform retention cleanup.
 
 Menus are separate from `listings`, which represents events, restaurants, and
 parks. The new table uses RLS and service-role-only access, matching ingestion
-storage conventions. An application API/UI for browsing menus is outside this
-scraper change. Release CI deploys both functions; no recurring job is installed.
+storage conventions. Release CI deploys both functions; no recurring job is installed.
+
+## Browse menus in Pebble
+
+Discover's **Food menus** button opens `/matchmaking/food` in the signed-in app.
+The screen uses `GET /api/dining?date=YYYY-MM-DD`, with the current session's
+bearer token. The API verifies the session before reading that calendar day's
+snapshots through the server's service-role client. Table permissions stay unchanged;
+the browser receives validated display fields and never accesses the table directly.
+
+Dates default to the Stony Brook calendar (`America/New_York`). Date, location,
+menu and dish search are URL-backed. Menu types and stations remain separate so
+overlapping dishes are not presented as a combined catalog. Dish details show only
+published labels, ingredients, serving sizes and nutrition, including source units.
+Each menu links to its provider and shows its last import time. Empty snapshots,
+unpublished days and unavailable reads have separate states; cached snapshots stay
+visible with an error if a refresh fails. No opening/closed status is inferred.
+
+Apply the dining migration and run a real import against the target database to
+populate this screen. Missing backend setup reports unavailable; a configured
+database with no imported menus shows an unpublished day. The UI does not schedule
+or trigger scraping. Validate browsing with:
+
+```sh
+pnpm test:unit tests/unit/api-dining.test.ts
+pnpm test:browser tests/browser/food.spec.ts
+```
 
 ## Source limits
 

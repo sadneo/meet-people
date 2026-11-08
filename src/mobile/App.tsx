@@ -22,6 +22,7 @@ import { SessionQueryProvider } from "../data/SessionQueryProvider";
 import { Private } from "../ui/session";
 import { Auth, AuthCallback } from "../ui/Auth";
 import { Discover } from "../ui/Discover";
+import { Food } from "../ui/Food";
 import { Profile } from "../ui/Profile";
 import { Onboarding } from "../ui/Onboarding";
 import { Settings } from "../ui/Settings";
@@ -182,6 +183,7 @@ export default function App() {
             <Route path="/home" element={<Garden />} />
             <Route path="/community" element={<Garden />} />
             <Route path="/matchmaking" element={<Discover />} />
+            <Route path="/matchmaking/food" element={<Food />} />
             <Route path="/events" element={<Events />} />
             <Route path="/events/:id" element={<EventDetail renderGroup={(id, available) => <EventGroup id={id} available={available} />} />} />
             <Route path="/messages" element={<Messages />} />

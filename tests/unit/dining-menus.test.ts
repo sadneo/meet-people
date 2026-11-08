@@ -55,6 +55,15 @@ describe('Nutrislice menus', () => {
     expect(rows[0].items.map(item => item.station)).toEqual(['Lunch', 'Dinner'])
     expect(rows[0].notices).toEqual(['Menu subject to change'])
   })
+  it('skips the empty editor placeholders published in the live West Side feed', () => {
+    const food = weekFixture.days[0].menu_items[1]
+    const placeholder = { id: 438179445, blank_line: false, food: null, food_list: null, text: '', image: '', smart_recipe_id: null, food_variation_id: null }
+    const normalize = (value: unknown) => normalizeNutrisliceWeek({ days: [{ date: '2026-11-06', menu_items: [food, value, food] }] }, location, location.menus[0], now)
+    expect(normalize(placeholder)[0].items).toHaveLength(2)
+    for (const invalid of [{ ...placeholder, food: {} }, { ...placeholder, food_list: [1] }, { ...placeholder, image: 'https://example.test/food.jpg' }]) {
+      expect(() => normalize(invalid)).toThrow('nutrislice_invalid_item')
+    }
+  })
   it('fetches each menu once per calendar week and filters to the requested dates', async () => {
     const network = vi.fn(async (url: string | URL | Request) => Response.json(String(url).includes('/schools/') ? locationsFixture : weekFixture))
     const result = await scrapeNutrisliceMenus(input(), now, network as typeof fetch)

@@ -67,7 +67,14 @@ export function normalizeNutrisliceWeek(payload: unknown, location: NutrisliceLo
       const food = normalizeItem(item, station)
       if (food) items.push(food)
       else if (textValue(item.text)) notices.push(textValue(item.text)!)
-      else if (!item.blank_line) throw new Error('nutrislice_invalid_item')
+      else {
+        // Nutrislice also publishes empty editor placeholders without setting
+        // blank_line. Only skip the known empty shape; broken food/list/image
+        // records must still fail rather than silently remove real dishes.
+        const emptyPlaceholder = item.food === null && item.food_list === null && item.text === '' && item.image === ''
+          && item.smart_recipe_id == null && item.food_variation_id == null
+        if (!item.blank_line && !emptyPlaceholder) throw new Error('nutrislice_invalid_item')
+      }
     }
     return {
       source: 'nutrislice_sbu', external_id: `${location.slug}:${menu.slug}:${day.date}`,
