@@ -41,6 +41,12 @@ unavailable. The legacy IndexedDB transaction helper and its regression tests ar
 retained for device-local data, but it is not the account wallet's write path.
 Previous device saves remain untouched and are not imported as trusted currency
 or ownership. Development funds remain explicitly temporary previews.
+Garden re-entry reuses a confirmed in-memory account snapshot for up to 30 seconds.
+Concurrent refresh requests share one read, but a queued mutation fences off any
+earlier shared refresh. Explicit refresh, focus/storage notifications and expired
+snapshots still fetch the account service. A cached display never skips the fresh
+pre-mutation read, revision checks or confirmed write response, and errors cannot
+grant cached write permission. Switching accounts clears snapshots and read state.
 
 Events keeps category selection inside the Filters dialog instead of wrapping
 category chips above the listings. A compact summary appears only when a category
@@ -81,6 +87,14 @@ explicit location action.
 Garden and the other signed-in destinations share one account loader and shell.
 An account-scoped TanStack Query cache retains display reads and decoded private
 photos across navigation, with background refresh and short freshness windows.
+Disposable inactive reads are limited to 24 entries, including at most eight
+private-photo entries, with a two-minute unused-entry lifetime. Recently observed
+data wins eviction; removed/replaced private photo URLs are revoked. Observed
+views, in-flight requests, the category catalog and unresolved discovery delivery
+state are not evicted just to meet that display budget. This is an entry budget,
+not a guarantee about total Android process/decoded-image memory. No disk cache,
+background polling loop or dependency is added. Sign-out/account changes still
+clear the entire private cache.
 Events and inbox data warm after the shell becomes idle and on navigation intent.
 Changing accounts or signing out clears the cache and revokes private image URLs.
 Cached request lists and chat histories remain visible during refresh, while their

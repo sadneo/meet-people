@@ -10,7 +10,7 @@ for (const width of [1440, 1024, 768, 481, 480, 479, 390, 320]) {
     await page.setViewportSize({ width, height: 900 })
     await page.goto('/')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Meet new friends,find a date,and make plans.')
-    await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toHaveCount(0)
     await expect(page.getByRole('group', { name: 'Try decorating the Garden preview' })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
     const hero = await page.locator('.landing-hero').boundingBox()

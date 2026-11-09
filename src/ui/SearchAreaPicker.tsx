@@ -86,11 +86,17 @@ function SearchAreaSheet({ mode, value, radiusMiles, disabled, save, close }: Pr
   useEffect(() => {
     if (!initial?.available || !mapElement.current) return
     let live = true, instance: SearchMap | null = null
-    void mountSearchMap(mapElement.current, { center: initial.center, zoom: initial.zoom, radiusMiles, onMoving: () => move(), onMove: center => move(center) }).then(result => {
+    const controller = new AbortController()
+    void mountSearchMap(mapElement.current, { center: initial.center, zoom: initial.zoom, radiusMiles, signal: controller.signal, onMoving: () => { if (live) move() }, onMove: center => { if (live) move(center) }, onError: failure => {
+      if (!live) return
+      version.current++; operation.current?.abort()
+      if (moveTimer.current) clearTimeout(moveTimer.current)
+      setReady(false); setPreview(null); setSuggestions([]); setSearching(false); setLocating(false); setError(failure.message)
+    } }).then(result => {
       if (!live) { result.destroy(); return }
       instance = result; map.current = result; setReady(true)
     }).catch(failure => { if (live) setError(failure instanceof Error ? failure.message : 'The map could not load.') })
-    return () => { live = false; instance?.destroy(); map.current = null }
+    return () => { live = false; controller.abort(); instance?.destroy(); map.current = null }
   }, [initial, radiusMiles, move])
   useEffect(() => {
     if (query.trim().length < 2 || !ready || saving) return
