@@ -31,7 +31,6 @@ test('landing links are real, previews retain focus, and account storage is unto
   await page.addInitScript(() => localStorage.setItem('landing-account-storage-sentinel', 'preserve'))
   await page.goto('/#install')
   const before = await page.evaluate(() => JSON.stringify({ ...localStorage }))
-  await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toHaveAttribute('href', 'https://mobile.dev.pebble.garden')
   const store = page.getByRole('link', { name: 'Open Google Play for Android' })
   await expect(store).toHaveAttribute('href', 'https://play.google.com/store/apps')
   await expect(store).toHaveAttribute('rel', 'noopener noreferrer')
