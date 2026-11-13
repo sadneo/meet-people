@@ -131,11 +131,11 @@ test('Events accepts new responses without counts and Reset restores All without
  await expect(page.getByText(/\d+ people looking/)).toHaveCount(0)
 })
 
-test('profile rejects an under-13 birthdate without writing it',async({page})=>{
+test('profile rejects an under-18 birthdate without writing it',async({page})=>{
  const fixture=await wiringFixture(page);await page.goto('/profile?section=basics')
  await page.getByLabel('Birthdate (private)',{exact:true}).fill('2020-01-01')
  await page.getByRole('button',{name:'Save changes',exact:true}).click()
- await expect(page.getByText('You must be at least 13 to use Pebble.')).toBeVisible()
+  await expect(page.getByText('You must be at least 18 to use Pebble.')).toBeVisible()
  expect(fixture.calls.filter(c=>c.method==='PUT')).toHaveLength(0)
 })
 

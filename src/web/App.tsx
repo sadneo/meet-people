@@ -20,6 +20,8 @@ export default function Web() {
       <Route path="/terms" element={<Legal kind="terms" />} />
       <Route path="/privacy" element={<Legal kind="privacy" />} />
       <Route path="/cookies" element={<Legal kind="cookies" />} />
+      <Route path="/delete-account" element={<Legal kind="delete-account" />} />
+      <Route path="/child-safety" element={<Legal kind="child-safety" />} />
       <Route path="*" element={<Navigate replace to="/" />} />
     </Routes>
   </SessionQueryProvider>

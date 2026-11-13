@@ -1,0 +1,38 @@
+name: Android compilation
+on:
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - run: pnpm install --frozen-lockfile
+      - name: Build bundled mobile assets without private credentials
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_android_compile_only
+          VITE_API_BASE_URL: https://example.invalid
+          VITE_DEV_TOOLS: 'false'
+        run: pnpm build:mobile
+      - run: pnpm exec cap sync android
+      - name: Compile Android debug variant (not a distributable release)
+        working-directory: android
+        run: sh gradlew --no-daemon --console=plain assembleDebug

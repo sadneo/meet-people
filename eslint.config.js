@@ -5,10 +5,11 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist/', 'supabase/.temp/', '.claude/', 'qa/', 'src/alt/'] },
+  { ignores: ['dist/', 'supabase/.temp/', '.claude/', 'qa/', 'src/alt/', '.android-build/', '.gcloud-local/', 'Pebble-APKs/'] },
 
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  { languageOptions: { parserOptions: { tsconfigRootDir: import.meta.dirname } } },
   {
     files: ['scripts/**/*.{js,mjs,cjs}', 'tools/qa-real-users/**/*.mjs'],
     languageOptions: { globals: globals.node },

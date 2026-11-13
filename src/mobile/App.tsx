@@ -174,6 +174,8 @@ export default function App() {
         <Route path="/terms" element={<Legal kind="terms" />} />
         <Route path="/privacy" element={<Legal kind="privacy" />} />
         <Route path="/cookies" element={<Legal kind="cookies" />} />
+        <Route path="/delete-account" element={<Legal kind="delete-account" />} />
+        <Route path="/child-safety" element={<Legal kind="child-safety" />} />
         <Route element={<Private session={session} />}>
           <Route path="/messages/requests" element={<Requests />} />
           <Route path="/onboarding" element={<Onboarding />} />

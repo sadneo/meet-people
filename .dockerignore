@@ -6,3 +6,10 @@ supabase
 tests
 e2e
 .env*
+env.*
+.android-build
+.android-signing
+.gcloud-local
+Pebble-APKs
+qa
+android

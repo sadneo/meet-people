@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+def releaseCode = System.getenv('PEBBLE_VERSION_CODE') ?: '1'
+def releaseName = System.getenv('PEBBLE_VERSION_NAME') ?: '1.0'
+def signingPath = System.getenv('PEBBLE_KEYSTORE_PATH')
+def releaseRequested = gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }
+if (releaseRequested && (!signingPath || !System.getenv('PEBBLE_KEYSTORE_PASSWORD') || !System.getenv('PEBBLE_KEY_ALIAS') || !System.getenv('PEBBLE_KEY_PASSWORD') || !System.getenv('PEBBLE_VERSION_CODE') || !System.getenv('PEBBLE_VERSION_NAME'))) {
+    throw new GradleException('Release requires explicit versioning and private signing environment variables.')
+}
+
 android {
     namespace = "garden.pebble.android"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +15,8 @@ android {
         applicationId "garden.pebble.android"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode releaseCode.toInteger()
+        versionName releaseName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +24,20 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (signingPath) {
+            production {
+                storeFile file(signingPath)
+                storePassword System.getenv('PEBBLE_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('PEBBLE_KEY_ALIAS')
+                keyPassword System.getenv('PEBBLE_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (signingPath) signingConfig signingConfigs.production
+            debuggable false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
