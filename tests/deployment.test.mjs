@@ -252,6 +252,15 @@ test('release preparation and smoke receive only environment-scoped public Maps 
   }
 })
 
+test('Android CI installs explicit current SDK packages instead of obsolete action defaults', () => {
+  const workflow = readFileSync('.github/workflows/android-checks.yml', 'utf8')
+  const setup = workflow.match(/uses: android-actions\/setup-android@v3\s+with:([\s\S]*?)(?=\n      -)/)?.[1]
+  assert.ok(setup, 'Android setup must override the action package defaults')
+  assert.ok(setup.includes("packages: 'platform-tools platforms;android-36 build-tools;36.0.0'"))
+  assert.ok(setup.includes("log-accepted-android-sdk-licenses: 'false'"))
+  assert.ok(workflow.includes('assembleDebug'), 'Compilation remains required')
+})
+
 test('pending Android push migrations follow the existing hosted migration head in dependency order', () => {
   // Sandbox's failed dry-run confirmed these two migrations had never been applied.
   // Fresh-database replay alone cannot catch an older pending file on a hosted DB.
