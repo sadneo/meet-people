@@ -145,8 +145,7 @@ show simulated success. Use the existing policy contact for manual data requests
 ## Prototype parity and age visibility
 
 `FRONTEND-PARITY-REPORT.md` records the screen comparisons and intentional service
-differences. The frontend rejects under-13 birthdays on onboarding/profile save and
-hides Dating UI below 18. These are presentation/admission checks, not server-side
-security. The Friends backend currently has an 18+ restriction that still needs a
-team decision against the retained 13+ policy. Do not weaken backend guards in a
-visual parity change.
+differences. The approved initial release is 18+ across the app. Onboarding/profile
+save reject under-18 birthdays; database writes enforce the same boundary. Saved
+birthdate corrections require support. Presentation checks never replace backend
+authorization. Do not weaken backend guards in a visual parity change.

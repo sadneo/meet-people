@@ -95,9 +95,10 @@ export function createFcmSender(options: FcmOptions): PushSender {
   const doFetch = options.fetchImpl ?? fetch
   let auth: { getAccessToken(): Promise<string | null | undefined> } | undefined
   const accessToken = options.getAccessToken ?? (async () => {
-    if (!options.serviceAccount) throw new Error('Firebase service account is required')
     if (!auth) {
       const { GoogleAuth } = await import('google-auth-library')
+      // Cloud Run uses its attached runtime identity through ADC; a downloaded
+      // long-lived service-account key is not required for hosted dispatch.
       auth = new GoogleAuth({ credentials: options.serviceAccount, scopes: ['https://www.googleapis.com/auth/firebase.messaging'] })
     }
     const token = await auth.getAccessToken()
@@ -120,7 +121,7 @@ export function createFcmSender(options: FcmOptions): PushSender {
     const detail = await response.json().catch(() => null) as { error?: { status?: string; message?: string; details?: { errorCode?: string }[] } } | null
     const code = detail?.error?.details?.find(item => item.errorCode)?.errorCode ?? detail?.error?.status
     // Only remove a device when FCM says the token itself is dead, never because of our own payload/config errors.
-    if (response.status === 404 || code === 'UNREGISTERED') return 'unregistered'
+    if (code === 'UNREGISTERED') return 'unregistered'
     if (response.status === 400 && /registration token/i.test(detail?.error?.message ?? '')) return 'unregistered'
     console.error('FCM send failed', { status: response.status, code })
     return 'retry'

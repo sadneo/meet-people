@@ -223,9 +223,14 @@ test('sandbox API deployment merges Maps references and static egress; productio
     assert.ok(!args.some(arg => arg.startsWith('--set-env-vars=') || arg.startsWith('--set-secrets=')))
     assert.ok(!args.join(' ').includes('VITE_GOOGLE_MAPS_API_KEY'))
     const production = deploy({ ...base, DEPLOY_ENVIRONMENT: 'production', API_SERVICE: 'pebble-api', API_SECRET: 'pebble-supabase-service-role', API_RUNTIME_ACCOUNT: 'pebble-api@cse416-meet-people.iam.gserviceaccount.com', SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co' })
-    assert.ok(production.includes('--set-secrets=SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role:latest'))
+    assert.ok(production.includes('--update-secrets=SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role:latest,GOOGLE_MAPS_SERVER_API_KEY=pebble-google-maps-server-key-production:1,SEARCH_LOCATION_SIGNING_KEY=pebble-search-location-signing-key-production:1'))
+    assert.ok(production.some(arg => arg.startsWith('--update-env-vars=')))
+    assert.ok(!production.some(arg => arg.startsWith('--set-env-vars=') || arg.startsWith('--set-secrets=')), 'Production must not replace unrelated runtime configuration')
     assert.ok(!production.join(' ').includes('sandbox'))
-    assert.ok(!production.some(arg => /GOOGLE_MAPS|SEARCH_LOCATION|--network=|--subnet=|--vpc-egress=/.test(arg)))
+    assert.ok(production.includes('--network=pebble-production-egress'))
+    assert.ok(production.includes('--subnet=pebble-production-egress-us-east4'))
+    assert.ok(production.includes('--vpc-egress=all-traffic'))
+    assert.ok(production.some(arg => arg.includes('GOOGLE_MAPS_REQUESTS_PER_DAY=200')))
     for (const overrides of [
       { API_SERVICE: 'pebble-api' }, { API_SECRET: 'pebble-supabase-service-role' },
       { API_RUNTIME_ACCOUNT: 'pebble-api@cse416-meet-people.iam.gserviceaccount.com' },
@@ -236,15 +241,24 @@ test('sandbox API deployment merges Maps references and static egress; productio
   } finally { rmSync(directory, { recursive: true, force: true }) }
 })
 
-test('release preparation and smoke receive only the sandbox public Maps key from GitHub variables', () => {
+test('release preparation and smoke receive only environment-scoped public Maps keys from GitHub variables', () => {
   const prepare = readFileSync('.github/workflows/prepare.yml', 'utf8')
   const release = readFileSync('.github/workflows/release.yml', 'utf8')
-  assert.ok(prepare.includes("VITE_GOOGLE_MAPS_API_KEY: ${{ inputs.environment == 'sandbox' && vars.VITE_GOOGLE_MAPS_API_KEY || '' }}"))
-  assert.ok(release.includes("VITE_GOOGLE_MAPS_API_KEY: ${{ needs.resolve.outputs.environment == 'sandbox' && vars.VITE_GOOGLE_MAPS_API_KEY || '' }}"))
+  assert.ok(prepare.includes('VITE_GOOGLE_MAPS_API_KEY: ${{ vars.VITE_GOOGLE_MAPS_API_KEY }}'))
+  assert.ok(release.includes('VITE_GOOGLE_MAPS_API_KEY: ${{ vars.VITE_GOOGLE_MAPS_API_KEY }}'))
   for (const workflow of [prepare, release]) {
     assert.ok(!workflow.includes('secrets.GOOGLE_MAPS_SERVER_API_KEY'))
     assert.ok(!workflow.includes('secrets.SEARCH_LOCATION_SIGNING_KEY'))
   }
+})
+
+test('Android CI installs explicit current SDK packages instead of obsolete action defaults', () => {
+  const workflow = readFileSync('.github/workflows/android-checks.yml', 'utf8')
+  const setup = workflow.match(/uses: android-actions\/setup-android@v3\s+with:([\s\S]*?)(?=\n {6}-)/)?.[1]
+  assert.ok(setup, 'Android setup must override the action package defaults')
+  assert.ok(setup.includes("packages: 'platform-tools platforms;android-36 build-tools;36.0.0'"))
+  assert.ok(setup.includes("log-accepted-android-sdk-licenses: 'false'"))
+  assert.ok(workflow.includes('assembleDebug'), 'Compilation remains required')
 })
 
 test('pending Android push migrations follow the existing hosted migration head in dependency order', () => {
