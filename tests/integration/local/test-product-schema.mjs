@@ -63,6 +63,7 @@ await replay('uuid', (query, migrate) => {
   query(source('tests/integration/sql/seed-messaging.sql'))
   query(source('tests/integration/sql/hosted-services.sql'))
   query(source('tests/integration/sql/public-live-events.sql'))
+  query(source('tests/integration/sql/garden-rewards.sql'))
   console.info('PASS: fresh migration replay, native UUID preservation, product receipt, seeds and SQL security checks.')
 })
 
@@ -79,5 +80,6 @@ await replay('legacy', (query, migrate) => {
   query(bundle.sql, false)
   assert.equal(query('select count(*) from deployment_private.product_versions'), '1')
   query(source('tests/integration/sql/public-live-events.sql'))
+  query(source('tests/integration/sql/garden-rewards.sql'))
   console.info('PASS: activated legacy upgrade, nonempty-store rollback, unchanged source receipt and duplicate-install refusal.')
 })

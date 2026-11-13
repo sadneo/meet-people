@@ -15,6 +15,34 @@ and `src/mobile/`. Web presents installation status and public events; mobile op
 login when signed out. This document supersedes their earlier design directions.
 Product UI changes must follow it.
 
+The public web landing page follows the supplied `Pebble-Landing-Page.html`
+desktop composition: forest-green wordmark, split headline/profile hero, store
+badges and an interactive marketing Garden. Its React implementation and scoped
+styles live in `src/web/`. It has no Sign in link.
+Google Play opens the general store until an app listing exists. The illustrated
+profiles and ephemeral, single-selection Garden preview are examples, not live
+accounts or saved account Garden state. Do not import the export's unrelated
+application/loading styles or embedded image data. Mobile entry remains unchanged.
+
+## Loading and media readiness
+
+The mobile cold-start/session/initial-account gates use the rolling-Pebble design
+from `Pebble-Loading-Page.html`, implemented in `src/ui/loading/`. The same static
+markup/CSS is included in mobile HTML before JavaScript; public web HTML remains
+unchanged. This is a real pending state, never a timed splash or a navigation
+destination. Ready content replaces it immediately. After a prolonged wait, an
+explicit reload link appears; no automatic authentication or mutation retries are
+added. Cold startup omits the demo's prototype-host Back button.
+
+Normal navigation retains the app shell. Unresolved Events, Discover, Messages,
+requests/activity and profile/settings regions use matching skeleton layouts.
+Cached content stays visible during background reads; skeletons never grant write
+permissions or replace conflict/uncertain-save guidance. Image placeholders are
+local to the image and end on load/decode or an error fallback. Garden keeps its
+sky/island skeleton until required artwork has produced its first successful
+canvas frame, with an explicit artwork-only retry on failure. Skeleton shapes are
+decorative with one status per region. Reduced motion stops decorative animation.
+
 ## Visual direction
 
 Keep the alternate frontend’s quiet, warm composition and floating pixel garden.
@@ -93,15 +121,23 @@ an unavailable state, never a synthetic production map.
 Garden uses the reference's #e8efed sky, pixel clouds, illustrative floating islands,
 forest-green wordmark and cream bottom Build tray. `features/garden/sky.css` loads
 after the general shell styles; do not restore the dotted workspace background.
-The collection card shows actual local unlocks rather than simulated weekly totals.
+Weekly Activity previews remain device-local and never claim real attendance or meetings.
 
-Garden remains a local creative scene. It does not claim real meetings, attendance,
-account rewards or another person’s garden history. Its local balance, purchases
-and unique Mystery Geode unlocks persist in this browser, keyed to the signed-in
-account; they are not synchronized to the server. New gardens start with a blank
-green platform and one Pebble. Landscape placement stays fixed; decorations can
-be dragged. Reset returns unlocked Geode rocks to free inventory without refunding
-their unlock cost or rerolling ownership. Test currency is development-only.
+Garden balances, purchases, placements and unique Random Pebble unlocks now use
+an authenticated account service. The server awards 300 starting Pebbles, a 100
+one-time onboarding reward, 20 per UTC-day check-in, and 50 on the fifth distinct
+check-in of a UTC week. Sustained mutual conversations can earn 30 once per peer
+(up to twice weekly), plus 20 for keeping in touch in a later week. A muted sage
+pole-free flag has a red dot only when a server-confirmed reward is claimable.
+Its compact cream sheet shows reward rows and seven UTC ledger-based check-in
+circles; fuller rules stay collapsed.
+See `docs/PEBBLE-ECONOMY.md` for activation and test boundaries. Purchases and
+rewards fail closed when the service is unavailable; no local currency fallback.
+New account gardens start blank with one Pebble. Landscape stays fixed; decorations
+can be dragged. Reset refunds actual regular purchases and returns collected rocks
+to free inventory without refunding or rerolling unlocks. Previous device saves
+are retained but are not imported as trusted ownership or currency. Development
+funds enter an explicitly labeled temporary preview, never the account wallet.
 Unsupported planning, group growth,
 provider sessions, support delivery, account export and account deletion must not
 show simulated success. Use the existing policy contact for manual data requests.
@@ -109,8 +145,7 @@ show simulated success. Use the existing policy contact for manual data requests
 ## Prototype parity and age visibility
 
 `FRONTEND-PARITY-REPORT.md` records the screen comparisons and intentional service
-differences. The frontend rejects under-13 birthdays on onboarding/profile save and
-hides Dating UI below 18. These are presentation/admission checks, not server-side
-security. The Friends backend currently has an 18+ restriction that still needs a
-team decision against the retained 13+ policy. Do not weaken backend guards in a
-visual parity change.
+differences. The approved initial release is 18+ across the app. Onboarding/profile
+save reject under-18 birthdays; database writes enforce the same boundary. Saved
+birthdate corrections require support. Presentation checks never replace backend
+authorization. Do not weaken backend guards in a visual parity change.

@@ -23,6 +23,36 @@ is a module-interception fixture only, never a runtime fallback.
 3. Create a separate server key restricted to Places/Geocoding, with stable server
    egress IP restrictions where available. Set `GOOGLE_MAPS_SERVER_API_KEY` only on
    the API server. Do not put server keys in Vite-prefixed variables.
+
+### Bundled Android maps
+
+The bundled Android WebView runs at `https://localhost`, not the hosted
+`https://mobile.dev.pebble.garden` origin. Its map still uses the **Maps JavaScript
+API** browser key. Location suggestions use the separate authenticated server
+path, so working suggestions do not establish that browser map authorization works.
+
+For `RefererNotAllowedMapError`, inspect the WebView console's rejected site URL.
+An operator-approved sandbox key intended for the bundled app must authorize
+`https://localhost/*` in its website restrictions while retaining its Maps
+JavaScript API restriction. Prefer a dedicated sandbox WebView browser key when
+separate usage/quotas are needed. Do not remove application restrictions, allow
+arbitrary websites, substitute the private server key, or apply native Android
+package/SHA restrictions to this JavaScript API key.
+
+Cloud changes require operator approval and propagation time. When the existing
+embedded key is updated, reopen the app after propagation; a replacement key
+requires a rebuild. Loopback authorization is not proof of app identity: other
+local content can share that origin. Production restrictions require a separate
+review. No cloud configuration is changed by this documentation or by a PR.
+
+Google may report authorization failure after its script-ready callback. The
+picker treats that as unavailable, prevents confirmation, and does not construct
+another map from the rejected SDK until the document reloads. Back must still
+work: late sheet initialization is canceled and missing/already-disposed vendor
+listener handles cannot throw through React unmount and blank the app.
+
+### Remaining activation steps
+
 4. Test and apply `20261030000000_google_search_locations.sql` after the canonical
    prerequisites. It creates no keys, imports no places and modifies no accounts.
 5. Generate a 32-byte random HMAC secret, encoded as 64 hex characters. Configure
@@ -117,6 +147,13 @@ References:
 - https://developers.google.com/profile/help/benefits#google-cloud-credits
 
 ## Verification and rollout
+
+For the approved hosted sandbox configuration, public browser build variable,
+pinned server/signing secret references and static outbound network, see
+[Sandbox Maps deployment](deployment.md#sandbox-maps-deployment). PRs do not deploy;
+merges into `dev` publish the API and both sandbox Hosting sites. The release
+declares the activation flag, so an emergency runtime disable must also be
+reflected in deployment configuration before another release.
 
 Automated provider tests intercept Google HTTP; browser tests intercept the map
 renderer and APIs; SQL acceptance uses signed synthetic tickets in a network-none

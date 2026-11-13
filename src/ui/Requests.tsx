@@ -8,6 +8,7 @@ import { ActionButton, ErrorMessage, Icon, PersonPhoto, ResourceState } from './
 import { respondToConnectionRequest } from './request-actions'
 import { useCurrent } from './current'
 import { SafetyActions } from './Safety'
+import { PageSkeleton } from './loading/PageSkeleton'
 
 export function Requests() {
   const current = useCurrent(), navigate = useNavigate(), action = useAction()
@@ -51,7 +52,7 @@ export function Requests() {
       <Link className="round requests-close" to="/messages" aria-label="Close requests"><Icon name="Skip" /></Link>
     </header>
     <ErrorMessage>{action.error}</ErrorMessage>
-    <ResourceState loading={people.loading} error={people.error} reload={people.reload} />
+    <ResourceState loading={people.loading} error={people.error} reload={people.reload} skeleton={<PageSkeleton view="list" label="Loading requests"/>}/>
     {uncertain && !action.busy && <div className="requests-reconcile"><p role="status">The response could not be confirmed. Reload requests before trying again.</p><ActionButton secondary onClick={() => void reconcile()}>Reload requests</ActionButton></div>}
     {people.value && people.value.incoming.length === 0 && <p className="muted">No pending requests.</p>}
     {people.value && people.value.incoming.length > 0 && sections.filter(section => section.mode !== 'dating' || canShowDating(current.account?.profile?.birthdate)).filter(section => section.mode !== 'earlier' || section.people.length > 0).map(section => <details className={`requests-group ${section.mode}`} key={section.mode} open>

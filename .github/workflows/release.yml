@@ -128,6 +128,7 @@ jobs:
       SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      VITE_GOOGLE_MAPS_API_KEY: ${{ vars.VITE_GOOGLE_MAPS_API_KEY }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       RELEASE_SHA: ${{ needs.resolve.outputs.sha }}
       API_IMAGE: ${{ needs.prepare-dev.outputs.image || needs.prepare-production.outputs.image }}
@@ -162,6 +163,13 @@ jobs:
           path: dist
       - name: Require a prepared immutable image
         run: test -n "$API_IMAGE" && test "${API_IMAGE#*@sha256:}" != "$API_IMAGE"
+      - name: Check production recovery policy before changes
+        if: env.DEPLOY_ENVIRONMENT == 'production'
+        env:
+          # Operator accepted Free-plan recovery risk for early access (2026-11-13).
+          # Change to require-managed-backup before leaving early access.
+          PRODUCTION_RECOVERY_POLICY: early-access-no-backups
+        run: node scripts/check-production-recovery.mjs
       - name: Link database and preview migrations
         run: |
           pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
@@ -176,7 +184,11 @@ jobs:
       - run: pnpm hosting:configure
       - run: sh scripts/deploy-api.sh
       - name: Deploy disabled event worker (no execution or schedule)
+        if: env.DEPLOY_ENVIRONMENT == 'sandbox'
         run: sh scripts/deploy-worker.sh
+      - name: Deploy approved production workers and schedules
+        if: env.DEPLOY_ENVIRONMENT == 'production'
+        run: node scripts/deploy-production-workers.mjs
       # Each site's pinTag updates the shared Run service; publish sequentially.
       - name: Deploy web site and pin API revision
         run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only "hosting:$FIREBASE_WEB_SITE_ID" --project "$GCP_PROJECT_ID" --non-interactive

@@ -63,16 +63,21 @@ test('Profile navigation leaves a deep-linked editor and follows browser history
  await expect(page.getByRole('heading',{name:'Profile',exact:true})).toBeVisible()
 })
 
-test('web marketing preview switches modes and offers installation information',async({page})=>{
- await page.route('**/src/mobile/main.tsx',route=>route.fulfill({contentType:'application/javascript',body:'import "/src/main.tsx"'}))
+test('web landing matches the supplied preview and links to mobile sign-in and Google Play',async({page})=>{
+ await page.route('**/src/mobile/main.tsx*',route=>route.fulfill({contentType:'application/javascript',body:'import "/src/main.tsx"'}))
  await wiringFixture(page,{guest:true});await page.goto('/')
  const modes=page.getByRole('group',{name:'Preview a matching mode'})
  await modes.getByRole('button',{name:'Dating'}).click()
  await expect(modes.getByRole('button',{name:'Dating'})).toHaveAttribute('aria-pressed','true')
- await expect(page.locator('.welcome-profile img')).toHaveAttribute('src','/pebble/maya.jpg')
- await page.getByRole('link',{name:'Get Pebble',exact:true}).first().click()
- await expect(page.getByRole('heading',{name:'Android — coming soon'})).toBeVisible()
- await expect(page.getByRole('link',{name:/Sign in|Get started/})).toHaveCount(0)
+  await expect(page.locator('.landing-profile img')).toHaveAttribute('src','/garden/preview-maya.jpg')
+  await expect(page.getByRole('link',{name:'Open Google Play for Android'})).toHaveAttribute('href','https://play.google.com/store/apps')
+  await expect(page.getByRole('status',{name:'iOS App Store: coming soon'})).toBeVisible()
+  await page.getByRole('button',{name:'Add trees to Garden preview'}).click()
+  await expect(page.locator('.landing-placement')).toHaveCount(1)
+  await page.getByRole('button',{name:'Add flowers to Garden preview'}).click()
+  await expect(page.getByRole('button',{name:'Add trees to Garden preview'})).toHaveAttribute('aria-pressed','false')
+  await page.getByRole('button',{name:'Remove flowers from Garden preview'}).click()
+  await expect(page.locator('.landing-placement')).toHaveCount(0)
 })
 
 test('mobile policy Back preserves non-secret auth text',async({page})=>{
@@ -105,26 +110,32 @@ for(const width of [390,1280])test(`prototype profile overview, preview, setting
 })
 
 test('Events accepts new responses without counts and Reset restores All without a stuck loader',async({page})=>{
- await page.route('**/src/mobile/main.tsx',route=>route.fulfill({contentType:'application/javascript',body:'import "/src/main.tsx"'}))
+ await page.route('**/src/mobile/main.tsx*',route=>route.fulfill({contentType:'application/javascript',body:'import "/src/main.tsx"'}))
  await wiringFixture(page,{guest:true})
  const event={id:eventId,title:'A real API-shaped event',description:null,category:'Music',starts_at:'2026-11-03T17:00:00Z',ends_at:null,location_name:'Campus',address:null,city:null,image_url:null,source:'Campus',source_url:null,status:'active',distance_miles:null}
  await page.route('**/api/events?*',route=>route.fulfill({json:{events:new URL(route.request().url()).searchParams.has('category')?[]:[event],categories:['Music','Food'],page:1,hasMore:false}}))
  await page.goto('/explore');await expect(page.getByRole('heading',{name:event.title})).toBeVisible()
- await page.getByRole('group',{name:'Event categories'}).getByRole('button',{name:'Food',exact:true}).click()
- await expect(page.getByText('No events here yet.',{exact:true})).toBeVisible()
- await page.getByRole('button',{name:'Filter events',exact:true}).click()
+  await page.getByRole('button',{name:'Filter events',exact:true}).click()
+  await page.getByLabel('Category',{exact:true}).selectOption('Food')
+  await page.getByRole('button',{name:'Done',exact:true}).click()
+  await expect(page.getByText('No events here yet.',{exact:true})).toBeVisible()
+  await expect(page.locator('#event-filter-summary')).toHaveText('Category: Food')
+  await page.getByRole('button',{name:'Filter events',exact:true}).click()
  await page.getByRole('button',{name:'Reset filters',exact:true}).click()
  await page.getByRole('button',{name:'Done',exact:true}).click()
  await expect(page.getByRole('heading',{name:event.title})).toBeVisible()
- await expect(page.getByRole('group',{name:'Event categories'}).getByRole('button',{name:'All',exact:true})).toHaveAttribute('aria-pressed','true')
+  await expect(page.locator('#event-filter-summary')).toHaveCount(0)
+  await page.getByRole('button',{name:'Filter events',exact:true}).click()
+  await expect(page.getByLabel('Category',{exact:true})).toHaveValue('')
+  await page.getByRole('button',{name:'Done',exact:true}).click()
  await expect(page.getByText(/\d+ people looking/)).toHaveCount(0)
 })
 
-test('profile rejects an under-13 birthdate without writing it',async({page})=>{
+test('profile rejects an under-18 birthdate without writing it',async({page})=>{
  const fixture=await wiringFixture(page);await page.goto('/profile?section=basics')
  await page.getByLabel('Birthdate (private)',{exact:true}).fill('2020-01-01')
  await page.getByRole('button',{name:'Save changes',exact:true}).click()
- await expect(page.getByText('You must be at least 13 to use Pebble.')).toBeVisible()
+  await expect(page.getByText('You must be at least 18 to use Pebble.')).toBeVisible()
  expect(fixture.calls.filter(c=>c.method==='PUT')).toHaveLength(0)
 })
 

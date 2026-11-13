@@ -2,7 +2,8 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
 import { SessionQueryProvider } from '../data/SessionQueryProvider'
 import { Events, EventDetail } from '../ui/Events'
-import { Landing, Legal } from '../ui/Public'
+import { Legal } from '../ui/Public'
+import { Landing } from './Landing'
 
 const DevelopmentNavigator = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS === 'true'
   ? lazy(() => import('../ui/DevelopmentNavigator'))
@@ -19,6 +20,8 @@ export default function Web() {
       <Route path="/terms" element={<Legal kind="terms" />} />
       <Route path="/privacy" element={<Legal kind="privacy" />} />
       <Route path="/cookies" element={<Legal kind="cookies" />} />
+      <Route path="/delete-account" element={<Legal kind="delete-account" />} />
+      <Route path="/child-safety" element={<Legal kind="child-safety" />} />
       <Route path="*" element={<Navigate replace to="/" />} />
     </Routes>
   </SessionQueryProvider>

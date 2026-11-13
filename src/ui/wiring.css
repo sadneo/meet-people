@@ -264,6 +264,8 @@ legend {
 }
 .discovery-photo .photo-more {
   z-index: 2;
+  min-width: 44px;
+  min-height: 44px;
 }
 .discovery-activity {
   display: inline-flex;
@@ -281,6 +283,19 @@ legend {
 }
 .discovery-page .area-link {
   min-height: 44px;
+}
+.discovery-page .discovertools .round {
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+.discovery-page .mode-toggle {
+  min-width: 0;
+}
+.discovery-page .mode-toggle button {
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: 10px;
 }
 @media (max-width: 800px) {
   .shell > main:has(> .discovery-page) {
@@ -306,7 +321,8 @@ legend {
     z-index: 30;
   }
   .discovery-page .discovery-profile .dating-card .discovery-photo {
-    height: clamp(420px, 65dvh, 650px);
+    /* Reserve the header, thumb actions and navigation before sizing the photo. */
+    height: clamp(200px, calc(100dvh - 340px - env(safe-area-inset-bottom)), 650px);
   }
 }
 .development-navigator .devquick button {
@@ -806,6 +822,7 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
   box-shadow: 0 8px 24px #49342114;
 }
 .chat-options-menu .text-link { text-align: left; min-height: 44px; }
+.chat-options-menu .btn { min-width: 44px; min-height: 44px; }
 .messaging-page .live-message { border-radius: 17px 17px 17px 4px; }
 .messaging-page .live-message.mine { border-radius: 17px 17px 4px 17px; }
 .messaging-page .chat-date { margin: 4px 0; }
@@ -975,9 +992,9 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
     display: block;
     padding-bottom: calc(76px + env(safe-area-inset-bottom));
   }
-  .app-navigation {
+  .shell > .app-navigation {
     height: calc(76px + env(safe-area-inset-bottom));
-    padding: 6px 8px env(safe-area-inset-bottom);
+    padding: 4px 8px env(safe-area-inset-bottom);
     position: fixed;
     top: auto;
     bottom: 0;
@@ -999,9 +1016,18 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
     display: flex;
     flex-direction: column;
     justify-content: center;
+    min-width: 0;
+    min-height: 44px;
     gap: 4px;
-    padding: 8px 2px;
+    padding: 1px 2px;
     font-size: 10px;
+  }
+  .app-navigation > a > span:not(.activity-dot) {
+    width: 100%;
+    flex-shrink: 0;
+    overflow-wrap: anywhere;
+    text-align: center;
+    line-height: 1;
   }
   .app-navigation > a.active {
     background: #eddfd1;

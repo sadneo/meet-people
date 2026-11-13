@@ -14,6 +14,9 @@ export function validateFrontendConfiguration(env) {
   assert.match(env.VITE_BUILD_SHA ?? '', /^[0-9a-f]{40}$/, 'Frontend requires a resolved commit SHA')
   assert.equal(env.VITE_SUPABASE_URL, supabaseUrl, 'Frontend must use the matching Supabase project')
   assert.ok(env.VITE_SUPABASE_PUBLISHABLE_KEY, 'Missing frontend Supabase public key')
+  if (env.DEPLOY_ENVIRONMENT === 'sandbox') {
+    assert.ok(env.VITE_GOOGLE_MAPS_API_KEY?.trim(), 'Missing sandbox Maps browser key; configure VITE_GOOGLE_MAPS_API_KEY in the sandbox GitHub environment')
+  }
   return { branch, sha: env.VITE_BUILD_SHA, supabaseUrl }
 }
 

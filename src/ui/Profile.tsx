@@ -1,4 +1,5 @@
 import { canShowDating, meetsMinimumAge } from './age-visibility'
+import { PageSkeleton } from './loading/PageSkeleton'
 import './parity-account.css'
 import { MatchingSchedule } from './MatchingSchedule';
 import { DatingPreferencesPanel } from './Preferences';
@@ -380,7 +381,7 @@ export function Profile() {
       </div> : <>
         {(section === 'basics' || section === 'interests' || section === 'dating') && <div className="account-segments" role="group" aria-label="Profile sections">{(['basics', 'interests', 'dating'] as const).filter(tab => tab !== 'dating' || adult).map((tab, i) => <button key={tab} aria-pressed={section === tab} onClick={() => setSection(tab)}>{['About You', 'Interests & Availability', 'Dating Profile'][i]}</button>)}</div>}
         <div hidden={section !== 'basics' && section !== 'interests'}>
-          <ResourceState loading={facts.loading} error={facts.error} reload={() => void facts.reload()}/>
+          <ResourceState loading={facts.loading && !facts.details} error={facts.error} reload={() => void facts.reload()} skeleton={<PageSkeleton view="profile" label="Loading profile details"/>}/>
           {facts.details && <ProfileDraft initial={current.account!} initialFacts={facts.details} factsResource={facts} section={section === 'interests' ? 'interests' : 'basics'} done={closeEditor}/>}
         </div>
         {adult && section === 'dating' && <section className="account-edit-fields"><DatingPreferencesPanel view="profile" done={closeEditor}/></section>}
@@ -448,7 +449,7 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
       return;
     }
     if (profile.birthdate && !meetsMinimumAge(profile.birthdate)) {
-      setError("You must be at least 13 to use Pebble.");
+      setError("You must be at least 18 to use Pebble.");
       return;
     }
     const factsChanged = JSON.stringify(optional.data) !== JSON.stringify(initialFacts.facts);

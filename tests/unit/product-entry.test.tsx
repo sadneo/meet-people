@@ -12,12 +12,30 @@ function Location() {
 beforeEach(() => { vi.stubEnv('DEV', false); vi.stubEnv('VITE_DEV_TOOLS', 'false') })
 afterEach(() => { cleanup(); vi.unstubAllEnvs(); vi.unstubAllGlobals() })
 
-it.each(['/', '/login', '/messages', '/auth/callback'])('web %s stays public without authentication controls', async path => {
+it.each(['/', '/login', '/messages', '/auth/callback'])('web %s stays public and links out to the mobile app without an auth form', async path => {
   render(<MemoryRouter initialEntries={[path]}><Web /><Location /></MemoryRouter>)
   expect(await screen.findByRole('heading', { name: /Meet new friends/ })).toBeTruthy()
-  expect(screen.getByText('Android — coming soon')).toBeTruthy()
-  expect(screen.queryByRole('link', { name: /sign in|get started/i })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Open Google Play for Android' }).getAttribute('href')).toBe('https://play.google.com/store/apps')
+  expect(screen.queryByRole('link', { name: /Sign in/ })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Continue with email' })).toBeNull()
   expect(screen.getByLabelText('Current URL').textContent).toBe('/')
+})
+
+it('landing previews remain ephemeral and never call APIs or touch account storage', async () => {
+  const fetch = vi.fn(), write = vi.spyOn(Storage.prototype, 'setItem')
+  vi.stubGlobal('fetch', fetch)
+  render(<MemoryRouter><Web /></MemoryRouter>)
+  fireEvent.click(screen.getByRole('button', { name: 'Dating', exact: true }))
+  expect(screen.getByRole('img', { name: /Maya, a fictional Dating profile/ }).getAttribute('src')).toBe('/garden/preview-maya.jpg')
+  fireEvent.click(screen.getByRole('button', { name: 'Add trees to Garden preview' }))
+  expect(screen.getByRole('img', { name: /Garden, with trees added/ })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Add flowers to Garden preview' }))
+  expect(screen.getByRole('button', { name: 'Add trees to Garden preview' }).getAttribute('aria-pressed')).toBe('false')
+  fireEvent.click(screen.getByRole('button', { name: 'Remove flowers from Garden preview' }))
+  expect(screen.getByRole('img', { name: 'A customizable pixel Garden' })).toBeTruthy()
+  expect(fetch).not.toHaveBeenCalled()
+  expect(write).not.toHaveBeenCalled()
+  write.mockRestore()
 })
 
 it('web event browsing reads the registry without private group controls', async () => {

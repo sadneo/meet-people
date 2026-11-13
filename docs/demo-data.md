@@ -76,6 +76,38 @@ the private local worker file. Population itself leaves worker configuration
 unchanged and does not manufacture proposals, attendance, or event-group chats.
 The retired `/api/events/:id/company` feature is not reinstated.
 
+### Worker diagnostics and recovery
+
+`pnpm dev:groups` now identifies the failed startup step or queue operation rather
+than printing one generic error. For example:
+
+```text
+Worker diagnostic: stage=claim; reason=timeout. Outcomes may be uncertain; no automatic replay.
+Local group worker stopped [general_queue]. ...
+```
+
+Queue stages are `claim`, `rank`, `fail` (recording an unsuccessful attempt),
+`complete`, and `reconcile`. Reasons distinguish `timeout`, `invalid_response`
+(a contract/schema mismatch), and `request_failed` (a rejected or unavailable
+request; it does not identify a specific provider cause). A completion error may
+still reconcile as completed; the completed count includes that confirmed result,
+but the worker still stops instead of taking another job.
+
+| Stop category | Safe next action |
+| --- | --- |
+| `local_database`, `local_configuration`, `worker_transport` | Run `pnpm run doctor`; check local Docker/Supabase/API availability. Doctor does not start anything. |
+| `private_credentials`, `worker_identity`, `worker_authentication` | Inspect local Auth availability and private file ownership/permissions. Do not publish credentials, replace an identity or reset passwords to bypass checks. |
+| `worker_provisioning`, `policy_setup`, `worker_setup` | Earlier setup work may already be committed. Inspect existing identity/schema/worker state before explicitly rerunning setup; failure does not imply rollback. |
+| `matching_policy` | Check database readiness and the local policy installation before explicitly running setup. Do not reset existing data. |
+| `development_queue`, `general_queue` | Inspect existing job, lease and proposal state before explicitly restarting or rejoining. Never replay uncertain ranking/completion calls. |
+
+Diagnostics contain fixed codes and guidance, not raw exceptions, provider
+responses, SQL, account IDs, job IDs, lease tokens, passwords or keys. A missing
+optional development-account credential file is reported as a general-queue
+fallback, not a fatal error. Normal shutdown after the current cycle is logged
+separately from failure. These diagnostics add no automatic retries, provisioning
+or schema changes beyond the command's existing explicit `--setup` behavior.
+
 To fill all currently available events without rerunning the full profile seed:
 
 ```sh

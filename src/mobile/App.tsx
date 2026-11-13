@@ -16,7 +16,7 @@ import { useCachedLoad } from "../data/useCachedLoad";
 import { MessagingActivitySchema } from "../../shared/messaging";
 import { messagingRequest } from "../features/messaging/client";
 import { useSession } from "../auth/useSession";
-import { supabase } from "../supabase";
+import { signOutLocally } from "../auth/signOut";
 import NativeBridge from "../platform/NativeBridge";
 import { SessionQueryProvider } from "../data/SessionQueryProvider";
 import { Private } from "../ui/session";
@@ -32,6 +32,7 @@ import { Requests } from "../ui/Requests";
 import { Activity } from "../ui/Activity";
 import { Garden } from "../features/garden/Garden";
 import { retainGardenFor } from '../features/garden/state';
+import { BootLoading } from '../ui/loading/BootLoading';
 import { Legal } from "../ui/Public";
 import { useAction } from "../ui/hooks";
 import {
@@ -40,8 +41,8 @@ import {
   Empty,
   ErrorMessage,
   Icon,
-  Loading,
 } from "../ui/common";
+import PushBridge from "../platform/PushBridge";
 
 const DevelopmentNavigator = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS === 'true'
   ? lazy(() => import('./DevelopmentNavigator'))
@@ -128,9 +129,9 @@ function Logout() {
         disabled={action.busy}
         onClick={() => {
           void action.run(async () => {
-            const result = await supabase?.auth.signOut({ scope: "local" });
-            if (result?.error)
+            try { await signOutLocally(); } catch {
               throw new Error("Could not sign out. Try again.");
+            }
             navigate("/login", { replace: true });
           });
         }}
@@ -153,14 +154,12 @@ export default function App() {
   useEffect(() => { if (ready) retainGardenFor(session?.user.id ?? null) }, [ready, session?.user.id]);
   if (!ready)
     return (
-      <main className="auth-screen">
-        <Brand />
-        <Loading />
-      </main>
+      <BootLoading />
     );
   return (
     <SessionQueryProvider scope={session?.user.id ?? "public"}>
       <NativeBridge />
+      <PushBridge />
       {DevelopmentNavigator && <Suspense fallback={null}><DevelopmentNavigator /></Suspense>}
       <Routes>
         <Route path="/welcome" element={<Navigate replace to="/" />} />
@@ -175,6 +174,8 @@ export default function App() {
         <Route path="/terms" element={<Legal kind="terms" />} />
         <Route path="/privacy" element={<Legal kind="privacy" />} />
         <Route path="/cookies" element={<Legal kind="cookies" />} />
+        <Route path="/delete-account" element={<Legal kind="delete-account" />} />
+        <Route path="/child-safety" element={<Legal kind="child-safety" />} />
         <Route element={<Private session={session} />}>
           <Route path="/messages/requests" element={<Requests />} />
           <Route path="/onboarding" element={<Onboarding />} />

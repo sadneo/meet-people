@@ -7,12 +7,14 @@ import type { DetailedSettings } from "../../shared/detailed-settings";
 import { supabase } from "../supabase";
 import { authCallbackUrl, validPassword } from "../auth/credential-policy";
 import { useDetailedSettings } from "../features/account/useDetailedSettings";
+import { PushNotificationsToggle } from "../features/account/PushNotificationsToggle";
 import { useAction } from "./hooks";
 import { ActionButton, ErrorMessage, Icon, ResourceState } from "./common";
 import { useCurrent } from "./current";
 import { Blocklist } from "./Safety";
 import { settingsCategories } from './settings-navigation';
 import { MatchingSchedule } from './MatchingSchedule';
+import { PageSkeleton } from './loading/PageSkeleton';
 
 function MasterSettings({ category }: { category: 'discovery' | 'notifications' }) {
   const current = useCurrent(),
@@ -36,6 +38,7 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
   return (
     <section className="account-panel">
       <h3>{category === 'notifications' ? 'Activity notifications' : 'Discovery & location'}</h3>
+      {category === 'notifications' && <PushNotificationsToggle />}
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -302,9 +305,10 @@ export function ProfileSettings({ section }: { section: string }) {
           <section className="account-panel">
             <h3>{category[1]} preferences</h3>
             <ResourceState
-              loading={detailed.loading}
+              loading={detailed.loading && !detailed.snapshot}
               error={detailed.error}
               reload={() => void detailed.reload()}
+              skeleton={<PageSkeleton view="settings" label="Loading saved preferences"/>}
             />
             {detailed.snapshot && (
                 <DetailedForm

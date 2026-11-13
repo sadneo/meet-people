@@ -15,13 +15,13 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 
 | Route | Current behavior |
 | --- | --- |
-| Web `/`, `/welcome` | Public marketing and installation status, independent of session |
+| Web `/`, `/welcome` | Desktop-first landing matching the supplied HTML; `/welcome` redirects to `/`. No Sign in link; Android badge opens `https://play.google.com/store/apps`; iOS is coming soon. The existing `/#install` anchor targets store badges. Profile and Garden previews are local examples with no account writes. |
 | Mobile `/`, `/welcome` | Signed-out entry opens login; signed-in entry opens Garden after account readiness |
 | `/login`, `/register` | Supabase email/password, email link and Google sign-in |
 | `/auth/callback`, `/reset-password` | Explicit grant verification and URL scrubbing |
 | `/auth/forgot-password`, `/forgot-password` | Real recovery email request |
 | `/onboarding` | Guided four-stone journey from the original dev flow, with a welcome scene and confirmed completion screen. About you (identity, private birthdate, home area), interests (1–5, premade or custom; at most 2 custom), social intentions, then weekly availability, general plan preferences and an explicit saved timezone. Each chapter persists and resumes from confirmed account data. Dating and group/event queues retain separate opt-in. |
-| `/home`, `/community` | Integrated pixel-art Garden; account-keyed browser inventory, placement and unique Geode unlocks (not server ownership) |
+| `/home`, `/community` | Integrated pixel-art Garden; account-backed inventory, placement, Random Pebble unlocks and capped earning rewards; weekly scene history stays device-local |
 | `/matchmaking` | Passive Friends/Dating recommendations, consent and search preferences |
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
 | Web `/explore`, `/explore/:id` | Public event reads; installation link for group participation |
@@ -33,9 +33,47 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/terms`, `/privacy`, `/cookies` | Existing policy content in the new visual layout |
 | `/logout` | Confirmed local session sign-out |
 
+Garden balances and ownership use the authenticated account service described in
+`docs/PEBBLE-ECONOMY.md`. Server revisions and transactions are authoritative;
+browser caches cannot credit a wallet or restore over a newer account change.
+Edits wait for confirmed account state and fail closed when the service is
+unavailable. The legacy IndexedDB transaction helper and its regression tests are
+retained for device-local data, but it is not the account wallet's write path.
+Previous device saves remain untouched and are not imported as trusted currency
+or ownership. Development funds remain explicitly temporary previews.
+Garden re-entry reuses a confirmed in-memory account snapshot for up to 30 seconds.
+Concurrent refresh requests share one read, but a queued mutation fences off any
+earlier shared refresh. Explicit refresh, focus/storage notifications and expired
+snapshots still fetch the account service. A cached display never skips the fresh
+pre-mutation read, revision checks or confirmed write response, and errors cannot
+grant cached write permission. Switching accounts clears snapshots and read state.
+
+Events keeps category selection inside the Filters dialog instead of wrapping
+category chips above the listings. A compact summary appears only when a category
+is selected. Category changes and Reset filters retain the page-one reset;
+Done, Escape and Close dismiss the existing dialog without changing that behavior.
+Category and page are URL-backed so detail/Close and Back/Forward preserve the
+directory search. The last successful category catalog remains in the session
+cache when a category's list request fails; the list still shows its real error.
+
+Android Back dismisses a modal's current layer first, then transient chat options,
+before navigating route history. Direct-link chats fall back to Messages; Garden
+and signed-out login roots minimize the app instead of revisiting auth history.
+The OS keyboard consumes its own first Back. System navigation is not hidden.
+Push opt-in updates tap handling within the session; registration has a bounded,
+cancelable lifecycle. Explicit local logout attempts server/native token cleanup
+before sign-out, with a three-second best-effort limit, without changing opt-in.
+
 Private routes wait for session hydration and persisted account readiness. A
 signed-in account with missing chapters resumes onboarding; account read failures
 block entry with retry and sign-out. Unknown routes pass through the same gate.
+Mobile's unresolved initial session/account uses the shared branded startup
+screen, also supplied as a mobile-only pre-JavaScript HTML fallback. Navigation
+inside the shell uses region-specific skeletons only when data is unavailable;
+background reads retain cached content and existing write-permission gates. Media
+placeholders resolve per image, not per page. Garden waits for its first drawn
+frame. Failures surface recovery rather than an indefinite skeleton; no minimum
+splash duration or automatic write/authentication retries are introduced.
 Profile photo selection/removal is staged with the profile draft: Cancel discards
 it and Save changes performs the revisioned photo write after profile/detail
 saves. These resources are not an atomic transaction; partial or uncertain saves
@@ -49,6 +87,14 @@ explicit location action.
 Garden and the other signed-in destinations share one account loader and shell.
 An account-scoped TanStack Query cache retains display reads and decoded private
 photos across navigation, with background refresh and short freshness windows.
+Disposable inactive reads are limited to 24 entries, including at most eight
+private-photo entries, with a two-minute unused-entry lifetime. Recently observed
+data wins eviction; removed/replaced private photo URLs are revoked. Observed
+views, in-flight requests, the category catalog and unresolved discovery delivery
+state are not evicted just to meet that display budget. This is an entry budget,
+not a guarantee about total Android process/decoded-image memory. No disk cache,
+background polling loop or dependency is added. Sign-out/account changes still
+clear the entire private cache.
 Events and inbox data warm after the shell becomes idle and on navigation intent.
 Changing accounts or signing out clears the cache and revokes private image URLs.
 Cached request lists and chat histories remain visible during refresh, while their
@@ -61,6 +107,12 @@ Versioned preference writes keep their compare-and-swap/readback behavior. Faile
 or uncertain mutations require read-only reconciliation before another write.
 Message retries reuse the same client request ID. Passive recommendations never
 enroll someone in the separate Messages group queue.
+Drafts and pending/unconfirmed send identities live in session-scoped memory,
+separately for direct and group conversations, across app-route navigation. A late
+confirmed response clears its draft even after leaving chat. Navigating or reading
+history never replays a send; an explicit retry retains the original request ID.
+Changing accounts or signing out clears this state. No message drafts or send IDs
+are added to persistent browser storage, and process restarts do not restore them.
 An open conversation refreshes its display history every four seconds while the
 tab is visible, and rechecks on return. Polling stops when the conversation
 unmounts. Drafts and loaded history remain during background refresh; stale or
