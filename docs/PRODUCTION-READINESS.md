@@ -1,5 +1,29 @@
 # Production readiness
 
+## Full dev promotion (November 14)
+
+The release scope now explicitly includes all current dev changes: native push
+permission timing, calendar links, Garden Cave and drag feedback, alongside the
+production worker/Maps/push repairs. The combined tree passed 826 unit tests,
+typecheck, lint, 18 deployment/recovery checks, production builds and the isolated
+legacy database-upgrade rehearsal. Additional calendar tests cover UTC conversion,
+encoding, invalid dates and duration fallback. Browser/CI and hosted deployment
+remain required gates; do not treat the older APK as containing these additions.
+
+Production recovery is live through merge `fa43783`. Full owned-account acceptance
+passed login, onboarding, Garden purchase idempotency, private photos, real Maps
+confirmation, owned-pair messaging, report receipt/block denial and account deletion.
+The API runtime additionally needed `roles/serviceusage.serviceUsageConsumer` for
+the OAuth quota project; this grant was applied after the deployed provider returned
+`USER_PROJECT_DENIED`. Earlier diagnostic success did not establish this permission
+was sufficient for the deployed provider. No API-key restrictions were loosened.
+
+Both production worker schedules are enabled and executions succeeded after the
+push-table grants migration. Physical-phone FCM receipt, real-user Google OAuth,
+SMTP receipt and comprehensive all-surface blocking remain unverified. Supabase
+backup recovery remains explicitly deferred for early access. The signing identity
+still needs an operator-controlled encrypted off-device backup.
+
 ## Recovery and Maps authentication follow-up (November 13)
 
 Recovery run `43550893011` succeeded, including hosted smoke checks, after PR #57.
