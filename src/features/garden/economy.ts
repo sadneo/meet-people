@@ -24,6 +24,7 @@ export const upgrades = [
   { id: 'cafe', name: 'Café Cart', cost: 55, icon: 'coffee', detail: 'A tiny cart for a shared coffee break.' },
   { id: 'stage', name: 'Music Stage', cost: 70, icon: 'music', detail: 'A place to play, listen, and gather.' },
   { id: 'cottage', name: 'Cottage Expansion', cost: 90, icon: 'profile', detail: 'Another wing for your first cottage.' },
+  { id: 'cave', name: 'Pebble Cave', cost: 150, icon: 'building', detail: 'A mossy stone shelter with room for three Pebbles.' },
   { id: 'hall', name: 'Community Hall', cost: 120, icon: 'people', detail: 'A bigger home for the whole community.' },
   { id: 'garnet', name: 'Garnet', cost: 300, icon: 'profile', detail: 'A little fiery determination.' },
   { id: 'sapphire', name: 'Sapphire', cost: 300, icon: 'profile', detail: 'A wistful blue companion.' },
@@ -90,8 +91,8 @@ export function resetPurchases(community: Community): Community {
 
 export const buildSections = [
   { name: 'Landscape', icon: 'landscape', items: landscapeUpgrades },
-  { name: 'Buildings', icon: 'building', items: upgrades.filter(item => ['cottage', 'hall'].includes(item.id)) },
-  { name: 'Decorations', icon: 'flower', items: upgrades.filter(item => !isLandscapeUpgrade(item.id) && !isGeode(item.id) && !['garnet', 'sapphire', 'emerald', 'citrine', 'cottage', 'hall'].includes(item.id)) },
+  { name: 'Buildings', icon: 'building', items: upgrades.filter(item => ['cottage', 'hall', 'cave'].includes(item.id)) },
+  { name: 'Decorations', icon: 'flower', items: upgrades.filter(item => !isLandscapeUpgrade(item.id) && !isGeode(item.id) && !['garnet', 'sapphire', 'emerald', 'citrine', 'cottage', 'hall', 'cave'].includes(item.id)) },
   { name: 'Rare Pebbles', icon: 'gem', items: upgrades.filter(item => ['garnet', 'sapphire', 'emerald', 'citrine'].includes(item.id)) },
 ]
 
