@@ -173,12 +173,12 @@ jobs:
       - name: Link database and preview migrations
         run: |
           pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
-          pnpm exec supabase db push --linked --dry-run
+          pnpm exec supabase db push --linked --include-all --dry-run
       - name: Deploy authenticated Edge Functions
         run: |
           pnpm exec supabase functions deploy embed-interest --project-ref "$SUPABASE_PROJECT_REF" --use-api
           pnpm exec supabase functions deploy ingest-sbengaged --project-ref "$SUPABASE_PROJECT_REF" --use-api
-      - run: pnpm exec supabase db push --linked --yes
+      - run: pnpm exec supabase db push --linked --include-all --yes
       - name: Install canonical product backend
         run: node scripts/deploy-product-schema.mjs
       - run: pnpm hosting:configure

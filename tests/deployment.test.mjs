@@ -8,6 +8,15 @@ import { test } from 'node:test'
 import { assertCurrentDeployment, resolveDeployment } from '../scripts/resolve-deployment.mjs'
 import { deploymentConfiguration, validateFrontendConfiguration } from '../scripts/configure-deployment.mjs'
 
+test('preview and apply include pending migrations older than the remote hotfix head', () => {
+  const workflow = readFileSync('.github/workflows/release.yml', 'utf8')
+  const commands = workflow.split('\n').filter(line => line.includes('pnpm exec supabase db push'))
+  assert.equal(commands.length, 2)
+  assert.ok(commands.every(line => line.includes('--linked --include-all')))
+  assert.ok(commands.some(line => line.includes('--dry-run')))
+  assert.ok(commands.some(line => line.includes('--yes')))
+})
+
 test('main deploys only production; dev deploys only sandbox; manual sources belong to the destination branch', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-deployment-'))
   const git = args => execFileSync('git', ['-C', directory, ...args], {
