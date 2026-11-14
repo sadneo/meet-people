@@ -56,3 +56,32 @@ it('sanitizes provider failures without leaking keys, URLs or raw upstream detai
     await expect(provider.suggestions(owner, { mode: 'friends', input: 'Brooklyn', sessionToken: token })).rejects.toMatchObject({ status: status === 429 ? 429 : 503 })
   }
 })
+it('uses renewable runtime OAuth for Places and v4 geocoding without sending an API key', async () => {
+  const request = vi.fn<typeof fetch>(async url => Response.json(String(url).includes('geocode.googleapis.com')
+    ? { results: [{ placeId: 'nearby', addressComponents: parts }] }
+    : String(url).includes('autocomplete') ? { suggestions: [] }
+      : { id: 'place', location: { latitude: 40.7, longitude: -73.9 }, addressComponents: parts }))
+  const accessToken = vi.fn(async () => 'short-lived-token')
+  const provider = createGoogleSearchLocations({ apiKey: 'must-not-send', oauthProject: 'approved-project', accessToken, signingKey, fetch: request })
+  await provider.suggestions(owner, { mode: 'friends', input: 'Brooklyn', sessionToken: token })
+  await provider.preview(owner, { kind: 'place', mode: 'friends', placeId: 'place', sessionToken: token })
+  const center = { latitude: 40.71234, longitude: -73.91234 }
+  expect(await provider.preview(owner, { kind: 'pin', mode: 'dating', center, deviceAssisted: false })).toMatchObject({ center, areaLabel: 'Brooklyn, NY' })
+  expect(accessToken).toHaveBeenCalledTimes(3)
+  for (const [url, init] of request.mock.calls) {
+    const headers = new Headers(init?.headers)
+    expect(headers.get('Authorization')).toBe('Bearer short-lived-token')
+    expect(headers.get('X-Goog-User-Project')).toBe('approved-project')
+    expect(headers.has('X-Goog-Api-Key')).toBe(false)
+    expect(String(url)).not.toContain('must-not-send')
+  }
+  expect(new Headers(request.mock.calls[2][1]?.headers).get('X-Goog-FieldMask')).toBe('results.placeId,results.addressComponents')
+})
+it('fails closed and sanitizes missing or failed OAuth credentials', async () => {
+  for (const accessToken of [async () => null, async () => { throw Error('private-token') }]) {
+    const request = vi.fn<typeof fetch>()
+    const provider = createGoogleSearchLocations({ apiKey: 'no-fallback', oauthProject: 'approved-project', accessToken, signingKey, fetch: request })
+    await expect(provider.suggestions(owner, { mode: 'friends', input: 'Brooklyn', sessionToken: token })).rejects.toMatchObject({ status: 503, message: 'Google location search is unavailable. Try again.' })
+    expect(request).not.toHaveBeenCalled()
+  }
+})
