@@ -1,5 +1,60 @@
 # Production readiness
 
+## Recovery and Maps authentication follow-up (November 13)
+
+Recovery run `43550893011` succeeded, including hosted smoke checks, after PR #57.
+Bounded production acceptance passed synthetic Auth, onboarding, Garden purchase
+idempotency and private photo upload, but stopped at Maps preview HTTP 503. Both
+owned accounts were cleaned after each attempt; public APK publication remains gated.
+
+The IP-restricted server key was rejected because Google API traffic used Private
+Google Access rather than the reserved NAT IP. Disabling subnet Private Google
+Access did not solve this: Google documents that Public NAT never translates select
+Google API traffic. The original `privateIpGoogleAccess=true` setting was restored.
+Neither the key's IP restrictions nor its allowed APIs were broadened.
+
+A deleted one-shot job using the production image, network and attached runtime
+identity successfully called Geocoding v4 reverse lookup and Places autocomplete
+with ADC OAuth (HTTP 200 for both). No downloaded service-account key, stored token
+or additional IAM grant was needed. The backend now supports renewable ADC with
+`GOOGLE_MAPS_OAUTH_PROJECT`; production selects it while sandbox retains API-key
+authentication. OAuth failures are sanitized and never fall back to the key.
+Reverse geocoding requests only place ID/address components and preserves the
+user-selected center. Existing signatures, expiry, owner/mode checks and retention
+policy are unchanged. The Geocoding v4 reverse daily provider quota was set and
+read back as 1000 (shared project); the per-instance app limit remains 200/day.
+These are request limits, not a hard dollar cap.
+
+Local typecheck, lint, API build, deployment tests and 12 focused location tests
+passed. The backend change still requires CI, protected merge/deployment and live
+acceptance before declaring Maps recovered or publishing the draft APK.
+
+## First production deployment follow-up
+
+PR #54 merged as `22c1e63c7e4145e87382f19683e07f64f2922dad`.
+Run `43527250078` applied migrations and deployed the API, then failed when the
+event-group job referenced `pebble-event-group-worker-jwt:latest`: the secret
+resource existed but no version had ever been provisioned. The website publish and
+final hosted acceptance steps had not completed. Do not describe that run as a
+successful production release or roll back migrations blindly.
+
+The corrective worker design uses an internal, non-discoverable Auth identity,
+registered only in the private worker allowlist. Versioned credentials are in
+`pebble-event-group-worker-credentials-production:1`, with access only for the
+group-worker runtime identity. Every job signs in for a fresh, bounded session and
+signs out its own refresh session afterwards; no permanent expiring access JWT or
+Supabase signing secret is required. Legacy JWT configuration remains supported
+for existing sandbox/manual jobs. No private user content was inspected.
+
+The first signed APK/AAB was built from the main merge, version
+`1.0.0-early-access.1` / code `1`, and placed in `Pebble-APKs/`. APK signing,
+production endpoints, non-debuggable state, credential-exclusion checks and native
+16 KB ZIP/ELF alignment passed. A fresh API36 emulator installed it and the screenshot
+shows the real sign-in screen. UIAutomator did not expose WebView text, so the text
+assertion failed despite the rendered screen; do not claim automated UI traversal
+or authenticated flows passed. Disposable emulator data was removed. The GitHub
+download release remains a draft pending production backend recovery/acceptance.
+
 ## Authorized autonomous release run — in progress
 
 Operator decisions: adult-only (18+) app; production deployments and bounded

@@ -40,7 +40,7 @@ case "${DEPLOY_ENVIRONMENT:-production}" in
       [ "${API_SECRET:-pebble-supabase-service-role}" = pebble-supabase-service-role ] &&
       [ "${API_RUNTIME_ACCOUNT:-pebble-api@$GCP_PROJECT_ID.iam.gserviceaccount.com}" = "pebble-api@$GCP_PROJECT_ID.iam.gserviceaccount.com" ] || { echo 'Production requires its approved service, project, region, database and identity.' >&2; exit 1; }
     # Operator-approved adult-only early-access production Maps activation.
-    ENV_VARS="$ENV_VARS,GOOGLE_MAPS_STORAGE_APPROVED=true,GOOGLE_MAPS_REQUESTS_PER_DAY=200"
+    ENV_VARS="$ENV_VARS,GOOGLE_MAPS_STORAGE_APPROVED=true,GOOGLE_MAPS_REQUESTS_PER_DAY=200,GOOGLE_MAPS_OAUTH_PROJECT=$GCP_PROJECT_ID"
     SECRETS="$SECRETS,GOOGLE_MAPS_SERVER_API_KEY=pebble-google-maps-server-key-production:1,SEARCH_LOCATION_SIGNING_KEY=pebble-search-location-signing-key-production:1"
     set -- --network=pebble-production-egress --subnet=pebble-production-egress-us-east4 --vpc-egress=all-traffic
     ;;
