@@ -5,6 +5,7 @@ import { EventsResponseSchema, EventSchema } from "../../shared/events";
 import {
   eventRequest,
   eventDate,
+  calendarLink,
   safeImage,
   sourceLink,
 } from "../features/events/client";
@@ -212,6 +213,16 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
               .join(" · ") || "Location to be announced"}
           </p>
           <p className="event-company"><Icon name="Friends"/>Find people looking for company</p>
+          {groupAvailable && calendarLink(event) && (
+            <a
+              className="btn light"
+              href={calendarLink(event)!}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Add to calendar
+            </a>
+          )}
           {source && (
             <a
               className="btn light"
