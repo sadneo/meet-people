@@ -9,9 +9,15 @@ export const defaultPlacements: Record<MovableId, [number, number, number]> = {
   'base-bench': [909, 671, 180], 'base-cottage': [550, 483, 310],
   flowers: [275, 650, 105], bench: [540, 840, 145], lanterns: [1030, 790, 82],
   picnic: [760, 873, 155], bridge: [1066, 628, 170], garden: [935, 830, 160],
+  cave: [696, 660, 480],
   cafe: [260, 575, 140], stage: [886, 416, 210], cottage: [470, 545, 280], hall: [700, 455, 350],
   amethyst: [650, 550, 92], 'rose-quartz': [750, 600, 92], aquamarine: [650, 700, 92], pyrite: [800, 700, 92],
   garnet: [475, 651, 92], sapphire: [793, 777, 92], emerald: [788, 491, 92], citrine: [626, 827, 92],
+}
+// The cave is an open shelter. Sort at its back wall so occupants stay visible
+// and receive pointer hits before the floor underneath them.
+export function gardenItemDepth(id: MovableId, y: number) {
+  return id === 'cave' ? y - defaultPlacements.cave[2] * 0.36 : y
 }
 const river = [[978, 394], [925, 435], [1008, 482], [980, 535], [1005, 568], [1060, 620], [1150, 688]]
 function onRiver({ x, y }: Position) {

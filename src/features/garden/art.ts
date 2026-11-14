@@ -4,6 +4,7 @@ import { geodeRocks, isGeode } from './geodes'
 type Crop = [number, number, number, number]
 // Measured source crops and turf cleanup from the working prototype. No new artwork.
 const crops: Record<string, Crop> = {
+  cave: [0,0,112,60],
   pebble: [455,155,175,170], flowers: [715,140,325,220], bench: [1080,145,310,200],
   lanterns: [65,408,255,250], picnic: [370,425,325,235], bridge: [715,420,335,270],
   garden: [1070,410,335,265], cafe: [45,697,300,310], stage: [365,720,335,288],
@@ -18,6 +19,7 @@ export function loadGardenArt() { return shared ??= createGardenArt().catch(erro
 async function createGardenArt() {
   const images: Record<string, HTMLImageElement> = {}
   const sources = {
+    cave:'/garden/pebble-cave.svg',
     empty:'/garden/legacy-garden/village-empty.png', landscape:'/garden/legacy-garden/village-landscape.png',
     props:'/garden/legacy-garden/village-props.png', rare:'/garden/legacy-garden/expressive-pebbles.png',
     ...Object.fromEntries(geodeRocks.map(rock => [rock.id, `/garden/geodes/${rock.id}.png`])),
@@ -64,7 +66,7 @@ async function createGardenArt() {
     ctx.drawImage(layers[id],breeze,0)
   }
   const sprite = (ctx: CanvasRenderingContext2D,id: string,x: number,y: number,width: number,t = 0) => {
-    const crop = crops[id], image = images[isGeode(id) ? id : rare(id) ? 'rare' : 'props']; if (!crop || !image) return
+    const crop = crops[id], image = images[id === 'cave' || isGeode(id) ? id : rare(id) ? 'rare' : 'props']; if (!crop || !image) return
     let w = Math.round(width), h = Math.round(w*crop[3]/crop[2])
     if (id === 'pebble' || rare(id) || isGeode(id)) {
       const period = id === 'sapphire' ? 14 : id === 'citrine' ? 9 : 11, cycle = ((t+id.length)%period)/period
