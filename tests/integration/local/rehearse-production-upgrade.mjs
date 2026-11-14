@@ -17,7 +17,8 @@ const pending = names.filter(name => name.split('_')[0] > head)
 assert.deepEqual(pending, [
   '20261104060000_push_notifications.sql', '20261104060100_push_accepted_and_match.sql',
   '20261105000000_garden_economy.sql', '20261105010000_garden_social_rewards.sql',
-  '20261113000000_adult_only_release.sql',
+  '20261113000000_adult_only_release.sql', '20261113010000_garden_cave.sql',
+  '20261114010000_push_service_grants.sql',
 ], 'Production baseline changed; review the rehearsal before executing.')
 const container = `pebble-production-rehearsal-${process.pid}`
 const docker = args => execFileSync('docker', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).trim()

@@ -1,11 +1,26 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { z } from 'zod'
-import { eventRequest, safeImage, eventImagePlaceholder } from '../../src/features/events/client'
+import { eventRequest, safeImage, eventImagePlaceholder, calendarLink } from '../../src/features/events/client'
 
 vi.mock('../../src/supabase', () => ({ supabase: null }))
 afterEach(() => vi.unstubAllGlobals())
 const schema = z.object({ title: z.string() })
 const unavailable = 'Events are unavailable. Try again.'
+
+it('encodes calendar text and normalizes offset event times to UTC', () => {
+  const url = new URL(calendarLink({ title: 'Music & coffee / #1', starts_at: '2026-11-14T12:00:00-05:00', ends_at: '2026-11-14T15:00:00-05:00', location_name: 'Hall & garden', address: '1 Main St', city: 'Stony Brook' })!)
+  expect(url.origin).toBe('https://calendar.google.com')
+  expect(url.searchParams.get('text')).toBe('Music & coffee / #1')
+  expect(url.searchParams.get('dates')).toBe('20261114T170000Z/20261114T200000Z')
+  expect(url.searchParams.get('location')).toBe('Hall & garden, 1 Main St, Stony Brook')
+})
+it.each([null, 'invalid', '2026-11-14T10:00:00Z'])('uses a two-hour calendar duration for unusable end %s', ends_at => {
+  const url = new URL(calendarLink({ title: 'Event', starts_at: '2026-11-14T12:00:00Z', ends_at })!)
+  expect(url.searchParams.get('dates')).toBe('20261114T120000Z/20261114T140000Z')
+})
+it.each([null, 'invalid'])('does not offer a calendar link for unusable start %s', starts_at => {
+  expect(calendarLink({ title: 'Event', starts_at, ends_at: null })).toBeNull()
+})
 
 it('allows bundled event photos without accepting arbitrary local or script URLs', () => {
   expect(safeImage('/pebble/event-picnic.jpg')).toBe('/pebble/event-picnic.jpg')

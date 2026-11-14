@@ -50,3 +50,29 @@ export function eventDate(start: string | null, end: string | null) {
   // Same-day ranges stay compact; multi-day ranges name the ending date.
   return `${when} – ${until.toLocaleString(undefined, until.toDateString() === date.toDateString() ? time : { ...day, ...time })}`
 }
+
+type CalendarEvent = {
+  title: string
+  starts_at: string | null
+  ends_at: string | null
+  location_name?: string | null
+  address?: string | null
+  city?: string | null
+}
+
+// Link that opens Google Calendar's "new event" screen prefilled. Null when there is no usable start time.
+export function calendarLink(event: CalendarEvent) {
+  const start = Date.parse(event.starts_at ?? '')
+  if (!Number.isFinite(start)) return null
+  const end = Date.parse(event.ends_at ?? '')
+  // No usable end time: assume two hours.
+  const finish = Number.isFinite(end) && end > start ? end : start + 2 * 60 * 60 * 1000
+  const stamp = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.title,
+    dates: `${stamp(start)}/${stamp(finish)}`,
+    location: [event.location_name, event.address, event.city].filter(Boolean).join(', '),
+  })
+  return `https://calendar.google.com/calendar/render?${params}`
+}
