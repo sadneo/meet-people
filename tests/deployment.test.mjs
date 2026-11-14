@@ -7,6 +7,23 @@ import process from 'node:process'
 import { test } from 'node:test'
 import { assertCurrentDeployment, resolveDeployment } from '../scripts/resolve-deployment.mjs'
 import { deploymentConfiguration, validateFrontendConfiguration } from '../scripts/configure-deployment.mjs'
+import { reviewedMigrationFlags } from '../scripts/push-reviewed-migrations.mjs'
+
+test('preview and apply use the same reviewed migration ordering guard', () => {
+  const workflow = readFileSync('.github/workflows/release.yml', 'utf8')
+  const commands = workflow.split('\n').filter(line => line.includes('node scripts/push-reviewed-migrations.mjs'))
+  assert.equal(commands.length, 2)
+  assert.ok(commands.some(line => line.includes('--dry-run')))
+  assert.ok(commands.some(line => line.includes('--yes')))
+  const head = '20261114010000 | 20261114010000 | time'
+  assert.deepEqual(reviewedMigrationFlags(`${head}\n20261113010000 | | time`, 'wacgxhsdhrqigrmqaonc'), ['--include-all'])
+  assert.deepEqual(reviewedMigrationFlags(`${head}\n20261115010000 | | time`, 'wacgxhsdhrqigrmqaonc'), [])
+  assert.deepEqual(reviewedMigrationFlags(head, 'sandbox'), [])
+  assert.throws(() => reviewedMigrationFlags(`${head}\n20261113010000 | | time`, 'sandbox'))
+  assert.throws(() => reviewedMigrationFlags(`${head}\n20261112010000 | | time`, 'wacgxhsdhrqigrmqaonc'))
+  assert.throws(() => reviewedMigrationFlags('| 20261114010000 | time', 'wacgxhsdhrqigrmqaonc'))
+  assert.throws(() => reviewedMigrationFlags('unrecognized output', 'wacgxhsdhrqigrmqaonc'))
+})
 
 test('main deploys only production; dev deploys only sandbox; manual sources belong to the destination branch', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-deployment-'))
@@ -275,7 +292,7 @@ test('pending Android push migrations follow the existing hosted migration head 
   assert.ok(readFileSync(`supabase/migrations/${pending[0]}`, 'utf8').includes('create table if not exists public.push_outbox'))
   assert.ok(readFileSync(`supabase/migrations/${pending[1]}`, 'utf8').includes('alter table public.push_outbox'))
   const release = readFileSync('.github/workflows/release.yml', 'utf8')
-  assert.ok(release.includes('supabase db push --linked --dry-run'))
-  assert.ok(release.includes('supabase db push --linked --yes'))
+  assert.ok(release.includes('node scripts/push-reviewed-migrations.mjs --dry-run'))
+  assert.ok(release.includes('node scripts/push-reviewed-migrations.mjs --yes'))
   assert.ok(!release.includes('--include-all'), 'Do not bypass migration-order review for all future releases')
 })

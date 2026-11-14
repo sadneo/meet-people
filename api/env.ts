@@ -17,6 +17,7 @@ export const ApiEnvSchema = z
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
     SUPABASE_PUBLISHABLE_KEY: z.string().refine(isPublicSupabaseKey, 'Must be a public publishable or anon key.').optional(),
     GOOGLE_MAPS_SERVER_API_KEY: z.string().min(1).optional(),
+    GOOGLE_MAPS_OAUTH_PROJECT: z.string().regex(/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/).optional(),
     SEARCH_LOCATION_SIGNING_KEY: z.string().regex(/^[a-f0-9]{64}$/i).optional(),
     GOOGLE_MAPS_STORAGE_APPROVED: z.enum(['true', 'false']).default('false'),
     GOOGLE_MAPS_REQUESTS_PER_DAY: z.coerce.number().int().min(1).max(100000).default(2000),

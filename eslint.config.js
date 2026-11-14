@@ -5,7 +5,7 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist/', 'supabase/.temp/', '.claude/', 'qa/', 'src/alt/', '.android-build/', '.gcloud-local/', 'Pebble-APKs/'] },
+  { ignores: ['dist/', 'supabase/.temp/', '.claude/', 'qa/', 'src/alt/', '.android-build/', '.gcloud-local/', 'Pebble-APKs/', 'android/**/build/', 'android/app/src/main/assets/public/'] },
 
   js.configs.recommended,
   ...tseslint.configs.recommended,

@@ -67,8 +67,8 @@ const friendsScoring = matchingConfig
 const activeWorker = matchingConfig
   ? createActiveFriendsWorker(matchingConfig.url, matchingConfig.serviceKey)
   : null
-const mapLocations = env.GOOGLE_MAPS_STORAGE_APPROVED === 'true' && env.GOOGLE_MAPS_SERVER_API_KEY && env.SEARCH_LOCATION_SIGNING_KEY
-  ? createGoogleSearchLocations({ apiKey: env.GOOGLE_MAPS_SERVER_API_KEY, signingKey: env.SEARCH_LOCATION_SIGNING_KEY })
+const mapLocations = env.GOOGLE_MAPS_STORAGE_APPROVED === 'true' && (env.GOOGLE_MAPS_OAUTH_PROJECT || env.GOOGLE_MAPS_SERVER_API_KEY) && env.SEARCH_LOCATION_SIGNING_KEY
+  ? createGoogleSearchLocations({ apiKey: env.GOOGLE_MAPS_SERVER_API_KEY, oauthProject: env.GOOGLE_MAPS_OAUTH_PROJECT, signingKey: env.SEARCH_LOCATION_SIGNING_KEY })
   : null
 app.use('/api/matchmaking', boundedMatchingBodyError, createMatchmakingRouter(ownerTransport, datingScoring, friendsScoring, activeWorker, mapLocations, env.GOOGLE_MAPS_REQUESTS_PER_DAY))
 app.use('/api/connections', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'connections'))
