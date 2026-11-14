@@ -1,5 +1,31 @@
 # Production readiness
 
+## First production deployment follow-up
+
+PR #54 merged as `22c1e63c7e4145e87382f19683e07f64f2922dad`.
+Run `43527250078` applied migrations and deployed the API, then failed when the
+event-group job referenced `pebble-event-group-worker-jwt:latest`: the secret
+resource existed but no version had ever been provisioned. The website publish and
+final hosted acceptance steps had not completed. Do not describe that run as a
+successful production release or roll back migrations blindly.
+
+The corrective worker design uses an internal, non-discoverable Auth identity,
+registered only in the private worker allowlist. Versioned credentials are in
+`pebble-event-group-worker-credentials-production:1`, with access only for the
+group-worker runtime identity. Every job signs in for a fresh, bounded session and
+signs out its own refresh session afterwards; no permanent expiring access JWT or
+Supabase signing secret is required. Legacy JWT configuration remains supported
+for existing sandbox/manual jobs. No private user content was inspected.
+
+The first signed APK/AAB was built from the main merge, version
+`1.0.0-early-access.1` / code `1`, and placed in `Pebble-APKs/`. APK signing,
+production endpoints, non-debuggable state, credential-exclusion checks and native
+16 KB ZIP/ELF alignment passed. A fresh API36 emulator installed it and the screenshot
+shows the real sign-in screen. UIAutomator did not expose WebView text, so the text
+assertion failed despite the rendered screen; do not claim automated UI traversal
+or authenticated flows passed. Disposable emulator data was removed. The GitHub
+download release remains a draft pending production backend recovery/acceptance.
+
 ## Authorized autonomous release run — in progress
 
 Operator decisions: adult-only (18+) app; production deployments and bounded
