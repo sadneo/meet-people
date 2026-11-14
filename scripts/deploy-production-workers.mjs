@@ -18,7 +18,7 @@ const scheduler = ensureIdentity('pebble-worker-scheduler')
 const groupIdentity = 'pebble-event-group-worker@'+project+'.iam.gserviceaccount.com'
 for (const worker of [
   { name:'pebble-push-dispatcher', identity:pushIdentity, main:'push-dispatcher-main', env:'FIREBASE_PROJECT_ID='+project+',PUSH_DISPATCH_ENABLED=true', secret:'SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role:latest', schedule:'* * * * *' },
-  { name:'pebble-event-group-worker', identity:groupIdentity, main:'event-group-worker-main', env:'EVENT_GROUP_WORKER_ENABLED=true,MATCHMAKING_SCORING_ENABLED=true,EVENT_GROUP_WORKER_ID=production-worker', secret:'EVENT_GROUP_WORKER_JWT=pebble-event-group-worker-jwt:latest', schedule:'*/2 * * * *' },
+  { name:'pebble-event-group-worker', identity:groupIdentity, main:'event-group-worker-main', env:'EVENT_GROUP_WORKER_ENABLED=true,MATCHMAKING_SCORING_ENABLED=true,EVENT_GROUP_WORKER_ID=production-worker', secret:'EVENT_GROUP_WORKER_CREDENTIALS_JSON=pebble-event-group-worker-credentials-production:1', schedule:'*/2 * * * *' },
 ]) {
   run(['run','jobs','deploy',worker.name,'--region='+region,'--image='+image,'--service-account='+worker.identity,
     '--command=node','--args=dist/api/api/'+worker.main+'.js','--tasks=1','--parallelism=1','--max-retries=0','--task-timeout=120s','--cpu=1','--memory=512Mi',
