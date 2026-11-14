@@ -48,8 +48,14 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
     await page.goto('/events')
     const card = page.locator('.event-card').first()
     await expect(card).toBeVisible()
-    const heading = (await page.locator('.events-page .pagehead').boundingBox())!
-    expect((await card.boundingBox())!.y - heading.y - heading.height).toBeLessThanOrEqual(20)
+    await page.evaluate(() => document.fonts.ready.then(() => undefined))
+    // Font/layout work can occur between two separate boundingBox calls. Sample
+    // both rectangles in one browser task and retry settling, not the threshold.
+    await expect.poll(() => page.locator('.events-page').evaluate(element => {
+      const heading = element.querySelector('.pagehead')!.getBoundingClientRect()
+      const card = element.querySelector('.event-card')!.getBoundingClientRect()
+      return card.top - heading.bottom
+    })).toBeLessThanOrEqual(20)
     await expect(page.getByRole('group', { name: 'Event categories' })).toHaveCount(0)
     await expect(page.getByLabel('Category', { exact: true })).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
