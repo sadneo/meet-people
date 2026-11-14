@@ -20,7 +20,11 @@ export function createAuthRouter(client: SupabaseClient | null, emailRequestsPer
       return
     }
     attempts.set(ip, count + 1); total++
-    if (request.headers['sec-fetch-site'] === 'cross-site' || !request.is('application/json')) {
+    // Native WebViews use a local origin while calling the hosted API. Their
+    // fetch metadata is cross-site even though these exact origins are admitted
+    // by the API's CORS policy. Keep arbitrary cross-site pages denied.
+    const nativeOrigin = request.headers.origin === 'https://localhost' || request.headers.origin === 'capacitor://localhost'
+    if ((request.headers['sec-fetch-site'] === 'cross-site' && !nativeOrigin) || !request.is('application/json')) {
       response.status(403).json({ error: 'Please continue from the Pebble sign-in page.' }); return
     }
     next()
