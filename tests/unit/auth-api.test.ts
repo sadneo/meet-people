@@ -13,6 +13,7 @@ app.use('/api/auth', createAuthRouter(client))
 app.use('/limited', createAuthRouter(client))
 app.use('/unconfigured', createAuthRouter(null))
 app.use('/qa-bounded', createAuthRouter(client, 20))
+app.use('/native', createAuthRouter(client, 20))
 const server = app.listen(0, '127.0.0.1')
 let url: string
 beforeAll(async () => {
@@ -47,6 +48,19 @@ it('fails closed on provider errors and missing configuration', async () => {
   expect(response.status).toBe(503)
   expect(await response.text()).not.toContain('private database details')
   expect((await post('/unconfigured/email')).status).toBe(503)
+})
+it('admits only exact native origins for cross-site email lookup and still requires JSON', async () => {
+  for (const origin of ['https://localhost', 'capacitor://localhost']) {
+    const response = await post('/native/email', undefined, { origin, 'sec-fetch-site': 'cross-site' })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ exists: true })
+  }
+  const count = databaseFetch.mock.calls.length
+  for (const origin of ['https://attacker.test', 'https://localhost.attacker.test', 'http://localhost', 'https://localhost:444', 'null']) {
+    expect((await post('/native/email', undefined, { origin, 'sec-fetch-site': 'cross-site' })).status).toBe(403)
+  }
+  expect((await post('/native/email', undefined, { origin: 'https://localhost', 'sec-fetch-site': 'cross-site', 'Content-Type': 'text/plain' })).status).toBe(403)
+  expect(databaseFetch.mock.calls.length).toBe(count)
 })
 it('limits automated enumeration and cannot be bypassed with forwarded addresses', async () => {
   for (let i = 0; i < 10; i++) expect((await post('/limited/email', undefined, { 'X-Forwarded-For': `192.0.2.${i}` })).status).toBe(200)

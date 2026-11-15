@@ -10,6 +10,8 @@ type GardenState = { community:Community; remote?:GardenResponse; pending:boolea
 export type GardenTransaction={before:GardenState;after:GardenState;cancelled:boolean;saved:boolean}
 const cache=new Map<string,GardenState>(),listeners=new Set<()=>void>()
 const queues=new Map<string,Promise<unknown>>(),controllers=new Map<string,Set<AbortController>>()
+const refreshes=new Map<string,{scope:object;promise:Promise<Community|null>}>(),confirmedAt=new Map<string,number>()
+const DISPLAY_FRESH_MS=30_000
 let retainedOwner:string|null|undefined
 const subscribe=(notify:()=>void)=>{listeners.add(notify);return()=>{listeners.delete(notify)}}
 const publish=(owner:string,state:GardenState)=>{cache.set(owner,state);for(const notify of listeners)notify()}
@@ -25,7 +27,7 @@ export function retainGardenFor(owner:string|null){
  retainedOwner=owner
  for(const key of cache.keys())if(key!==owner){
   for(const controller of controllers.get(key)??[])controller.abort()
-  cache.delete(key);queues.delete(key)
+  cache.delete(key);queues.delete(key);refreshes.delete(key);confirmedAt.delete(key)
  }
 }
 function enqueue<T>(owner:string,work:()=>Promise<T>):Promise<T>{
@@ -57,6 +59,7 @@ async function requestGarden(owner:string,scope:object,command?:GardenCommand){
   const preserveUndo=!initial.remote||initial.undoRevision===initial.remote.revision
   const undoRevision=remote.canUndo&&(ownUndo||(preserveUndo&&(!!command||!initial.remote||initial.remote.revision===remote.revision)))?remote.revision:undefined
   const after={...initial,community,remote,pending:false,error:'',preview:false,storageAvailable,undoRevision}
+  confirmedAt.set(owner,Date.now())
   publish(owner,after)
   return after
  }catch{
@@ -66,7 +69,17 @@ async function requestGarden(owner:string,scope:object,command?:GardenCommand){
 }
 export function refreshGarden(owner:string){
  const scope=gardenFor(owner).generation
- return enqueue(owner,async()=> (await requestGarden(owner,scope))?.community??null)
+ const shared=refreshes.get(owner)
+ if(shared?.scope===scope)return shared.promise
+ const promise=enqueue(owner,async()=> (await requestGarden(owner,scope))?.community??null)
+ const entry={scope,promise};refreshes.set(owner,entry)
+ void promise.finally(()=>{if(refreshes.get(owner)===entry)refreshes.delete(owner)}).catch(()=>undefined)
+ return promise
+}
+export function ensureGarden(owner:string){
+ const current=gardenFor(owner),age=Date.now()-(confirmedAt.get(owner)??-Infinity)
+ if(current.remote&&!current.error&&!current.preview&&!current.pending&&age>=0&&age<DISPLAY_FRESH_MS)return Promise.resolve(current.community)
+ return refreshGarden(owner)
 }
 // Storage events signal another tab; always fetch authority from the account service.
 if(typeof window!=='undefined')window.addEventListener('storage',event=>{
@@ -83,6 +96,7 @@ async function serialized<T>(owner:string,work:()=>Promise<T>):Promise<T>{
  return run()
 }
 export function earnPebbles(owner:string,action:GardenRewardAction){
+ refreshes.delete(owner)
  const scope=gardenFor(owner).generation
  return enqueue(owner,()=>serialized(owner,async()=>{
   if(!active(owner,scope))return null
@@ -94,6 +108,8 @@ export function earnPebbles(owner:string,action:GardenRewardAction){
  }))
 }
 export function updateGarden(owner:string,action:GardenAction,expected?:Community):Promise<GardenTransaction>{
+ // A later read must not reuse a refresh queued before this mutation.
+ refreshes.delete(owner)
  const initial=gardenFor(owner),scope=initial.generation,expectedRevision=initial.remote?.revision
  const cancelled=():GardenTransaction=>({before:initial,after:initial,cancelled:true,saved:false})
  return enqueue(owner,()=>serialized(owner,async()=>{
@@ -127,7 +143,7 @@ export function useGarden(){
  const state=useSyncExternalStore(subscribe,useCallback(()=>gardenFor(owner),[owner]))
  const scope=state.generation
  useEffect(()=>{
-  void refreshGarden(owner)
+  void ensureGarden(owner)
   const focus=()=>{const current=cache.get(owner);if(current&&active(owner,scope)&&!current.pending&&!current.preview)void refreshGarden(owner)}
   const visible=()=>{if(document.visibilityState==='visible')focus()}
   const timer=window.setInterval(visible,60000)

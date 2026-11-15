@@ -82,7 +82,7 @@ function Chapter({ initial, chapter, advance, onBusyChange }: { initial: Account
     setTimezoneError('')
     await action.run(async () => {
       if ((chapter === 0 || chapter === 3) && (!profile.birthdate || profile.birthdate > new Date().toISOString().slice(0, 10))) throw new Error('Enter a valid birthdate in the past.')
-      if ((chapter === 0 || chapter === 3) && !meetsMinimumAge(profile.birthdate)) throw new Error('You must be at least 13 to use Pebble.')
+      if ((chapter === 0 || chapter === 3) && !meetsMinimumAge(profile.birthdate)) throw new Error('You must be at least 18 to use Pebble.')
       if ((chapter === 0 || chapter === 3) && !profile.location_city?.trim()) throw new Error('Enter your city or campus area.')
       if (chapter === 1) {
         const problem = interestSelectionProblem(profile.interests)

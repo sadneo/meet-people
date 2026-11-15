@@ -34,7 +34,7 @@ exclusive end and remain correct across daylight saving changes.
 
 ## Run an import
 
-Apply `supabase/migrations/20261103000000_dining_menu_ingestion.sql` to the target
+Apply `supabase/migrations/20261115010000_dining_menu_ingestion.sql` to the target
 database. Set `INGEST_TOKEN`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` in the
 Edge Function environment, as for SB Engaged. Dry-runs only need `INGEST_TOKEN`.
 For local serving, put function secrets in the existing ignored `supabase/.env`:
@@ -61,6 +61,33 @@ normalization counts, up to three sample menus, storage/cleanup counts, structur
 errors, and the ingestion run ID/status for real imports. Partial results return
 HTTP 200 with `status: "partial"`; failures with no usable rows return HTTP 502.
 Malformed input returns 400; missing/wrong tokens return 500/401 respectively.
+
+For a local database, start Supabase and apply pending migrations without resetting
+existing data, then serve both functions in one terminal:
+
+```sh
+pnpm supabase:start
+pnpm exec supabase migration up --local
+pnpm exec supabase functions serve --env-file supabase/.env
+```
+
+In another terminal, export `INGEST_TOKEN` with the same value configured in
+`supabase/.env`, then import both sources into the database:
+
+```sh
+for function in ingest-nutrislice ingest-sbu-hospital; do
+  curl --fail-with-body -X POST "http://127.0.0.1:54321/functions/v1/$function" \
+    -H "x-ingest-token: $INGEST_TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d '{"mode":"full","dryRun":false}'
+done
+```
+
+For a hosted database, use its `SUPABASE_URL` instead of
+`http://127.0.0.1:54321`; both functions must be deployed, the migration applied,
+and `INGEST_TOKEN` configured as a function secret. Check each response for
+`status: "ok"` and a nonzero `storage.upserted`; HTTP 200 can also indicate a
+partial import. `pnpm dining:scrape` only writes JSON and does not populate the app.
 
 ## Storage and refresh behavior
 

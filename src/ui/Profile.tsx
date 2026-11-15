@@ -449,7 +449,7 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
       return;
     }
     if (profile.birthdate && !meetsMinimumAge(profile.birthdate)) {
-      setError("You must be at least 13 to use Pebble.");
+      setError("You must be at least 18 to use Pebble.");
       return;
     }
     const factsChanged = JSON.stringify(optional.data) !== JSON.stringify(initialFacts.facts);

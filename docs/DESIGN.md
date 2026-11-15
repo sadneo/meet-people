@@ -18,7 +18,7 @@ Product UI changes must follow it.
 The public web landing page follows the supplied `Pebble-Landing-Page.html`
 desktop composition: forest-green wordmark, split headline/profile hero, store
 badges and an interactive marketing Garden. Its React implementation and scoped
-styles live in `src/web/`. Sign in links to the current mobile browser sandbox;
+styles live in `src/web/`. It has no Sign in link.
 Google Play opens the general store until an app listing exists. The illustrated
 profiles and ephemeral, single-selection Garden preview are examples, not live
 accounts or saved account Garden state. Do not import the export's unrelated
@@ -145,8 +145,7 @@ show simulated success. Use the existing policy contact for manual data requests
 ## Prototype parity and age visibility
 
 `FRONTEND-PARITY-REPORT.md` records the screen comparisons and intentional service
-differences. The frontend rejects under-13 birthdays on onboarding/profile save and
-hides Dating UI below 18. These are presentation/admission checks, not server-side
-security. The Friends backend currently has an 18+ restriction that still needs a
-team decision against the retained 13+ policy. Do not weaken backend guards in a
-visual parity change.
+differences. The approved initial release is 18+ across the app. Onboarding/profile
+save reject under-18 birthdays; database writes enforce the same boundary. Saved
+birthdate corrections require support. Presentation checks never replace backend
+authorization. Do not weaken backend guards in a visual parity change.

@@ -122,12 +122,14 @@ export async function enablePush(userId: string, signal?: AbortSignal): Promise<
   if (!isNative()) return 'unsupported'
   if (signal?.aborted) return 'failed'
   try {
-    return await runPushOperation(userId, signal, async operation => {
-      let permission = await PushNotifications.checkPermissions()
-      checkOperation(operation)
-      if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') permission = await PushNotifications.requestPermissions()
-      checkOperation(operation)
-      if (permission.receive !== 'granted') return 'denied'
+    // The OS permission dialog waits on a person, so it must not run inside the 10s registration
+    // timeout below. Only the channel + token work (which is network/Firebase bound) is timed.
+    let permission = await PushNotifications.checkPermissions()
+    if (signal?.aborted) return 'failed'
+    if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') permission = await PushNotifications.requestPermissions()
+    if (signal?.aborted) return 'failed'
+    if (permission.receive !== 'granted') return 'denied'
+    return await runPushOperation<EnablePushResult>(userId, signal, async operation => {
       await PushNotifications.createChannel({ id: CHANNEL_ID, name: 'Pebble', description: 'Messages and connection requests', importance: 4 })
       checkOperation(operation)
       await sendToken(await fetchPushToken(operation.controller.signal), operation)

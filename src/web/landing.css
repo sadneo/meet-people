@@ -14,12 +14,9 @@
 .web-landing .landing-wordmark { display: inline-flex; align-items: center; flex: none; }
 .web-landing .landing-wordmark img { display: block; width: 150px; height: auto; object-fit: contain; }
 .web-landing .landing-nav { position: static; inset: auto; display: flex; flex-direction: row; align-items: center; gap: 32px; width: auto; height: auto; min-height: 0; padding: 0; margin: 0 0 0 auto; border: 0; background: transparent; z-index: auto; box-shadow: none; }
-.web-landing .landing-nav a, .web-landing .landing-signin { font-size: 14px; font-weight: 600; color: #405340; text-decoration: none; }
+.web-landing .landing-nav a { font-size: 14px; font-weight: 600; color: #405340; text-decoration: none; }
 .web-landing .landing-nav a { padding: 12px 0; }
 .web-landing .landing-nav a:hover { color: #a75a42; }
-.web-landing .landing-signin { display: flex; align-items: center; gap: 9px; border: 1px solid #d5d8c9; padding: 12px 17px; border-radius: 12px; white-space: nowrap; }
-.web-landing .landing-signin:hover { background: #edf0e4; }
-.web-landing .landing-signin .ui-icon { width: 17px; height: 17px; }
 .web-landing .landing-main { max-width: none; padding: 0; margin: 0; width: 100%; }
 .web-landing .landing-hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 50px; align-items: center; min-height: 640px; padding: 65px 0 60px; }
 .web-landing .landing-copy { min-width: 0; }
@@ -117,7 +114,6 @@
   .web-landing .landing-header { height: 83px; gap: 14px; }
   .web-landing .landing-nav { margin-left: auto; gap: 0; }
   .web-landing .landing-nav a { font-size: 12px; min-height: 44px; display: flex; align-items: center; }
-  .web-landing .landing-signin { font-size: 12px; padding: 11px 13px; }
   .web-landing .landing-wordmark img { width: 118px; }
   .web-landing .landing-hero { padding-top: 35px; }
   .web-landing .landing-visual { height: 420px; max-width: 340px; }

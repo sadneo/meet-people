@@ -35,7 +35,7 @@
     "test": "pnpm test:unit",
     "test:unit": "vitest run --config vite.config.ts",
     "test:alt": "node src/alt/tests/account-ui.check.cjs",
-    "test:deployment": "node --test tests/deployment.test.mjs",
+    "test:deployment": "node --test tests/deployment.test.mjs tests/production-migration-audit.test.mjs tests/production-recovery.test.mjs",
     "test:demo-populate": "tsx tests/integration/offline/demo-scenarios.ts",
 
     "test:browser": "playwright test --config playwright.config.ts",

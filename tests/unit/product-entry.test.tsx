@@ -16,7 +16,7 @@ it.each(['/', '/login', '/messages', '/auth/callback'])('web %s stays public and
   render(<MemoryRouter initialEntries={[path]}><Web /><Location /></MemoryRouter>)
   expect(await screen.findByRole('heading', { name: /Meet new friends/ })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Open Google Play for Android' }).getAttribute('href')).toBe('https://play.google.com/store/apps')
-  expect(screen.getByRole('link', { name: 'Sign in' }).getAttribute('href')).toBe('https://mobile.dev.pebble.garden')
+  expect(screen.queryByRole('link', { name: /Sign in/ })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Continue with email' })).toBeNull()
   expect(screen.getByLabelText('Current URL').textContent).toBe('/')
 })

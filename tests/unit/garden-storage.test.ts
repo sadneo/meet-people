@@ -33,6 +33,60 @@ beforeEach(()=>{
  Object.defineProperty(navigator,'locks',{configurable:true,value:{request:vi.fn((_name:string,_options:LockOptions,callback:()=>unknown)=>Promise.resolve().then(callback))}})
 })
 afterEach(()=>{cleanup();retainGardenFor(null)})
+it('shares concurrent refreshes rather than queueing duplicate account reads',async()=>{
+ let finish!:(response:GardenResponse)=>void
+ transport.request.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve}))
+ const reads=[refreshGarden(owner),refreshGarden(owner),refreshGarden(owner)]
+ await vi.waitFor(()=>expect(finish).toBeDefined())
+ expect(transport.request).toHaveBeenCalledOnce()
+ finish(structuredClone(server));await Promise.all(reads)
+ expect(transport.request).toHaveBeenCalledOnce()
+})
+it('reuses a recent confirmed Garden on remount without a blocking read',async()=>{
+ await refreshGarden(owner)
+ const count=transport.request.mock.calls.length
+ const hook=renderHook(()=>useGarden())
+ await act(async()=>{await Promise.resolve()})
+ expect(hook.result.current.available).toBe(true)
+ expect(transport.request).toHaveBeenCalledTimes(count)
+})
+it('expires the Garden display snapshot and keeps explicit refresh authoritative',async()=>{
+ let now=Date.now();vi.spyOn(Date,'now').mockImplementation(()=>now)
+ await refreshGarden(owner)
+ const count=transport.request.mock.calls.length
+ const recent=renderHook(()=>useGarden())
+ await act(async()=>{await Promise.resolve()});recent.unmount()
+ expect(transport.request).toHaveBeenCalledTimes(count)
+ now+=30_001
+ const stale=renderHook(()=>useGarden())
+ await act(async()=>{await Promise.resolve()})
+ await vi.waitFor(()=>expect(transport.request).toHaveBeenCalledTimes(count+1))
+ stale.unmount()
+ await refreshGarden(owner)
+ expect(transport.request).toHaveBeenCalledTimes(count+2)
+})
+it('does not turn a failed refresh into fresh cached write permission',async()=>{
+ await refreshGarden(owner)
+ transport.request.mockRejectedValueOnce(new Error('Offline'))
+ await refreshGarden(owner)
+ const hook=renderHook(()=>useGarden())
+ expect(hook.result.current.available).toBe(false)
+ await act(async()=>{await refreshGarden(owner)})
+ expect(hook.result.current.available).toBe(true)
+})
+it('does not share a refresh across a queued mutation',async()=>{
+ await refreshGarden(owner)
+ let finish!:(response:GardenResponse)=>void
+ transport.request.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve}))
+ const first=refreshGarden(owner)
+ await vi.waitFor(()=>expect(finish).toBeDefined())
+ const write=updateGarden(owner,{type:'build',id:'bench'})
+ const after=refreshGarden(owner)
+ finish(structuredClone(server))
+ await first;await write
+ expect((await after)?.owned).toContain('bench')
+ expect(posts()).toHaveLength(1)
+})
 it('rebases purchases on the latest server balance before an external notification arrives',async()=>{
  await refreshGarden(owner);setServer({...emptyCommunity,balance:985,owned:['bench'],purchaseCosts:{bench:15}})
  const result=await updateGarden(owner,{type:'build',id:'river'})

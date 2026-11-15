@@ -70,7 +70,6 @@ test('web landing matches the supplied preview and links to mobile sign-in and G
  await modes.getByRole('button',{name:'Dating'}).click()
  await expect(modes.getByRole('button',{name:'Dating'})).toHaveAttribute('aria-pressed','true')
   await expect(page.locator('.landing-profile img')).toHaveAttribute('src','/garden/preview-maya.jpg')
-  await expect(page.getByRole('link',{name:'Sign in',exact:true})).toHaveAttribute('href','https://mobile.dev.pebble.garden')
   await expect(page.getByRole('link',{name:'Open Google Play for Android'})).toHaveAttribute('href','https://play.google.com/store/apps')
   await expect(page.getByRole('status',{name:'iOS App Store: coming soon'})).toBeVisible()
   await page.getByRole('button',{name:'Add trees to Garden preview'}).click()
@@ -132,11 +131,11 @@ test('Events accepts new responses without counts and Reset restores All without
  await expect(page.getByText(/\d+ people looking/)).toHaveCount(0)
 })
 
-test('profile rejects an under-13 birthdate without writing it',async({page})=>{
+test('profile rejects an under-18 birthdate without writing it',async({page})=>{
  const fixture=await wiringFixture(page);await page.goto('/profile?section=basics')
  await page.getByLabel('Birthdate (private)',{exact:true}).fill('2020-01-01')
  await page.getByRole('button',{name:'Save changes',exact:true}).click()
- await expect(page.getByText('You must be at least 13 to use Pebble.')).toBeVisible()
+  await expect(page.getByText('You must be at least 18 to use Pebble.')).toBeVisible()
  expect(fixture.calls.filter(c=>c.method==='PUT')).toHaveLength(0)
 })
 

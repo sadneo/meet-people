@@ -7,6 +7,36 @@ import process from 'node:process'
 import { test } from 'node:test'
 import { assertCurrentDeployment, resolveDeployment } from '../scripts/resolve-deployment.mjs'
 import { deploymentConfiguration, validateFrontendConfiguration } from '../scripts/configure-deployment.mjs'
+import { reviewedMigrationFlags } from '../scripts/push-reviewed-migrations.mjs'
+
+test('preview and apply use the same reviewed migration ordering guard', () => {
+  const workflow = readFileSync('.github/workflows/release.yml', 'utf8')
+  const commands = workflow.split('\n').filter(line => line.includes('node scripts/push-reviewed-migrations.mjs'))
+  assert.equal(commands.length, 2)
+  assert.ok(commands.some(line => line.includes('--dry-run')))
+  assert.ok(commands.some(line => line.includes('--yes')))
+  const head = '20261114010000 | 20261114010000 | time'
+  assert.deepEqual(reviewedMigrationFlags(`${head}\n20261113010000 | | time`, 'wacgxhsdhrqigrmqaonc'), ['--include-all'])
+  assert.deepEqual(reviewedMigrationFlags(`${head}\n20261115010000 | | time`, 'wacgxhsdhrqigrmqaonc'), [])
+  assert.deepEqual(reviewedMigrationFlags(head, 'sandbox'), [])
+  assert.throws(() => reviewedMigrationFlags(`${head}\n20261113010000 | | time`, 'sandbox'))
+  assert.throws(() => reviewedMigrationFlags(`${head}\n20261112010000 | | time`, 'wacgxhsdhrqigrmqaonc'))
+  assert.throws(() => reviewedMigrationFlags('| 20261114010000 | time', 'wacgxhsdhrqigrmqaonc'))
+  assert.throws(() => reviewedMigrationFlags('unrecognized output', 'wacgxhsdhrqigrmqaonc'))
+})
+
+test('dining migration can follow an up-to-date dev database without an ordering exception', () => {
+  const versions = readdirSync('supabase/migrations').filter(name => name.endsWith('.sql'))
+  const dining = versions.find(name => name.endsWith('_dining_menu_ingestion.sql'))
+  assert.ok(dining)
+  const ledger = versions.map(name => {
+    const version = name.split('_')[0]
+    return `${version} | ${name === dining ? '' : version} | time`
+  }).join('\n')
+  for (const project of ['sandbox', 'wacgxhsdhrqigrmqaonc']) {
+    assert.deepEqual(reviewedMigrationFlags(ledger, project), [])
+  }
+})
 
 test('main deploys only production; dev deploys only sandbox; manual sources belong to the destination branch', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-deployment-'))
@@ -223,9 +253,14 @@ test('sandbox API deployment merges Maps references and static egress; productio
     assert.ok(!args.some(arg => arg.startsWith('--set-env-vars=') || arg.startsWith('--set-secrets=')))
     assert.ok(!args.join(' ').includes('VITE_GOOGLE_MAPS_API_KEY'))
     const production = deploy({ ...base, DEPLOY_ENVIRONMENT: 'production', API_SERVICE: 'pebble-api', API_SECRET: 'pebble-supabase-service-role', API_RUNTIME_ACCOUNT: 'pebble-api@cse416-meet-people.iam.gserviceaccount.com', SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co' })
-    assert.ok(production.includes('--set-secrets=SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role:latest'))
+    assert.ok(production.includes('--update-secrets=SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role:latest,GOOGLE_MAPS_SERVER_API_KEY=pebble-google-maps-server-key-production:1,SEARCH_LOCATION_SIGNING_KEY=pebble-search-location-signing-key-production:1'))
+    assert.ok(production.some(arg => arg.startsWith('--update-env-vars=')))
+    assert.ok(!production.some(arg => arg.startsWith('--set-env-vars=') || arg.startsWith('--set-secrets=')), 'Production must not replace unrelated runtime configuration')
     assert.ok(!production.join(' ').includes('sandbox'))
-    assert.ok(!production.some(arg => /GOOGLE_MAPS|SEARCH_LOCATION|--network=|--subnet=|--vpc-egress=/.test(arg)))
+    assert.ok(production.includes('--network=pebble-production-egress'))
+    assert.ok(production.includes('--subnet=pebble-production-egress-us-east4'))
+    assert.ok(production.includes('--vpc-egress=all-traffic'))
+    assert.ok(production.some(arg => arg.includes('GOOGLE_MAPS_REQUESTS_PER_DAY=200')))
     for (const overrides of [
       { API_SERVICE: 'pebble-api' }, { API_SECRET: 'pebble-supabase-service-role' },
       { API_RUNTIME_ACCOUNT: 'pebble-api@cse416-meet-people.iam.gserviceaccount.com' },
@@ -236,15 +271,24 @@ test('sandbox API deployment merges Maps references and static egress; productio
   } finally { rmSync(directory, { recursive: true, force: true }) }
 })
 
-test('release preparation and smoke receive only the sandbox public Maps key from GitHub variables', () => {
+test('release preparation and smoke receive only environment-scoped public Maps keys from GitHub variables', () => {
   const prepare = readFileSync('.github/workflows/prepare.yml', 'utf8')
   const release = readFileSync('.github/workflows/release.yml', 'utf8')
-  assert.ok(prepare.includes("VITE_GOOGLE_MAPS_API_KEY: ${{ inputs.environment == 'sandbox' && vars.VITE_GOOGLE_MAPS_API_KEY || '' }}"))
-  assert.ok(release.includes("VITE_GOOGLE_MAPS_API_KEY: ${{ needs.resolve.outputs.environment == 'sandbox' && vars.VITE_GOOGLE_MAPS_API_KEY || '' }}"))
+  assert.ok(prepare.includes('VITE_GOOGLE_MAPS_API_KEY: ${{ vars.VITE_GOOGLE_MAPS_API_KEY }}'))
+  assert.ok(release.includes('VITE_GOOGLE_MAPS_API_KEY: ${{ vars.VITE_GOOGLE_MAPS_API_KEY }}'))
   for (const workflow of [prepare, release]) {
     assert.ok(!workflow.includes('secrets.GOOGLE_MAPS_SERVER_API_KEY'))
     assert.ok(!workflow.includes('secrets.SEARCH_LOCATION_SIGNING_KEY'))
   }
+})
+
+test('Android CI installs explicit current SDK packages instead of obsolete action defaults', () => {
+  const workflow = readFileSync('.github/workflows/android-checks.yml', 'utf8')
+  const setup = workflow.match(/uses: android-actions\/setup-android@v3\s+with:([\s\S]*?)(?=\n {6}-)/)?.[1]
+  assert.ok(setup, 'Android setup must override the action package defaults')
+  assert.ok(setup.includes("packages: 'platform-tools platforms;android-36 build-tools;36.0.0'"))
+  assert.ok(setup.includes("log-accepted-android-sdk-licenses: 'false'"))
+  assert.ok(workflow.includes('assembleDebug'), 'Compilation remains required')
 })
 
 test('pending Android push migrations follow the existing hosted migration head in dependency order', () => {
@@ -261,7 +305,7 @@ test('pending Android push migrations follow the existing hosted migration head 
   assert.ok(readFileSync(`supabase/migrations/${pending[0]}`, 'utf8').includes('create table if not exists public.push_outbox'))
   assert.ok(readFileSync(`supabase/migrations/${pending[1]}`, 'utf8').includes('alter table public.push_outbox'))
   const release = readFileSync('.github/workflows/release.yml', 'utf8')
-  assert.ok(release.includes('supabase db push --linked --dry-run'))
-  assert.ok(release.includes('supabase db push --linked --yes'))
+  assert.ok(release.includes('node scripts/push-reviewed-migrations.mjs --dry-run'))
+  assert.ok(release.includes('node scripts/push-reviewed-migrations.mjs --yes'))
   assert.ok(!release.includes('--include-all'), 'Do not bypass migration-order review for all future releases')
 })

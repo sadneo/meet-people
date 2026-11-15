@@ -78,3 +78,55 @@ it('invalidating confirmed changes refreshes an active view without blanking it'
   await act(async () => { finish('after'); await refreshed })
   await waitFor(() => expect(hook.result.current.value).toBe('after'))
 })
+
+it('bounds inactive display entries while keeping recently observed data', async () => {
+  const { client, wrapper } = setup()
+  client.setQueryData(['keep-recent'], 'recent')
+  for (let index = 0; index < 30; index++) client.setQueryData(['page', index], index)
+  const hook = renderHook(() => useCachedLoad(async () => 'recent', ['keep-recent']), { wrapper })
+  hook.unmount()
+  await waitFor(() => expect(client.getQueryCache().getAll().length).toBeLessThanOrEqual(24))
+  expect(client.getQueryData(['keep-recent'])).toBe('recent')
+  expect(client.getQueryData(['page', 0])).toBeUndefined()
+})
+
+it('limits inactive private photos and revokes the evicted URLs', async () => {
+  const { client } = setup()
+  const revoke = vi.fn()
+  vi.stubGlobal('URL', class extends URL { static revokeObjectURL = revoke })
+  try {
+    for (let index = 0; index < 12; index++) client.setQueryData(['profile-photo', index], { url: `blob:person-${index}` })
+    await waitFor(() => expect(client.getQueryCache().findAll({ queryKey: ['profile-photo'] })).toHaveLength(8))
+    expect(revoke).toHaveBeenCalledWith('blob:person-0')
+    expect(revoke).not.toHaveBeenCalledWith('blob:person-11')
+    client.clear()
+    expect(revoke).toHaveBeenCalledWith('blob:person-11')
+  } finally { vi.unstubAllGlobals() }
+})
+
+it('releases unused display data after two minutes instead of persisting it', async () => {
+  vi.useFakeTimers()
+  const { client } = setup()
+  try {
+    client.setQueryData(['temporary'], 'display only')
+    await vi.advanceTimersByTimeAsync(120_001)
+    expect(client.getQueryData(['temporary'])).toBeUndefined()
+  } finally { client.clear(); vi.useRealTimers() }
+})
+
+it('never evicts an observed view, an in-flight read, or unresolved discovery actions', async () => {
+  const { client, wrapper } = setup()
+  const active = renderHook(() => useCachedLoad(async () => 'visible', ['visible']), { wrapper })
+  await waitFor(() => expect(active.result.current.value).toBe('visible'))
+  let finish!: (value: string) => void
+  const pending = client.fetchQuery({ queryKey: ['pending'], queryFn: () => new Promise<string>(resolve => { finish = resolve }) })
+  client.setQueryData(['discovery-deck', 'Friends'], { outcomes: [{ state: 'uncertain' }] })
+  client.setQueryData(['event-categories'], ['A previously loaded category'])
+  for (let index = 0; index < 40; index++) client.setQueryData(['unused', index], index)
+  await Promise.resolve()
+  expect(client.getQueryData(['visible'])).toBe('visible')
+  expect(client.getQueryState(['pending'])?.fetchStatus).toBe('fetching')
+  expect(client.getQueryData(['discovery-deck', 'Friends'])).toEqual({ outcomes: [{ state: 'uncertain' }] })
+  expect(client.getQueryData(['event-categories'])).toEqual(['A previously loaded category'])
+  finish('finished'); await pending
+})

@@ -1,7 +1,16 @@
 node_modules/
+# Local Android SDK, Java, emulator data, and build caches.
+/.android-build/
+/Pebble-APKs/
+# Local Cloud CLI and authentication state (never commit credentials).
+/.gcloud-local/
+/.android-signing/
+*.jks
+*.keystore
 dist/
 .env
 .env.*
+env.*
 !.env.example
 *.local
 .vite/
