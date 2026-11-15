@@ -8,7 +8,27 @@ export async function mockMatchingSession(page: Page, signedIn = true, signOutFa
     let session = ${signedIn ? JSON.stringify({ access_token: principal.token, user: { id: principal.id } }) : 'null'};
     let failures = ${signOutFailures};
     const listeners = new Set();
-    export const supabase = { auth: {
+    export const supabase = {
+      channel(topic, options) {
+        if (topic !== 'messaging:' + session?.user.id || options?.config?.private !== true) throw new Error('Expected private owner messaging channel');
+        let broadcast, status;
+        const changed = () => broadcast?.();
+        const reconnected = () => status?.('SUBSCRIBED');
+        const channel = {
+          on(type, filter, callback) { if (type !== 'broadcast' || filter.event !== 'changed') throw new Error('Unexpected realtime event'); broadcast = callback; return channel; },
+          subscribe(callback) {
+            status = callback;
+            window.addEventListener('test:messaging-broadcast', changed);
+            window.addEventListener('test:messaging-reconnected', reconnected);
+            queueMicrotask(reconnected);
+            return channel;
+          },
+          unsubscribe() { window.removeEventListener('test:messaging-broadcast', changed); window.removeEventListener('test:messaging-reconnected', reconnected); }
+        };
+        return channel;
+      },
+      removeChannel(channel) { channel.unsubscribe(); return Promise.resolve('ok'); },
+      auth: {
       onAuthStateChange(callback) { listeners.add(callback); queueMicrotask(() => { if (listeners.has(callback)) callback('INITIAL_SESSION', session); }); return { data: { subscription: { unsubscribe() { listeners.delete(callback); } } } }; },
       signOut: async (options) => {
         if (options?.scope !== 'local') throw new Error('Expected browser-local sign-out');

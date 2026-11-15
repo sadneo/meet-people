@@ -17,8 +17,23 @@ test('an open conversation receives a new message without refresh and keeps its 
   const composer = page.getByRole('textbox', { name: 'Message', exact: true })
   await composer.fill('An unsent draft')
   messages.push({ ...messages[0], id: 'b0000000-0000-4000-8000-000000000002', seq: 2, body: 'Incoming while chat stays open' })
+  await page.evaluate(() => window.dispatchEvent(new Event('test:messaging-broadcast')))
   await expect(history.getByText('Incoming while chat stays open', { exact: true })).toBeVisible({ timeout: 12_000 })
   await expect(composer).toHaveValue('An unsent draft')
   await expect(composer).toBeFocused()
   expect(fixture.calls.filter(call => call.path.endsWith('/messages') && call.method === 'POST')).toHaveLength(0)
+})
+
+test('reconnecting catches up without periodic HTTP history reads', async ({ page }) => {
+  const fixture = await wiringFixture(page)
+  await page.goto(`/messages/chat?conversation=${conversationId}`)
+  await expect(page.getByRole('log').getByText('A real saved hello', { exact: true })).toBeVisible()
+  const reads = () => fixture.calls.filter(call => call.path.endsWith('/messages') && call.method === 'GET').length
+  // Let subscription catch-up and its read receipt finish before measuring idle reads.
+  await page.waitForTimeout(500)
+  const before = reads()
+  await page.waitForTimeout(4500)
+  expect(reads()).toBe(before)
+  await page.evaluate(() => window.dispatchEvent(new Event('test:messaging-reconnected')))
+  await expect.poll(reads).toBeGreaterThan(before)
 })
