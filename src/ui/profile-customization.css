@@ -1,0 +1,106 @@
+/* Profile customization: interest order, audiences, Garden showcase,
+   finish card, inline photos and the in-page preview. */
+.interest-order { display: grid; gap: 8px; margin-top: 18px; }
+.interest-order h3 { margin: 0; }
+.interest-order .account-note { margin: 0 0 4px; }
+.interest-order ol { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.interest-order li {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  min-height: 52px; padding: 4px 6px 4px 14px;
+  border: 1px solid #e7dfd5; border-radius: 14px; background: #fffdf9;
+  animation: rise-in 220ms var(--ease-out);
+}
+.interest-order li.is-top { border-color: #d8b2a3; background: #fbefea; }
+.interest-order-label { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.interest-top-badge {
+  display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px;
+  border-radius: 999px; background: #9d503d; color: #fffdf9; font-size: 12px; font-weight: 700;
+}
+.interest-top-badge .ui-icon { width: 12px; height: 12px; }
+.interest-order-actions { display: flex; gap: 4px; flex: none; }
+.interest-order-actions .round { width: 40px; height: 40px; min-height: 40px; display: grid; place-items: center; padding: 0; border: 1px solid #e7dfd5; background: #fffdf9; }
+.interest-order-actions .round:disabled { opacity: 0.35; }
+.interest-order-actions .ui-icon { width: 18px; height: 18px; }
+
+.audience-select { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 2px 0 14px 30px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.audience-select select { width: auto; min-width: 0; min-height: 40px; margin: 0; padding: 6px 36px 6px 12px; font-size: 13px; }
+
+.garden-showcase-picker { margin: 22px 0 6px; padding: 0; border: 0; min-width: 0; }
+.garden-showcase-picker legend { padding: 0; font-weight: 700; font-size: 14px; }
+.garden-showcase-picker .account-note { margin: 4px 0 10px; }
+.garden-showcase-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+.garden-showcase-options label {
+  position: relative; display: grid; justify-items: center; gap: 4px; margin: 0; padding: 10px 6px;
+  border: 1px solid #e7dfd5; border-radius: 14px; background: #fffdf9; text-align: center;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 140ms var(--ease-out);
+}
+.garden-showcase-options label:active { transform: scale(0.97); }
+.garden-showcase-options label.is-selected { border-color: #9d503d; background: #fbefea; }
+.garden-showcase-options input { position: absolute; opacity: 0; pointer-events: none; }
+.garden-showcase-options label:has(input:focus-visible) { outline: 3px solid #9d503d; outline-offset: 2px; }
+.garden-showcase-art { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: #eef2e8; }
+.garden-showcase-art canvas { image-rendering: pixelated; }
+.garden-showcase-none { color: var(--muted); font-size: 20px; }
+
+.profile-finish {
+  display: grid; gap: 8px; margin: 0 0 18px; padding: 16px;
+  border: 1px solid #ecd8cd; border-radius: 18px; background: #fbf1ea;
+  animation: rise-in 320ms var(--ease-out);
+}
+.profile-finish-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.profile-finish-head h3 { margin: 0; font-size: 16px; }
+.profile-finish-head span { color: #9d503d; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.profile-finish ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.profile-finish a, .profile-finish button {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 4px;
+  border: 0; background: none; color: #302b28; font: inherit; font-size: 14px; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer;
+}
+.profile-finish a .ui-icon, .profile-finish button .ui-icon { margin-left: auto; width: 18px; height: 18px; color: var(--muted); }
+.profile-finish-dot { width: 10px; height: 10px; flex: none; border: 2px solid #c79a86; border-radius: 50%; }
+
+.profile-photos-section { display: grid; gap: 10px; margin: 0 0 18px; scroll-margin-top: 20px; }
+.profile-photos-section > h3 { margin: 0; font-size: 16px; }
+.photo-gallery-inline .photo-gallery-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.photo-gallery-inline .photo-gallery-position { font-size: 12px; }
+.photo-gallery-inline .photo-gallery-count,
+.photo-gallery-inline .photo-gallery-reorder-note { font-size: 13px; color: var(--muted); }
+
+.profile-view-switch {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 0 0 18px; padding: 4px;
+  border-radius: 14px; background: #efe5da;
+}
+.profile-view-switch button {
+  min-height: 44px; border: 0; border-radius: 11px; background: transparent; color: #6f5f52; font: inherit; font-weight: 700; cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease, transform 140ms var(--ease-out);
+}
+.profile-view-switch button[aria-pressed="true"] { background: #fffdf9; color: #302b28; box-shadow: 0 2px 8px #30251f14; }
+
+.own-preview { display: grid; gap: 12px; animation: rise-in 260ms var(--ease-out); }
+.own-preview-modes { display: inline-flex; gap: 6px; }
+.own-preview-modes button {
+  min-height: 40px; padding: 0 14px; border: 1px solid #e7dfd5; border-radius: 999px; background: #fffdf9; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.own-preview-modes button[aria-pressed="true"] { border-color: #9d503d; background: #fbefea; color: #8a3f2c; }
+.own-preview-card { overflow: hidden; border-radius: 22px; background: #fffdf9; box-shadow: 0 6px 20px #4934210f; }
+.own-preview-photo { position: relative; height: clamp(320px, 62vw, 460px); }
+.own-preview-body { display: grid; gap: 16px; padding: 18px; }
+.own-preview-body h3 { margin: 0 0 8px; font-size: 16px; }
+.own-preview-body p { margin: 0; }
+
+/* Garden item on a profile card and the top interest chip. */
+.card-garden-item {
+  position: absolute; right: 14px; bottom: 14px; z-index: 2;
+  display: grid; place-items: center; width: 56px; height: 56px;
+  border: 3px solid #fffdf9; border-radius: 50%; background: #eef2e8;
+  box-shadow: 0 6px 16px #30251f33;
+  animation: pop-in 420ms var(--ease-out) both;
+}
+.card-garden-item canvas { image-rendering: pixelated; }
+.dating-interest.is-top { border-color: #9d503d; background: #fbefea; color: #8a3f2c; font-weight: 700; }
+.dating-interest .ui-icon { width: 14px; height: 14px; }
+.account-edit-fields .audience-select {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px;
+  margin: -4px 0 16px 30px; font-size: 13px; font-weight: 600; color: var(--muted);
+}
+.account-edit-fields .audience-select select { flex: 0 1 auto; width: auto; min-width: 0; max-width: 100%; min-height: 40px; margin: 0; font-size: 13px; }

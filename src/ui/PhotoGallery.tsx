@@ -87,6 +87,14 @@ function GalleryThumbnail({ token, owner, revision, position }: {
 }
 
 export function PhotoGalleryEditor({ close }: { close: () => void }) {
+  const busy = useRef(false)
+  return <Modal title="Profile photos" className="photo-gallery-modal" close={() => { if (!busy.current) close() }}>
+    <PhotoGalleryPanel busyRef={busy}/>
+  </Modal>
+}
+
+// The same photo manager, used in the dialog and directly on the Profile page.
+export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolean; busyRef?: { current: boolean } }) {
   const { session } = useCurrent()
   const owner = session.user.id, token = session.access_token
   const { query, client } = usePhotoGallery(owner)
@@ -216,8 +224,9 @@ export function PhotoGalleryEditor({ close }: { close: () => void }) {
     }
   }
 
-  return <Modal title="Profile photos" className="photo-gallery-modal" close={() => { if (!lock.current) close() }}>
-    <p className="photo-gallery-note">Add up to four photos. The first is your profile photo and appears first in Friends and Dating.</p>
+  useEffect(() => { if (busyRef) busyRef.current = busy })
+  return <div className={`photo-gallery-panel ${inline ? 'photo-gallery-inline' : ''}`}>
+    {!inline && <p className="photo-gallery-note">Add up to four photos. The first is your profile photo and appears first in Friends and Dating.</p>}
     <span className="sr-only" role="status">{announcement}</span>
     <ResourceState loading={query.isPending} error={query.isError ? 'Your photos couldn’t be loaded.' : ''} reload={() => void reload()}/>
     {state && <>
@@ -275,5 +284,5 @@ export function PhotoGalleryEditor({ close }: { close: () => void }) {
     </>}
     <ErrorMessage>{error}</ErrorMessage>
     {reconcile && <ActionButton secondary disabled={query.isFetching} onClick={() => void reload()}>Reload photos</ActionButton>}
-  </Modal>
+  </div>
 }

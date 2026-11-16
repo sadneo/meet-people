@@ -1,4 +1,7 @@
-import { PhotoGalleryEditor } from './PhotoGallery';
+import { PhotoGalleryEditor, PhotoGalleryPanel } from './PhotoGallery';
+import { AudienceSelect, GardenShowcasePicker, InterestOrderEditor, OwnProfilePreview, ProfileFinishCard } from './ProfileCustomization';
+import { useProfileCustomization } from '../features/account/profile-customization-client';
+import { sameCustomization, type ProfileCustomizationValue } from '../../shared/profile-customization';
 import { usePhotoGallery } from '../features/account/usePhotoGallery';
 import { legalPublication } from '../features/public/legal-content';
 import { canShowDating, meetsMinimumAge } from './age-visibility'
@@ -327,6 +330,7 @@ export function Profile() {
   const photo = useProfilePhoto();
   const [search, setSearch] = useSearchParams();
   const [preview, setPreview] = useState(false);
+  const [view, setView] = useState<"profile" | "preview">("profile");
   const adult = canShowDating(current.account?.profile?.birthdate);
   const requestedSection = search.get('section') === 'dating' && !adult ? 'basics' : search.get('section');
   const section = requestedSection === 'basics' || requestedSection === 'interests' || requestedSection === 'dating' ? requestedSection : null;
@@ -353,11 +357,25 @@ export function Profile() {
     <div className="account-page profile-page live-profile">
       <div className="pagehead">
         <h2>{section ? 'Edit profile' : 'Profile'}</h2>
-        <div className="row"><button type="button" className="btn light small" onClick={() => setPreview(true)}>Preview</button>{!section && <Link className="round" aria-label="Settings" to="/profile?section=settings"><Icon name="Settings"/></Link>}</div>
+        <div className="row">{section && <button type="button" className="btn light small" onClick={() => setPreview(true)}>Preview</button>}{!section && <Link className="round" aria-label="Settings" to="/profile?section=settings"><Icon name="Settings"/></Link>}</div>
       </div>
-      {!section ? <div className="profile-overview">
+      {!section && <div className="profile-view-switch" role="group" aria-label="Profile view">
+        <button type="button" aria-pressed={view === 'profile'} onClick={() => setView('profile')}>Your profile</button>
+        <button type="button" aria-pressed={view === 'preview'} onClick={() => setView('preview')}>Preview</button>
+      </div>}
+      {!section && view === 'preview' ? <OwnProfilePreview ownerId={current.session.user.id} account={current.account!} details={facts.details ?? null} photoRevision={photo.snapshot?.revision} adult={adult}/>
+      : !section ? <div className="profile-overview">
         <div className="profile-summary"><ProfileCompletion profile={profile} hasPhoto={!!photo.snapshot?.hasPhoto}><Avatar name={profile?.display_name ?? ''} url={photo.url} large/></ProfileCompletion><div><h3>{profile?.display_name}</h3><p>{profile?.location_city || 'Add your home area'}</p></div><button className="btn light small profile-edit-button" aria-label="Edit profile" onClick={() => setSection('basics')}><Icon name="Edit"/>Edit</button></div>
-        <p className="profile-saved-bio">{profile?.bio || 'Add a little about yourself.'}</p>
+        {profile?.bio && <p className="profile-saved-bio">{profile.bio}</p>}
+        <ProfileFinishCard profile={profile} hasPhoto={!!photo.snapshot?.hasPhoto} onAddPhoto={() => {
+          const section = document.getElementById('profile-photos');
+          section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          section?.querySelector<HTMLButtonElement>('.photo-gallery-panel > .btn')?.focus({ preventScroll: true });
+        }}/>
+        <section id="profile-photos" className="profile-photos-section" aria-labelledby="profile-photos-title">
+          <h3 id="profile-photos-title">Photos</h3>
+          <PhotoGalleryPanel inline/>
+        </section>
         <div className="account-group">
           <button className="account-row" onClick={() => setSection('basics')}><span className="account-row-icon"><Icon name="Profile"/></span><span className="account-row-copy"><b>About you</b><small>Photo, bio, hometown & personal details</small></span><Icon name="ChevronRight"/></button>
           <button className="account-row" onClick={() => setSection('interests')}><span className="account-row-icon"><Icon name="Events"/></span><span className="account-row-copy"><b>Interests & availability</b><small>{profile?.interests.length ?? 0} interests · {profile?.availability.length ?? 0} saved time windows</small></span><Icon name="ChevronRight"/></button>
@@ -419,7 +437,13 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
   const [source, setSource] = useState(initial.profile);
   const [profile, setProfile] = useState(() => structuredClone(initial.profile!));
   const [facts, setFacts] = useState(() => structuredClone(initialFacts.facts));
-  const dirty = !!photoDraft || JSON.stringify(profile) !== JSON.stringify(source) || JSON.stringify(facts) !== JSON.stringify(initialFacts.facts);
+  const custom = useProfileCustomization();
+  const [customDraft, setCustomDraft] = useState<ProfileCustomizationValue | null>(null);
+  const customValue = customDraft ?? custom.value;
+  const customChanged = !!customDraft && !sameCustomization(customDraft, custom.value);
+  const changeCustom = (value: Partial<ProfileCustomizationValue>) => setCustomDraft({ ...customValue, ...value });
+  const adultDraft = canShowDating(current.account?.profile?.birthdate);
+  const dirty = customChanged || !!photoDraft || JSON.stringify(profile) !== JSON.stringify(source) || JSON.stringify(facts) !== JSON.stringify(initialFacts.facts);
   const [error, setError] = useState(''), [saving, setSaving] = useState(false);
   if (source !== initial.profile) {
     setSource(initial.profile);
@@ -472,6 +496,16 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
         return;
       }
       savedDetails = true;
+      if (customChanged) {
+        // Only interests that are saved on the profile can be ordered.
+        try {
+          await custom.save({ ...customDraft!, interestOrder: customDraft!.interestOrder.filter(label => profile.interests.includes(label)) });
+          setCustomDraft(null);
+        } catch {
+          setError('Your profile is saved, but your display choices could not be confirmed. Reload before trying again.');
+          return;
+        }
+      }
       if (photoDraft) {
         setPhotoReconcile(true);
         photoAttempted = true;
@@ -534,15 +568,19 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
               {(['education', 'occupation'] as const).map(key => <div key={key}>
                 <label>{key === 'education' ? 'Education' : 'Occupation'} (optional)<input maxLength={120} value={facts[key]} onChange={event => setFacts({ ...facts, [key]: event.target.value })}/></label>
                 <label className="account-check"><input type="checkbox" checked={facts.visibility[key]} onChange={event => setFacts({ ...facts, visibility: { ...facts.visibility, [key]: event.target.checked } })}/>Show {key}</label>
+                {adultDraft && facts.visibility[key] && <AudienceSelect field={key} value={customValue.audiences[key]} disabled={!custom.query.data} change={value => changeCustom({ audiences: { ...customValue.audiences, [key]: value } })}/>}
               </div>)}
               <LanguagePicker value={facts.languages} change={languages => setFacts({ ...facts, languages })}/>
               <label className="account-check"><input type="checkbox" checked={facts.visibility.languages} onChange={event => setFacts({ ...facts, visibility: { ...facts.visibility, languages: event.target.checked } })}/>Show languages</label>
+              {adultDraft && facts.visibility.languages && <AudienceSelect field="languages" value={customValue.audiences.languages} disabled={!custom.query.data} change={value => changeCustom({ audiences: { ...customValue.audiences, languages: value } })}/>}
             </fieldset>
+            <GardenShowcasePicker value={customValue.gardenItem} disabled={!custom.query.data} change={gardenItem => changeCustom({ gardenItem })}/>
             <details className="profile-account-details"><summary>Account username</summary><label>Username<input required maxLength={80} value={profile.username} onChange={event => update({ username: event.target.value })}/></label></details>
           </div>
           <div hidden={section !== 'interests'}>
             <h3 className="account-section-label">Interests <span>{profile.interests.length}/{interestLimit}</span></h3>
             <Interests compact value={profile.interests} change={interests => update({ interests })}/>
+            <InterestOrderEditor interests={profile.interests} order={customValue.interestOrder} disabled={!custom.query.data} change={interestOrder => changeCustom({ interestOrder })}/>
             <div className="account-divider"/>
             <h3 className="account-section-label">Weekly availability</h3>
             <p className="account-note">{profile.availability.length ? `${profile.availability.length} saved time ${profile.availability.length === 1 ? 'window' : 'windows'}` : 'Add times that usually work for you.'}</p>
