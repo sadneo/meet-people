@@ -1,11 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { mobileEntry } from './vite.mobile.config.js'
+import { runIdPlugin } from './dev/run-id.js'
 
 // Browser test process only: no .env loading, API server, proxy or real auth client.
 export default defineConfig({
   envDir: false,
-  plugins: [react(), mobileEntry, {
+  plugins: [react(), mobileEntry, runIdPlugin(), {
     name: 'isolated-browser-boundaries',
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
