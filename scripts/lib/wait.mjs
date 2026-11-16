@@ -5,7 +5,7 @@ async function reportedRun(url) {
     const response = await fetch(url, { signal: AbortSignal.timeout(2000) })
     const body = (await response.text()).trim()
     let parsed
-    try { parsed = JSON.parse(body) } catch {}
+    try { parsed = JSON.parse(body) } catch { /* Not JSON: fall back to the plain body. */ }
     if (parsed && typeof parsed === 'object') return typeof parsed.run === 'string' ? parsed.run : ''
     return response.ok ? body : ''
   } catch {
