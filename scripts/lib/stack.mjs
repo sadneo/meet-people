@@ -1,0 +1,137 @@
+import { spawn, execFile } from 'node:child_process'
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { basename, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+import { container as engine } from './containers.mjs'
+import { freePorts, isFree } from './ports.mjs'
+
+const repoRoot = resolve(fileURLToPath(new URL('../..', import.meta.url)))
+const label = 'com.supabase.cli.project'
+const testPrefix = 'meet-people-test-'
+const names = ['api', 'db', 'shadow', 'studio', 'mail']
+const preferred = [54321, 54322, 54320, 54323, 54324]
+const lines = value => value ? value.split('\n').filter(Boolean) : []
+const makeStack = (projectId, ports) => ({ projectId, ports, apiUrl: `http://127.0.0.1:${ports.api}`, dbContainer: `supabase_db_${projectId}` })
+const toPorts = list => Object.fromEntries(names.map((name, index) => [name, list[index]]))
+const devFile = root => join(root, '.pebble/dev.json')
+
+export function devProjectId(root = repoRoot) {
+  try { if (statSync(join(root, '.git')).isDirectory()) return 'meet-people' } catch { /* no .git: treat as a worktree */ }
+  const slug = basename(root).toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 40).replace(/^-+|-+$/g, '')
+  return `meet-people-${slug || 'worktree'}`
+}
+
+export function credentialsDir(projectId, home = homedir()) {
+  const base = join(home, '.local/share/pebble')
+  return projectId === 'meet-people' ? base : join(base, projectId)
+}
+
+export function stackEnv({ projectId, ports, apiUrl }) {
+  return {
+    SUPABASE_PROJECT_ID: projectId,
+    SUPABASE_API_PORT: String(ports.api),
+    SUPABASE_DB_PORT: String(ports.db),
+    SUPABASE_DB_SHADOW_PORT: String(ports.shadow),
+    SUPABASE_STUDIO_PORT: String(ports.studio),
+    SUPABASE_INBUCKET_PORT: String(ports.mail),
+    PEBBLE_SUPABASE_PROJECT_ID: projectId,
+    PEBBLE_SUPABASE_URL: apiUrl,
+  }
+}
+
+function readDev(root) {
+  try { return JSON.parse(readFileSync(devFile(root), 'utf8')) } catch { return null }
+}
+
+export async function devStack(root = repoRoot, { container = engine } = {}) {
+  const projectId = devProjectId(root)
+  const dev = readDev(root)
+  const saved = dev?.projectId === projectId ? dev.ports : null
+  let ports = saved
+  if (!saved || !(await container(['ps', '-q', '--filter', `name=^supabase_db_${projectId}$`]))) {
+    const free = saved && (await Promise.all(Object.values(saved).map(isFree))).every(Boolean)
+    if (!free) ports = toPorts(await freePorts(5, preferred))
+  }
+  mkdirSync(join(root, '.pebble'), { recursive: true })
+  writeFileSync(devFile(root), JSON.stringify({ projectId, ports }, null, 2), { mode: 0o600 })
+  chmodSync(devFile(root), 0o600)
+  return makeStack(projectId, ports)
+}
+
+export async function testStack(runId) {
+  return makeStack(`${testPrefix}${runId}`, toPorts(await freePorts(5)))
+}
+
+export function currentStack(root = repoRoot, env = process.env) {
+  if (env.PEBBLE_SUPABASE_PROJECT_ID && env.PEBBLE_SUPABASE_URL) {
+    return makeStack(env.PEBBLE_SUPABASE_PROJECT_ID, { api: Number(new URL(env.PEBBLE_SUPABASE_URL).port) })
+  }
+  const saved = readDev(root)
+  return saved ? makeStack(saved.projectId, saved.ports) : null
+}
+
+export function assertLocalStack(url, stack) {
+  if (new URL(url).href !== `${stack.apiUrl}/`) throw new Error(`Refusing ${url}: not the local stack ${stack.apiUrl}.`)
+}
+
+const ownerDir = () => join(existsSync('/tmp/opencode') ? '/tmp/opencode' : tmpdir(), 'pebble-stacks')
+const ownerFile = projectId => join(ownerDir(), `${projectId}.json`)
+
+function ownerPid(projectId) {
+  try { return JSON.parse(readFileSync(ownerFile(projectId), 'utf8')).pid } catch { return undefined }
+}
+
+function alive(pid) {
+  if (!pid) return false
+  try { process.kill(pid, 0); return true } catch (error) { return error.code !== 'ESRCH' }
+}
+
+export async function startStack(stack, { minimal = false, workdir, siteUrl } = {}) {
+  if (minimal || stack.projectId.startsWith(testPrefix)) {
+    mkdirSync(ownerDir(), { recursive: true })
+    writeFileSync(ownerFile(stack.projectId), JSON.stringify({ pid: process.pid }))
+  }
+  const env = { ...process.env, ...stackEnv(stack), ...(siteUrl && { SUPABASE_AUTH_SITE_URL: siteUrl }) }
+  const base = ['scripts/supabase.sh', ...(workdir ? ['--workdir', workdir] : [])]
+  const exclude = minimal ? ['-x', 'studio,mailpit,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta'] : []
+  await new Promise((done, fail) => {
+    spawn('sh', [...base, 'start', ...exclude], { cwd: repoRoot, env, stdio: ['ignore', 2, 2] })
+      .once('error', fail)
+      .once('close', code => code === 0 ? done() : fail(new Error(`supabase start failed (exit ${code}).`)))
+  })
+  const { stdout } = await promisify(execFile)('sh', [...base, 'status', '--output', 'json'], { cwd: repoRoot, env, maxBuffer: 8 * 1024 * 1024 })
+  const status = JSON.parse(stdout)
+  return { apiUrl: stack.apiUrl, publishableKey: status.PUBLISHABLE_KEY, anonKey: status.ANON_KEY, serviceRoleKey: status.SERVICE_ROLE_KEY }
+}
+
+export async function removeStack(projectId, { container = engine } = {}) {
+  const filter = ['--filter', `label=${label}=${projectId}`]
+  const ids = async args => lines(await container([...args, '-q', ...filter]))
+  const rm = async (args, list) => { if (list.length) await container([...args, ...list]) }
+  await rm(['rm', '-f'], await ids(['ps', '-a']))
+  await rm(['volume', 'rm', '-f'], await ids(['volume', 'ls']))
+  await rm(['network', 'rm'], await ids(['network', 'ls']))
+  rmSync(ownerFile(projectId), { force: true })
+}
+
+async function projectsWithResources(container) {
+  const kinds = [[['ps', '-aq'], ['inspect'], 'Config.Labels'], [['volume', 'ls', '-q'], ['volume', 'inspect'], 'Labels'], [['network', 'ls', '-q'], ['network', 'inspect'], 'Labels']]
+  const found = new Set()
+  for (const [list, inspect, path] of kinds) {
+    const ids = lines(await container([...list, '--filter', `label=${label}`]))
+    if (ids.length) lines(await container([...inspect, '--format', `{{index .${path} "${label}"}}`, ...ids])).forEach(id => found.add(id))
+  }
+  return [...found]
+}
+
+export async function reapTestStacks({ container = engine, owner = ownerPid, remove = id => removeStack(id, { container }) } = {}) {
+  const removed = []
+  for (const projectId of await projectsWithResources(container)) {
+    if (!projectId.startsWith(testPrefix) || alive(owner(projectId))) continue
+    await remove(projectId)
+    removed.push(projectId)
+  }
+  return removed
+}

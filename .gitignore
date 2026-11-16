@@ -35,3 +35,5 @@ qa/.sessions/
 qa/**/*.png
 # Generated QA run snapshots stay local.
 qa/runs/**/*.json
+# Per-worktree Supabase stack identity.
+/.pebble/

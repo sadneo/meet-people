@@ -33,7 +33,10 @@ export async function engineCli({ which = onPath } = {}) {
 
 export async function container(args, { input, env } = {}) {
   const run = execute(await engineCli(), args, { env: await engineEnv({ ...process.env, ...env }), maxBuffer, encoding: 'utf8' })
-  if (input !== undefined) run.child.stdin.end(input)
+  if (input !== undefined) {
+    run.child.stdin.on('error', () => {})
+    run.child.stdin.end(input)
+  }
   return (await run).stdout.trim()
 }
 
