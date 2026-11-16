@@ -18,7 +18,11 @@ export const FriendsPreferencesSchema = z.object({
 const revision = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
 export const FriendsSearchPreferencesSchema = z.object({ revision, preferences: FriendsPreferencesSchema.nullable() }).strict()
   .refine(value => (value.revision === 0) === (value.preferences === null), 'Revision zero means preferences have not been chosen.')
-export const SaveFriendsSearchPreferencesSchema = z.object({ expectedRevision: revision.max(Number.MAX_SAFE_INTEGER - 1), preferences: FriendsPreferencesSchema }).strict()
+export const SaveFriendsSearchPreferencesSchema = z.object({
+  expectedRevision: revision.max(Number.MAX_SAFE_INTEGER - 1),
+  preferences: FriendsPreferencesSchema,
+  deferDiscovery: z.literal(true).optional(),
+}).strict()
 export const FriendsSearchErrorSchema = z.object({ code: z.enum(['auth', 'invalid', 'conflict', 'unavailable', 'provider', 'malformed']), error: ProfileDetailsErrorSchema.shape.error }).strict()
 export type FriendsPreferences = z.infer<typeof FriendsPreferencesSchema>
 export type FriendsSearchPreferences = z.infer<typeof FriendsSearchPreferencesSchema>

@@ -89,6 +89,24 @@ short screens, large text and the bottom safe area. Dialogs scroll internally an
 support Escape, focus containment and focus return. Keep visible keyboard focus,
 44px controls and reduced-motion behavior.
 
+## Onboarding and matching setup
+
+Open with a single mobile form for display name, user-chosen username and private
+birthday. Use clearly labeled numeric month, day and year fields. A confirmed
+adult profile enters the requested app screen or Garden. Save the supported device
+timezone as the initial schedule default. The schedule shows the saved timezone
+and lets people search or use their current device timezone. Put matching setup
+beside the matching action and open it in a focused, full-screen mobile dialog.
+
+Each matching feature requires one saved profile photo, at least one interest
+and a confirmed search area. Friends and Dating have separate areas. Event and
+group matching use the Friends search area. Weekly availability is optional
+until group matching, which needs a continuous hour and a confirmed timezone.
+Profile and matching setup offer a photo manager with up to four ordered photos.
+Drag a handle to reorder photos. The first is the profile photo. Friends and
+Dating cards support swiping when a person has more than one photo, with
+keyboard navigation on the photo viewer.
+
 ## Real data and service states
 
 Supabase owns authentication. Existing Express `/api` contracts own account,
@@ -98,10 +116,10 @@ Loading, empty, unavailable, conflict and unconfirmed-write states stay distinct
 A failed write never establishes success. Versioned resources retain their existing
 revision checks and explicit reconciliation requirements.
 
-Friends uses a manual queue check and at most one candidate. Starting active
-Friends matching requires confirmation before replacing downtime. Dating has its
-own explicit participation action and preference resource. Saving a Dating draft
-does not enable participation. Device location requires an explicit action;
+Finishing Friends or Dating setup starts discovery for that mode. State the
+visibility change on the final action and preserve existing privacy choices.
+Dating drafts and search-area confirmations do not start discovery by themselves.
+Event and group queues still require a separate join action. Device location requires an explicit action;
 Profile home and per-mode search areas stay separate. Interests and weekly
 availability use one canonical Profile resource.
 

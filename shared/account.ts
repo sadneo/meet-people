@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { MatchingProfileSchema } from './matchmaking.js'
-import { ReadyPreferencesSchema } from './profile-readiness.js'
 import { interestSelectionProblem } from './interests.js'
 
 export const AccountPreferencesSchema = z.object({
@@ -17,25 +16,30 @@ const AccountDataSchema = z.object({
   completed: z.array(z.number().int().min(0).max(3)).max(4),
 }).strict().refine(value => value.completed.every((chapter, i) => chapter === i), 'Chapters must be sequential.')
 type AccountData = z.infer<typeof AccountDataSchema>
-// Derive a prefix only from real stored data. Existing valid users need no replay;
-// legacy profiles lacking private choices resume at social intent, not identity.
-export function completedAccountChapters(value: AccountData): number[] {
-  if (!value.profile) return []
-  if (interestSelectionProblem(value.profile.interests)) return [0]
-  if (!value.preferences.intents.length) return [0, 1]
-  if (!value.preferences.distance || !value.preferences.group || !ReadyPreferencesSchema.safeParse(value.profile).success) return [0, 1, 2]
-  return [0, 1, 2, 3]
+// Account admission depends on saved identity and birthday. The existing
+// completion array remains on the wire for older clients and Garden rewards.
+export function hasBasicProfile(profile: AccountData['profile'] | undefined): boolean {
+  return Boolean(profile?.display_name.trim() && profile.username.trim() && profile.birthdate)
 }
-// Stored completion markers can predate today's required fields. Read the account
-// so onboarding can collect missing facts; never use those markers to grant access.
+
+export function completedAccountChapters(value: AccountData): number[] {
+  if (hasBasicProfile(value.profile)) return [0, 1, 2, 3]
+  if (!value.profile) return []
+  // Older callers could save interests and intents before supplying a birthday.
+  if (interestSelectionProblem(value.profile.interests)) return [0]
+  return value.preferences.intents.length ? [0, 1, 2] : [0, 1]
+}
 export const AccountSchema = AccountDataSchema
-export const SaveAccountSchema = AccountSchema
+export const SaveAccountSchema = AccountSchema.safeExtend({
+  initialTimeZone: z.string().max(100).regex(/^(?:UTC|[A-Za-z_]+\/[A-Za-z0-9_+/-]+)$/).optional(),
+})
   .superRefine((value, context) => {
     if (!value.profile) return;
-    const message = interestSelectionProblem(value.profile.interests, value.completed.includes(1));
+    const message = interestSelectionProblem(value.profile.interests, false);
     if (message) context.addIssue({ code: 'custom', path: ['profile', 'interests'], message });
   })
   .refine(value => value.completed.length <= completedAccountChapters(value).length, 'Completed chapters must have valid persisted required fields.')
   .refine(value => value.profile !== null, 'Profile is required.')
+export type SaveAccount = z.infer<typeof SaveAccountSchema>
 export type Account = z.infer<typeof AccountSchema>
 export const emptyAccount: Account = { profile: null, preferences: { intents: [], usual: [], distance: '', group: '' }, settings: { notifications: true, availability: true, discoverable: true, location: false }, completed: [] }

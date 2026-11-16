@@ -4,6 +4,7 @@ import type { FriendsPreferences } from "../../shared/friends-search-preferences
 import {
   DatingProfileSchema,
   automaticDatingTargets,
+  completeDatingProfile,
   datingNeedsClarification,
   type DatingProfile,
   type DatingSearch,
@@ -97,7 +98,12 @@ function DistanceRange({ value, change, commit }: { value: number; change: (valu
     <div className="row between dating-distance-limits"><span>1 mile</span><span>100+ miles</span></div>
   </div>;
 }
-export function FriendsPreferencesPanel({ done, onSavingChange }: { done: () => void; onSavingChange?: (saving: boolean) => void }) {
+export function FriendsPreferencesPanel({ done, onSavingChange, finishSetup, submitLabel }: {
+  done: () => void;
+  onSavingChange?: (saving: boolean) => void;
+  finishSetup?: () => Promise<string>;
+  submitLabel?: string;
+}) {
   const [reloadKey, setReloadKey] = useState(0);
   const current = useCurrent(),
     resource = useFriendsPreferences(
@@ -125,11 +131,13 @@ export function FriendsPreferencesPanel({ done, onSavingChange }: { done: () => 
           disabled={!resource.canWrite}
           saving={resource.busy}
           done={done}
+          submitLabel={submitLabel}
           verify={async () => {
             onSavingChange?.(true);
             try {
+              if (finishSetup) return await finishSetup();
               const status = await matchingClient(current.session.access_token).friendsStatus();
-              if (status.reason === 'preferences') return 'Confirm a search area before finishing Friends setup.';
+              if (status.reason === 'preferences' && !(await matchingClient(current.session.access_token).matchingSetup()).friendsAreaReady) return 'Confirm a search area before finishing Friends setup.';
               if (status.reason === 'location') return 'Your saved search area has expired or changed. Confirm it again before finishing.';
               return '';
             } catch {
@@ -157,6 +165,7 @@ function FriendsForm({
   saving,
   done,
   verify,
+  submitLabel,
 }: {
   initial: FriendsPreferences;
   disabled: boolean;
@@ -164,6 +173,7 @@ function FriendsForm({
   saving: boolean;
   done: () => void;
   verify: () => Promise<string>;
+  submitLabel?: string;
 }) {
   const current = useCurrent();
   const [value, setValue] = useState(initial),
@@ -213,44 +223,54 @@ function FriendsForm({
   const availability = profile?.availability.map(window => `${days[window.dow]} ${+window.start_time.slice(0,2) < 12 ? 'mornings' : +window.start_time.slice(0,2) < 17 ? 'afternoons' : 'evenings'}`);
   const goals = [...new Set(['New friends', 'Hangout crew', 'Study buddies', 'Activity partners', ...value.goals])];
   const selectedGoal = value.goals.length > 1 ? '__multiple__' : value.goals[0] ?? '';
+  const locationPicker = (
+    <LocationPicker
+      mode="friends"
+      value={value.searchArea}
+      radiusMiles={value.radiusMiles}
+      disabled={disabled || saving || finishing}
+      save={async searchArea => {
+        if (disabled || locked.current) return false;
+        const next = { ...latest.current, searchArea };
+        locked.current = true;
+        try {
+          if (!await save(next)) return false;
+          confirmed.current = next;
+          latest.current = next;
+          setValue(next);
+          setValidation('');
+          return true;
+        } finally { locked.current = false; }
+      }}
+    />
+  );
+  const matchFilters = <>
+    <h3>Who you’d like to meet</h3>
+    <AgeRange value={value} change={bounds => change({ ...latest.current, ...bounds })} commit={() => void commit()}/>
+    <DistanceRange value={value.radiusMiles} change={radiusMiles => change({ ...latest.current, radiusMiles })} commit={() => void commit()}/>
+    {!submitLabel && locationPicker}
+    <label className="friends-goal">Friendship goal
+      <select value={selectedGoal} onChange={event => change({ ...latest.current, goals: event.target.value ? [event.target.value] : [] }, true)}>
+        <option value="">Any friendship goal</option>
+        {value.goals.length > 1 && <option value="__multiple__">{value.goals.join(' · ')}</option>}
+        {goals.map(goal => <option key={goal} value={goal}>{goal}</option>)}
+      </select>
+    </label>
+  </>;
   return (
     <form className="friends-preferences-form" onSubmit={event => { event.preventDefault(); void finish(); }}>
       <fieldset disabled={disabled || finishing}>
-        <h3>Who you’d like to meet</h3>
-        <AgeRange value={value} change={bounds => change({ ...latest.current, ...bounds })} commit={() => void commit()}/>
-        <DistanceRange value={value.radiusMiles} change={radiusMiles => change({ ...latest.current, radiusMiles })} commit={() => void commit()}/>
-        <LocationPicker
-          mode="friends"
-          value={value.searchArea}
-          radiusMiles={value.radiusMiles}
-          disabled={disabled || saving || finishing}
-          save={async searchArea => {
-            if (disabled || locked.current) return false;
-            const next = { ...latest.current, searchArea };
-            locked.current = true;
-            try {
-              if (!await save(next)) return false;
-              confirmed.current = next; latest.current = next; setValue(next); setValidation(''); return true;
-            } finally { locked.current = false; }
-          }}
-        />
-        <label className="friends-goal">Friendship goal
-          <select value={selectedGoal} onChange={event => change({ ...latest.current, goals: event.target.value ? [event.target.value] : [] }, true)}>
-            <option value="">Any friendship goal</option>
-            {value.goals.length > 1 && <option value="__multiple__">{value.goals.join(' · ')}</option>}
-            {goals.map(goal => <option key={goal} value={goal}>{goal}</option>)}
-          </select>
-        </label>
+        {submitLabel ? <>{locationPicker}<details className="setup-optional-preferences"><summary>Optional preferences</summary>{matchFilters}</details></> : matchFilters}
       </fieldset>
-      <section className="friends-shared-interests"><h4>Interests · shared with Profile</h4><p className="account-note">{profile?.interests.join(' · ') || 'Add your interests'}</p><Link className="btn light" to="/profile?section=basics">Edit profile</Link></section>
-      <section className="friends-shared-availability"><h4>Availability · shared with Profile</h4><div className="row between"><p className="account-note">{[...new Set(availability)].join(', ') || 'Add your availability'}</p><Link to="/profile?section=interests">Edit</Link></div></section>
+      {!submitLabel && <><section className="friends-shared-interests"><h4>Interests · shared with Profile</h4><p className="account-note">{profile?.interests.join(' · ') || 'Add your interests'}</p><Link className="btn light" to="/profile?section=basics">Edit profile</Link></section>
+      <section className="friends-shared-availability"><h4>Availability · shared with Profile</h4><div className="row between"><p className="account-note">{[...new Set(availability)].join(', ') || 'Add your availability'}</p><Link to="/profile?section=interests">Edit</Link></div></section></>}
       <ErrorMessage>{validation}</ErrorMessage>
       {saving && <p role="status" className="account-note">Saving preferences…</p>}
-      <button className="btn" disabled={disabled || saving || finishing}>{finishing ? 'Checking setup…' : 'Done'}</button>
+      <button className="btn" disabled={disabled || saving || finishing}>{finishing ? 'Checking setup…' : submitLabel ?? 'Done'}</button>
     </form>
   );
 }
-export function DatingPreferencesPanel({ done, view = 'all', onSavingChange }: { done: () => void; view?: 'all' | 'profile'; onSavingChange?: (saving: boolean) => void }) {
+export function DatingPreferencesPanel({ done, view = 'all', onSavingChange }: { done: () => void; view?: 'all' | 'profile' | 'setup'; onSavingChange?: (saving: boolean) => void }) {
   const [reloadKey, setReloadKey] = useState(0);
   const current = useCurrent(),
     resource = useDatingPreferences(
@@ -276,7 +296,7 @@ export function DatingPreferencesPanel({ done, view = 'all', onSavingChange }: {
         <p className="account-note">Pause Dating to edit preferences. <Link to="/matchmaking?mode=dating">Open Discover</Link></p>
       )}
       {resource.snapshot && view === 'all' && <DatingSearchForm key={reloadKey} initialProfile={resource.snapshot.profile} initialSearch={resource.snapshot.search ?? { ...defaultBounds, searchArea: { source: 'home', resolvedLocationRef: null } }} disabled={!resource.canWrite} saving={resource.busy} save={savePreferences} done={done}/>}
-      {resource.snapshot && view === 'profile' && (
+      {resource.snapshot && view !== 'all' && (
         <DatingForm
           view={view}
           cancel={done}
@@ -348,12 +368,13 @@ function DatingForm({
   initialSearch: DatingSearch;
   disabled: boolean;
   save: (profile: DatingProfile, search: DatingSearch) => Promise<boolean>;
-  view?: 'all' | 'profile';
+  view?: 'all' | 'profile' | 'setup';
   cancel?: () => void;
   saving?: boolean;
 }) {
   const [profile, setProfile] = useState(initialProfile),
-    [search, setSearch] = useState(initialSearch);
+    [search, setSearch] = useState(initialSearch),
+    [validation, setValidation] = useState('');
   const establishedIdentityChanged =
     !!(initialProfile.gender || initialProfile.sexuality) &&
     (profile.gender !== initialProfile.gender ||
@@ -365,6 +386,11 @@ function DatingForm({
     <form className={view === 'profile' ? 'profile-editor' : undefined}
       onSubmit={(event) => {
         event.preventDefault();
+        if (view === 'setup' && (!search.searchArea.resolvedLocationRef || !completeDatingProfile(profile) && !establishedIdentityChanged)) {
+          setValidation('Complete your Dating details and confirm a search area.');
+          return;
+        }
+        setValidation('');
         void save(profile, search);
       }}
     >
@@ -516,22 +542,22 @@ function DatingForm({
             </label>
           ))}
         </fieldset></>}
-        {view === 'all' && <><BoundsFields
-          value={search}
-          change={(bounds) => setSearch({ ...search, ...bounds })}
-        />
-        <LocationPicker
-          mode="dating"
-          value={search.searchArea}
-          radiusMiles={search.radiusMiles}
-          disabled={disabled || saving}
-          save={async searchArea => {
-            const next = { ...search, searchArea };
-            if (!await save(profile, next)) return false;
-            setSearch(next); return true;
-          }}
-        /></>}
-        {view === 'all' && <button className="btn">Save Dating preferences</button>}
+        {view !== 'profile' && <>
+          <LocationPicker
+            mode="dating"
+            value={search.searchArea}
+            radiusMiles={search.radiusMiles}
+            disabled={disabled || saving}
+            save={async searchArea => {
+              const next = { ...search, searchArea };
+              if (view !== 'setup' && !await save(profile, next)) return false;
+              setSearch(next); return true;
+            }}/>
+          <details className="setup-optional-preferences"><summary>Optional preferences</summary>
+            <BoundsFields value={search} change={bounds => setSearch({ ...search, ...bounds })}/>
+          </details>
+        </>}
+        {view !== 'profile' && <><ErrorMessage>{validation}</ErrorMessage><button className="btn">{view === 'setup' ? 'Continue' : 'Save Dating preferences'}</button></>}
       </fieldset>
       {view === 'profile' && <div className="profile-save-bar"><button type="button" className="btn light" disabled={saving} onClick={cancel}>Cancel</button><button className="btn" disabled={disabled}>{saving ? 'Saving…' : 'Save changes'}</button></div>}
     </form>

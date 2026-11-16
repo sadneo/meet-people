@@ -8,6 +8,7 @@ import { accountFixture, requiredPreferences } from './complete-profile-fixture'
 const mocks = vi.hoisted(() => ({ current: {} as Record<string, unknown>, photo: {} as Record<string, unknown>, facts: {} as Record<string, unknown>, detailed: {} as Record<string, unknown> }));
 vi.mock('../../src/ui/current', () => ({ useCurrent: () => mocks.current }));
 vi.mock('../../src/features/account/useProfilePhoto', () => ({ photoChangedEvent: 'pebble:profile-photo-changed', useProfilePhoto: () => mocks.photo }));
+vi.mock('../../src/features/account/usePhotoGallery', () => ({ usePhotoGallery: () => ({ query: {} }) }));
 vi.mock('../../src/features/account/useProfileDetails', () => ({ useProfileDetails: () => mocks.facts }));
 vi.mock('../../src/features/account/useDetailedSettings', () => ({ useDetailedSettings: () => mocks.detailed }));
 vi.mock('../../src/ui/Preferences', () => ({ DatingPreferencesPanel: () => null }));
@@ -131,7 +132,7 @@ it('never retries a confirmed photo write when only its preview read fails', asy
 });
 
 it('keeps standalone photo upload immediate and separate from the profile draft', async () => {
-  render(<PhotoEditor/>); choose();
+  render(<PhotoEditor onSavingChange={vi.fn()}/>); choose();
   fireEvent.click(screen.getByRole('button', { name: 'Upload photo' }));
   await waitFor(() => expect(savePhoto).toHaveBeenCalledOnce());
 });

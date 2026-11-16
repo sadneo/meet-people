@@ -32,7 +32,7 @@ export function friendsPreferencesClient(token: string) {
   return {
     read: (signal?: AbortSignal) => request('GET', undefined, signal),
     async save(value: SaveFriendsSearchPreferences, signal?: AbortSignal) {
-      const parsed = SaveFriendsSearchPreferencesSchema.safeParse(value)
+      const parsed = SaveFriendsSearchPreferencesSchema.safeParse({ ...value, deferDiscovery: true })
       if (!parsed.success) throw new FriendsPreferencesClientError('invalid', 400, 'Check your Friends filters before saving.')
       const saved = await request('PUT', parsed.data, signal)
       if (saved.revision !== parsed.data.expectedRevision + 1 || !saved.preferences || !sameFriendsPreferences(saved.preferences, parsed.data.preferences)) throw new FriendsPreferencesClientError('malformed', 502, 'Friends save could not be confirmed. Reload before retrying.')

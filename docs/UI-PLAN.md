@@ -20,7 +20,7 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/login`, `/register` | Supabase email/password, email link and Google sign-in |
 | `/auth/callback`, `/reset-password` | Explicit grant verification and URL scrubbing |
 | `/auth/forgot-password`, `/forgot-password` | Real recovery email request |
-| `/onboarding` | Guided four-stone journey from the original dev flow, with a welcome scene and confirmed completion screen. About you (identity, private birthdate, home area), interests (1–5, premade or custom; at most 2 custom), social intentions, then weekly availability, general plan preferences and an explicit saved timezone. Each chapter persists and resumes from confirmed account data. Dating and group/event queues retain separate opt-in. |
+| `/onboarding` | One mobile form for display name, chosen username and private birthday. A confirmed adult profile can enter Pebble. |
 | `/home`, `/community` | Integrated pixel-art Garden; account-backed inventory, placement, Random Pebble unlocks and capped earning rewards; weekly scene history stays device-local |
 | `/matchmaking` | Passive Friends/Dating recommendations, consent and search preferences |
 | `/matchmaking/food` | Food menus reached from Discover; campus-date picker, dining location and meal choices, dish search and published ingredient/nutrition details. Authenticated reads of imported campus and hospital snapshots; no sample dishes or inferred opening hours. |
@@ -66,7 +66,7 @@ cancelable lifecycle. Explicit local logout attempts server/native token cleanup
 before sign-out, with a three-second best-effort limit, without changing opt-in.
 
 Private routes wait for session hydration and persisted account readiness. A
-signed-in account with missing chapters resumes onboarding; account read failures
+signed-in account missing basic identity or birthday opens onboarding. Account read failures
 block entry with retry and sign-out. Unknown routes pass through the same gate.
 Mobile's unresolved initial session/account uses the shared branded startup
 screen, also supplied as a mobile-only pre-JavaScript HTML fallback. Navigation
@@ -79,6 +79,10 @@ Profile photo selection/removal is staged with the profile draft: Cancel discard
 it and Save changes performs the revisioned photo write after profile/detail
 saves. These resources are not an atomic transaction; partial or uncertain saves
 stay explicit and require read-only reconciliation before another photo write.
+Manage photos saves individual adds, removals and moves as they happen. Its
+four-photo limit and revision checks are enforced by the database. The first
+photo supplies existing avatars and matching readiness. Gallery metadata and
+individual photo reads use the existing private photo audience rules.
 Timezone/sharing controls retain their separately labeled immediate-save behavior
 in the editor. Privacy and the editor expose the same canonical schedule-sharing
 opt-in; the legacy account availability flag is preserved but not presented as a
@@ -129,13 +133,16 @@ shows specific guidance for the supported age range (18–99), disabled discover
 missing preferences, or a search area that needs confirmation. Eligibility changes
 during scoring return a setup conflict and recheck status, rather than a generic
 server error. This requires `20261030000200_friends_discovery_status.sql`.
-Friends preferences require an explicitly confirmed search area before Done can
-finish setup. Done waits for confirmed saves and a fresh owner setup check;
-expired areas and unavailable checks keep the dialog open. An unconfirmed area
+Friends and Dating show a focused setup flow for missing prerequisites. Both
+reuse the saved interest and photo. Each mode confirms its own area and starts
+discovery on its labeled final action. Events and groups reuse the Friends search
+area while retaining their separate queue joins. Groups also require a saved
+continuous hour of weekly availability and a timezone. Expired areas and
+unavailable checks keep setup open. An unconfirmed area
 shows “Choose an area” rather than the Profile home label.
 Dating uses its existing owner-only runtime for specific age (18+), discovery,
 profile, search-area and participation guidance. Recommendations wait until that
-runtime permits them; eligible users still explicitly start participation. Setup
+runtime permits them; eligible users start participation when they finish setup, and can pause from Discover. Setup
 rejections retain their conflict category, and a definitively rejected opt-in is
 distinct from an unconfirmed write. Pause remains available after eligibility
 expires. Automatic setup rechecks are bounded to prevent recommendation loops.

@@ -29,7 +29,10 @@ for (const interest of ['Coffee', 'Ceramics']) test(`a single ${interest === 'Co
   await page.goto('/profile?section=interests');
   for (const label of ['Coffee', 'Art', 'Music']) await page.getByRole('button', { name: label, exact: true }).click();
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'Choose at least one interest.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
+  expect(fixture.getAccount().profile?.interests).toEqual([]);
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Interests & Availability', exact: true }).click();
   if (interest === 'Coffee') await page.getByRole('button', { name: 'Coffee', exact: true }).click();
   else {
     await page.getByLabel('Add your own', { exact: true }).fill(interest);

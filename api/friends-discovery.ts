@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod'
-import { FriendsBatchRequestSchema, FriendsDiscoveryStatusSchema } from '../shared/friends-discovery.js'
+import { FriendsBatchRequestSchema, FriendsDiscoveryStatusSchema, MatchingSetupStatusSchema } from '../shared/friends-discovery.js'
 import { MatchingScoringSettingsResponseSchema, SaveMatchingScoringSettingsSchema } from '../shared/matching-scoring.js'
 import { ConnectionStateSchema } from '../shared/connections.js'
 import { rankedFriendsBatch, FriendsEligibilityError, type FriendsScoringTransport } from './matching/friends-recommendations.js'
@@ -29,7 +29,7 @@ export function createFriendsDiscoveryRouter(scoring: FriendsScoringTransport | 
     res.set('Cache-Control', 'no-store')
     if (!z.uuid().safeParse(res.locals.actorId).success || !res.locals.actor) return next(new Failure(401, 'Sign in to use Friends discovery.'))
     if (Object.keys(req.query ?? {}).length) return next(new Failure(400, 'Unexpected Friends request fields.'))
-    if (!scoring) return next(new Failure(503, 'Friends discovery is not configured.'))
+    if (!scoring && req.path !== '/setup') return next(new Failure(503, 'Friends discovery is not configured.'))
     next()
   })
   router.post('/recommendations', async (req, res) => {
@@ -44,6 +44,20 @@ export function createFriendsDiscoveryRouter(scoring: FriendsScoringTransport | 
     const read = actor(res).friendsDiscoveryStatus
     if (!read) throw new Failure(503, 'Friends discovery setup is not available yet.')
     res.json(parsed(FriendsDiscoveryStatusSchema, unwrap(await read())))
+  })
+  router.get('/setup', async (req, res) => {
+    if (req.body !== undefined && !z.object({}).strict().safeParse(req.body).success) throw new Failure(400, 'Unexpected setup fields.')
+    const read = actor(res).progressiveMatchingSetup
+    if (!read) throw new Failure(503, 'Matching setup is unavailable.')
+    res.json(parsed(MatchingSetupStatusSchema, unwrap(await read())))
+  })
+  router.post('/start', async (req, res) => {
+    if (!z.object({}).strict().safeParse(req.body).success) throw new Failure(400, 'Unexpected setup fields.')
+    const start = actor(res).startFriendsDiscovery
+    if (!start) throw new Failure(503, 'Friends setup is unavailable.')
+    const status = parsed(FriendsDiscoveryStatusSchema, unwrap(await start()))
+    if (!status.eligible) throw new Failure(409, 'Review your Friends setup and try again.')
+    res.json(status)
   })
   router.get('/scoring-settings', async (req, res) => {
     if (req.body !== undefined && !z.object({}).strict().safeParse(req.body).success) throw new Failure(400, 'Unexpected Friends fields.')

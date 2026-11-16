@@ -52,6 +52,7 @@ export function Messages() {
     selected = selectedGroup ?? search.get("conversation"),
     [query, setQuery] = useState(''),
     [findGroup,setFindGroup] = useState(false),
+    [groupSetupBusy,setGroupSetupBusy] = useState(false),
     [page, setPage] = useState(1);
   const inbox = useCachedLoad(
     useCallback(
@@ -91,7 +92,7 @@ export function Messages() {
           <Link className="round messages-activity" to="/activity" aria-label="Activity inbox"><Icon name="Bell" /></Link>
         </div>
       </div>
-      {findGroup&&<Modal title="Find a group" close={()=>setFindGroup(false)}><ActiveFriends key={current.session.user.id} close={()=>setFindGroup(false)} changed={changed}/></Modal>}
+      {findGroup&&<Modal className="matching-setup-modal" title="Find a group" close={()=>{if(!groupSetupBusy)setFindGroup(false)}}><ActiveFriends key={current.session.user.id} close={()=>setFindGroup(false)} changed={changed} onSetupBusy={setGroupSetupBusy}/></Modal>}
       <div className="live-messages">
         <aside className="live-inbox">
           <div className="inbox-search">

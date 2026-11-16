@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AccountSchema, SaveAccountSchema, type Account } from '../../shared/account'
+import { AccountSchema, SaveAccountSchema, type Account, type SaveAccount } from '../../shared/account'
 import { matchmakingClient, MatchmakingClientError } from '../features/matchmaking/client'
 
 type State = { token: string | null; account: Account | null; loading: boolean; busy: boolean; available: boolean; error: string }
@@ -38,13 +38,13 @@ export function useUnifiedAccount(token: string | null) {
     return () => { fence.current = epoch + 1; active.current = null }
   }, [client, token, revision])
   const current = state.token === token ? state : empty(token)
-  async function save(next: Account) {
+  async function save(next: SaveAccount) {
     if (!client || client !== active.current || pending.current || !current.available || current.loading) return false
     const parsed = SaveAccountSchema.safeParse(next)
-    if (!parsed.success) { setState(value => ({ ...value, error: 'Check the required fields for this chapter.' })); return false }
+    if (!parsed.success) { setState(value => ({ ...value, error: 'Check the required profile fields.' })); return false }
     pending.current = true
     const epoch = fence.current
-    let attempted = false
+    let attempted = false, saved = false
     setState(value => ({ ...value, busy: true, error: '' }))
     try {
       const fresh = await client.account()
@@ -66,6 +66,7 @@ export function useUnifiedAccount(token: string | null) {
       })
       attempted = true
       await client.saveAccount(payload)
+      saved = true
       if (epoch !== fence.current) return false
       const confirmed = AccountSchema.parse(await client.account())
       if (epoch !== fence.current) return false
@@ -73,7 +74,13 @@ export function useUnifiedAccount(token: string | null) {
       setState({ token, account: confirmed, loading: false, busy: false, available: true, error: '' })
       return true
     } catch (failure) {
-      if (epoch === fence.current) setState(value => ({ ...value, busy: false, available: false, error: attempted ? 'Account save could not be confirmed. Your draft is kept. Retry account to reconcile before saving again.' : failure instanceof MatchmakingClientError ? failure.message : failure instanceof Error ? failure.message : 'Account unavailable.' }))
+      if (epoch === fence.current) {
+        const rejected = attempted && !saved && failure instanceof MatchmakingClientError && failure.status === 400 && failure.code === 'invalid'
+        const error = attempted && !rejected
+          ? 'Account save could not be confirmed. Your draft is kept. Retry account to reconcile before saving again.'
+          : failure instanceof Error ? failure.message : 'Account unavailable.'
+        setState(value => ({ ...value, busy: false, available: rejected, error }))
+      }
       return false
     } finally { if (epoch === fence.current) pending.current = false }
   }

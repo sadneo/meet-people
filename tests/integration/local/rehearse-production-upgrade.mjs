@@ -18,7 +18,9 @@ assert.deepEqual(pending, [
   '20261104060000_push_notifications.sql', '20261104060100_push_accepted_and_match.sql',
   '20261105000000_garden_economy.sql', '20261105010000_garden_social_rewards.sql',
   '20261113000000_adult_only_release.sql', '20261113010000_garden_cave.sql',
-  '20261114010000_push_service_grants.sql',
+  '20261114010000_push_service_grants.sql', '20261115010000_dining_menu_ingestion.sql',
+  '20261116000000_progressive_onboarding.sql',
+  '20261116000100_profile_photo_gallery.sql',
 ], 'Production baseline changed; review the rehearsal before executing.')
 const container = `pebble-production-rehearsal-${process.pid}`
 const docker = args => execFileSync('docker', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).trim()
@@ -71,6 +73,8 @@ try {
   assert.equal(fingerprint(), before, 'Upgrade changed existing synthetic profiles')
   assert.equal(sql('select count(*) from supabase_migrations.schema_migrations'), String(names.length))
   sql(source('tests/integration/sql/garden-rewards.sql'))
+  sql(source('tests/integration/sql/progressive-onboarding.sql'))
+  sql(source('tests/integration/sql/profile-photo-gallery.sql'))
   sql(source('tests/integration/sql/public-live-events.sql'))
   sql(source('tests/integration/sql/adult-release.sql'))
   assert.equal(sql(`select has_table_privilege('anon','public.push_devices','SELECT') or has_table_privilege('authenticated','public.push_devices','SELECT') or has_table_privilege('authenticated','garden_private.wallets','SELECT')`), 'f')
