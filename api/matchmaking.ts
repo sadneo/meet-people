@@ -100,6 +100,7 @@ export interface UserContextTransport {
     socialHistory?(conversation: string, before: number | null, after: number | null): PromiseLike<RpcResponse>
     socialSend?(conversation: string, body: string, requestId: string): PromiseLike<RpcResponse>
     socialRead?(conversation: string, seq: number): PromiseLike<RpcResponse>
+    socialTyping?(conversation: string, isGroup: boolean, typing: boolean): PromiseLike<RpcResponse>
     socialActivity?(): PromiseLike<RpcResponse>
     ownerBlocklist?(): PromiseLike<RpcResponse>
     ownerBlockState?(target: string): PromiseLike<RpcResponse>
@@ -157,6 +158,7 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         socialHistory: (conversation, before, after) => client.rpc('social_history', { conversation_in: conversation, before_in: before, after_in: after }),
         socialSend: (conversation, body, requestId) => client.rpc('social_send', { conversation_in: conversation, body_in: body, request_in: requestId }),
         socialRead: (conversation, seq) => client.rpc('social_read', { conversation_in: conversation, seq_in: seq }),
+        socialTyping: (conversation, isGroup, typing) => client.rpc('messaging_typing', { conversation_in: conversation, group_in: isGroup, typing_in: typing }),
         socialActivity: () => client.rpc('social_activity'),
         ownerBlocklist: () => client.rpc('get_owner_blocklist'),
         ownerBlockState: target => client.rpc('get_owner_block_state', { target_in: target }),

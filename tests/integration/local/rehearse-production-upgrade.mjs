@@ -19,6 +19,7 @@ assert.deepEqual(pending, [
   '20261105000000_garden_economy.sql', '20261105010000_garden_social_rewards.sql',
   '20261113000000_adult_only_release.sql', '20261113010000_garden_cave.sql',
   '20261114010000_push_service_grants.sql', '20261115010000_dining_menu_ingestion.sql',
+  '20261115030000_messaging_realtime.sql', '20261115040000_messaging_typing.sql',
   '20261116000000_progressive_onboarding.sql',
   '20261116000100_profile_photo_gallery.sql',
 ], 'Production baseline changed; review the rehearsal before executing.')
@@ -69,6 +70,9 @@ try {
   const fingerprint = () => sql(`select md5(coalesce(jsonb_agg(to_jsonb(p) order by id)::text,'')) from public.profiles p`)
   const before = fingerprint()
   assert.notEqual(sql('select count(*) from public.profiles'), '0')
+  // The isolated image lacks the platform-owned Realtime schema that hosted
+  // projects provide; use the same stand-in as the product schema replay.
+  sql(source('tests/integration/sql/realtime-bootstrap.sql'))
   for (const name of pending) migrate(name)
   assert.equal(fingerprint(), before, 'Upgrade changed existing synthetic profiles')
   assert.equal(sql('select count(*) from supabase_migrations.schema_migrations'), String(names.length))

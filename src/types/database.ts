@@ -1615,6 +1615,10 @@ export type Database = {
         Args: { p_conversation_id: string; p_user_id: string }
         Returns: string
       }
+      messaging_typing: {
+        Args: { conversation_in: string; group_in: boolean; typing_in: boolean }
+        Returns: Json
+      }
       person_dating_score: {
         Args: { me: string; other: string }
         Returns: number
