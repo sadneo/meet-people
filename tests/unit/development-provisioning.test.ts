@@ -11,6 +11,7 @@ const credentials = { accountId: id, email: 'pebble-development@example.test', p
 beforeEach(() => {
   vi.resetAllMocks()
   vi.stubEnv('PEBBLE_SUPABASE_PROJECT_ID', 'meet-people-wt-unit'); vi.stubEnv('PEBBLE_SUPABASE_URL', credentials.url)
+  for (const name of ['SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) vi.stubEnv(name, undefined)
   mocks.loadEnv.mockReturnValue({ SUPABASE_URL: credentials.url, SUPABASE_PUBLISHABLE_KEY: credentials.publicKey, SUPABASE_SERVICE_ROLE_KEY: 'synthetic-server-only' })
   mocks.getUserById.mockResolvedValue({ data: { user: null }, error: { status: 404 } })
   mocks.createUser.mockResolvedValue({ error: null })
