@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { PullToRefresh } from './PullToRefresh';
 import { Link, useLocation } from "react-router";
 import { respondToConnectionRequest } from "./request-actions";
 import { connections } from "../features/connections/client";
@@ -9,7 +10,6 @@ import { PageSkeleton } from './loading/PageSkeleton';
 import {
   ActionButton,
   PersonPhoto,
-  Empty,
   ErrorMessage,
   ResourceState,
   Icon,
@@ -52,6 +52,7 @@ export function Activity() {
         </ActionButton>
       </div>
       {matches && <div className="tabs" role="group" aria-label="Matches and plans view">{['Upcoming', 'Connections', 'Past'].map(name => <button key={name} type="button" aria-pressed={tab === name} className={tab === name ? 'active' : ''} onClick={() => setTab(name)}>{name}</button>)}</div>}
+      <PullToRefresh onRefresh={() => Promise.all([people.reload(), updates.reload()])} label="Refreshing activity"/>
       <ErrorMessage>{action.error}</ErrorMessage>
       {uncertain && !action.busy && <p role="status">The request response is unconfirmed. Refresh before another change.</p>}
             <section className="card" id="requests" hidden={matches && tab !== 'Connections'}>
@@ -63,7 +64,7 @@ export function Activity() {
           skeleton={<PageSkeleton view="list" label="Loading connections"/>}
         />
         {people.value && !people.value.incoming.length && (
-          <p>No pending requests.</p>
+          <p className="activity-empty-line"><Icon name="AddFriend"/><span>No pending requests.</span></p>
         )}
         {people.value?.incoming.map((person) => (
           <div className="row between item" key={person.id}>
@@ -120,7 +121,7 @@ export function Activity() {
         <h3>Your connections</h3>
         <ResourceState loading={people.loading} error={people.error} reload={people.reload} skeleton={<PageSkeleton view="list" label="Loading connections"/>}/>
         {people.value && !people.value.connected.length && (
-          <p>Find your first connection in Discover.</p>
+          <p className="activity-empty-line"><Icon name="Friends"/><span>No connections yet.</span><Link className="text-link" to="/matchmaking">Discover</Link></p>
         )}
         {people.value?.connected.map((person) => (
           <div className="row between item" key={person.id}>
@@ -148,7 +149,7 @@ export function Activity() {
           skeleton={<PageSkeleton view="list" label="Loading activity"/>}
         />
         {updates.value && !updates.value.notifications.length && (
-          <Empty title="No suggested groups yet." />
+          <p className="activity-empty-line"><Icon name="Events"/><span>No suggested groups yet.</span><Link className="text-link" to="/events">Events</Link></p>
         )}
         {updates.value?.notifications.map((item) => (
           <div className="item" key={item.id}>

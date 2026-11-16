@@ -45,8 +45,11 @@ function MatchingSetupSteps({ mode, status, done, onBusyChange }: {
   const client = useMemo(() => matchingClient(token), [token])
   const action = useAction()
 
-  if (!profileSaved) return <SharedProfileStep onBusyChange={onBusyChange} done={() => setProfileSaved(true)}/>
-  if (mode === 'group' && !scheduleSaved) return <GroupScheduleStep onBusyChange={onBusyChange} done={() => setScheduleSaved(true)}/>
+  const steps = mode === 'group' ? ['Profile', 'Schedule', 'Area'] : mode === 'dating' ? ['Profile', 'Preferences', 'Start'] : ['Profile', 'Area']
+  const step = !profileSaved ? 0 : mode === 'group' && !scheduleSaved ? 1 : mode === 'dating' && datingSaved ? 2 : steps.length === 2 ? 1 : mode === 'group' ? 2 : 1
+  const progress = <SetupProgress steps={steps} step={step}/>
+  if (!profileSaved) return <>{progress}<div className="setup-step" key="profile"><SharedProfileStep onBusyChange={onBusyChange} done={() => setProfileSaved(true)}/></div></>
+  if (mode === 'group' && !scheduleSaved) return <>{progress}<div className="setup-step" key="schedule"><GroupScheduleStep onBusyChange={onBusyChange} done={() => setScheduleSaved(true)}/></div></>
 
   async function finishFriends() {
     if (mode === 'friends') {
@@ -85,15 +88,19 @@ function MatchingSetupSteps({ mode, status, done, onBusyChange }: {
   }
 
   if (mode === 'dating') return <>
+    {progress}
+    <div className="setup-step" key={datingSaved ? 'start' : 'preferences'}>
     <ErrorMessage>{action.error}</ErrorMessage>
     {datingSaved ? <>
       <h3>Ready to meet people?</h3>
       <p>When you save, your profile can appear in Dating. You can pause from Discover anytime.</p>
       <ActionButton disabled={action.busy} onClick={() => void finishDating()}>Save and start Dating</ActionButton>
     </> : <DatingSetupPreferences done={() => setDatingSaved(true)} onBusyChange={onBusyChange}/>}
+    </div>
   </>
 
   if (mode !== 'friends' && status.friendsAreaReady) return <>
+    {progress}
     <h3>Search area confirmed</h3>
     <p>Return to {mode === 'event' ? 'the event' : 'Find a group'} when you’re ready to join.</p>
     <ErrorMessage>{action.error}</ErrorMessage>
@@ -108,11 +115,21 @@ function MatchingSetupSteps({ mode, status, done, onBusyChange }: {
   </>
 
   return <>
+    {progress}
+    <div className="setup-step" key="area">
     <h3>Choose your search area</h3>
     <p>{mode === 'friends' ? 'When you save, your profile can appear in Friends. You can pause in your discovery settings.' : 'Event and group matching use the Friends search area.'}</p>
     <FriendsPreferencesPanel done={done} onSavingChange={onBusyChange} finishSetup={finishFriends}
       submitLabel={mode === 'friends' ? 'Save and start Friends' : 'Finish setup'}/>
+    </div>
   </>
+}
+
+function SetupProgress({ steps, step }: { steps: string[]; step: number }) {
+  return <div className="setup-progress">
+    <p className="setup-progress-label">Step {step + 1} of {steps.length} · {steps[step]}</p>
+    <ol aria-hidden="true">{steps.map((name, index) => <li key={name} className={index < step ? 'done' : index === step ? 'current' : ''}/>)}</ol>
+  </div>
 }
 
 function DatingSetupPreferences({ done, onBusyChange }: { done: () => void; onBusyChange: (busy: boolean) => void }) {

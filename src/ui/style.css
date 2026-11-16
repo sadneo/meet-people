@@ -126,7 +126,7 @@ small,
   font-size: 20px;
 }
 .eyebrow {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -238,7 +238,7 @@ main {
   border-radius: 30px;
   background: #eef2e7;
   padding: 6px 11px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 .badge.pink {
@@ -526,7 +526,7 @@ textarea {
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .bar i {
   background: #a4bb8c;
@@ -604,7 +604,7 @@ dialog::backdrop {
   background: #ffffffcc;
   padding: 5px 10px;
   border-radius: 9px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .suggest {
   width: 100%;
@@ -726,7 +726,7 @@ dialog::backdrop {
   }
   nav button {
     padding: 7px 8px;
-    font-size: 10px;
+    font-size: 12px;
     flex-direction: column;
     gap: 5px;
     border-radius: 12px;
@@ -747,7 +747,7 @@ dialog::backdrop {
     font-size: 26px;
   }
   .pagehead .eyebrow {
-    font-size: 9px;
+    font-size: 12px;
   }
   .hero {
     min-height: 400px;
@@ -788,7 +788,7 @@ dialog::backdrop {
     margin-top: 30px;
   }
   .tile p {
-    font-size: 11px;
+    font-size: 12px;
   }
   .arrow {
     right: 12px;
@@ -1035,7 +1035,7 @@ button:disabled {
     height: 70px;
   }
   .top .badge {
-    font-size: 10px;
+    font-size: 12px;
   }
   .top .round {
     width: 35px;
@@ -1098,7 +1098,7 @@ button:disabled {
   display: none;
 }
 .devbar summary b {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 1px;
   color: #b7c5ff;
 }
@@ -1140,7 +1140,7 @@ button:disabled {
 }
 .devbar small {
   color: #b5bdcf;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 .devbar label {
@@ -1169,7 +1169,7 @@ button:disabled {
   color: #e3e9fc;
   padding: 7px 10px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .devquick button:hover {
   background: #315cf6;
@@ -1186,7 +1186,7 @@ button:disabled {
   .devbar summary {
     padding: 9px 12px;
     min-width: 195px;
-    font-size: 11px;
+    font-size: 12px;
     background: #191c24f5;
   }
   .devpanel {
@@ -1353,14 +1353,14 @@ button:disabled {
   margin-top: 10px;
 }
 .filter-content .chip {
-  font-size: 11px;
+  font-size: 12px;
   padding: 8px 10px;
 }
 .filter-content .daygrid button {
-  font-size: 10px;
+  font-size: 12px;
 }
 .filter-content .mini {
-  font-size: 11px;
+  font-size: 12px;
 }
 .dating-tabs .tabs button {
   border: 0;
@@ -1416,7 +1416,7 @@ button:disabled {
   justify-content: center;
   align-items: center;
   gap: 9px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   padding: 14px;
 }
@@ -1470,7 +1470,7 @@ button:disabled {
     font-size: 26px;
   }
   .area-link {
-    font-size: 10px;
+    font-size: 12px;
     max-width: 170px;
   }
   .discovertools {
@@ -1501,7 +1501,7 @@ button:disabled {
     font-size: 20px;
   }
   .friend-person small {
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1.6;
   }
   .queue-panel {
@@ -1877,7 +1877,7 @@ input[type="checkbox"] {
     font-size: 26px;
   }
   .garden-stats span {
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 .ui-icon {
@@ -1967,7 +1967,7 @@ nav button.active .ui-icon {
   width: 18px;
   height: 18px;
   margin-left: 6px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .contact-row {
   display: flex;
@@ -2027,7 +2027,7 @@ nav button.active .ui-icon {
   font-size: 14px;
 }
 .contact-top small {
-  font-size: 10px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .contact-bottom {
@@ -2057,13 +2057,13 @@ nav button.active .ui-icon {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  font-size: 10px;
+  font-size: 12px;
   flex: none;
 }
 .connection-kind {
   display: block;
   width: fit-content;
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.5;
   color: #81776a;
   margin-top: 5px;
@@ -2124,7 +2124,7 @@ nav button.active .ui-icon {
 }
 .chat-date {
   text-align: center;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 25px;
 }
@@ -2153,11 +2153,11 @@ nav button.active .ui-icon {
   border-radius: 17px 17px 4px 17px;
 }
 .message-meta {
-  font-size: 9px;
+  font-size: 12px;
   padding: 0 3px;
 }
 .sender-name {
-  font-size: 10px;
+  font-size: 12px;
 }
 .composer {
   display: flex;
@@ -2282,7 +2282,7 @@ nav button.active .ui-icon {
     font-size: 15px;
   }
   .contact-top small {
-    font-size: 11px;
+    font-size: 12px;
   }
   .contact-preview {
     font-size: 13px;
@@ -2291,7 +2291,7 @@ nav button.active .ui-icon {
     padding: 8px 0 17px;
   }
   .connection-kind {
-    font-size: 10px;
+    font-size: 12px;
   }
   .conversation.no-conversation {
     display: none;
@@ -2477,7 +2477,7 @@ nav button.active .ui-icon {
   display: flex;
   justify-content: space-between;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   margin: 0 12px;
 }
 .garden-activity {
@@ -2508,7 +2508,7 @@ nav button.active .ui-icon {
 }
 .activity-period {
   margin-left: auto;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--muted);
   white-space: nowrap;
@@ -2528,7 +2528,7 @@ nav button.active .ui-icon {
   margin-top: 10px;
 }
 .activity-content .activity-note {
-  font-size: 10px;
+  font-size: 12px;
   margin: 18px 0 0;
 }
 .activity-content > .mini {
@@ -2665,7 +2665,7 @@ nav button.active .ui-icon {
   padding: 9px 15px;
   border-radius: 20px;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
   margin: 0;
   color: #75695f;
   pointer-events: none;
@@ -2685,7 +2685,7 @@ nav button.active .ui-icon {
   font-size: 12px;
 }
 .editor-selection button {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   padding: 10px 0;
 }
@@ -2740,18 +2740,18 @@ nav button.active .ui-icon {
   font-size: 34px;
 }
 .editor-shop-item b {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
 }
 .editor-shop-item small {
-  font-size: 10px;
+  font-size: 12px;
 }
 .editor-shop-item:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 .editor-reset {
-  font-size: 11px;
+  font-size: 12px;
   padding: 14px 0;
 }
 .editor-item:focus-visible {
@@ -2789,7 +2789,7 @@ nav button.active .ui-icon {
     font-size: 28px;
   }
   .editor-instruction {
-    font-size: 10px;
+    font-size: 12px;
     padding: 8px 12px;
   }
   .editor-item {
@@ -2936,7 +2936,7 @@ nav button.active .ui-icon {
   font-weight: 500;
 }
 .availability-block small {
-  font-size: 11px;
+  font-size: 12px;
 }
 .availability-block.selected {
   background: #efdfce;
@@ -2978,7 +2978,7 @@ nav button.active .ui-icon {
   border-top: 1px solid var(--line);
 }
 .availability-footer p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 17px;
 }
@@ -3004,7 +3004,7 @@ nav button.active .ui-icon {
     gap: 4px;
   }
   .availability-tabs button {
-    font-size: 11px;
+    font-size: 12px;
   }
   .availability-row p {
     font-size: 12px;
@@ -3040,7 +3040,7 @@ nav button.active .ui-icon {
   margin-bottom: 20px;
 }
 .friend-match-card > .row > small {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .friend-group-preview {
@@ -3057,7 +3057,7 @@ nav button.active .ui-icon {
   min-width: 48px;
 }
 .friend-group-preview small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink);
 }
 .friend-group-photo,
@@ -3108,11 +3108,11 @@ nav button.active .ui-icon {
 .friend-group-member small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 5px;
 }
 .member-response {
-  font-size: 10px;
+  font-size: 12px;
   color: #8c7c6a;
   background: #f1eae0;
   border-radius: 20px;
@@ -3129,7 +3129,7 @@ nav button.active .ui-icon {
   padding: 0;
 }
 .friend-group-note {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin: 22px 0;
 }
@@ -3203,7 +3203,7 @@ nav button.active .ui-icon {
   margin: 0;
 }
 .recommendations-heading small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .recommendation-people {
@@ -3280,7 +3280,7 @@ nav button.active .ui-icon {
     margin-left: 4px;
   }
   .recommendation-person p {
-    font-size: 10px;
+    font-size: 12px;
     margin-left: 4px;
     min-height: 35px;
   }
@@ -3548,7 +3548,7 @@ nav button.active .ui-icon {
     font-size: 23px;
   }
   .profile-caption > span {
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.6;
   }
   .profile-photo-actions {
@@ -3750,7 +3750,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   border-bottom: 0;
 }
 .dating-profile-shortcut dt {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 .dating-profile-shortcut dd {
@@ -3788,7 +3788,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 }
 .discovery-setting small {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   margin-top: 8px;
   color: #9d503d;
 }
@@ -3923,7 +3923,7 @@ label.range-flexibility {
 .chat-system {
   text-align: center;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.6;
   margin: 18px 0;
 }
@@ -3939,7 +3939,7 @@ label.range-flexibility {
   font-weight: 600;
 }
 .group-growth small {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .group-growth h3 {
@@ -3969,7 +3969,7 @@ label.range-flexibility {
   font-weight: 600;
 }
 .growth-demo-link {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   padding: 14px 0 0;
 }
@@ -3991,7 +3991,7 @@ label.range-flexibility {
   margin-top: 5px;
 }
 .growth-candidate .text-link {
-  font-size: 10px;
+  font-size: 12px;
   color: #9d503d;
 }
 .growth-candidates {
@@ -4010,7 +4010,7 @@ label.range-flexibility {
     padding: 16px;
   }
   .group-growth > .row .btn {
-    font-size: 11px;
+    font-size: 12px;
     padding: 10px 14px;
   }
   .growth-candidate .inbox-avatar {
@@ -4092,7 +4092,7 @@ label.range-flexibility {
   }
   .pagehead > .row .btn.small {
     padding: 10px 13px;
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 .mode-toggle-indicator {
@@ -4283,7 +4283,7 @@ label.range-flexibility {
   padding-top: 23px;
 }
 .dating-facts > div > span {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .dating-facts p {
@@ -4633,7 +4633,7 @@ button.dating-interest:focus-visible {
   font-size: 13px;
 }
 .garden-catalog-category .builditem small {
-  font-size: 11px;
+  font-size: 12px;
   display: inline-block;
   margin-top: 6px;
 }
@@ -4718,10 +4718,10 @@ button.dating-interest:focus-visible {
     height: 54px;
   }
   .editor-shop-item b {
-    font-size: 10px;
+    font-size: 12px;
   }
   .editor-shop-item small {
-    font-size: 9px;
+    font-size: 12px;
   }
 }
 
@@ -4765,7 +4765,7 @@ button.dating-interest:focus-visible {
   gap: 12px;
 }
 .garden-motion-toggle {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   min-height: 40px;
   padding: 8px 4px;
@@ -4787,7 +4787,7 @@ button.dating-interest:focus-visible {
   pointer-events: auto;
 }
 .editor-header .garden-motion-toggle {
-  font-size: 10px;
+  font-size: 12px;
 }
 .original-tree-canopy {
   transform-box: view-box;
@@ -4987,7 +4987,7 @@ main.sky-garden-main {
   margin: 5px 0 0;
 }
 .sky-kicker {
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 1.8px;
   color: #798475;
@@ -5015,7 +5015,7 @@ main.sky-garden-main {
   left: 50%;
   top: 100px;
   transform: translateX(-50%);
-  font-size: 11px;
+  font-size: 12px;
   color: #7b8673;
   white-space: nowrap;
   transition: opacity 0.2s;
@@ -5083,7 +5083,7 @@ main.sky-garden-main {
 }
 .sky-activity-button small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: #849078;
   margin-top: 5px;
 }
@@ -5135,7 +5135,7 @@ main.sky-garden-main {
   gap: 16px;
 }
 .sky-placement > span {
-  font-size: 11px;
+  font-size: 12px;
   color: #7c8573;
   line-height: 1.5;
 }
@@ -5169,7 +5169,7 @@ main.sky-garden-main {
   background: #4c6044;
   color: white;
   padding: 8px 13px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .sky-sheet-scrim {
   position: absolute;
@@ -5225,12 +5225,12 @@ main.sky-garden-main {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  font-size: 11px;
+  font-size: 12px;
   color: #8a917f;
   padding-bottom: 17px;
 }
 .sky-build-meta button {
-  font-size: 11px;
+  font-size: 12px;
   color: #9d503d;
   padding: 8px 0;
 }
@@ -5242,7 +5242,7 @@ main.sky-garden-main {
   margin-bottom: 17px;
 }
 .sky-build-tabs button {
-  font-size: 11px;
+  font-size: 12px;
   padding: 9px 12px;
   background: #f1eee3;
   color: #8b917f;
@@ -5276,7 +5276,7 @@ main.sky-garden-main {
   display: block;
 }
 .sky-shop-item b {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.4;
   min-height: 28px;
@@ -5284,11 +5284,11 @@ main.sky-garden-main {
   align-items: center;
 }
 .sky-shop-item small {
-  font-size: 10px;
+  font-size: 12px;
   color: #8e927f;
 }
 .sky-shop-item em {
-  font-size: 9px;
+  font-size: 12px;
   font-style: normal;
   color: #ac9681;
 }
@@ -5305,13 +5305,13 @@ main.sky-garden-main {
   border-top: 1px solid #eae7d8;
 }
 .sky-sheet > footer small {
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.5;
   color: #999d8a;
   max-width: 170px;
 }
 .sky-sheet > footer button {
-  font-size: 10px;
+  font-size: 12px;
   color: #a16451;
   white-space: nowrap;
   padding: 10px 0;
@@ -5330,7 +5330,7 @@ main.sky-garden-main {
 }
 .sky-stat-row span {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: #939985;
   margin-top: 7px;
 }
@@ -5338,12 +5338,12 @@ main.sky-garden-main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 11px;
+  font-size: 12px;
   padding: 16px 0 4px;
   border-top: 1px solid #e9e7d8;
 }
 .sky-week-heading > span {
-  font-size: 10px;
+  font-size: 12px;
   color: #939985;
 }
 .sky-week {
@@ -5360,7 +5360,7 @@ main.sky-garden-main {
   gap: 10px;
   align-items: center;
   justify-content: flex-end;
-  font-size: 9px;
+  font-size: 12px;
   color: #9b9f8c;
   height: 100%;
 }
@@ -5378,11 +5378,11 @@ main.sky-garden-main {
   background: #4c6044;
 }
 .sky-day-summary {
-  font-size: 11px;
+  font-size: 12px;
   margin: 10px 0;
 }
 .sky-fixture-note {
-  font-size: 10px;
+  font-size: 12px;
   color: #939985;
   margin: 0 0 8px;
 }
@@ -5402,7 +5402,7 @@ main.sky-garden-main {
     font-size: 28px;
   }
   .sky-kicker {
-    font-size: 8px;
+    font-size: 12px;
     letter-spacing: 1.5px;
   }
   .sky-balance {
@@ -5411,7 +5411,7 @@ main.sky-garden-main {
   }
   .sky-explore-hint {
     top: 96px;
-    font-size: 10px;
+    font-size: 12px;
   }
   .sky-camera-tools {
     right: 17px;
@@ -5438,10 +5438,10 @@ main.sky-garden-main {
     height: 20px;
   }
   .sky-activity-button b {
-    font-size: 11px;
+    font-size: 12px;
   }
   .sky-activity-button small {
-    font-size: 9px;
+    font-size: 12px;
   }
   .sky-build-button {
     min-height: 56px;
@@ -5491,7 +5491,7 @@ main.sky-garden-main {
   }
   .sky-placement > span {
     flex: 1;
-    font-size: 10px;
+    font-size: 12px;
   }
   .sky-placement > div {
     gap: 0;
@@ -5501,7 +5501,7 @@ main.sky-garden-main {
     height: 32px;
   }
   .sky-placement button.sky-done {
-    font-size: 10px;
+    font-size: 12px;
     padding: 8px 10px;
   }
   .sky-heading,
@@ -5518,7 +5518,7 @@ body:has(.sky-garden-main) .devbar {
   z-index: 5;
 }
 body:has(.sky-garden-main) .devbar details:not([open]) summary {
-  font-size: 9px;
+  font-size: 12px;
   padding: 7px 9px;
 }
 body:has(.sky-garden-main) .devbar details:not([open]) .devcurrent {
@@ -5583,7 +5583,7 @@ body:has(.sky-garden-main) .devbar details:not([open]) .devcurrent {
 }
 .sky-minimap span {
   display: block;
-  font-size: 9px;
+  font-size: 12px;
   color: #7b8673;
   margin-top: 1px;
   line-height: 1.4;
@@ -5597,7 +5597,7 @@ body:has(.sky-garden-main) .devbar details:not([open]) .devcurrent {
   }
   .sky-view-switch button {
     padding: 8px 16px;
-    font-size: 11px;
+    font-size: 12px;
   }
   .sky-explore-hint {
     top: 157px;
@@ -5825,7 +5825,7 @@ body:has(.sky-garden-main) .devbar .devpanel {
   font-weight: 600;
 }
 .sky-build-catalog .builditem small {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
   color: #8a927c;
   display: inline-block;
@@ -5835,7 +5835,7 @@ body:has(.sky-garden-main) .devbar .devpanel {
   padding: 10px 12px;
   min-width: 65px;
   border-radius: 13px;
-  font-size: 11px;
+  font-size: 12px;
   background: #4c6044;
   color: #fffdf5;
   border: 0;
@@ -5868,7 +5868,7 @@ body:has(.sky-garden-main) .devbar .devpanel {
     font-size: 14px;
   }
   .sky-build-catalog .builditem small {
-    font-size: 11px;
+    font-size: 12px;
   }
   .sky-build-catalog .builditem .garden-shop-art {
     width: 57px;
@@ -6164,7 +6164,7 @@ body:has(.sky-garden-main) .devbar .devpanel {
 }
 .event-category {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 750;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -6414,7 +6414,7 @@ main.welcome-main {
   padding: 70px 0 80px;
 }
 .welcome-eyebrow {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 1.8px;
   text-transform: uppercase;
   font-weight: 700;
@@ -6576,7 +6576,7 @@ main.welcome-main {
   display: inline-block;
   border: 1px solid #ffffff65;
   border-radius: 100px;
-  font-size: 10px;
+  font-size: 12px;
   padding: 5px 9px;
   margin-bottom: 12px;
   background: #ffffff18;
@@ -6621,7 +6621,7 @@ main.welcome-main {
 }
 .welcome-hello small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: #85796e;
 }
 .welcome-hello-icon {
@@ -6634,7 +6634,7 @@ main.welcome-main {
 }
 .welcome-visual-caption {
   margin-top: 27px;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.5px;
   color: #958777;
 }
@@ -6745,7 +6745,7 @@ main.welcome-main {
   margin: 0;
 }
 .welcome-fixture-note {
-  font-size: 11px;
+  font-size: 12px;
   color: #958777;
   margin: 22px 0 0;
 }
@@ -6910,7 +6910,7 @@ main.welcome-main {
     letter-spacing: -2.8px;
   }
   .welcome-eyebrow {
-    font-size: 10px;
+    font-size: 12px;
     letter-spacing: 1.5px;
     margin-bottom: 20px;
   }
@@ -6952,7 +6952,7 @@ main.welcome-main {
     gap: 9px;
   }
   .welcome-hello small {
-    font-size: 9px;
+    font-size: 12px;
   }
   .welcome-hello-icon {
     display: none;
@@ -7134,7 +7134,7 @@ main.auth-main {
   padding-top: 23px;
 }
 .auth-dev-label {
-  font-size: 11px;
+  font-size: 12px;
   color: #84715f;
   margin: 0 0 10px;
   letter-spacing: 0.3px;
@@ -7148,7 +7148,7 @@ main.auth-main {
   background: #dbdeca;
 }
 .auth-demo-note {
-  font-size: 11px;
+  font-size: 12px;
   color: #8a7764;
   margin: 12px 0 0;
   line-height: 1.5;
@@ -7182,7 +7182,7 @@ main.auth-main {
   padding: 27px 0 0;
 }
 .auth-footer button {
-  font-size: 11px;
+  font-size: 12px;
   color: #8c7967;
   padding: 10px 0;
 }
@@ -7715,7 +7715,7 @@ nav.legal-toc {
     line-height: 1.8;
   }
   .legal-kicker {
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 @media print {

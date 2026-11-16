@@ -67,7 +67,7 @@ export function EventGroup({ id, available }: { id: string; available: boolean }
         state.value && (
           <p>
             {!available
-              ? "Group matching is closed for this event."
+              ? "This event has started or ended, so new groups can’t form."
               : state.value.state === "waiting"
                 ? "You’re in this event’s queue. Your group will appear here automatically when it’s ready."
                 : discoveryOff ? "Turn on discovery to find a group."
@@ -77,6 +77,7 @@ export function EventGroup({ id, available }: { id: string; available: boolean }
         )
       )}
       {canJoin && !discoveryOff && <ResourceState loading={readiness.loading} error={readiness.error} reload={readiness.reload}/>}
+      <div className="event-group-actions">
       {canJoin && discoveryOff && <Link className="btn light" to="/profile?section=discovery">Discovery settings</Link>}
       {canJoin && readiness.value && !setupReady && !discoveryOff && <ActionButton onClick={() => setSetupOpen(true)}>Set up event matching</ActionButton>}
       {setupOpen && <MatchingSetup mode="event" close={closeSetup} done={closeSetup}/>}
@@ -105,6 +106,7 @@ export function EventGroup({ id, available }: { id: string; available: boolean }
             {state.value.state === "idle" ? "Join group queue" : "Leave group queue"}
           </ActionButton>
         )}
+      </div>
       </div>
     </section>
   );

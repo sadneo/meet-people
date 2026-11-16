@@ -15,6 +15,7 @@ import { Blocklist } from "./Safety";
 import { settingsCategories } from './settings-navigation';
 import { MatchingSchedule } from './MatchingSchedule';
 import { PageSkeleton } from './loading/PageSkeleton';
+import { toast } from './feedback';
 
 function MasterSettings({ category }: { category: 'discovery' | 'notifications' }) {
   const current = useCurrent(),
@@ -39,14 +40,7 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
     <section className="account-panel">
       <h3>{category === 'notifications' ? 'Activity notifications' : 'Discovery & location'}</h3>
       {category === 'notifications' && <PushNotificationsToggle />}
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          void current
-            .save({ ...current.account!, settings: draft })
-            .then((ok) => setNotice(ok ? "Preferences saved." : ""));
-        }}
-      >
+      <form onSubmit={(event) => event.preventDefault()}>
         <fieldset disabled={current.busy || !current.available}>
           {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => category === 'notifications' ? key === 'notifications' : key === 'discoverable' || key === 'location').map((key) => (
             <label className="settings-switch" key={key}>
@@ -55,16 +49,24 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
                 type="checkbox"
                 role="switch"
                 checked={draft[key]}
-                onChange={(event) =>
-                  setDraft({ ...draft, [key]: event.target.checked })
-                }
+                onChange={(event) => {
+                  // Switches save as soon as they change; a failed save keeps
+                  // the choice visible until the account is reloaded.
+                  const next = { ...draft, [key]: event.target.checked };
+                  setDraft(next);
+                  setNotice("");
+                  void current.save({ ...current.account!, settings: next }).then((ok) => {
+                    if (!ok) return;
+                    setNotice("Preferences saved.");
+                    toast("Saved");
+                  });
+                }}
               />
             </label>
           ))}
           <p className="account-note">
             {category === 'discovery' ? 'Allows “Use my current location” when choosing a search area in Discover. Your device asks permission when you use it; this switch alone does not request coordinates. You can still search or move the map manually when it is off.' : 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.'}
           </p>
-          <button className="btn">Save</button>
         </fieldset>
         <ErrorMessage>{current.error}</ErrorMessage>
         {current.error && (
@@ -98,12 +100,7 @@ function DetailedForm({
     datingDiscovery: "Dating discovery",
   };
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        void save(value);
-      }}
-    >
+    <form onSubmit={(event) => event.preventDefault()}>
       <fieldset disabled={disabled}>
         {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => key !== 'datingDiscovery' || adult).filter(key => category === 'discovery' ? key === 'friendsDiscovery' || key === 'datingDiscovery' : key === 'messages' || key === 'plans' || key === 'matches').map((key) => (
           <label className="settings-switch" key={key}>
@@ -112,16 +109,17 @@ function DetailedForm({
               role="switch"
               type="checkbox"
               checked={value[key]}
-              onChange={(event) =>
-                setValue({ ...value, [key]: event.target.checked })
-              }
+              onChange={(event) => {
+                const next = { ...value, [key]: event.target.checked };
+                setValue(next);
+                void save(next);
+              }}
             />
           </label>
         ))}
         <p className="account-note">
           {category === 'discovery' ? 'Global discovery takes priority. Pausing a mode keeps existing chats available.' : 'Global notification preferences take priority. Saving a preference doesn’t verify delivery.'}
         </p>
-        <button className="btn">Save</button>
       </fieldset>
     </form>
   );
@@ -145,7 +143,7 @@ function Credentials() {
   );
   return (
     <section className="account-group credential-settings">
-      <details><summary><span><b>Email</b><small>{current.session.user.email || "Your account email"}</small></span><Icon name="ChevronRight"/></summary>
+      <details className="account-row-details"><summary className="account-row"><span><b>Email</b><small>{current.session.user.email || "Your account email"}</small></span><Icon name="ChevronRight"/></summary>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -182,7 +180,7 @@ function Credentials() {
       </form>
       </details>
       <div className="account-row"><span><b>Sign-in methods</b><small>{methods.join(", ") || "Provider information unavailable"}</small></span></div>
-      <details><summary><span><b>Change password</b><small>Confirm your identity before changing it.</small></span><Icon name="ChevronRight"/></summary>
+      <details className="account-row-details"><summary className="account-row"><span><b>Change password</b><small>Confirm your identity before changing it.</small></span><Icon name="ChevronRight"/></summary>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -322,8 +320,10 @@ export function ProfileSettings({ section }: { section: string }) {
                       expectedRevision: detailed.snapshot!.revision,
                       settings,
                     })
-                  )
+                  ) {
                     setNotice("Detailed preferences saved.");
+                    toast("Saved");
+                  }
                 }}
               />
             )}

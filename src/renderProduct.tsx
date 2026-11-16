@@ -10,6 +10,7 @@ import './ui/parity-account.css'
 import './ui/parity-public.css'
 import './ui/parity-social.css'
 import './ui/parity-shell.css'
+import './ui/motion.css'
 
 export function renderProduct(Product: ComponentType) {
   createRoot(document.getElementById('root')!).render(

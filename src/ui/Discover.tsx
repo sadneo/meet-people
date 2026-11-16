@@ -20,6 +20,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { canonicalInterest, interestSelectionProblem } from '../../shared/interests'
 import { MatchingSetup } from './MatchingSetup'
 import { DiscoverModes } from './DiscoverModes'
+import { haptic, prefersReducedMotion } from './feedback'
 export function Connect({
   id,
   dating = false,
@@ -134,6 +135,7 @@ function Candidate({
     else setInterestError('Your interests could not be confirmed. Reload your saved profile before trying again.');
   }
   const content = useRef<HTMLDivElement>(null), moving = useRef(false), live = useRef(true), animation = useRef<Animation | null>(null);
+  const [lean, setLean] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
   useEffect(() => {
     live.current = true;
@@ -142,16 +144,19 @@ function Candidate({
   async function decide(direction: 'pass' | 'connect') {
     if (moving.current) return;
     const action = direction === 'pass' ? onSkip : onConnect;
-    if (!action) return;
+    if (!action || (direction === 'connect' && connectDisabled)) return;
     moving.current = true;
     setTransitioning(true);
+    setLean(direction === 'pass' ? -1 : 1);
+    haptic(direction === 'connect' ? 'medium' : 'light');
     try {
-      if (content.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        const offset = direction === 'pass' ? -10 : 10;
+      if (content.current && !prefersReducedMotion()) {
+        // The card leaves in the chosen direction; the next card rises in.
+        const sign = direction === 'pass' ? -1 : 1, width = content.current.offsetWidth || 360;
         animation.current = content.current.animate([
-          { transform: 'translateX(0) rotate(0deg)' },
-          { transform: `translateX(${offset}px) rotate(${direction === 'pass' ? -.35 : .35}deg)` },
-        ], { duration: 150, easing: 'ease-in', fill: 'forwards' });
+          { transform: 'none' },
+          { transform: `translateX(${sign * (width + 80)}px) rotate(${sign * 14}deg)` },
+        ], { duration: 280, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
         await animation.current.finished;
       }
       if (live.current) action();
@@ -161,7 +166,8 @@ function Candidate({
       animation.current?.cancel();
       animation.current = null;
       moving.current = false;
-      if (live.current) setTransitioning(false);
+      if (content.current) content.current.style.transform = '';
+      if (live.current) { setTransitioning(false); setLean(0); }
     }
   }
   const viewerInterests = new Set(current.account?.profile?.interests.map(canonicalInterest) ?? []);
@@ -173,6 +179,8 @@ function Candidate({
     <div className={`card dating-card ${dating ? '' : 'friends-card'}`}>
       <div className="discovery-profile-content" ref={content}>
       <div className="photo discovery-photo">
+        {onConnect && <><span className="decision-stamp pass" aria-hidden="true" style={{ opacity: Math.max(0, -lean) }}>Pass</span>
+        <span className="decision-stamp connect" aria-hidden="true" style={{ opacity: Math.max(0, lean) }}>{dating ? 'Like' : 'Connect'}</span></>}
         <DiscoverPhotos id={id} name={name} revision={photoRevision} fallback={avatar} active={photoGalleryActive}/>
         <div className="phototext">
         <h2>
@@ -210,7 +218,7 @@ function Candidate({
         <button type="button" className="photo-action primary" aria-label={dating ? 'Send Dating request' : 'Connect'} title={dating ? 'Send Dating request' : 'Send friend request'} disabled={transitioning || connectDisabled} onClick={() => void decide('connect')}><Icon name={dating ? 'Dating' : 'AddFriend'} /></button>
       </div> : <Connect id={id} dating={dating} />}
     </div>
-    {selectedInterest && <Modal title={selectedInterest} close={() => setSelectedInterest(null)}><p>{shared.includes(selectedInterest) ? `You and ${name} both enjoy ${selectedInterest}.` : `${name} enjoys ${selectedInterest}.`}</p><ErrorMessage>{interestError}</ErrorMessage><div className="row wrap"><ActionButton disabled={current.busy || !current.available} onClick={() => void toggleInterest()}>{shared.includes(selectedInterest) ? 'Remove from my interests' : 'Add to my interests'}</ActionButton><Link className="btn light" to="/profile?section=interests">Edit your interests</Link></div></Modal>}
+    {selectedInterest && <Modal variant="sheet" title={selectedInterest} close={() => setSelectedInterest(null)}><p>{shared.includes(selectedInterest) ? `You and ${name} both enjoy ${selectedInterest}.` : `${name} enjoys ${selectedInterest}.`}</p><ErrorMessage>{interestError}</ErrorMessage><div className="row wrap"><ActionButton disabled={current.busy || !current.available} onClick={() => void toggleInterest()}>{shared.includes(selectedInterest) ? 'Remove from my interests' : 'Add to my interests'}</ActionButton><Link className="btn light" to="/profile?section=interests">Edit your interests</Link></div></Modal>}
     </article>
   );
 }
@@ -285,8 +293,8 @@ export function Discover(){
     return saved.source === 'temporary' ? saved.areaLabel : saved.source === 'home' ? home : null;
   }, [mode, token, epoch, home]));
   const revision=JSON.stringify([epoch,current.account?.profile])
-  return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className="area-link" aria-label="Search area & preferences" onClick={()=>setPreferences(true)}>⌖ {area.loading ? 'Search area' : area.error ? 'Check search area' : area.value || 'Choose an area'} <span aria-hidden="true">⌄</span></button></div>
-  <div className="discovertools"><DiscoverModes adult={adult} mode={mode} discoverSearch={search.toString()} onModeChange={setMode}/><div className="row"><button className="round" aria-label={`${mode} preferences`} onClick={()=>setPreferences(true)}><Icon name="DiscoveryPreferences"/></button><Link className="round discovery-activity" to="/matches" aria-label="Matches and activity"><Icon name="DiscoveryActivity" /></Link></div></div>
+  return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className={`area-link ${!area.loading&&!area.value?'needs-area':''}`} aria-label="Search area & preferences" onClick={()=>setPreferences(true)}><Icon name="Location"/><span>{area.loading ? 'Search area' : area.error ? 'Check search area' : area.value || 'Choose an area'}</span><span className="area-chevron" aria-hidden="true">⌄</span></button></div>
+  <div className="discovertools"><DiscoverModes adult={adult} mode={mode} discoverSearch={search.toString()} onModeChange={setMode}/><div className="row discover-tool-row"><button className="discover-tool" aria-label={`${mode} preferences`} onClick={()=>setPreferences(true)}><span className="discover-tool-icon"><Icon name="DiscoveryPreferences"/></span><span className="discover-tool-label" aria-hidden="true">Filters</span></button><Link className="discover-tool discovery-activity" to="/matches" aria-label="Matches and activity"><span className="discover-tool-icon"><Icon name="DiscoveryActivity" /></span><span className="discover-tool-label" aria-hidden="true">Activity</span></Link></div></div>
   <ResourceState loading={!allowance.value && allowance.checking} error={allowance.error} reload={()=>void allowance.refresh()} skeleton={<span className="sr-only" role="status">Checking request availability</span>}/>
  {allowance.limited ? <section className="friends-waiting discovery-request-limit" aria-labelledby="request-limit-title">
   <Icon name="Clock"/><h2 id="request-limit-title">You’ve reached today’s request limit.</h2>

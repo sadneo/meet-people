@@ -6,7 +6,7 @@ import { PageSkeleton } from './loading/PageSkeleton'
 import './parity-account.css'
 import { MatchingSchedule } from './MatchingSchedule';
 import { DatingPreferencesPanel } from './Preferences';
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
 import {
   SaveAccountSchema,
@@ -356,7 +356,7 @@ export function Profile() {
         <div className="row"><button type="button" className="btn light small" onClick={() => setPreview(true)}>Preview</button>{!section && <Link className="round" aria-label="Settings" to="/profile?section=settings"><Icon name="Settings"/></Link>}</div>
       </div>
       {!section ? <div className="profile-overview">
-        <div className="profile-summary"><Avatar name={profile?.display_name ?? ''} url={photo.url} large/><div><h3>{profile?.display_name}</h3><p>{profile?.location_city || 'Add your home area'}</p></div><button className="account-edit-text" aria-label="Edit profile" onClick={() => setSection('basics')}>Edit</button></div>
+        <div className="profile-summary"><ProfileCompletion profile={profile} hasPhoto={!!photo.snapshot?.hasPhoto}><Avatar name={profile?.display_name ?? ''} url={photo.url} large/></ProfileCompletion><div><h3>{profile?.display_name}</h3><p>{profile?.location_city || 'Add your home area'}</p></div><button className="btn light small profile-edit-button" aria-label="Edit profile" onClick={() => setSection('basics')}><Icon name="Edit"/>Edit</button></div>
         <p className="profile-saved-bio">{profile?.bio || 'Add a little about yourself.'}</p>
         <div className="account-group">
           <button className="account-row" onClick={() => setSection('basics')}><span className="account-row-icon"><Icon name="Profile"/></span><span className="account-row-copy"><b>About you</b><small>Photo, bio, hometown & personal details</small></span><Icon name="ChevronRight"/></button>
@@ -369,7 +369,7 @@ export function Profile() {
           {adult && <Link className="account-row" to="/matchmaking?mode=dating&preferences=true"><span className="account-row-icon"><Icon name="Dating"/></span><span className="account-row-copy"><b>Dating preferences</b><small>Who you’d like to date & search area</small></span><Icon name="ChevronRight"/></Link>}
         </div>
       </div> : <>
-        {(section === 'basics' || section === 'interests' || section === 'dating') && <div className="account-segments" role="group" aria-label="Profile sections">{(['basics', 'interests', 'dating'] as const).filter(tab => tab !== 'dating' || adult).map((tab, i) => <button key={tab} aria-pressed={section === tab} onClick={() => setSection(tab)}>{['About You', 'Interests & Availability', 'Dating Profile'][i]}</button>)}</div>}
+        {(section === 'basics' || section === 'interests' || section === 'dating') && <div className="account-segments" role="group" aria-label="Profile sections">{(['basics', 'interests', 'dating'] as const).filter(tab => tab !== 'dating' || adult).map((tab, i) => <button key={tab} aria-pressed={section === tab} aria-label={['About You', 'Interests & Availability', 'Dating Profile'][i]} onClick={() => setSection(tab)}>{['About', 'Interests', 'Dating'][i]}</button>)}</div>}
         <div hidden={section !== 'basics' && section !== 'interests'}>
           <ResourceState loading={facts.loading && !facts.details} error={facts.error} reload={() => void facts.reload()} skeleton={<PageSkeleton view="profile" label="Loading profile details"/>}/>
           {facts.details && <ProfileDraft initial={current.account!} initialFacts={facts.details} factsResource={facts} section={section === 'interests' ? 'interests' : 'basics'} done={closeEditor}/>}
@@ -385,6 +385,16 @@ export function Profile() {
       </Modal>}
     </div>
   );
+}
+
+// A ring around the avatar shows how much of the profile is filled in.
+function ProfileCompletion({ profile, hasPhoto, children }: { profile: Account['profile'] | undefined; hasPhoto: boolean; children: ReactNode }) {
+  const steps = [hasPhoto, !!profile?.bio?.trim(), !!profile?.location_city?.trim(), !!profile?.interests.length, !!profile?.availability.length];
+  const done = steps.filter(Boolean).length, percent = Math.round(done / steps.length * 100);
+  return <div className={`profile-completion ${done === steps.length ? 'is-complete' : ''}`} style={{ '--completion': `${percent}%` } as CSSProperties}>
+    {children}
+    <span className="profile-completion-badge" aria-label={`Profile ${percent}% complete`}>{done === steps.length ? '✓' : `${done}/${steps.length}`}</span>
+  </div>;
 }
 
 function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
@@ -409,6 +419,7 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
   const [source, setSource] = useState(initial.profile);
   const [profile, setProfile] = useState(() => structuredClone(initial.profile!));
   const [facts, setFacts] = useState(() => structuredClone(initialFacts.facts));
+  const dirty = !!photoDraft || JSON.stringify(profile) !== JSON.stringify(source) || JSON.stringify(facts) !== JSON.stringify(initialFacts.facts);
   const [error, setError] = useState(''), [saving, setSaving] = useState(false);
   if (source !== initial.profile) {
     setSource(initial.profile);
@@ -544,6 +555,6 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
       {current.error && <ActionButton secondary onClick={current.reload}>Reload account and replace draft before saving again</ActionButton>}
       {!factsResource.canWrite && <ActionButton secondary disabled={busy} onClick={() => { void factsResource.reload().then(saved => { if (saved) { setFacts(structuredClone(saved.facts)); setError(''); } }); }}>Reload saved optional details to replace this draft</ActionButton>}
     </div>
-    <div className="profile-save-bar"><button className="btn light" type="button" disabled={busy} onClick={done}>Cancel</button><button className="btn" form={formId} disabled={busy || !current.available}>{busy ? 'Saving…' : 'Save changes'}</button></div>
+    <div className={`profile-save-bar ${dirty ? 'is-dirty' : ''}`}>{dirty && <span className="profile-save-status" role="status">Unsaved changes</span>}<button className="btn light" type="button" disabled={busy} onClick={done}>Cancel</button><button className="btn" form={formId} disabled={busy || !current.available}>{busy ? 'Saving…' : 'Save changes'}</button></div>
   </div>;
 }

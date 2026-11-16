@@ -17,7 +17,7 @@ export function useCachedLoad<T>(load: (signal: AbortSignal) => Promise<T>, key:
     ...(options.refetchOnWindowFocus === undefined ? {} : { refetchOnWindowFocus: options.refetchOnWindowFocus }),
   })
   const { refetch } = query
-  const reload = useCallback(() => { void refetch() }, [refetch])
+  const reload = useCallback(() => refetch().then(() => undefined), [refetch])
   return {
     // Retained data is for display only; callers must still gate writes on error/refreshing.
     value: query.isError && !options.retainDataOnError ? null : query.data ?? null,

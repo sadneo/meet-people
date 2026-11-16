@@ -41,7 +41,7 @@ function useCampusDate() {
 function ItemDetails({ item, close }: { item: DiningItem; close: () => void }) {
   const nutrition = Object.entries(item.nutrition ?? {}).filter((entry): entry is [string, number] => entry[1] !== null)
   const serving = [item.serving_size?.amount, item.serving_size?.unit].filter(value => value !== null && value !== undefined && value !== '').join(' ')
-  return <Modal title={item.name} close={close} className="food-item-modal">
+  return <Modal variant="sheet" title={item.name} close={close} className="food-item-modal">
     {item.description && <p>{item.description}</p>}
     {!!item.labels.length && <><div className="food-labels">{item.labels.map(label => <span key={label}>{label}</span>)}</div><p className="mini muted">Dietary and allergen labels are supplied by the dining provider.</p></>}
     {item.ingredients && <section><h3>Ingredients</h3><p>{item.ingredients}</p></section>}

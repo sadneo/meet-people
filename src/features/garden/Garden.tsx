@@ -11,6 +11,8 @@ import { landscapeNames, loadGardenArt, type GardenArt } from './art'
 import { drawGardenSky, gardenProjection } from './sky'
 import { Link } from 'react-router'
 import { Modal } from '../../ui/common'
+import { haptic } from '../../ui/feedback'
+import { CountUp } from '../../ui/CountUp'
 import './garden.css'
 import { WeeklyActivity } from './WeeklyActivity'
 import { recordGardenDay, type GardenSnapshot } from './history'
@@ -32,6 +34,10 @@ export function Garden() {
   const [activityOpen,setActivityOpen]=useState(false), [historyPreview,setHistoryPreview]=useState<{day:string;snapshot:GardenSnapshot}|null>(null)
   const shownCommunity = historyPreview?.snapshot ?? community
   const activityPanel=useRef<HTMLDivElement>(null), activityTrigger=useRef<HTMLButtonElement>(null)
+  // Briefly bounce an item that was just placed or bought.
+  const pop=useRef<{id:string;at:number}|null>(null)
+  const ownedBefore=useRef<string[]|null>(null)
+  useEffect(()=>{const before=ownedBefore.current;ownedBefore.current=community.owned;if(!before)return;const added=community.owned.find(id=>!before.includes(id)&&!isLandscapeUpgrade(id));if(added){pop.current={id:added,at:performance.now()};haptic('success')}},[community.owned])
   const [undo,setUndo]=useState<Community[]>([])
   const [earningOpen,setEarningOpen]=useState(false)
   const dispatch=async(action:GardenAction)=>{
@@ -86,7 +92,7 @@ export function Garden() {
       const layers=[...items.map(item=>({depth:gardenItemDepth(item.id,item.y),item,tree:''})),...(shownCommunity.owned.includes('tree-cluster')?art.trees.map(tree=>({depth:tree.depth,item:null,tree:tree.id})):[])].sort((a,b)=>a.depth-b.depth)
       for(const layer of layers){
         if(layer.tree){art.layer(ctx,layer.tree,t);continue}
-        const item=layer.item!; art.sprite(ctx,item.id,item.x,item.y,item.width,t)
+        const item=layer.item!; const popping=pop.current&&pop.current.id===item.id&&!motion.matches?time-pop.current.at:-1; const bounce=popping>=0&&popping<420?1+.16*Math.sin(Math.PI*popping/420):1; art.sprite(ctx,item.id,item.x,item.y,item.width*bounce,t)
         if(item.id==='lanterns'&&t){ctx.save();ctx.globalAlpha=.08+.05*Math.sin(t);ctx.fillStyle='#ffd977';ctx.beginPath();ctx.arc(item.x,item.y-55,20,0,Math.PI*2);ctx.fill();ctx.restore()}
       }
       if(!painted){painted=true;setSceneReady(true)}
@@ -125,6 +131,7 @@ export function Garden() {
       return
     }
     const drop = {owner, id:current.id, point:current.point}
+    pop.current={id:drop.id,at:performance.now()};haptic('light')
     setPreview(drop)
     // Keep the drop visible through the pre-write refresh and the account write.
     // A late response must not clear a newer gesture.
@@ -133,7 +140,7 @@ export function Garden() {
   }
   const unlocked=community.geodeUnlocks??[],revealed=geodeRocks.find(rock=>rock.id===reveal)
   return <section className="garden-workspace integrated-sky-garden" aria-label="Pebble Garden">
-    <header className="garden-heading"><h1 className="garden-wordmark" aria-label="Your Garden"><img src="/pebble/pebble-wordmark.svg" width="216" height="96" alt=""/></h1><button className="garden-balance" disabled={!sceneReady||!!error} onClick={()=>open()} aria-label={`Build with ${community.balance} Pebbles`}><CurrencyIcon/><strong>{community.balance.toLocaleString()}</strong></button></header>
+    <header className="garden-heading"><h1 className="garden-wordmark" aria-label="Your Garden"><img src="/pebble/pebble-wordmark.svg" width="216" height="96" alt=""/></h1><button className="garden-balance" disabled={!sceneReady||!!error} onClick={()=>open()} aria-label={`Build with ${community.balance} Pebbles`}><CurrencyIcon/><strong><CountUp value={community.balance} live={sceneReady&&!!state.remote}/></strong></button></header>
     <button className="garden-earn-flag" aria-label="How to earn Pebbles" title="How to earn Pebbles" onClick={()=>{closeActivity();setEarningOpen(true);if(!state.preview)void refresh()}}><svg viewBox="0 0 36 44" aria-hidden="true"><path d="M3 2h30v39L18 33 3 41Z"/><path d="M18 11v10m0 6v1"/></svg>{!state.error&&!state.preview&&hasGardenReward(state.remote?.rewards)&&<span className="garden-reward-dot" role="status" aria-label="Reward available"/>}</button>
     {earningOpen&&<EarnPebbles rewards={state.remote?.rewards} disabled={!available||state.preview} claim={earn} error={state.error} refresh={()=>void refresh()} close={()=>setEarningOpen(false)}/>}
     {(state.error||state.preview)&&<div className="garden-account-notice"><p role={state.error?'alert':'status'}>{state.preview?'Test Garden preview — changes are not saved to your account.':state.error}</p><button disabled={state.pending} onClick={()=>{setUndo([]);void refresh()}}>{state.preview?'Return to saved Garden':'Refresh Garden'}</button></div>}
@@ -162,13 +169,13 @@ export function Garden() {
       if(selected&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();void dispatch({type:'nudge-community-item',id:selected,delta:{x:e.key==='ArrowLeft'?-12:e.key==='ArrowRight'?12:0,y:e.key==='ArrowUp'?-12:e.key==='ArrowDown'?12:0}})}
     }}/>
     <div ref={islandTargets} className="garden-friend-islands" aria-label="Illustrative friend islands">{[0,1,2].map(i=><button disabled={!sceneReady||!!error} key={i} className={`garden-friend-island island-${i}`} aria-label="An island for a future friend" onClick={()=>setFriendIsland(true)}/>)}</div>
-    {friendIsland&&<Modal title="Room for a new friend" close={()=>setFriendIsland(false)}><img className="garden-friend-preview" src="/pebble/square-garden-cutout.png" alt="Illustrative pixel garden"/><p>A little island is waiting. Meet someone new and grow your worlds together.</p><p className="mini muted">An illustration, not another person's private Garden.</p><Link className="btn" to="/matchmaking?mode=friends">Discover people</Link></Modal>}
+    {friendIsland&&<Modal variant="sheet" title="Room for a new friend" close={()=>setFriendIsland(false)}><img className="garden-friend-preview" src="/pebble/square-garden-cutout.png" alt="Illustrative pixel garden"/><p>A little island is waiting. Meet someone new and grow your worlds together.</p><p className="mini muted">An illustration, not another person's private Garden.</p><Link className="btn" to="/matchmaking?mode=friends">Discover people</Link></Modal>}
     {selected&&!activityOpen&&<div className="garden-selection" role="group" aria-label="Selected Garden item"><span>{selected==='pebble'?'Your Pebble':upgrades.find(item=>item.id===selected)?.name}</span>{selected!=='pebble'&&<button disabled={!available} onClick={async()=>{if(!(await dispatch({type:'remove-garden-item',id:selected as UpgradeId})).cancelled)setSelected(null)}}>{isGeode(selected)?'Return to inventory':'Remove & refund'}</button>}<button aria-label="Deselect item" onClick={()=>setSelected(null)}><Icon name="close"/></button></div>}
     <div ref={activityPanel} className="garden-bottom">
       {activityOpen ? <WeeklyActivity owner={owner} community={community} preview={historyPreview?.day??null} onPreview={setHistoryPreview} close={()=>{closeActivity();requestAnimationFrame(()=>activityTrigger.current?.focus({preventScroll:true}))}}/> :
         <button ref={activityTrigger} disabled={!sceneReady||!!error} className="garden-activity" aria-label="Open weekly Garden activity" aria-expanded={false} onClick={()=>{if(state.storageAvailable&&!state.preview)recordGardenDay(owner,community);setSelected(null);setPreview(null);drag.current=null;pointers.current.clear();setActivityOpen(true)}}><Icon name="history"/><span>Weekly Activity</span></button>}
     </div>
-    <div className="garden-inventory-dock"><button ref={trigger} disabled={!sceneReady||!!error} className="garden-build" onClick={()=>open()} aria-label="Open Garden inventory" aria-expanded={inventoryOpen} aria-controls="garden-inventory-panel" onPointerDown={e=>{inventoryGesture.current=e.clientY;e.currentTarget.setPointerCapture(e.pointerId)}} onPointerMove={e=>{if(inventoryGesture.current!==null&&inventoryGesture.current-e.clientY>25){inventoryGesture.current=null;open()}}} onPointerUp={()=>{inventoryGesture.current=null}} onPointerCancel={()=>{inventoryGesture.current=null}}><span className="garden-inventory-handle"/><Icon name="build"/></button></div>
+    <div className="garden-inventory-dock"><button ref={trigger} disabled={!sceneReady||!!error} className="garden-build" onClick={()=>open()} aria-label="Open Garden inventory" aria-expanded={inventoryOpen} aria-controls="garden-inventory-panel" onPointerDown={e=>{inventoryGesture.current=e.clientY;e.currentTarget.setPointerCapture(e.pointerId)}} onPointerMove={e=>{if(inventoryGesture.current!==null&&inventoryGesture.current-e.clientY>25){inventoryGesture.current=null;open()}}} onPointerUp={()=>{inventoryGesture.current=null}} onPointerCancel={()=>{inventoryGesture.current=null}}><span className="garden-inventory-handle"/><Icon name="build"/><span className="garden-build-label" aria-hidden="true">Build</span></button></div>
     <p className="garden-sr-only" role="status">{announcement}</p>
     <dialog ref={drawer} id="garden-inventory-panel" className="garden-drawer" aria-labelledby="garden-drawer-title" onCancel={e=>{e.preventDefault();close()}}>
       <span className="garden-inventory-handle" aria-hidden="true"/>

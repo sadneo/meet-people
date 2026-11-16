@@ -143,15 +143,16 @@ test('Dating Like back uses the reciprocal Dating endpoint, not Friends acceptan
   expect(likes).toBe(1)
 })
 
-test('the safety sheet fills the mobile viewport and keeps its action visible', async ({ page }) => {
+test('the safety sheet rises from the bottom edge and keeps its action visible', async ({ page }) => {
   await page.setViewportSize({ width: 630, height: 980 })
   await requestFixture(page)
   await page.goto('/messages/requests')
   await page.getByRole('button', { name: 'Block or report' }).click()
   const dialog = page.getByRole('dialog', { name: 'Safety · Taylor' })
-  await expect(dialog.getByRole('button', { name: 'Send report' })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Send report' })).toBeInViewport()
+  await expect.poll(async () => { const box = (await dialog.boundingBox())!; return Math.round(box.y + box.height) }).toBe(980)
   const bounds = (await dialog.boundingBox())!
-  expect(Math.abs(bounds.x + bounds.width / 2 - 315)).toBeLessThan(1)
-  expect(Math.abs(bounds.y + bounds.height / 2 - 490)).toBeLessThan(1)
-  expect(bounds.height).toBe(980)
+  expect(bounds.x).toBe(0)
+  expect(bounds.width).toBe(630)
+  expect(bounds.height).toBeLessThan(980)
 })

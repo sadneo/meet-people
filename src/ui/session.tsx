@@ -20,7 +20,7 @@ function AdultAdmission() {
     <a href="mailto:pebblesupport.help@gmail.com">Contact support</a>
     <ActionButton secondary onClick={() => setDeleting(true)}>Delete account</ActionButton>
     <ActionButton secondary onClick={() => { void supabase?.auth.signOut({ scope: 'local' }); }}>Sign out</ActionButton>
-    {deleting && <Modal title="Delete account" close={() => setDeleting(false)}><DeleteAccountPanel close={() => setDeleting(false)} /></Modal>}
+    {deleting && <Modal variant="sheet" title="Delete account" close={() => setDeleting(false)}><DeleteAccountPanel close={() => setDeleting(false)} /></Modal>}
   </main>;
 }
 

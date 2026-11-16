@@ -174,7 +174,7 @@ test("event group joining stays closed after the fixture event starts", async ({
   const fixture = await wiringFixture(page);
   await page.goto(`/events/${eventId}`);
   await expect(page.getByRole('heading', { name: 'Group matching closed', exact: true })).toBeVisible();
-  await expect(page.getByText('Group matching is closed for this event.', { exact: true })).toBeVisible();
+  await expect(page.getByText('This event has started or ended, so new groups can’t form.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Join group queue', exact: true })).toHaveCount(0);
   expect(fixture.calls.filter(call => call.path.endsWith('/group-queue') && call.method !== 'GET')).toHaveLength(0);
 });
@@ -260,7 +260,7 @@ test("safety uses the real block API and confirms before writing", async ({
       (call) => call.path.includes("/safety/blocks/") && call.method === "PUT",
     ),
   ).toHaveLength(0);
-  await page.getByRole("button", { name: "Confirm", exact: true }).click();
+  await page.getByRole("button", { name: "Block", exact: true }).click();
   await expect.poll(()=>fixture.calls.filter(call=>call.path.includes('/safety/blocks/')&&call.method==='PUT').length).toBe(1);
 });
 
@@ -408,7 +408,6 @@ test("detailed settings persist to their own revisioned resource", async ({
   await page.goto("/settings");
   await page.getByRole('link', { name: /^Notifications Messages/ }).click();
   await page.getByRole("switch", { name: "Plan notifications" }).check();
-  await page.getByRole('heading', { name: 'Notifications preferences', exact: true }).locator('..').getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByText("Detailed preferences saved.", { exact: true }),
   ).toBeVisible();
