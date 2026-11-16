@@ -24,6 +24,8 @@ for(const width of [320,390,1280])test(`compact earning menu and server-day trac
  await panel.getByRole('button',{name:'Check in',exact:true}).click()
  await expect(panel.getByLabel('Thursday: checked in',{exact:true})).toBeVisible()
  await panel.getByRole('button',{name:'Collect',exact:true}).click()
+ // A claim reads then writes; buttons re-enable briefly between, so wait for the write to land.
+ await expect(panel.locator('.garden-collected-quests summary')).toHaveText('Collected (2)')
  await panel.getByRole('button',{name:'Collect connection reward'}).click()
  await expect(panel.getByText('1 / 2 collected this week')).toBeVisible()
  await panel.getByRole('button',{name:'Collect keep-in-touch reward'}).click()
