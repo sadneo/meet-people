@@ -93,7 +93,7 @@ export async function signInDevelopmentAccount() {
     credentials = await provisionDevelopmentAccount()
     return authenticateDevelopmentAccount(credentials)
   }
-  if (credentials.accountId === 'd0000000-0000-4000-8000-000000000001' && credentials.email === 'pebble-development@example.test') await provisionDevelopmentAccount(credentials)
+  if (credentials.accountId === 'd0000000-0000-4000-8000-000000000001' && credentials.email === 'pebble-development@example.test') credentials = await provisionDevelopmentAccount(credentials)
   return authenticateDevelopmentAccount(credentials)
 }
 
