@@ -61,15 +61,23 @@ function description(value: string | undefined) {
 }
 
 function toEvent(properties: Properties): SbEngagedFeedEvent {
+  const summary = property(properties, 'SUMMARY'), location = property(properties, 'LOCATION')
+  const type = eventType(properties), url = property(properties, 'URL')
   return {
-    summary: property(properties, 'SUMMARY') ? decodeText(property(properties, 'SUMMARY')) : undefined,
+    summary: summary ? decodeText(summary) : undefined,
     description: description(property(properties, 'DESCRIPTION')),
     startsAt: parseDateTime(property(properties, 'DTSTART')) ?? undefined,
     endsAt: parseDateTime(property(properties, 'DTEND')) ?? undefined,
-    location: property(properties, 'LOCATION') ? decodeText(property(properties, 'LOCATION')) : undefined,
-    eventType: eventType(properties) ? decodeText(eventType(properties)) : undefined,
-    url: property(properties, 'URL') ? decodeText(property(properties, 'URL')) : undefined,
+    location: location ? decodeText(location) : undefined,
+    eventType: type ? decodeText(type) : undefined,
+    url: url ? decodeText(url) : undefined,
   }
+}
+
+export function selectSbEngagedWindow(events: SbEngagedFeedEvent[], startsAt: string, endsAt: string) {
+  return events.filter(event => event.startsAt && event.startsAt < endsAt
+    && (event.endsAt ?? event.startsAt) >= startsAt)
+    .sort((left, right) => (left.startsAt ?? '').localeCompare(right.startsAt ?? ''))
 }
 
 export function parseSbEngagedICal(input: string) {

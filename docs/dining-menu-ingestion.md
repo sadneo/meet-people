@@ -3,6 +3,8 @@
 Two Supabase Edge Functions follow the SB Engaged import pattern: authenticated
 POST requests, `smoke`/`full` modes, dry-run by default, deterministic IDs, run
 accounting in `ingestion_runs`, and seven-day retention.
+The `ingest-dining` Edge Function runs both source handlers in one authenticated
+request and reports their results separately.
 
 | Function | Source | Discovery |
 | --- | --- | --- |
@@ -108,7 +110,37 @@ before today. Smoke/partial/failed runs do not perform retention cleanup.
 
 Menus are separate from `listings`, which represents events, restaurants, and
 parks. The new table uses RLS and service-role-only access, matching ingestion
-storage conventions. Release CI deploys both functions; no recurring job is installed.
+storage conventions. Release CI deploys both functions.
+
+## Production schedule
+
+Google Cloud Scheduler in `cse416-meet-people`, region `us-east4`, runs both
+production imports daily at **6:00 a.m. America/New_York**, including daylight
+saving changes (`0 6 * * *`) through one job:
+`pebble-ingest-dining-schedule` calls the `ingest-dining` Edge Function.
+
+It sends authenticated POST requests to production Supabase
+(`wacgxhsdhrqigrmqaonc`) with `{"mode":"full","dryRun":false}`. The function
+runs both existing ingestion handlers concurrently, each with its own run record.
+Both are attempted even if one fails; the combined response reports each result
+and returns a failure HTTP status if either fails. Each refreshes
+the next seven days of available menus, with a three-minute request deadline and
+no automatic retries. Missing or unpublished source days can produce partial
+imports; inspect `ingestion_runs`, since HTTP 200 alone does not mean full coverage.
+
+`scripts/deploy-dining-schedules.mjs` creates or updates this schedule during
+production releases, after Edge Functions, migrations, and hosted secrets are
+configured. It reads the existing ingestion token from production Vault and
+passes it through private temporary files without logging it. This also refreshes
+the Scheduler headers after token rotation. Sandbox releases do not install these
+schedule. The two previous source-specific schedules were removed after verifying
+the combined job. To reconcile manually with an existing Supabase and gcloud login:
+
+```sh
+DEPLOY_ENVIRONMENT=production GCP_PROJECT_ID=cse416-meet-people \
+SUPABASE_URL=https://wacgxhsdhrqigrmqaonc.supabase.co \
+node scripts/deploy-dining-schedules.mjs
+```
 
 ## Browse menus in Pebble
 
@@ -162,7 +194,7 @@ pnpm test:browser tests/browser/food.spec.ts
 
 ```sh
 pnpm test:unit tests/unit/dining-menus.test.ts tests/unit/dining-ingestion.test.ts
-deno check supabase/functions/ingest-nutrislice/index.ts supabase/functions/ingest-sbu-hospital/index.ts
+deno check supabase/functions/ingest-nutrislice/index.ts supabase/functions/ingest-sbu-hospital/index.ts supabase/functions/ingest-dining/index.ts
 docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/dining-menus.sql
 ```
 
