@@ -82,3 +82,18 @@
 @media (max-width: 359px) {
   .matching-photo-row { grid-template-columns: 88px minmax(0, 1fr); gap: 12px; }
 }
+
+/* Step indicator; each step slides in from the right. */
+.setup-progress { display: grid; gap: 8px; margin-bottom: 4px; }
+.setup-progress-label { margin: 0; color: var(--muted); font-size: 13px; font-weight: 600; }
+.setup-progress ol { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.setup-progress li { flex: 1; height: 5px; border-radius: 999px; background: #eadfd3; transition: background-color 300ms ease; }
+.setup-progress li.done { background: #c79a86; }
+.setup-progress li.current { background: #9d503d; }
+.setup-step { display: grid; gap: 14px; min-width: 0; animation: setup-step-in 320ms var(--ease-out) both; }
+.setup-step > h3, .setup-step > p { margin: 0; }
+.setup-step > p { color: var(--muted); line-height: 1.5; }
+@keyframes setup-step-in { from { opacity: 0; transform: translateX(24px); } }
+.matching-setup fieldset { margin-inline: 0; padding-inline: 0; border: 0; min-width: 0; }
+.matching-setup legend { padding-inline: 0; }
+.matching-setup .interest-chips { display: flex; flex-wrap: wrap; gap: 8px; } .matching-setup .interest-chips .chip { margin: 0; }

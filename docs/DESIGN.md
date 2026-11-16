@@ -79,7 +79,9 @@ Dating preferences link to their real preference editors. The five existing acco
 settings categories live in `/profile?section=settings`; each category returns to
 that hub. Editor sections follow the URL, including browser Back/Forward. Mobile
 profile Save/Cancel stays above bottom navigation. Compact account dialogs use
-full-screen sheets; desktop retains centered dialogs.
+full-screen sheets; short tasks (filters, safety, confirmations, member lists,
+Find a group) use content-sized bottom sheets with a drag handle; desktop
+retains centered dialogs.
 
 Matches & Plans has Upcoming, Connections and Past tabs. Populate these only
 from supported services; unsupported plan history must not become sample history.
@@ -88,6 +90,21 @@ The message history scrolls independently of its composer. Forms must fit 320px,
 short screens, large text and the bottom safe area. Dialogs scroll internally and
 support Escape, focus containment and focus return. Keep visible keyboard focus,
 44px controls and reduced-motion behavior.
+
+## Motion and touch feedback
+
+Motion explains change; it never delays a confirmed result. Dialogs and sheets
+lift or slide in and reverse on close. Tabs cross-fade; deeper screens slide in
+from the right and back from the left. Pressed controls scale slightly. New
+messages, newly placed Garden items, earned Pebbles and completed steps get a
+short entrance. Discover cards can be swiped left (pass) or right (connect);
+buttons remain for every decision. Lists support pull-to-refresh on touch while
+keeping a visible Refresh control. Confirmations use a brief toast; errors that
+need a decision stay inline. Native builds add light haptics to key actions.
+Conversations hide the bottom navigation. Text is at least 12px, except 11px
+bottom-tab labels so they still fit at doubled system text. Settings
+switches save as soon as they change. Reduced motion removes all decorative
+movement.
 
 ## Onboarding and matching setup
 

@@ -45,7 +45,7 @@ test('account Garden earns and persists across two browsers through real API and
   const panel=page.getByRole('dialog',{name:'Earn Pebbles'})
   await panel.getByRole('button',{name:'Check in',exact:true}).click();await expect(panel.locator('.garden-collected-quests summary')).toHaveText('Collected (1)')
   await panel.getByRole('button',{name:'Collect',exact:true}).click();await expect(panel.locator('.garden-collected-quests summary')).toHaveText('Collected (2)')
-  await panel.getByRole('button',{name:'Collect connection reward'}).click();await expect(panel.getByRole('button',{name:'Collect connection reward'})).toBeDisabled()
+  await panel.getByRole('button',{name:'Collect connection reward'}).click();await expect(panel.getByRole('button',{name:'Collect connection reward'})).toHaveCount(0);await expect(panel.getByText('Accept a connection',{exact:true})).toBeVisible()
   await expect(panel.getByRole('listitem')).toHaveCount(7);await expect(panel.locator('.checked')).toHaveCount(1)
   await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Build with 450 Pebbles'})).toBeVisible()
   await page.getByRole('button',{name:'Open Garden inventory'}).click();await page.locator('summary[aria-label="Random Pebbles"]').click()

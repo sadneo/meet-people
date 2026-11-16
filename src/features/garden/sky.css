@@ -12,7 +12,7 @@
 .integrated-sky-garden .garden-activity{display:flex;align-items:center;gap:12px;background:#fffdf0df;padding:13px 19px;border:1px solid #fffdf5;border-radius:19px;box-shadow:0 5px 20px #5363460c;text-align:left;color:#333d32}
 .integrated-sky-garden .garden-activity svg{color:#9d6e49;width:24px;height:24px}
 .integrated-sky-garden .garden-activity span{font-size:12px;line-height:1.5;font-weight:600}
-.integrated-sky-garden .garden-activity small{font-size:10px;color:#7c876d;margin-top:3px}
+.integrated-sky-garden .garden-activity small{font-size: 12px;color:#7c876d;margin-top:3px}
 .garden-inventory-dock{position:absolute;bottom:0;right:24px;width:410px;max-width:calc(100% - 48px);z-index:3;border:1px solid #fefdf7;border-bottom:0;border-radius:23px 23px 0 0;background:#fffdf4f5;box-shadow:0 -5px 24px #40513709;overflow:hidden}
 .garden-inventory-dock .garden-build{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;min-height:64px;width:100%;padding:10px 18px 12px;touch-action:none;color:#526349;background:transparent;border:0;cursor:pointer}
 .garden-inventory-handle{display:block;width:34px;height:4px;border-radius:8px;background:#bdc7b2;flex:none}
@@ -28,20 +28,20 @@
 .integrated-sky-garden .garden-drawer header{padding:0 22px 10px;border:0;flex:none}
 .integrated-sky-garden .garden-drawer h2{font-size:24px;font-weight:700;margin:0;letter-spacing:-.6px}
 .integrated-sky-garden .garden-drawer header button{color:#526349}
-.garden-build-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 22px 13px;flex:none;font-size:11px;color:#8a917f}
-.garden-build-meta>span{display:flex;align-items:center;gap:8px;font-size:12px}.garden-build-meta img{width:30px;height:30px}.garden-build-meta button{color:#9d503d;font-size:11px;min-height:44px;background:none;border:0;cursor:pointer}
+.garden-build-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 22px 13px;flex:none;font-size: 12px;color:#8a917f}
+.garden-build-meta>span{display:flex;align-items:center;gap:8px;font-size:12px}.garden-build-meta img{width:30px;height:30px}.garden-build-meta button{color:#9d503d;font-size: 12px;min-height:44px;background:none;border:0;cursor:pointer}
 .integrated-sky-garden .garden-drawer{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .integrated-sky-garden .garden-drawer-body{padding:0 22px 22px;flex:none;overflow:visible}
 .integrated-sky-garden .garden-drawer h3{font-family:inherit;font-size:14px;font-weight:600;color:#68785d}
 .integrated-sky-garden .garden-shop-item{gap:12px;padding:16px 0;border-color:#e7e7d9}
 .integrated-sky-garden .garden-shop-item canvas,.integrated-sky-garden .garden-shop-item>img{width:58px;height:58px;background:#e9eddb;border-radius:14px;padding:5px}
-.integrated-sky-garden .garden-shop-item strong{font-size:13px;font-weight:600}.integrated-sky-garden .garden-shop-item small{font-size:11px;line-height:1.5;color:#8a927c;margin-top:6px}
-.integrated-sky-garden .garden-shop-item button{background:#e9eddb;color:#526349;border:0;min-width:58px;font-size:11px;border-radius:14px}
+.integrated-sky-garden .garden-shop-item strong{font-size:13px;font-weight:600}.integrated-sky-garden .garden-shop-item small{font-size: 12px;line-height:1.5;color:#8a927c;margin-top:6px}
+.integrated-sky-garden .garden-shop-item button{background:#e9eddb;color:#526349;border:0;min-width:58px;font-size: 12px;border-radius:14px}
 .integrated-sky-garden .garden-tools{position:static;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
-.integrated-sky-garden .garden-tools button{width:auto;min-height:36px;padding:8px 10px;font-size:11px;gap:5px;border-color:#e7e7d9;background:transparent;color:#68785d}.integrated-sky-garden .garden-tools svg{width:16px;height:16px}
-.integrated-sky-garden .garden-drawer footer{border-color:#e7e7d9;padding:13px 22px;flex:none}.integrated-sky-garden .garden-drawer footer button{background:none;color:#9d503d;border:0;font-size:11px}
+.integrated-sky-garden .garden-tools button{width:auto;min-height:36px;padding:8px 10px;font-size: 12px;gap:5px;border-color:#e7e7d9;background:transparent;color:#68785d}.integrated-sky-garden .garden-tools svg{width:16px;height:16px}
+.integrated-sky-garden .garden-drawer footer{border-color:#e7e7d9;padding:13px 22px;flex:none}.integrated-sky-garden .garden-drawer footer button{background:none;color:#9d503d;border:0;font-size: 12px}
 @media(max-width:1000px){.garden-inventory-dock{left:0;right:0;width:100%;max-width:none}.integrated-sky-garden .garden-bottom{bottom:84px}.integrated-sky-garden .garden-selection{bottom:84px}}
-@media(max-width:800px){.shell>main.sky-garden-main{height:calc(100dvh - 79px - env(safe-area-inset-bottom,0px));min-height:0}.integrated-sky-garden .garden-heading{top:23px;left:21px;right:20px}.integrated-sky-garden .garden-balance{font-size:12px}.integrated-sky-garden .garden-balance img{width:24px;height:24px}.integrated-sky-garden .garden-bottom{left:17px;bottom:83px}.integrated-sky-garden .garden-activity{padding:11px 14px;gap:8px;border-radius:18px}.integrated-sky-garden .garden-activity span{font-size:11px}.integrated-sky-garden .garden-activity small{font-size:9px}.garden-inventory-dock .garden-build{min-height:62px}.integrated-sky-garden .garden-drawer{width:100%;max-width:none;height:calc(83dvh - 60px);max-height:calc(100dvh - 120px);margin:auto 0 calc(79px + env(safe-area-inset-bottom,0px));border-radius:25px 25px 0 0}}
+@media(max-width:800px){.shell>main.sky-garden-main{height:calc(100dvh - 79px - env(safe-area-inset-bottom,0px));min-height:0}.integrated-sky-garden .garden-heading{top:23px;left:21px;right:20px}.integrated-sky-garden .garden-balance{font-size:12px}.integrated-sky-garden .garden-balance img{width:24px;height:24px}.integrated-sky-garden .garden-bottom{left:17px;bottom:83px}.integrated-sky-garden .garden-activity{padding:11px 14px;gap:8px;border-radius:18px}.integrated-sky-garden .garden-activity span{font-size: 12px}.integrated-sky-garden .garden-activity small{font-size: 12px}.garden-inventory-dock .garden-build{min-height:62px}.integrated-sky-garden .garden-drawer{width:100%;max-width:none;height:calc(83dvh - 60px);max-height:calc(100dvh - 120px);margin:auto 0 calc(79px + env(safe-area-inset-bottom,0px));border-radius:25px 25px 0 0}}
 @media(prefers-reduced-motion:no-preference){.integrated-sky-garden .garden-drawer[open]{animation:garden-inventory-rise .22s cubic-bezier(.22,1,.36,1)}}
 @keyframes garden-inventory-rise{from{transform:translateY(80px)}to{transform:translateY(0)}}
 
@@ -51,7 +51,7 @@
 .garden-build-section>summary::-webkit-details-marker{display:none}
 .garden-build-section>summary svg{width:22px;height:22px;flex:none}
 .garden-build-section>summary span{flex:1}
-.garden-build-section>summary small{font-weight:400;font-size:11px;color:#8a927c}
+.garden-build-section>summary small{font-weight:400;font-size: 12px;color:#8a927c}
 .garden-build-section>summary svg:last-child{width:16px;height:16px}
 .garden-build-section[open]>summary svg:last-child{transform:rotate(180deg)}
 .garden-build-section>summary:focus-visible,.garden-week button:focus-visible{outline:2px solid #9d503d;outline-offset:2px;border-radius:8px}
@@ -60,22 +60,30 @@
 .garden-keyboard-help summary{min-height:44px;align-content:center;cursor:pointer}
 .integrated-sky-garden .garden-drawer footer.garden-build-footer{display:flex;flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px;background:#fffdf5}
 .integrated-sky-garden .garden-build-footer .garden-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0}
-.integrated-sky-garden .garden-build-footer .garden-tools button{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:44px;padding:8px 4px;font-size:11px;border:1px solid #e7e7d9;border-radius:12px;white-space:normal;overflow-wrap:anywhere;color:#526349}
+.integrated-sky-garden .garden-build-footer .garden-tools button{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:44px;padding:8px 4px;font-size: 12px;border:1px solid #e7e7d9;border-radius:12px;white-space:normal;overflow-wrap:anywhere;color:#526349}
 .integrated-sky-garden .garden-build-footer .garden-tools button:last-child{color:#9d503d}
 .integrated-sky-garden .garden-build-footer small{text-align:center;max-width:none;color:#8a927c}
 .garden-week{width:310px;max-width:calc(100vw - 34px);padding:9px 12px 8px;background:#fffdf5;border:1px solid #fffdf9;border-radius:20px;box-shadow:0 8px 28px #31422e14}
 .garden-week header{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .garden-week header>div{display:flex;align-items:baseline;gap:9px}
 .garden-week strong{font-size:12px;color:#333d32}
-.garden-week header span{font-size:10px;color:#7c876d}
+.garden-week header span{font-size: 12px;color:#7c876d}
 .integrated-sky-garden .garden-week header button{border:0;background:none;padding:0;min-height:44px;min-width:44px;justify-content:center}
 .garden-week header svg{width:16px;height:16px}
 .garden-week-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
-.integrated-sky-garden .garden-week-days button{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-width:0;min-height:61px;border:0;border-radius:8px;padding:4px 0;background:transparent;font-size:10px;color:#68785d}
+.integrated-sky-garden .garden-week-days button{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-width:0;min-height:61px;border:0;border-radius:8px;padding:4px 0;background:transparent;font-size: 12px;color:#68785d}
 .integrated-sky-garden .garden-week-days button[aria-pressed=true]{background:#eee0d3;color:#9d503d}
 .garden-week-bar-track{display:flex;height:32px;align-items:flex-end;justify-content:center;width:100%}
 .garden-week-bar{display:block;width:12px;max-width:80%;border-radius:3px 3px 1px 1px;background:#9aa98a}
 .garden-week-days button[aria-pressed=true] .garden-week-bar{background:#9d503d}
 .garden-week-days button:disabled .garden-week-bar{background:#d7dbd0}
-.garden-week p{font-size:9px;color:#8a927c;margin:6px 0 0;text-align:center}
-@media(max-width:360px){.integrated-sky-garden .garden-build-footer .garden-tools button{flex-direction:column;gap:3px;font-size:10px}.garden-week{width:286px}}
+.garden-week p{font-size: 12px;color:#8a927c;margin:6px 0 0;text-align:center}
+@media(max-width:360px){.integrated-sky-garden .garden-build-footer .garden-tools button{flex-direction:column;gap:3px;font-size: 12px}.garden-week{width:286px}}
+/* Build tray label and earning feedback. */
+.garden-inventory-dock .garden-build{gap:5px}
+.garden-build-label{font-size:12px;font-weight:700;letter-spacing:.02em;color:#526349;line-height:1}
+.integrated-sky-garden .garden-balance{position:relative;overflow:visible}
+.integrated-sky-garden .garden-balance strong{font-variant-numeric:tabular-nums}
+.count-gain{position:absolute;right:8px;top:-8px;padding:2px 7px;border-radius:999px;background:#4f7a3a;color:#fffdf5;font-size:12px;font-weight:700;pointer-events:none;animation:count-gain 1.2s var(--ease-out) forwards}
+@keyframes count-gain{0%{opacity:0;transform:translateY(6px) scale(.8)}15%{opacity:1;transform:translateY(0) scale(1.05)}70%{opacity:1;transform:translateY(-10px)}100%{opacity:0;transform:translateY(-18px)}}
+.garden-reward-dot{animation:soft-pulse 2.2s ease-in-out infinite}

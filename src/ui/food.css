@@ -45,7 +45,7 @@
 .food-dish-end { display: flex; align-items: center; gap: 12px; color: #725c4d; font-size: 13px; overflow-wrap: anywhere; }
 .food-dish-end .ui-icon { width: 17px; height: 17px; flex-shrink: 0; }
 .food-labels { display: flex; flex-wrap: wrap; gap: 5px; }
-.food-labels > span { display: inline-block; background: #f0eee4; border-radius: 7px; padding: 3px 7px; font-size: 11px; line-height: 1.5; color: #625c49; font-weight: 400; }
+.food-labels > span { display: inline-block; background: #f0eee4; border-radius: 7px; padding: 3px 7px; font-size: 12px; line-height: 1.5; color: #625c49; font-weight: 400; }
 .food-menu-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 20px 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .food-menu-footer > div { display: flex; flex-direction: column; gap: 6px; }
 .food-menu-footer a { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; color: var(--green); text-underline-offset: 4px; }
@@ -70,7 +70,7 @@
   .food-page-heading p { font-size: 14px; }
   .food-days { gap: 4px; }
   .food-days button { min-height: 70px; border-radius: 13px; }
-  .food-days button > span { font-size: 11px; }
+  .food-days button > span { font-size: 12px; }
   .food-filters { grid-template-columns: 1fr; gap: 12px; }
   .food-menu-heading { padding: 22px 20px; }
   .food-menu-heading h2 { font-size: 24px; }

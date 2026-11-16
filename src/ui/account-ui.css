@@ -820,7 +820,7 @@
 }
 .availability-tools > span {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: #89735d;
   margin: 0 0 8px;
 }
@@ -1085,7 +1085,7 @@
     padding: 11px 12px;
   }
   .account-segments > button {
-    font-size: 11px;
+    font-size: 12px;
   }
   .own-profile-facts {
     grid-template-columns: 1fr;

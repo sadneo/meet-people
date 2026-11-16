@@ -25,3 +25,22 @@
 .onboarding-date label { margin: 0; }
 .onboarding-date input { font-variant-numeric: tabular-nums; }
 .onboarding-card form > .btn { width: 100%; min-height: 48px; }
+
+/* Hints sit under their label; every field keeps the same rhythm. */
+.onboarding-card .account-form > fieldset { display: grid; gap: 16px; }
+.onboarding-card .account-form > fieldset > label { display: grid; gap: 4px; margin: 0; }
+.onboarding-card label small { display: block; margin-bottom: 4px; line-height: 1.4; }
+.onboarding-card label > span,
+.onboarding-birthday legend,
+.onboarding-date label { font-size: 14px; font-weight: 700; }
+.onboarding-birthday { margin: 0; padding: 0; border: 0; min-width: 0; }
+.onboarding-birthday p { margin: 4px 0 8px; line-height: 1.4; }
+.onboarding-date label { display: grid; gap: 6px; font-weight: 600; color: var(--muted); }
+.onboarding-card form > .btn { margin-top: 24px; }
+.onboarding-intro img {
+  animation: pop-in 520ms var(--ease-out) both, gentle-float 3.6s ease-in-out 600ms infinite;
+  transform-origin: 50% 90%;
+}
+.onboarding-card .onboarding-birthday legend { float: left; width: 100%; margin: 0 0 4px; line-height: 1.3; }
+.onboarding-card .onboarding-birthday #birthday-note { clear: both; margin: 0 0 10px; }
+.onboarding-card form > .btn { margin-top: 20px; }

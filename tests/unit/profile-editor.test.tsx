@@ -167,6 +167,6 @@ it('explains the location gate and preserves independent availability on setting
   render(<MemoryRouter><ProfileSettings section="discovery"/></MemoryRouter>);
   fireEvent.click(screen.getByRole('switch', { name: 'Allow device location for search areas' }));
   expect(screen.getByText(/this switch alone does not request coordinates/)).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  // The switch saves immediately.
   await waitFor(() => expect(saveAccount).toHaveBeenCalledWith(expect.objectContaining({ settings: expect.objectContaining({ availability: true, location: true }) })));
 });
