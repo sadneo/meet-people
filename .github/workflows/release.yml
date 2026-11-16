@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -14,22 +14,14 @@ on:
         description: 'Sandbox: dev or its full SHA (default latest dev). Production: full SHA already on main.'
         type: string
         default: ''
-      skip_checks:
-        description: Skip pre-deployment checks (requires override reason)
-        type: boolean
-        default: false
-      override_reason:
-        description: Reason for bypassing checks
-        type: string
-        default: ''
 
 permissions:
   contents: read
 
-# Queue complete production pipelines, preserving release order even if CI times vary.
-# Dev runs have independent groups; only their environment-changing job is locked.
+# Tests run on PRs into dev; releases deploy already-reviewed commits without re-running them.
+# Queue complete production pipelines in release order. Sandbox runs lock only their deploy job.
 concurrency:
-  group: release-${{ (github.event_name == 'push' && github.ref == 'refs/heads/main' || inputs.environment == 'production') && 'production' || github.run_id }}
+  group: release-${{ (github.event_name == 'push' || inputs.environment == 'production') && 'production' || github.run_id }}
   queue: max
   cancel-in-progress: false
 
@@ -40,12 +32,11 @@ jobs:
       sha: ${{ steps.source.outputs.sha }}
       branch: ${{ steps.source.outputs.branch }}
       environment: ${{ steps.source.outputs.environment }}
-      skip_checks: ${{ steps.source.outputs.skip_checks }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Resolve and validate deployment source
@@ -53,22 +44,11 @@ jobs:
         env:
           DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
           SOURCE_REF: ${{ inputs.source_ref }}
-          SKIP_CHECKS: ${{ inputs.skip_checks }}
-          OVERRIDE_REASON: ${{ inputs.override_reason }}
         run: node scripts/resolve-deployment.mjs
 
-  checks:
-    name: Checks
+  prepare:
+    name: Prepare ${{ needs.resolve.outputs.environment }}
     needs: resolve
-    if: needs.resolve.outputs.skip_checks != 'true'
-    uses: ./.github/workflows/ci.yml
-    with:
-      source_sha: ${{ needs.resolve.outputs.sha }}
-
-  prepare-dev:
-    name: Prepare sandbox
-    needs: resolve
-    if: needs.resolve.outputs.environment == 'sandbox'
     permissions:
       contents: read
       id-token: write
@@ -76,32 +56,10 @@ jobs:
     with:
       source_sha: ${{ needs.resolve.outputs.sha }}
       source_branch: ${{ needs.resolve.outputs.branch }}
-      environment: sandbox
-
-  prepare-production:
-    name: Prepare production
-    needs: [resolve, checks]
-    if: >-
-      always() && !cancelled() && needs.resolve.result == 'success' &&
-      needs.resolve.outputs.environment == 'production' &&
-      (needs.checks.result == 'success' ||
-       (needs.resolve.outputs.skip_checks == 'true' && needs.checks.result == 'skipped'))
-    permissions:
-      contents: read
-      id-token: write
-    uses: ./.github/workflows/prepare.yml
-    with:
-      source_sha: ${{ needs.resolve.outputs.sha }}
-      source_branch: ${{ needs.resolve.outputs.branch }}
-      environment: production
+      environment: ${{ needs.resolve.outputs.environment }}
 
   deploy:
-    needs: [resolve, checks, prepare-dev, prepare-production]
-    if: >-
-      always() && !cancelled() && needs.resolve.result == 'success' &&
-      (needs.checks.result == 'success' ||
-       (needs.resolve.outputs.skip_checks == 'true' && needs.checks.result == 'skipped')) &&
-      (needs.prepare-dev.result == 'success' || needs.prepare-production.result == 'success')
+    needs: [resolve, prepare]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: ${{ needs.resolve.outputs.environment }}
@@ -131,23 +89,21 @@ jobs:
       VITE_GOOGLE_MAPS_API_KEY: ${{ vars.VITE_GOOGLE_MAPS_API_KEY }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       RELEASE_SHA: ${{ needs.resolve.outputs.sha }}
-      API_IMAGE: ${{ needs.prepare-dev.outputs.image || needs.prepare-production.outputs.image }}
+      API_IMAGE: ${{ needs.prepare.outputs.image }}
       VITE_BUILD_SHA: ${{ needs.resolve.outputs.sha }}
       VITE_BUILD_BRANCH: ${{ needs.resolve.outputs.branch }}
       EVENT_GROUP_WORKER_ENABLED: 'false'
       HOSTED_CONFIG_WORKDIR: hosting/deployment
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve.outputs.sha }}
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
-      - name: Reject superseded automatic sandbox releases before making changes
-        run: node scripts/resolve-deployment.mjs --check-current
       - run: pnpm install --frozen-lockfile
       - name: Validate isolated deployment settings
         run: node scripts/configure-deployment.mjs
@@ -157,7 +113,7 @@ jobs:
           service_account: ${{ vars.GCP_DEPLOY_SA_EMAIL }}
       - uses: google-github-actions/setup-gcloud@v3
       - name: Download this run's prepared frontend
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-${{ needs.resolve.outputs.environment }}-${{ needs.resolve.outputs.sha }}
           path: dist
@@ -227,14 +183,12 @@ jobs:
         if: always()
         env:
           SOURCE_BRANCH: ${{ needs.resolve.outputs.branch }}
-          SKIPPED_CHECKS: ${{ needs.resolve.outputs.skip_checks }}
-          OVERRIDE_REASON: ${{ inputs.override_reason }}
           DEPLOY_RESULT: ${{ job.status }}
         run: |
           node --input-type=module <<'JS'
           import { appendFileSync } from 'node:fs'
           const e = process.env
-          const lines = [`### ${e.DEPLOY_ENVIRONMENT} deployment: ${e.DEPLOY_RESULT}`, `- Actor: ${e.GITHUB_ACTOR}`, `- Branch: ${e.SOURCE_BRANCH}`, `- Commit: ${e.RELEASE_SHA}`, `- Checks skipped: ${e.SKIPPED_CHECKS}`, `- Override reason: ${JSON.stringify(e.OVERRIDE_REASON || '')}`, `- Web site: https://${e.FIREBASE_WEB_SITE_ID}.web.app`, `- Image: ${e.API_IMAGE || 'not built'}`, '- Worker: disabled; not executed or scheduled']
+          const lines = [`### ${e.DEPLOY_ENVIRONMENT} deployment: ${e.DEPLOY_RESULT}`, `- Actor: ${e.GITHUB_ACTOR}`, `- Branch: ${e.SOURCE_BRANCH}`, `- Commit: ${e.RELEASE_SHA}`, `- Web site: https://${e.FIREBASE_WEB_SITE_ID}.web.app`, `- Image: ${e.API_IMAGE || 'not built'}`, '- Worker: disabled; not executed or scheduled']
           if (e.DEPLOY_ENVIRONMENT === 'sandbox') lines.push(`- Mobile site: https://${e.FIREBASE_MOBILE_SITE_ID}.web.app`)
           lines.push(`- Custom domains: ${e.DEPLOY_ENVIRONMENT === 'sandbox' ? 'https://web.dev.pebble.garden, https://mobile.dev.pebble.garden' : 'https://pebble.garden'}`)
           appendFileSync(e.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n')
