@@ -23,6 +23,7 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/onboarding` | Guided four-stone journey from the original dev flow, with a welcome scene and confirmed completion screen. About you (identity, private birthdate, home area), interests (1–5, premade or custom; at most 2 custom), social intentions, then weekly availability, general plan preferences and an explicit saved timezone. Each chapter persists and resumes from confirmed account data. Dating and group/event queues retain separate opt-in. |
 | `/home`, `/community` | Integrated pixel-art Garden; account-backed inventory, placement, Random Pebble unlocks and capped earning rewards; weekly scene history stays device-local |
 | `/matchmaking` | Passive Friends/Dating recommendations, consent and search preferences |
+| `/matchmaking/food` | Food menus reached from Discover; campus-date picker, dining location and meal choices, dish search and published ingredient/nutrition details. Authenticated reads of imported campus and hospital snapshots; no sample dishes or inferred opening hours. |
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
 | Web `/explore`, `/explore/:id` | Public event reads; installation link for group participation |
 | `/messages`, `/messages/chat?conversation=…` | Saved inbox, history, read state and idempotent sends |

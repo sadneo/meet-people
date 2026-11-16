@@ -33,7 +33,8 @@ it('strict commands reject client-selected geodes, arbitrary undo snapshots and 
  expect(GardenCommandSchema.safeParse({...request,action:'move',id:'bench'}).success).toBe(false)
 })
 it('SQL prices stay in sync with the existing Garden catalog',()=>{
- const migration=readFileSync('supabase/migrations/20261105000000_garden_economy.sql','utf8')
+ const migration=['20261105000000_garden_economy.sql','20261113010000_garden_cave.sql']
+  .map(name=>readFileSync(`supabase/migrations/${name}`,'utf8')).join('\n')
  for(const item of upgrades)expect(migration).toContain(`('${item.id}',${item.cost},`)
 })
 it('social claims reach the owner RPC without client-selected evidence or payouts',async()=>{

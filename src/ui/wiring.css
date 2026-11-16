@@ -321,8 +321,8 @@ legend {
     z-index: 30;
   }
   .discovery-page .discovery-profile .dating-card .discovery-photo {
-    /* Reserve the header, thumb actions and navigation before sizing the photo. */
-    height: clamp(200px, calc(100dvh - 340px - env(safe-area-inset-bottom)), 650px);
+    /* Reserve the header, Food menus row, thumb actions and navigation. */
+    height: clamp(160px, calc(100dvh - 400px - env(safe-area-inset-bottom)), 650px);
   }
 }
 .development-navigator .devquick button {

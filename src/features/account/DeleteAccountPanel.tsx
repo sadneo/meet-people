@@ -33,8 +33,8 @@ export function DeleteAccountPanel({ close }: { close: () => void }) {
   }
 
   return <div className="pt-delete-account">
-    <p><strong>This permanently deletes your Pebble account and signs you out everywhere.</strong> It cannot be undone.</p>
-    <p>Your profile, photos, preferences, matches and connections are removed. Messages you already sent may remain visible to other people, and some copies can persist in logs or backups for a limited time.</p>
+    <p><strong>This permanently deletes your Pebble account and signs you out on this device.</strong> It cannot be undone.</p>
+    <p>Your profile, current photo, preferences, Garden and device registrations are removed under the account deletion rules. Some conversation history, recipient copies, safety records and logs may remain. Other devices can retain previously loaded content. Contact support for deletion or retention questions.</p>
     <label>Type <strong>{DELETE_CONFIRM_WORD}</strong> to confirm
       <input value={typed} onChange={event => setTyped(event.target.value)} autoComplete="off" autoCapitalize="characters" spellCheck={false} aria-label={`Type ${DELETE_CONFIRM_WORD} to confirm`} disabled={busy} />
     </label>

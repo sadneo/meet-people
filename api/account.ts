@@ -31,7 +31,7 @@ export function createAccountRouter(client: Pick<SupabaseClient, 'auth'> | null)
     const { error: deleteError } = await client.auth.admin.deleteUser(data.user.id)
     if (deleteError) {
       console.error('Account deletion failed', { userId: data.user.id, status: deleteError.status, code: deleteError.code })
-      response.status(502).json({ error: 'Your account could not be deleted. Nothing was changed. Try again or email support.' })
+      response.status(502).json({ error: 'Account deletion could not be confirmed. Check whether you can still sign in, or email support before trying again.' })
       return
     }
     response.status(204).end()

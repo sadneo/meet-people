@@ -35,7 +35,7 @@
     "test": "pnpm test:unit",
     "test:unit": "vitest run --config vite.config.ts",
     "test:alt": "node src/alt/tests/account-ui.check.cjs",
-    "test:deployment": "node --test tests/deployment.test.mjs",
+    "test:deployment": "node --test tests/deployment.test.mjs tests/production-migration-audit.test.mjs tests/production-recovery.test.mjs",
     "test:demo-populate": "tsx tests/integration/offline/demo-scenarios.ts",
 
     "test:browser": "playwright test --config playwright.config.ts",
@@ -62,6 +62,10 @@
     "supabase:check": "pnpm supabase:reset && pnpm supabase:types && git diff --exit-code -- src/types/database.ts",
     "supabase:functions:serve": "sh scripts/supabase.sh functions serve ingest-ticketmaster --env-file supabase/.env",
     "supabase:functions:serve:sbengaged": "sh scripts/supabase.sh functions serve ingest-sbengaged --env-file supabase/.env",
+    "supabase:functions:serve:nutrislice": "sh scripts/supabase.sh functions serve ingest-nutrislice --env-file supabase/.env",
+    "supabase:functions:serve:hospital": "sh scripts/supabase.sh functions serve ingest-sbu-hospital --env-file supabase/.env",
+    "dining:scrape": "tsx scripts/scrape-dining-menus.ts",
+    "dining:preview": "tsx tools/dining-preview/server.ts",
 
     "build:android": "vite build --config vite.mobile.config.ts --mode android && cap sync android",
     "android": "pnpm build:android && cap open android",

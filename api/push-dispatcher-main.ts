@@ -7,14 +7,16 @@ if (process.env.PUSH_DISPATCH_ENABLED !== 'true') {
   console.info('Push dispatcher paused; set PUSH_DISPATCH_ENABLED=true to send notifications.')
 } else {
   const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, FIREBASE_PROJECT_ID, FIREBASE_SERVICE_ACCOUNT_JSON } = process.env
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !FIREBASE_PROJECT_ID || !FIREBASE_SERVICE_ACCOUNT_JSON) {
-    console.error('Push dispatcher needs SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT_JSON.')
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !FIREBASE_PROJECT_ID) {
+    console.error('Push dispatcher needs SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and FIREBASE_PROJECT_ID.')
     process.exit(1)
   }
-  let serviceAccount: { client_email: string; private_key: string }
+  let serviceAccount: { client_email: string; private_key: string } | undefined
   try {
-    serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON)
-    if (!serviceAccount.client_email || !serviceAccount.private_key) throw new Error('missing fields')
+    if (FIREBASE_SERVICE_ACCOUNT_JSON) {
+      serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON)
+      if (!serviceAccount?.client_email || !serviceAccount.private_key) throw new Error('missing fields')
+    }
   } catch {
     console.error('FIREBASE_SERVICE_ACCOUNT_JSON must be the service-account key JSON.')
     process.exit(1)

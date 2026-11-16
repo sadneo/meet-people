@@ -64,6 +64,12 @@ begin
   raise exception 'Duplicate reward was accepted';
  exception when sqlstate 'GR400' then null;
  end;
+ result:=public.garden_account(jsonb_build_object('action','build','id','cave','requestId',gen_random_uuid(),'revision',result->'revision'));
+ assert (result#>>'{community,balance}')::integer=180 and (result#>'{community,owned}') ? 'cave', 'Cave purchase failed';
+ result:=public.garden_account(jsonb_build_object('action','move','id','cave','position',jsonb_build_object('x',696,'y',660),'requestId',gen_random_uuid(),'revision',result->'revision'));
+ assert public.garden_account(null)#>'{community,positions,cave}'='{"x":696,"y":660}'::jsonb, 'Cave move was not saved';
+ result:=public.garden_account(jsonb_build_object('action','reset','requestId',gen_random_uuid(),'revision',result->'revision'));
+ assert (result#>>'{community,balance}')::integer=330 and not ((result#>'{community,owned}') ? 'cave'), 'Cave reset refund failed';
  perform set_config('role','none',true);
  assert not exists(select 1 from garden_private.social_candidates(a,false)), 'Previously rewarded peer must stay excluded';
  assert exists(select 1 from garden_private.social_candidates(b,false)), 'The other participant has their own reward';

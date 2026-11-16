@@ -88,12 +88,13 @@ describe('createFcmSender', () => {
     expect(Object.keys(body.message.data)).toEqual(['kind'])
   })
   it('reports dead tokens', async () => {
-    expect(await make({ status: 404, body: { error: { status: 'NOT_FOUND' } } }).send('tok', message)).toBe('unregistered')
+    expect(await make({ status: 404, body: { error: { status: 'NOT_FOUND', details: [{ errorCode: 'UNREGISTERED' }] } } }).send('tok', message)).toBe('unregistered')
     expect(await make({ status: 400, body: { error: { status: 'NOT_FOUND', details: [{ errorCode: 'UNREGISTERED' }] } } }).send('tok', message)).toBe('unregistered')
     expect(await make({ status: 400, body: { error: { status: 'INVALID_ARGUMENT', message: 'The registration token is not a valid FCM registration token' } } }).send('tok', message)).toBe('unregistered')
   })
   it('never deletes a device because of our own payload or credential errors', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    expect(await make({ status: 404, body: { error: { status: 'NOT_FOUND' } } }).send('tok', message)).toBe('retry')
     expect(await make({ status: 400, body: { error: { status: 'INVALID_ARGUMENT', message: 'Invalid JSON payload' } } }).send('tok', message)).toBe('retry')
     expect(await make({ status: 401, body: { error: { status: 'UNAUTHENTICATED' } } }).send('tok', message)).toBe('retry')
     expect(await make({ status: 503 }).send('tok', message)).toBe('retry')

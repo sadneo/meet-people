@@ -32,8 +32,8 @@ This verifies sustained in-app conversation, **not** a real meeting or the quali
 conversation. Determined coordinated accounts can still qualify within the caps;
 there is no claim that software can prove friendship or eliminate all collusion.
 No attendance or real-world-meeting claims. The current Event Group UI explicitly
-states that suggested groups do not confirm attendance, so there is no event reward. All current item prices are unchanged:
-decorations 10–70, landscapes 20–80, buildings 90/120, rare/random rocks 300.
+states that suggested groups do not confirm attendance, so there is no event reward. Current item prices:
+decorations 10–70, landscapes 20–80, buildings 90/120/150 (Pebble Cave costs 150), rare/random rocks 300.
 The starter allowance can buy a rock immediately or a useful collection of basic
 items; ongoing check-ins fund a 300-Pebble collectible in roughly two weeks.
 

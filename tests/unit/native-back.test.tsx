@@ -163,6 +163,7 @@ describe('native Back policy', () => {
     ['/messages/chat', '?conversation=123', '/messages'],
     ['/messages/requests', '', '/messages'],
     ['/events/123', '', '/events'],
+    ['/matchmaking/food', '?date=2026-11-06', '/matchmaking'],
     ['/profile', '?section=settings', '/profile'],
     ['/register', '', '/login'],
     ['/auth/forgot-password', '', '/login'],

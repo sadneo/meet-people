@@ -3,6 +3,7 @@ import { createGardenRouter } from './garden.js'
 import { createClient } from '@supabase/supabase-js'
 import { env } from './env.js'
 import { createEventsRouter } from './events.js'
+import { createDiningRouter } from './dining.js'
 import { createAuthRouter } from './auth.js'
 import { createAccountRouter } from './account.js'
 import { createPushRouter } from './push.js'
@@ -67,13 +68,14 @@ const friendsScoring = matchingConfig
 const activeWorker = matchingConfig
   ? createActiveFriendsWorker(matchingConfig.url, matchingConfig.serviceKey)
   : null
-const mapLocations = env.GOOGLE_MAPS_STORAGE_APPROVED === 'true' && env.GOOGLE_MAPS_SERVER_API_KEY && env.SEARCH_LOCATION_SIGNING_KEY
-  ? createGoogleSearchLocations({ apiKey: env.GOOGLE_MAPS_SERVER_API_KEY, signingKey: env.SEARCH_LOCATION_SIGNING_KEY })
+const mapLocations = env.GOOGLE_MAPS_STORAGE_APPROVED === 'true' && (env.GOOGLE_MAPS_OAUTH_PROJECT || env.GOOGLE_MAPS_SERVER_API_KEY) && env.SEARCH_LOCATION_SIGNING_KEY
+  ? createGoogleSearchLocations({ apiKey: env.GOOGLE_MAPS_SERVER_API_KEY, oauthProject: env.GOOGLE_MAPS_OAUTH_PROJECT, signingKey: env.SEARCH_LOCATION_SIGNING_KEY })
   : null
 app.use('/api/matchmaking', boundedMatchingBodyError, createMatchmakingRouter(ownerTransport, datingScoring, friendsScoring, activeWorker, mapLocations, env.GOOGLE_MAPS_REQUESTS_PER_DAY))
 app.use('/api/connections', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'connections'))
 app.use('/api/conversations', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'conversations'))
 app.use('/api/garden', createGardenRouter(ownerTransport))
+app.use('/api/dining', createDiningRouter(eventsClient, ownerTransport))
 
 app.get('/api/health', (_request, response) => {
   response.json(HealthResponseSchema.parse({ status: 'ok' }))
