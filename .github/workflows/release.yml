@@ -42,10 +42,10 @@ jobs:
       environment: ${{ steps.source.outputs.environment }}
       skip_checks: ${{ steps.source.outputs.skip_checks }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Resolve and validate deployment source
@@ -137,12 +137,12 @@ jobs:
       EVENT_GROUP_WORKER_ENABLED: 'false'
       HOSTED_CONFIG_WORKDIR: hosting/deployment
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve.outputs.sha }}
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -157,7 +157,7 @@ jobs:
           service_account: ${{ vars.GCP_DEPLOY_SA_EMAIL }}
       - uses: google-github-actions/setup-gcloud@v3
       - name: Download this run's prepared frontend
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-${{ needs.resolve.outputs.environment }}-${{ needs.resolve.outputs.sha }}
           path: dist
