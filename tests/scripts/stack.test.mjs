@@ -4,7 +4,7 @@ import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, reapTestStacks, stackEnv } from '../../scripts/lib/stack.mjs'
+import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, reapTestStacks, removeStack, stackEnv } from '../../scripts/lib/stack.mjs'
 
 const stack = { projectId: 'meet-people-x', ports: { api: 1, db: 2, shadow: 3, studio: 4, mail: 5 }, apiUrl: 'http://127.0.0.1:1', dbContainer: 'supabase_db_meet-people-x' }
 const tmp = () => mkdtempSync(join(tmpdir(), 'stack-test-'))
@@ -109,6 +109,37 @@ test('reap tolerates objects removed between listing and inspect', async () => {
   }
   const removed = []
   assert.deepEqual(await reapTestStacks({ container, owner: () => undefined, remove: async id => { removed.push(id) } }), ['meet-people-test-a', 'meet-people-test-c'])
+})
+
+const fakeEngine = ({ rmFails = {}, stuck = [] } = {}) => {
+  const present = { ps: ['c1'], volume: ['v1'], network: ['n1'] }
+  const calls = []
+  const container = async args => {
+    calls.push(args)
+    const kind = ['volume', 'network'].includes(args[0]) ? args[0] : 'ps'
+    const action = args.includes('ls') || args[0] === 'ps' ? 'ls' : 'rm'
+    if (action === 'ls') return present[kind].join('\n')
+    const id = args.at(-1)
+    if (rmFails[kind]) { if (!stuck.includes(kind)) present[kind] = present[kind].filter(item => item !== id); throw new Error(rmFails[kind]) }
+    present[kind] = present[kind].filter(item => item !== id)
+    return id
+  }
+  return { container, calls }
+}
+
+test('removeStack tolerates objects another reaper already removed', async () => {
+  const { container } = fakeEngine({ rmFails: { network: 'Error: no such network: n1' } })
+  await removeStack('meet-people-test-a', { container })
+})
+
+test('removeStack still throws when something with the label remains', async () => {
+  const { container } = fakeEngine({ rmFails: { network: 'Error: no such network: n1' }, stuck: ['network'] })
+  await assert.rejects(removeStack('meet-people-test-a', { container }), /Could not remove n1/)
+})
+
+test('removeStack rethrows unrelated errors', async () => {
+  const { container } = fakeEngine({ rmFails: { volume: 'volume is in use' } })
+  await assert.rejects(removeStack('meet-people-test-a', { container }), /in use/)
 })
 
 test('assertLocalStack accepts only the stack origin', () => {

@@ -108,13 +108,19 @@ export async function startStack(stack, { minimal = false, workdir, siteUrl } = 
   return { apiUrl: stack.apiUrl, publishableKey: status.PUBLISHABLE_KEY, anonKey: status.ANON_KEY, serviceRoleKey: status.SERVICE_ROLE_KEY }
 }
 
+const vanished = /no such|not found|no (container|volume|network) with/i
+
 export async function removeStack(projectId, { container = engine } = {}) {
   const filter = ['--filter', `label=${label}=${projectId}`]
   const ids = async args => lines(await container([...args, '-q', ...filter]))
-  const rm = async (args, list) => { if (list.length) await container([...args, ...list]) }
-  await rm(['rm', '-f'], await ids(['ps', '-a']))
-  await rm(['volume', 'rm', '-f'], await ids(['volume', 'ls']))
-  await rm(['network', 'rm'], await ids(['network', 'ls']))
+  const remove = async (args, id) => {
+    try { await container([...args, id]) } catch (error) { if (!vanished.test(error.message)) throw error }
+  }
+  for (const [list, rm] of [[['ps', '-a'], ['rm', '-f']], [['volume', 'ls'], ['volume', 'rm', '-f']], [['network', 'ls'], ['network', 'rm']]]) {
+    for (const id of await ids(list)) await remove(rm, id)
+    const left = await ids(list)
+    if (left.length) throw new Error(`Could not remove ${left.join(', ')} for ${projectId}.`)
+  }
   rmSync(ownerFile(projectId), { force: true })
 }
 
