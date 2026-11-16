@@ -1757,6 +1757,44 @@ export type Database = {
       save_matchmaking_profile: { Args: { profile_in: Json }; Returns: Json }
       save_profile_details: { Args: { details_in: Json }; Returns: Json }
       save_profile_photo: { Args: { photo_in: Json }; Returns: Json }
+      sbengaged_begin_sync: { Args: { p_mode: string }; Returns: Json }
+      sbengaged_claim_photos: { Args: never; Returns: Json }
+      sbengaged_complete_photo: {
+        Args: {
+          p_http: number
+          p_id: string
+          p_image: string
+          p_outcome: string
+          p_retry_seconds: number
+          p_token: string
+        }
+        Returns: undefined
+      }
+      sbengaged_export_snapshot: { Args: never; Returns: Json }
+      sbengaged_finish_sync: {
+        Args: {
+          p_ends: string
+          p_full: boolean
+          p_seen: string[]
+          p_starts: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      sbengaged_origin_cooldown: {
+        Args: { p_seconds: number }
+        Returns: undefined
+      }
+      sbengaged_release_photos: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
+      sbengaged_release_sync: { Args: { p_token: string }; Returns: undefined }
+      sbengaged_runtime_config: { Args: never; Returns: Json }
+      sbengaged_upsert_events: {
+        Args: { p_rows: Json; p_token: string }
+        Returns: number
+      }
       search_location_places: { Args: { query_in: string }; Returns: Json }
       search_people: {
         Args: { max_results?: number; q: string }
