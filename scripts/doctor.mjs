@@ -5,6 +5,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseEnv, promisify } from 'node:util'
+import { credentialsDir, currentStack } from './lib/stack.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const execute = promisify(execFile)
@@ -36,7 +37,7 @@ async function occupied(port) {
 // All external operations are injected so tests need no Docker, ports or credentials.
 export async function diagnose({ directory = root, env = process.env, node = process.versions.node,
   home = homedir(), uid = process.getuid?.(), run = execute, read = readFile,
-  stat = lstat, probe = occupied } = {}) {
+  stat = lstat, probe = occupied, stack = currentStack(directory, env) } = {}) {
   const checks = []
   const add = (id, status, message) => checks.push({ id, status, message })
   const command = async (file, args, extra = {}) => {
@@ -99,14 +100,15 @@ export async function diagnose({ directory = root, env = process.env, node = pro
   const docker = (args) => command('docker', args, { env: dockerEnv })
   const engine = await docker(['info', '--format', '{{json .ServerVersion}}'])
   add('docker', engine ? 'pass' : 'fail', engine ? 'Docker-compatible engine is reachable.' : 'Docker-compatible engine is unavailable. Start it or review DOCKER_HOST/socket permissions.')
-  if (engine) {
-    const metadata = await docker(['inspect', '--format', '{"running":{{json .State.Running}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}}}', 'supabase_db_meet-people'])
+  if (engine && !stack) add('supabase-db', 'fail', 'No local stack for this worktree. Run pnpm dev first.')
+  else if (engine) {
+    const metadata = await docker(['inspect', '--format', '{"running":{{json .State.Running}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}}}', stack.dbContainer])
     let owned = false
-    try { const container = JSON.parse(metadata); owned = container.running === true && container.project === 'meet-people' } catch { /* Fail closed. */ }
+    try { const container = JSON.parse(metadata); owned = container.running === true && container.project === stack.projectId } catch { /* Fail closed. */ }
     add('supabase-db', owned ? 'pass' : 'fail', owned ? 'Expected local Supabase database container is running.' : 'Expected local database is absent, stopped, or has unexpected ownership. Review pnpm supabase:start; doctor starts nothing.')
     if (owned) {
       // No application RPCs are invoked. The session itself is read-only and bounded.
-      const result = await docker(['exec', '-e', 'PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=3000', 'supabase_db_meet-people', 'psql', '-X', '-qAt', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', schemaQuery])
+      const result = await docker(['exec', '-e', 'PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=3000', stack.dbContainer, 'psql', '-X', '-qAt', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', schemaQuery])
       try {
         const schema = JSON.parse(result)
         if (!Array.isArray(schema.missing) || schema.missing.some(name => !signatures.includes(name)) || typeof schema.worker !== 'boolean') throw new Error('Unexpected schema response')
@@ -116,7 +118,7 @@ export async function diagnose({ directory = root, env = process.env, node = pro
     }
   }
   try {
-    const file = await stat(join(home, '.local/share/pebble/development-account.json'))
+    const file = await stat(join(credentialsDir(stack?.projectId ?? 'meet-people', home), 'development-account.json'))
     const safe = file.isFile() && (uid === undefined || file.uid === uid) && (file.mode & 0o7777) === 0o600 && file.size <= 8192
     add('development-login', safe ? 'pass' : 'warn', safe ? 'Development credential file metadata is valid; contents, authentication and onboarding were not checked.' : 'Optional development credential file has unsafe type, ownership, permissions or size. Review dev/development-login.ts; doctor does not read it.')
   } catch { add('development-login', 'warn', 'Optional development credential file is absent or inaccessible. Normal sign-in remains available; doctor does not provision accounts.') }

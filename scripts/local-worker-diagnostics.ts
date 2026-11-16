@@ -3,8 +3,8 @@ import type { WorkerDiagnostic } from '../api/event-group-worker.js'
 const stages = {
   runtime: ['runtime', 'Check command arguments and run pnpm run doctor.'],
   database: ['local_database', 'Check Docker and the owned local Supabase project with pnpm run doctor. Doctor starts nothing.'],
-  configuration: ['local_configuration', 'Check pnpm exec supabase status and the loopback API on port 54321. Do not share its keys or raw output.'],
-  credentials: ['private_credentials', 'Check the fixed ~/.local/share/pebble/event-group-worker.json file: owner-only 0600, regular non-symlink, valid contents. Do not delete or publish it.'],
+  configuration: ['local_configuration', "Check pnpm exec supabase status and the current stack's API (see pnpm dev --help). Do not share its keys or raw output."],
+  credentials: ['private_credentials', 'Check the <credentialsDir>/event-group-worker.json file: owner-only 0600, regular non-symlink, valid contents. Do not delete or publish it.'],
   identity: ['worker_identity', 'Check local Auth availability and existing worker identity ownership. Do not replace its identity or reset its password to bypass this check.'],
   provisioning: ['worker_provisioning', 'Account creation may already have succeeded. Inspect the existing marked worker identity before explicitly restarting; do not delete credentials or create a replacement.'],
   policySetup: ['policy_setup', 'Local SQL setup was rejected or could not be confirmed. Inspect schema/job state before explicitly rerunning setup; no rollback is implied. See docs/demo-data.md.'],

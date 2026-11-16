@@ -23,4 +23,5 @@ export function reapTestStacks(deps?: {
   remove?: (projectId: string) => Promise<void>
 }): Promise<string[]>
 export function currentStack(root?: string, env?: Record<string, string | undefined>): Stack | null
+export function requireStack(root?: string, env?: Record<string, string | undefined>): Stack
 export function assertLocalStack(url: string, stack: Stack): void

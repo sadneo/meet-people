@@ -4,14 +4,17 @@ import { randomBytes,randomUUID } from 'node:crypto'
 import { execFileSync,spawnSync } from 'node:child_process'
 import { createClient } from '@supabase/supabase-js'
 import sharp from 'sharp'
-import { demoPlan,seedContainer,seedMarker } from '../../../scripts/demo-seed/plan.js'
+import { demoPlan,seedMarker } from '../../../scripts/demo-seed/plan.js'
 import { seedSql } from '../../../scripts/demo-seed/sql.js'
+import { containerResult } from '../../../scripts/lib/containers.mjs'
+import { assertLocalStack,requireStack } from '../../../scripts/lib/stack.mjs'
 const plan=demoPlan(2),ids=plan.map(p=>p.id),password=randomBytes(24).toString('base64url')
 let status:Record<string,string>;try{status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}))}catch{throw new Error('Local status unavailable; no keys printed')}
-assert.equal(new URL(status.API_URL).origin,'http://127.0.0.1:54321')
+const stack=requireStack()
+assertLocalStack(status.API_URL,stack)
 const settings={auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}
 const admin=createClient(status.API_URL,status.SERVICE_ROLE_KEY,settings)
-const sql=(source:string)=>spawnSync('docker',['exec','-i',seedContainer,'psql','-X','-qAt','-U','postgres','-v','ON_ERROR_STOP=1','-d','postgres'],{input:source,encoding:'utf8'})
+const sql=(source:string)=>containerResult(['exec','-i',stack.dbContainer,'psql','-X','-qAt','-U','postgres','-v','ON_ERROR_STOP=1','-d','postgres'],{input:source})
 const checked=(source:string)=>{const result=sql(source);assert.equal(result.status,0,'Scoped seed SQL failed');return result.stdout.trim()}
 const run=()=>spawnSync('pnpm',['demo:seed','--count','2','--password-stdin'],{input:password+'\n',encoding:'utf8',timeout:120000})
 for(const p of plan){const exists=await admin.auth.admin.getUserById(p.id);assert.equal(exists.error?.status,404,'Reserved test identities occupied; refusing to touch them')}

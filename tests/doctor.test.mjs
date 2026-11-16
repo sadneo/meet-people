@@ -2,12 +2,15 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { diagnose } from '../scripts/doctor.mjs'
 
+const projectId = 'meet-people-wt-x'
+const stack = { projectId, ports: { api: 55321, db: 55322, shadow: 55320, studio: 55323, mail: 55324 }, apiUrl: 'http://127.0.0.1:55321', dbContainer: `supabase_db_${projectId}` }
+
 function fixture(overrides = {}) {
   const calls = [], reads = []
   const secret = 'PRIVATE_SENTINEL_MUST_NEVER_APPEAR'
-  const environment = `SUPABASE_URL=http://127.0.0.1:54321\nVITE_SUPABASE_URL=http://127.0.0.1:54321\nSUPABASE_PUBLISHABLE_KEY=sb_publishable_test\nVITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_test\nSUPABASE_SERVICE_ROLE_KEY=${secret}\n`
+  const environment = `SUPABASE_URL=${stack.apiUrl}\nVITE_SUPABASE_URL=${stack.apiUrl}\nSUPABASE_PUBLISHABLE_KEY=sb_publishable_test\nVITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_test\nSUPABASE_SERVICE_ROLE_KEY=${secret}\n`
   const options = {
-    directory: '/project', home: '/private-home', uid: 1000, env: {}, node: '22.23.4',
+    directory: '/project', stack, home: '/private-home', uid: 1000, env: {}, node: '22.23.4',
     read: async path => {
       reads.push(path)
       if (path.endsWith('package.json')) return '{"packageManager":"pnpm@11.25.0"}'
@@ -23,7 +26,7 @@ function fixture(overrides = {}) {
       calls.push({ file, args, options })
       if (file === 'pnpm') return { stdout: args[0] === '--version' ? '11.25.0' : '2.117.0' }
       if (args[0] === 'info') return { stdout: '"engine-version"' }
-      if (args[0] === 'inspect') return { stdout: '{"running":true,"project":"meet-people"}' }
+      if (args[0] === 'inspect') return { stdout: `{"running":true,"project":"${stack.projectId}"}` }
       if (args[0] === 'exec') return { stdout: '{"missing":[],"worker":true}' }
       throw new Error(secret)
     },
@@ -47,6 +50,8 @@ test('healthy local setup is inspected without mutations, authentication or secr
     else assert.ok(file === 'docker' && ['info', 'inspect', 'exec'].includes(args[0]))
   }
   const sql = calls.find(call => call.file === 'docker' && call.args[0] === 'exec').args
+  assert.ok(sql.includes(stack.dbContainer))
+  assert.ok(calls.filter(call => call.args[0] === 'inspect').every(call => call.args.at(-1) === stack.dbContainer))
   assert.ok(sql.includes('PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=3000'))
   assert.match(sql.at(-1), /^select /)
   assert.doesNotMatch(sql.at(-1), /insert|update|delete|create|drop|reset|alter/i)
@@ -64,7 +69,7 @@ test('missing tools and dependencies produce bounded, redacted failures', async 
 })
 
 test('foreign or stopped database containers never receive SQL commands', async () => {
-  for (const metadata of ['{"running":true,"project":"foreign"}', '{"running":false,"project":"meet-people"}', 'invalid']) {
+  for (const metadata of ['{"running":true,"project":"foreign"}', `{"running":false,"project":"${stack.projectId}"}`, 'invalid']) {
     const { options, calls } = fixture()
     const original = options.run
     options.run = async (file, args, config) => file === 'docker' && args[0] === 'inspect' ? { stdout: metadata } : original(file, args, config)
@@ -72,6 +77,31 @@ test('foreign or stopped database containers never receive SQL commands', async 
     assert.equal(check(report, 'supabase-db').status, 'fail')
     assert.ok(!calls.some(call => call.file === 'docker' && call.args[0] === 'exec'))
   }
+})
+
+test('a foreign project label is rejected even when the default meet-people project is expected elsewhere', async () => {
+  const { options, calls } = fixture()
+  const original = options.run
+  options.run = async (file, args, config) => file === 'docker' && args[0] === 'inspect' ? { stdout: '{"running":true,"project":"meet-people"}' } : original(file, args, config)
+  assert.equal(check(await diagnose(options), 'supabase-db').status, 'fail')
+  assert.ok(!calls.some(call => call.file === 'docker' && call.args[0] === 'exec'))
+})
+
+test('no local stack fails supabase-db without touching the database', async () => {
+  const { options, calls } = fixture({ stack: null })
+  const report = await diagnose(options)
+  assert.equal(check(report, 'supabase-db').status, 'fail')
+  assert.match(check(report, 'supabase-db').message, /No local stack for this worktree\. Run pnpm dev first\./)
+  assert.ok(!calls.some(call => call.file === 'docker' && ['inspect', 'exec'].includes(call.args[0])))
+})
+
+test('development credentials are looked up in the stack credentials directory', async () => {
+  const { options } = fixture()
+  const seen = []
+  const original = options.stat
+  options.stat = async path => { seen.push(path); return original(path) }
+  await diagnose(options)
+  assert.ok(seen.includes('/private-home/.local/share/pebble/meet-people-wt-x/development-account.json'))
 })
 
 test('schema failures and missing prerequisites are reported without applying migrations', async () => {

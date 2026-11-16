@@ -3,7 +3,7 @@ import { Readable } from 'node:stream'
 import { constants } from 'node:fs'
 import { accountFixture } from './complete-profile-fixture'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { developmentLoginEnabled, developmentLoginPlugin, developmentLoginHandler, authenticateDevelopmentAccount, parseDevelopmentCredentials, readDevelopmentCredentials } from '../../dev/development-login'
 
 vi.mock('../../dev/private-development-file', () => ({ validatePrivateDevelopmentFile: async (_path: string, stat: { uid: number; mode: number }) => {
@@ -12,9 +12,14 @@ vi.mock('../../dev/private-development-file', () => ({ validatePrivateDevelopmen
 
 const files = vi.hoisted(() => ({ open: vi.fn() }))
 vi.mock('node:fs/promises', () => files)
-beforeEach(() => { files.open.mockReset().mockRejectedValue(new Error('Synthetic missing file')) })
+const stackUrl = 'http://127.0.0.1:55321'
+beforeEach(() => {
+  files.open.mockReset().mockRejectedValue(new Error('Synthetic missing file'))
+  vi.stubEnv('PEBBLE_SUPABASE_PROJECT_ID', 'meet-people-wt-unit'); vi.stubEnv('PEBBLE_SUPABASE_URL', stackUrl)
+})
+afterEach(() => { vi.unstubAllEnvs() })
 
-const credentials = { accountId: 'a0000000-0000-4000-8000-000000000001', email: 'fixture@example.test', password: 'Synthetic-only-password-1!', url: 'http://127.0.0.1:54321', publicKey: 'sb_publishable_fixture' }
+const credentials = { accountId: 'a0000000-0000-4000-8000-000000000001', email: 'fixture@example.test', password: 'Synthetic-only-password-1!', url: stackUrl, publicKey: 'sb_publishable_fixture' }
 const session = { access_token: 'synthetic-access', refresh_token: 'synthetic-refresh', expires_in: 3600, token_type: 'bearer', user: { id: credentials.accountId } }
 async function request(overrides: { method?: string; origin?: string; host?: string; remote?: string; body?: string; type?: string } = {}) {
   const req = Readable.from([overrides.body ?? '{"intent":"development-sign-in"}']) as IncomingMessage
@@ -58,7 +63,7 @@ it('fake credential file enforces owner-only permissions, fixed path, bounded re
   const read = vi.fn(async (buffer: Buffer) => { buffer.write(text); return { bytesRead: Buffer.byteLength(text) } })
   files.open.mockResolvedValue({ stat: async () => ({ isFile: () => true, uid: 1000, mode: 0o100600, size: text.length }), read, close })
   expect(await readDevelopmentCredentials()).toEqual(credentials)
-  expect(files.open.mock.calls[0][0]).toMatch(/[\\/]\.local[\\/]share[\\/]pebble[\\/]development-account\.json$/)
+  expect(files.open.mock.calls[0][0]).toMatch(/[\\/]\.local[\\/]share[\\/]pebble[\\/]meet-people-wt-unit[\\/]development-account\.json$/)
   if (constants.O_NOFOLLOW !== undefined) expect(files.open.mock.calls[0][1] & constants.O_NOFOLLOW).toBe(constants.O_NOFOLLOW)
   expect(read.mock.calls[0][0]).toHaveLength(8193)
   expect(close).toHaveBeenCalledTimes(1)
@@ -80,8 +85,12 @@ it('default missing-file route returns only useful redacted 503 and never authen
   await developmentLoginHandler('http://127.0.0.1:3000')(req, res, vi.fn())
   expect(status).toBe(503); expect(body).toContain('provisioning is unavailable'); expect(body).not.toContain('Synthetic missing file')
 })
-it.each(['https://remote.example', 'http://localhost.example:54321', 'http://127.0.0.1:54321/path', 'http://user@127.0.0.1:54321', 'http://192.168.1.2:54321'])('credential URL cannot escape local Supabase: %s', url => {
+it.each(['https://remote.example', 'http://localhost.example:55321', `${stackUrl}/path`, 'http://user@127.0.0.1:55321', 'http://192.168.1.2:55321', 'http://127.0.0.1:55322', `${stackUrl}/?a=1`])('credential URL cannot escape local Supabase: %s', url => {
   expect(() => parseDevelopmentCredentials({ ...credentials, url })).toThrow()
+})
+it('rejects every credential when no local stack exists', () => {
+  vi.stubEnv('PEBBLE_SUPABASE_PROJECT_ID', ''); vi.stubEnv('PEBBLE_SUPABASE_URL', '')
+  expect(() => parseDevelopmentCredentials(credentials)).toThrow()
 })
 it('rejects admin/secret keys and malformed identity', () => {
   for (const patch of [{ publicKey: 'sb_secret_fixture' }, { accountId: 'not-an-id' }, { password: '' }, { extra: 'untrusted' }]) expect(() => parseDevelopmentCredentials({ ...credentials, ...patch })).toThrow()

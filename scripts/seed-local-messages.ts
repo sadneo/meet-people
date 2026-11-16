@@ -1,6 +1,6 @@
-import { spawnSync, execFileSync } from 'node:child_process'
 import { parseArgs } from 'node:util'
-import { seedIdentity, seedMarker, seedContainer } from './demo-seed/plan.js'
+import { seedIdentity, seedMarker } from './demo-seed/plan.js'
+import { psql, verifiedStack } from './demo-seed/local.js'
 
 const options = parseArgs({ options: { 'dry-run': { type: 'boolean' } } }).values
 const actor = 'd0000000-0000-4000-8000-000000000001'
@@ -8,8 +8,7 @@ const selected = [2, 3, 5].map(seedIdentity), pending = seedIdentity(7)
 if (options['dry-run']) {
   console.log('Preview: three local development conversations, nine fictional messages, one pending request. No database access.')
 } else {
-  const metadata = JSON.parse(execFileSync('docker', ['inspect', '--format', '{"running":{{json .State.Running}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}}}', seedContainer], { encoding: 'utf8' }))
-  if (!metadata.running || metadata.project !== 'meet-people') throw new Error('Expected local meet-people database; no remote targets supported')
+  verifiedStack('Expected local Supabase database for this worktree; no remote targets supported')
   const text = (value: string) => `'${value.replaceAll("'", "''")}'`
   const claims = (id: string) => `perform set_config('request.jwt.claim.sub','${id}',true);perform set_config('request.jwt.claims','{"sub":"${id}","role":"authenticated"}',true);`
   let sql = `begin;set local lock_timeout='5s';set local statement_timeout='60s';
@@ -43,7 +42,7 @@ ${claims(pending.id)}
 state:=public.social_connection('${actor}','get');
 if state->>'status'='none' then perform public.friends_discovery_connection('${actor}','request');end if;
 end $$;commit;`
-  const result = spawnSync('docker', ['exec', '-i', seedContainer, 'psql', '-X', '-q', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1'], { input: sql, encoding: 'utf8' })
+  const result = psql(['-X', '-q', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1'], sql)
   if (result.status !== 0) throw new Error(`Local demo chat transaction rejected; no partial writes committed. ${result.stderr}`)
   console.log('Ready: three local demo conversations, nine idempotently seeded messages, and one request (unless already resolved). Existing chats and messages preserved.')
 }

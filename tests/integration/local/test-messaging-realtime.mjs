@@ -5,9 +5,10 @@ import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
 import { setTimeout, clearTimeout } from 'node:timers'
-import { URL } from 'node:url'
 import console from 'node:console'
 import { createClient } from '@supabase/supabase-js'
+import { containerSync } from '../../../scripts/lib/containers.mjs'
+import { assertLocalStack, requireStack } from '../../../scripts/lib/stack.mjs'
 
 const { fetch } = globalThis
 const status = execFileSync('sh', ['scripts/supabase.sh', 'status', '--output', 'env'], { encoding: 'utf8', stdio: 'pipe' })
@@ -16,14 +17,14 @@ const values = Object.fromEntries(status.trim().split('\n').map(line => {
   return [key, value.replace(/^"|"$/g, '')]
 }))
 const url = values.API_URL ?? values.SUPA_API_URL
-const endpoint = new URL(url)
-assert.ok(endpoint.protocol === 'http:' && endpoint.hostname === '127.0.0.1', 'Local Supabase only')
+const stack = requireStack()
+assertLocalStack(url, stack)
 const key = values.PUBLISHABLE_KEY ?? values.ANON_KEY
 const options = { auth: { persistSession: false, autoRefreshToken: false } }
 const admin = createClient(url, values.SERVICE_ROLE_KEY, options)
 const clients = [], users = []
 const groupId = randomUUID(), sourceKey = `realtime-test:${randomUUID()}`
-const sql = source => execFileSync('docker', ['exec', '-i', 'supabase_db_meet-people', 'psql', '-X', '-qAt', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1'], { input: source, encoding: 'utf8', stdio: 'pipe' }).trim()
+const sql = source => containerSync(['exec', '-i', stack.dbContainer, 'psql', '-X', '-qAt', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1'], { input: source })
 const quote = value => `'${value.replaceAll("'", "''")}'`
 const waitFor = async predicate => {
   for (let attempt = 0; attempt < 100; attempt++) {

@@ -1,31 +1,31 @@
 import { constants } from 'node:fs'
 import { mkdir,open,readFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { randomBytes,randomUUID } from 'node:crypto'
-import { execFileSync,spawnSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { parseArgs } from 'node:util'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { createEventGroupWorkerTransport,runEventGroupCycle } from '../api/event-group-worker.js'
 import { readDevelopmentCredentials } from '../dev/development-login.js'
-import { seedContainer } from './demo-seed/plan.js'
+import { psql,verifiedStack } from './demo-seed/local.js'
+import { assertLocalStack,credentialsDir } from './lib/stack.mjs'
 import { localWorkerFailure,workerDiagnosticMessage,type LocalWorkerStage } from './local-worker-diagnostics.js'
 
 let flags={setup:false,watch:false}
-const origin='http://127.0.0.1:54321',workerId='local-interest-worker'
+const workerId='local-interest-worker'
 const Credentials=z.object({id:z.uuid(),email:z.email(),password:z.string().min(16).max(128)}).strict()
 let running=true
 let stage:LocalWorkerStage='runtime'
 const diagnostic=(value:Parameters<typeof workerDiagnosticMessage>[0])=>console.error(workerDiagnosticMessage(value))
 process.on('SIGINT',()=>{running=false});process.on('SIGTERM',()=>{running=false})
 function sql(source:string){
- const result=spawnSync('docker',['exec','-i',seedContainer,'psql','-X','-qAt','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1'],{input:source,encoding:'utf8',maxBuffer:131072})
+ const result=psql(['-X','-qAt','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1'],source,131072)
  if(result.status!==0)throw new Error('Local worker SQL rejected; no scoring retry attempted')
  return result.stdout.trim()
 }
-async function credentials(){
- const directory=join(homedir(),'.local/share/pebble'),path=join(directory,'event-group-worker.json')
+async function credentials(directory:string){
+ const path=join(directory,'event-group-worker.json')
  let file
  try{file=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK)}catch(error){
   if(!flags.setup||(error as NodeJS.ErrnoException).code!=='ENOENT')throw new Error('Private local worker credentials unavailable; run with --setup',{cause:error})
@@ -40,15 +40,15 @@ async function main(){
  const parsed=parseArgs({options:{setup:{type:'boolean'},watch:{type:'boolean'}}}).values
  flags={setup:parsed.setup??false,watch:parsed.watch??false}
  stage='database'
- const metadata=JSON.parse(execFileSync('docker',['inspect','--format','{"running":{{json .State.Running}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}}}',seedContainer],{encoding:'utf8',stdio:['ignore','pipe','pipe']}))
- if(!metadata.running||metadata.project!=='meet-people')throw new Error('Local meet-people Supabase is required')
+ const stack=verifiedStack('Local Supabase for this worktree is required'),origin=stack.apiUrl
  stage='configuration'
- const status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:131072}))
- if(new URL(status.API_URL).origin!==origin||!status.ANON_KEY||!status.SERVICE_ROLE_KEY)throw new Error('Verified local runtime configuration required')
+ const status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:131072,env:{...process.env,SUPABASE_PROJECT_ID:stack.projectId}}))
+ assertLocalStack(status.API_URL,stack)
+ if(!status.ANON_KEY||!status.SERVICE_ROLE_KEY)throw new Error('Verified local runtime configuration required')
  const boundedFetch:typeof fetch=(input,init)=>{if(new URL(String(input)).origin!==origin)throw new Error('Worker refused a nonlocal request');return fetch(input,{...init,redirect:'error',signal:init?.signal??AbortSignal.timeout(15000)})}
  const options={auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},global:{fetch:boundedFetch}}
  stage='credentials'
- const stored=await credentials(),admin=createClient(origin,status.SERVICE_ROLE_KEY,options)
+ const stored=await credentials(credentialsDir(stack.projectId)),admin=createClient(origin,status.SERVICE_ROLE_KEY,options)
  stage='identity'
  const existing=await admin.auth.admin.getUserById(stored.id)
  if(existing.data.user){if(existing.data.user.email!==stored.email||existing.data.user.app_metadata.pebble_local_group_worker!==true)throw new Error('Worker identity is not owned by this local tool')}

@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { randomBytes } from 'node:crypto'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 import { loadEnv } from 'vite'
+import { assertLocalStack, credentialsDir, requireStack } from '../scripts/lib/stack.mjs'
 import { emptyAccount, SaveAccountSchema } from '../shared/account.js'
 
 const accountId = 'd0000000-0000-4000-8000-000000000001'
@@ -12,12 +12,14 @@ const marker = 'local-development-v1'
 
 export async function provisionDevelopmentAccount(existing?: { accountId: string; email: string; password: string; url: string; publicKey: string }) {
   const env = { ...loadEnv('development', process.cwd(), ''), ...process.env }
+  const stack = requireStack()
   const url = env.SUPABASE_URL
-  if (!url || new URL(url).origin !== 'http://127.0.0.1:54321' || new URL(url).pathname !== '/' || new URL(url).search || new URL(url).hash || new URL(url).username || new URL(url).password || !env.SUPABASE_SERVICE_ROLE_KEY || !env.SUPABASE_PUBLISHABLE_KEY) throw new Error('Local Supabase configuration required')
+  if (!url || !env.SUPABASE_SERVICE_ROLE_KEY || !env.SUPABASE_PUBLISHABLE_KEY) throw new Error('Local Supabase configuration required')
+  try { assertLocalStack(url, stack) } catch { throw new Error('Local Supabase configuration required') }
   if (existing && (existing.accountId !== accountId || existing.email !== email || existing.url !== url)) throw new Error('Unexpected development identity')
   const credentials = existing ?? { accountId, email, password: randomBytes(32).toString('base64url'), url, publicKey: env.SUPABASE_PUBLISHABLE_KEY }
   const options = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: ((input, init) => {
-    if (new URL(String(input)).origin !== 'http://127.0.0.1:54321') throw new Error('Nonlocal provisioning refused')
+    if (new URL(String(input)).origin !== stack.apiUrl) throw new Error('Nonlocal provisioning refused')
     return fetch(input, { ...init, redirect: 'error', signal: AbortSignal.timeout(5000) })
   }) as typeof fetch } }
   const admin = createClient(url, env.SUPABASE_SERVICE_ROLE_KEY, options)
@@ -26,7 +28,7 @@ export async function provisionDevelopmentAccount(existing?: { accountId: string
   if (found.data.user && (found.data.user.email !== email || found.data.user.app_metadata.pebble_development !== marker)) throw new Error('Reserved identity is not a development account')
   if (!existing && found.data.user) throw new Error('Existing development credentials missing; account preserved')
   if (!existing) {
-    const directory = join(homedir(), '.local/share/pebble')
+    const directory = credentialsDir(stack.projectId)
     await mkdir(directory, { recursive: true, mode: 0o700 })
     await writeFile(join(directory, 'development-account.json'), JSON.stringify(credentials), { mode: 0o600, flag: 'wx' })
   }

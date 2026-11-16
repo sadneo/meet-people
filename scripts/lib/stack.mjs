@@ -7,7 +7,7 @@ import { promisify } from 'node:util'
 import { container as engine } from './containers.mjs'
 import { freePorts, isFree } from './ports.mjs'
 
-const repoRoot = resolve(fileURLToPath(new URL('../..', import.meta.url)))
+const repoRoot = resolve(fileURLToPath(import.meta.url), '../../..')
 const label = 'com.supabase.cli.project'
 const testPrefix = 'meet-people-test-'
 const names = ['api', 'db', 'shadow', 'studio', 'mail']
@@ -70,6 +70,12 @@ export function currentStack(root = repoRoot, env = process.env) {
   }
   const saved = readDev(root)
   return saved ? makeStack(saved.projectId, saved.ports) : null
+}
+
+export function requireStack(root, env) {
+  const stack = currentStack(root, env)
+  if (!stack) throw new Error('No local stack for this worktree. Run pnpm dev first.')
+  return stack
 }
 
 export function assertLocalStack(url, stack) {

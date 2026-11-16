@@ -1,21 +1,18 @@
 import { constants } from 'node:fs'
 import { open } from 'node:fs/promises'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import type { Plugin } from 'vite'
+import { assertLocalStack, credentialsDir, requireStack } from '../scripts/lib/stack.mjs'
 import { AccountSchema, completedAccountChapters } from '../shared/account.js'
 import { validatePrivateDevelopmentFile } from './private-development-file.js'
 import { provisionDevelopmentAccount } from './provision-development-account.js'
 
 const loopback = (value: string | undefined) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '')
 const localUrl = (value: string) => {
-  try {
-    const url = new URL(value)
-    return url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname) && !!url.port && url.pathname === '/' && !url.search && !url.hash && !url.username && !url.password
-  } catch { return false }
+  try { assertLocalStack(value, requireStack()); return true } catch { return false }
 }
 const publicKey = (value: string) => {
   if (value.startsWith('sb_publishable_')) return value.length > 15
@@ -26,9 +23,9 @@ export const parseDevelopmentCredentials = (value: unknown) => Credentials.parse
 type Credentials = z.infer<typeof Credentials>
 const unavailable = 'Development account provisioning is unavailable. Check that local Supabase is running and .env.local contains its local connection settings.'
 
-// Runtime-only fixed path. Never imported by the browser; no environment/browser path override.
+// Runtime-only path inside the current stack's credentials directory. Never imported by the browser; no environment/browser path override.
 export async function readDevelopmentCredentials() {
-  const path = join(homedir(), '.local/share/pebble/development-account.json')
+  const path = join(credentialsDir(requireStack().projectId), 'development-account.json')
   const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
   try {
     const stat = await file.stat()

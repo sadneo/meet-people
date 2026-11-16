@@ -4,7 +4,7 @@ import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, reapTestStacks, removeStack, stackEnv } from '../../scripts/lib/stack.mjs'
+import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, reapTestStacks, removeStack, requireStack, stackEnv } from '../../scripts/lib/stack.mjs'
 
 const stack = { projectId: 'meet-people-x', ports: { api: 1, db: 2, shadow: 3, studio: 4, mail: 5 }, apiUrl: 'http://127.0.0.1:1', dbContainer: 'supabase_db_meet-people-x' }
 const tmp = () => mkdtempSync(join(tmpdir(), 'stack-test-'))
@@ -159,4 +159,9 @@ test('currentStack prefers env, then dev.json, then null', () => {
   const fromEnv = currentStack(root, { PEBBLE_SUPABASE_PROJECT_ID: 'meet-people-test-q', PEBBLE_SUPABASE_URL: 'http://127.0.0.1:9' })
   assert.equal(fromEnv.projectId, 'meet-people-test-q')
   assert.equal(fromEnv.apiUrl, 'http://127.0.0.1:9')
+})
+
+test('requireStack throws the standard message without a stack', () => {
+  assert.throws(() => requireStack(tmp(), {}), /^Error: No local stack for this worktree\. Run pnpm dev first\.$/)
+  assert.equal(requireStack(tmp(), { PEBBLE_SUPABASE_PROJECT_ID: 'meet-people-test-q', PEBBLE_SUPABASE_URL: 'http://127.0.0.1:9' }).apiUrl, 'http://127.0.0.1:9')
 })

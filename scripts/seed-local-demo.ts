@@ -1,17 +1,18 @@
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
-import { execFileSync,spawnSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { createClient,type SupabaseClient } from '@supabase/supabase-js'
 import { demoInitialsPhoto } from './demo-seed/photos.js'
-import { demoPlan,developmentDemoPlan,seedContainer,seedMarker } from './demo-seed/plan.js'
+import { demoPlan,developmentDemoPlan,seedMarker } from './demo-seed/plan.js'
+import { psql,verifiedStack } from './demo-seed/local.js'
+import { assertLocalStack } from './lib/stack.mjs'
 import { seedSql } from './demo-seed/sql.js'
 import { scenarioPlan,scenarioSql } from './demo-seed/scenarios.js'
 import { eventQueueSql } from './demo-seed/event.js'
 import { DevelopmentAnchorSchema,type DevelopmentAnchor } from './demo-seed/development.js'
 import { readDevelopmentCredentials } from '../dev/development-login.js'
 import { AccountSchema } from '../shared/account.js'
-const url='http://127.0.0.1:54321'
 const options=parseArgs({options:{count:{type:'string'},scenarios:{type:'boolean'},'for-development-account':{type:'boolean'},'refresh-events':{type:'boolean'},'dry-run':{type:'boolean'},'reset-profiles':{type:'boolean'},'password-stdin':{type:'boolean'},'no-photos':{type:'boolean'},'reset-passwords':{type:'boolean'},'refresh-location':{type:'boolean'}},args:process.argv.slice(2).filter(value=>value!=='--')}).values
 const forDevelopment=!!options['for-development-account']
 if(forDevelopment&&(!options.scenarios||options['reset-passwords']||options['password-stdin']))throw new Error('Development-account mode requires --scenarios and preserves fixture passwords; use demo:seed separately to choose fixture passwords')
@@ -41,7 +42,7 @@ async function passwordInput(){
  })
 }
 const pg=(sql:string,user='postgres')=>{
- const result=spawnSync('docker',['exec','-i',seedContainer,'psql','-X','-qAt','-U',user,'-v','ON_ERROR_STOP=1','-v','VERBOSITY=sqlstate','-d','postgres'],{input:sql,encoding:'utf8',maxBuffer:2*1024*1024})
+ const result=psql(['-X','-qAt','-U',user,'-v','ON_ERROR_STOP=1','-v','VERBOSITY=sqlstate','-d','postgres'],sql,2*1024*1024)
  if(result.status!==0){const code=result.stderr?.match(/ERROR:\s+([A-Z0-9]{5}):/)?.[1];throw new Error(`Local demo SQL rejected${code?` (${code})`:''}; transaction rolled back. Review schema, location expiry or existing demo edits.`)}
  return result.stdout
 }
@@ -60,12 +61,12 @@ async function main(){
   if(options['refresh-location'])console.log('A real run renews the existing reviewed Stony Brook campus-area catalogue entry for seven days.')
   return
  }
- const metadata=JSON.parse(execFileSync('docker',['inspect','--format','{"running":{{json .State.Running}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}}}',seedContainer],{encoding:'utf8',stdio:['ignore','pipe','pipe']}))
- if(!metadata.running||metadata.project!=='meet-people')throw new Error('Expected running local meet-people Supabase container; no remote target is supported')
+ const stack=verifiedStack('Expected running local Supabase container for this worktree; no remote target is supported'),url=stack.apiUrl
  let status:Record<string,string>
- try{status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:131072}))}catch{throw new Error('Local Supabase runtime configuration unavailable; no keys printed')}
+ try{status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:131072,env:{...process.env,SUPABASE_PROJECT_ID:stack.projectId}}))}catch{throw new Error('Local Supabase runtime configuration unavailable; no keys printed')}
  const target=new URL(status.API_URL)
- if(target.protocol!=='http:'||!['127.0.0.1','localhost'].includes(target.hostname)||target.port!=='54321'||target.username||target.password||!status.SERVICE_ROLE_KEY||!status.ANON_KEY)throw new Error('Refusing nonlocal or incomplete Supabase configuration')
+ assertLocalStack(target.href,stack)
+ if(!status.SERVICE_ROLE_KEY||!status.ANON_KEY)throw new Error('Refusing nonlocal or incomplete Supabase configuration')
  if(options['refresh-location'])pg(readFileSync(new URL('../supabase/schema-sources/stony-brook-demo-location.sql',import.meta.url),'utf8'),'supabase_admin')
  // Check safety prerequisites BEFORE creating any Auth fixtures.
  pg(`begin read only;do $$ begin if to_regprocedure('public.get_matching_scoring_settings()') is null or to_regprocedure('public.get_dating_runtime()') is null or to_regprocedure('public.start_friends_discovery()') is null or not exists(select 1 from location_private.places where id='b641ad29-9f92-4e66-9490-0b616f8fd85c' and enabled and verified_until>statement_timestamp()+interval '1 hour') then raise exception 'Local demo prerequisites missing/expired';end if;end $$;rollback;`)

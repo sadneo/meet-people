@@ -1,4 +1,4 @@
-import { execFile, execFileSync } from 'node:child_process'
+import { execFile, execFileSync, spawnSync } from 'node:child_process'
 import { accessSync, constants, statSync } from 'node:fs'
 import { access, stat as fsStat } from 'node:fs/promises'
 import { delimiter, join } from 'node:path'
@@ -40,9 +40,14 @@ export async function container(args, { input, env } = {}) {
   return (await run).stdout.trim()
 }
 
+const cliSync = () => pathDirectories().some(directory => { try { accessSync(join(directory, 'docker'), constants.X_OK); return true } catch { return false } }) ? 'docker' : 'podman'
+
 export function containerSync(args, { input, env } = {}) {
-  const docker = pathDirectories().some(directory => { try { accessSync(join(directory, 'docker'), constants.X_OK); return true } catch { return false } })
-  return execFileSync(docker ? 'docker' : 'podman', args, { input, env: engineEnvSync({ ...process.env, ...env }), maxBuffer, encoding: 'utf8' }).trim()
+  return execFileSync(cliSync(), args, { input, env: engineEnvSync({ ...process.env, ...env }), maxBuffer, encoding: 'utf8' }).trim()
+}
+
+export function containerResult(args, { input, env, maxBuffer: limit = maxBuffer, encoding = 'utf8' } = {}) {
+  return spawnSync(cliSync(), args, { input, env: engineEnvSync({ ...process.env, ...env }), maxBuffer: limit, encoding })
 }
 
 export async function engineReachable() {

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { provisionDevelopmentAccount } from '../../dev/provision-development-account'
 
 const mocks = vi.hoisted(() => ({ mkdir: vi.fn(), writeFile: vi.fn(), createUser: vi.fn(), getUserById: vi.fn(), signInWithPassword: vi.fn(), rpc: vi.fn(), loadEnv: vi.fn() }))
@@ -7,15 +7,17 @@ vi.mock('node:fs/promises', () => ({ mkdir: mocks.mkdir, writeFile: mocks.writeF
 vi.mock('vite', () => ({ loadEnv: mocks.loadEnv }))
 vi.mock('@supabase/supabase-js', () => ({ createClient: () => ({ auth: { admin: { getUserById: mocks.getUserById, createUser: mocks.createUser }, signInWithPassword: mocks.signInWithPassword }, rpc: mocks.rpc }) }))
 const id = 'd0000000-0000-4000-8000-000000000001'
-const credentials = { accountId: id, email: 'pebble-development@example.test', password: 'synthetic-password', url: 'http://127.0.0.1:54321', publicKey: 'sb_publishable_fixture' }
+const credentials = { accountId: id, email: 'pebble-development@example.test', password: 'synthetic-password', url: 'http://127.0.0.1:55321', publicKey: 'sb_publishable_fixture' }
 beforeEach(() => {
   vi.resetAllMocks()
+  vi.stubEnv('PEBBLE_SUPABASE_PROJECT_ID', 'meet-people-wt-unit'); vi.stubEnv('PEBBLE_SUPABASE_URL', credentials.url)
   mocks.loadEnv.mockReturnValue({ SUPABASE_URL: credentials.url, SUPABASE_PUBLISHABLE_KEY: credentials.publicKey, SUPABASE_SERVICE_ROLE_KEY: 'synthetic-server-only' })
   mocks.getUserById.mockResolvedValue({ data: { user: null }, error: { status: 404 } })
   mocks.createUser.mockResolvedValue({ error: null })
   mocks.signInWithPassword.mockResolvedValue({ data: { user: { id } }, error: null })
   mocks.rpc.mockResolvedValue({ data: { profile: null, completed: [] }, error: null })
 })
+afterEach(() => { vi.unstubAllEnvs() })
 it('creates a confirmed, marked local user and persists private credentials exclusively', async () => {
   const result = await provisionDevelopmentAccount()
   expect(result.password.length).toBeGreaterThan(32)
@@ -35,6 +37,17 @@ it('refuses hosted Supabase before credential or account writes', async () => {
   mocks.loadEnv.mockReturnValue({ SUPABASE_URL: 'https://example.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'synthetic', SUPABASE_SERVICE_ROLE_KEY: 'synthetic' })
   await expect(provisionDevelopmentAccount()).rejects.toThrow('Local Supabase')
   expect(mocks.getUserById).not.toHaveBeenCalled()
+  expect(mocks.writeFile).not.toHaveBeenCalled()
+})
+it('refuses a loopback origin that is not this stack\'s before credential or account writes', async () => {
+  mocks.loadEnv.mockReturnValue({ SUPABASE_URL: 'http://127.0.0.1:55322', SUPABASE_PUBLISHABLE_KEY: 'synthetic', SUPABASE_SERVICE_ROLE_KEY: 'synthetic' })
+  await expect(provisionDevelopmentAccount()).rejects.toThrow('Local Supabase')
+  expect(mocks.getUserById).not.toHaveBeenCalled()
+  expect(mocks.writeFile).not.toHaveBeenCalled()
+})
+it('refuses to provision without a local stack', async () => {
+  vi.stubEnv('PEBBLE_SUPABASE_PROJECT_ID', ''); vi.stubEnv('PEBBLE_SUPABASE_URL', '')
+  await expect(provisionDevelopmentAccount()).rejects.toThrow('No local stack for this worktree. Run pnpm dev first.')
   expect(mocks.writeFile).not.toHaveBeenCalled()
 })
 it('preserves an unrelated account occupying the reserved identity', async () => {
