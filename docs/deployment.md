@@ -50,10 +50,29 @@ sandbox builds use one resolved commit, one API deployment and one database.
 3. Merging into `main` runs `Deploy`, which resolves one commit SHA and prepares
    production frontend and API image builds without re-running tests.
 4. Deployment downloads frontend artifacts from the same workflow run and uses the
-   prepared API image by digest. It does not rebuild them. It deploys Edge Functions,
-   applies migrations without development seeds, configures services and deploys Hosting.
+   prepared API image by digest. It does not rebuild them. It then runs five stages:
+
+   | Stage | Where | What |
+   |---|---|---|
+   | Preflight | `release.yml` | settings validation, image check, production recovery policy, migration preview. Changes nothing. |
+   | Backend | `deploy-stages.mjs backend` | Edge Functions, reviewed migrations (no development seeds), product schema, hosted config, event sync |
+   | Services | `deploy-stages.mjs services` | API; sandbox's disabled event worker, or production's workers, schedules and 6 a.m. dining imports |
+   | Hosting | `release.yml` | web site, then sandbox's mobile site |
+   | Verify | `release.yml` | hosted smoke checks and summary |
+
 5. Every deployed URL runs hosted smoke checks, even if another URL fails. Any
    failed smoke check fails the run; it does not automatically roll back changes.
+
+**Adding to a release:** add Edge Functions to `EDGE_FUNCTIONS` and new backend
+or service steps to `scripts/deploy-stages.mjs`, not to `release.yml`. A test
+fails if a directory in `supabase/functions/` is in neither `EDGE_FUNCTIONS` nor
+`UNDEPLOYED_FUNCTIONS` (currently `ingest-ticketmaster`, deliberately not deployed).
+
+**After a partial failure:** every step is safe to repeat (function and Cloud Run
+deploys overwrite, applied migrations are skipped, schedules are reconciled), so
+fix the cause and re-run Deploy. Each step's log is a collapsible group, and the
+failing step is reported as an error naming it. To roll production back, use a
+manual production redeploy of the previous main SHA. Migrations are never reverted.
 
 Version tags are release labels only. Production pipelines queue as complete runs
 (`queue: max`, up to 100 pending), preventing faster builds from overtaking an

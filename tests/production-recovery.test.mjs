@@ -38,5 +38,5 @@ test('workflow runs the explicit production policy before hosted mutation steps'
   const step = workflow.slice(workflow.lastIndexOf('      - name:', gate), gate)
   assert.ok(step.includes("if: env.DEPLOY_ENVIRONMENT == 'production'"))
   assert.ok(step.includes('PRODUCTION_RECOVERY_POLICY: early-access-no-backups'))
-  for (const step of ['Deploy authenticated Edge Functions', 'node scripts/push-reviewed-migrations.mjs --yes', 'Install canonical product backend', 'pnpm hosting:configure']) assert.ok(gate < workflow.indexOf(step))
+  for (const step of ['node scripts/deploy-stages.mjs backend', 'node scripts/deploy-stages.mjs services']) assert.ok(gate < workflow.indexOf(step))
 })
