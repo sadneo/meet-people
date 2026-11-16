@@ -1,8 +1,8 @@
 import { PhotoGalleryEditor, PhotoGalleryPanel } from './PhotoGallery';
-import { AudienceSelect, GardenShowcasePicker, InterestOrderEditor, OwnProfilePreview, ProfileFinishCard } from './ProfileCustomization';
+import { AudienceSelect, GardenShowcasePicker, InterestOrderEditor, OwnProfilePreview, ProfileFinishCard, PromptsEditor } from './ProfileCustomization';
 import { useProfileCustomization } from '../features/account/profile-customization-client';
 import { haptic } from './feedback';
-import { sameCustomization, type ProfileCustomizationValue } from '../../shared/profile-customization';
+import { ProfileCustomizationValueSchema, sameCustomization, type ProfileCustomizationValue } from '../../shared/profile-customization';
 import { usePhotoGallery } from '../features/account/usePhotoGallery';
 import { legalPublication } from '../features/public/legal-content';
 import { canShowDating, meetsMinimumAge } from './age-visibility'
@@ -371,7 +371,7 @@ export function Profile() {
         <ProfileFinishCard profile={profile} hasPhoto={!!photo.snapshot?.hasPhoto} onAddPhoto={() => {
           const section = document.getElementById('profile-photos');
           section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          section?.querySelector<HTMLButtonElement>('.photo-gallery-panel > .btn')?.focus({ preventScroll: true });
+          section?.querySelector<HTMLButtonElement>('.photo-gallery-toolbar .btn')?.focus({ preventScroll: true });
         }}/>
         <section id="profile-photos" className="profile-photos-section" aria-labelledby="profile-photos-title">
           <h3 id="profile-photos-title">Photos</h3>
@@ -481,6 +481,25 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
       setError("You must be at least 18 to use Pebble.");
       return;
     }
+    let nextCustomization;
+    if (customChanged && customDraft) {
+      const prompts = (customDraft.prompts ?? []).map(item => ({ ...item, answer: item.answer.trim() }));
+      if (prompts.some(item => !item.answer)) {
+        setError('Answer each prompt or remove it.');
+        return;
+      }
+      const result = ProfileCustomizationValueSchema.safeParse({
+        ...customDraft,
+        interestOrder: customDraft.interestOrder.filter(label => profile.interests.includes(label)),
+        prompts,
+        datingBio: customDraft.datingBio?.trim() || null,
+      });
+      if (!result.success) {
+        setError(result.error.issues[0].message);
+        return;
+      }
+      nextCustomization = result.data;
+    }
     const factsChanged = JSON.stringify(optional.data) !== JSON.stringify(initialFacts.facts);
     if (factsChanged && !factsResource.canWrite) {
       setError('Reload optional details before saving again. Your draft is still here.');
@@ -497,10 +516,9 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
         return;
       }
       savedDetails = true;
-      if (customChanged) {
-        // Only interests that are saved on the profile can be ordered.
+      if (nextCustomization) {
         try {
-          await custom.save({ ...customDraft!, interestOrder: customDraft!.interestOrder.filter(label => profile.interests.includes(label)) });
+          await custom.save(nextCustomization);
           setCustomDraft(null);
         } catch {
           setError('Your profile is saved, but your display choices could not be confirmed. Reload before trying again.');
@@ -532,7 +550,7 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
       {section === 'basics' && <section className="profile-photo-editor">
         <div className="profile-edit-photo">
           <Avatar name={profile.display_name} url={photoDraft ? photoDraft.preview : photo.url} large/>
-          <div className="profile-photo-actions">
+          <div className="profile-edit-photo-actions">
             <ActionButton secondary disabled={busy || !!photoDraft || photoReconcile} onClick={() => setGalleryOpen(true)}>Manage photos</ActionButton>
             {!hasGallery && <ActionButton secondary disabled={busy || photo.loading || !!photo.error || !photo.snapshot || photoReconcile} onClick={() => photoInput.current?.click()}>
               {(photoDraft ? !!photoDraft.file : photo.snapshot?.hasPhoto) ? 'Change photo' : 'Add photo'}
@@ -552,6 +570,14 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
           <div hidden={section !== 'basics'}>
             <label>Display name<input required maxLength={120} autoComplete="nickname" value={profile.display_name} onChange={event => update({ display_name: event.target.value })}/></label>
             <label>Bio <span className="profile-bio-count">{profile.bio?.length ?? 0}/1000</span><textarea maxLength={1000} rows={3} value={profile.bio ?? ''} onChange={event => update({ bio: event.target.value || null })}/></label>
+            {adultDraft && <>
+              <label className="account-check"><input type="checkbox" checked={customValue.datingBio !== null && customValue.datingBio !== undefined} disabled={!custom.query.data}
+                onChange={event => changeCustom({ datingBio: event.target.checked ? '' : null })}/>Use a different bio in Dating</label>
+              {customValue.datingBio !== null && customValue.datingBio !== undefined &&
+                <label>Dating bio <span className="profile-bio-count">{customValue.datingBio.length}/1000</span>
+                  <textarea maxLength={1000} rows={3} placeholder="Leave empty to use your bio" value={customValue.datingBio} disabled={!custom.query.data}
+                    onChange={event => changeCustom({ datingBio: event.target.value })}/></label>}
+            </>}
             <div className="profile-birthday" role="group" aria-label="Birthday">
               <div className="profile-birthday-row">
                 <div>
@@ -576,6 +602,7 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
               <label className="account-check"><input type="checkbox" checked={facts.visibility.languages} onChange={event => setFacts({ ...facts, visibility: { ...facts.visibility, languages: event.target.checked } })}/>Show languages</label>
               {adultDraft && facts.visibility.languages && <AudienceSelect field="languages" value={customValue.audiences.languages} disabled={!custom.query.data} change={value => changeCustom({ audiences: { ...customValue.audiences, languages: value } })}/>}
             </fieldset>
+            <PromptsEditor prompts={customValue.prompts ?? []} adult={adultDraft} disabled={!custom.query.data} change={prompts => changeCustom({ prompts })}/>
             <GardenShowcasePicker value={customValue.gardenItem} disabled={!custom.query.data} change={gardenItem => changeCustom({ gardenItem })}/>
             <details className="profile-account-details"><summary>Account username</summary><label>Username<input required maxLength={80} value={profile.username} onChange={event => update({ username: event.target.value })}/></label></details>
           </div>

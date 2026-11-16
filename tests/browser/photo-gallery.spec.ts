@@ -5,10 +5,11 @@ import { locationId, peer, user, wiringFixture } from './wiring-fixture'
 const photos = ['maya', 'alex', 'jordan', 'sam'].map(name => `public/pebble/${name}.jpg`)
 const screenshotStyle = '.development-navigator{display:none!important}body:has(.development-navigator){--development-toolbar-height:0px!important}'
 
-async function galleryFixture(page: Page) {
+async function galleryFixture(page: Page, photoCount = 1) {
   await wiringFixture(page)
   let revision = 1
-  const own = [photos[0]]
+  const own = photos.slice(0, photoCount)
+  const captions = new Map<string, string>()
   await page.route('**/api/matchmaking/profile-photo**', route => {
     const req = route.request()
     const url = new URL(req.url())
@@ -25,11 +26,20 @@ async function galleryFixture(page: Page) {
       expect(expectedRevision).toBe(revision)
       const i = position - 1
       if (action === 'move') own.splice(toPosition - 1, 0, own.splice(i, 1)[0])
-      else own.splice(i, 1)
+      else captions.delete(own.splice(i, 1)[0])
       revision++
       return route.fulfill({json: state()})
     }
     if (tail === `/gallery/${user}`) return route.fulfill({json:state()})
+    const captionState = () => ({ revision, captions: own.map(photo => captions.get(photo) ?? null) })
+    if (tail === `/gallery/${user}/captions`) return route.fulfill({ json: captionState() })
+    if (tail === '/gallery/caption' && req.method() === 'PUT') {
+      const { expectedRevision, position, caption } = req.postDataJSON()
+      expect(expectedRevision).toBe(revision)
+      if (caption) captions.set(own[position - 1], caption)
+      else captions.delete(own[position - 1])
+      return route.fulfill({ json: captionState() })
+    }
     if (tail === `/gallery/${peer}`) return route.fulfill({json:{revision: 2, count: 2}})
     if (!tail) return route.fulfill({json:{revision, hasPhoto:own.length>0, updatedAt:'2026-11-16T12:00:00Z'}})
     const parts = tail.slice(1).split('/')
@@ -62,6 +72,113 @@ async function galleryFixture(page: Page) {
   return own
 }
 
+for (const width of [320, 390]) test(`inline Profile photos stay compact and can be reordered at ${width}px`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 840 })
+  const own = await galleryFixture(page, 2)
+  await page.goto('/profile')
+
+  const gallery = page.getByRole('region', { name: 'Photos', exact: true })
+  const tiles = gallery.getByRole('listitem')
+  await expect(tiles).toHaveCount(2)
+  const [first, second] = await Promise.all([tiles.nth(0).boundingBox(), tiles.nth(1).boundingBox()])
+  expect(first!.y).toBe(second!.y)
+  expect(Math.abs(first!.width - second!.width)).toBeLessThan(1)
+  expect(first!.width).toBeLessThanOrEqual(104)
+  expect(Math.abs(first!.width - first!.height)).toBeLessThan(1)
+  await expect(tiles.nth(0).getByText('Main')).toBeVisible()
+  await expect(gallery.getByRole('button', { name: /Reorder photo|Remove photo/ })).toHaveCount(0)
+  await expect(gallery.getByRole('button', {name:'Add photo'})).toBeEnabled()
+  await page.addStyleTag({ content: screenshotStyle })
+  await gallery.evaluate(element => element.scrollIntoView({ block: 'start', behavior: 'instant' }))
+  await gallery.getByRole('img', { name: 'Photo 2' }).evaluate(img => (img as HTMLImageElement).decode())
+  await page.screenshot({ path: info.outputPath('inline-photos.png'), style: screenshotStyle, animations: 'disabled' })
+  if (width === 390) {
+    const from = (await gallery.getByRole('button', { name: 'Preview photo 2' }).boundingBox())!
+    const cdp = await page.context().newCDPSession(page)
+    try {
+      const point = (box: typeof from) => ({ x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) })
+      const initialScroll = await page.evaluate(() => window.scrollY)
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point(from)] })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x:point(from).x, y:point(from).y-60 }] })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(initialScroll)
+      await expect(gallery.locator('.drag-source')).toHaveCount(0)
+      await expect(page.getByRole('dialog', { name: 'Photo 2' })).toHaveCount(0)
+      expect(own[0]).toBe(photos[0])
+
+      await gallery.evaluate(element => element.scrollIntoView({ block: 'start', behavior: 'instant' }))
+      const start = (await gallery.getByRole('button', { name: 'Preview photo 2' }).boundingBox())!
+      const destination = (await tiles.first().boundingBox())!
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point(start)] })
+      await expect(gallery.locator('.drag-source')).toHaveCount(1)
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [point(destination)] })
+      await expect(gallery.locator('.drop-target')).toHaveAttribute('data-gallery-position', '1')
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await expect(gallery.getByText('Photo moved to position 1.')).toBeAttached()
+      expect(own[0]).toBe(photos[1])
+
+      const nextThumbnail = gallery.getByRole('button', { name: 'Preview photo 2' })
+      await expect(nextThumbnail).toBeVisible()
+      const tap = point((await nextThumbnail.boundingBox())!)
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [tap] })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await expect(page.getByRole('dialog', { name: 'Photo 2', exact: true })).toBeVisible()
+    } finally {
+      await cdp.detach()
+    }
+  }
+})
+
+for (const location of ['inline','manager']) test(`previews a photo and makes it primary from the ${location} gallery`, async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const own = await galleryFixture(page, 2)
+  await page.goto(location === 'inline' ? '/profile' : '/profile?section=basics')
+  if (location === 'manager') {
+    const open = page.getByRole('button', { name: 'Manage photos' })
+    await expect(open).toBeEnabled()
+    await open.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }))
+    await open.click()
+  }
+
+  const gallery = location === 'manager'
+    ? page.getByRole('dialog', { name: 'Profile photos' })
+    : page.getByRole('region', { name: 'Photos', exact: true })
+  const thumbnail = gallery.getByRole('button', { name: 'Preview photo 2' })
+  const preview = page.getByRole('dialog', { name: 'Photo 2', exact: true })
+  await thumbnail.click()
+  await expect(preview.getByRole('img', { name: 'Photo 2' })).toHaveCSS('object-fit', 'contain')
+  await page.keyboard.press('Escape')
+  await expect(preview).toHaveCount(0)
+  await expect(thumbnail).toBeFocused()
+  expect(own[0]).toBe(photos[0])
+
+  await thumbnail.click()
+  const image = preview.getByRole('img', { name: 'Photo 2' })
+  await image.evaluate(img => (img as HTMLImageElement).decode())
+  await page.screenshot({ path: info.outputPath('photo-preview.png'), style: screenshotStyle, animations: 'disabled' })
+  const primary = preview.getByRole('button', { name: 'Make profile photo' })
+  const caption = preview.getByRole('textbox', { name: /Caption/ })
+  await expect(caption).toBeEnabled()
+  await expect(preview.getByRole('button', { name: 'Close' })).toBeFocused()
+  // Focus wraps to the last control: the optional caption field.
+  await page.keyboard.press('Shift+Tab')
+  await expect(caption).toBeFocused()
+  await caption.fill('An afternoon by the water')
+  await caption.press('Enter')
+  await expect(page.getByText('Caption saved', { exact: true })).toBeVisible()
+  const cover = page.waitForResponse(response => response.url().endsWith(`/profile-photo/${user}/2`))
+  await primary.click()
+  await cover
+  await expect(preview).toHaveCount(0)
+  await expect(gallery.getByText('Photo moved to position 1.')).toBeAttached()
+  expect(own).toEqual([photos[1], photos[0]])
+
+  await gallery.getByRole('button', { name: 'Preview photo 1' }).click()
+  const mainPreview = page.getByRole('dialog', { name: 'Profile photo', exact: true })
+  await expect(mainPreview.getByRole('textbox', { name: /Caption/ })).toHaveValue('An afternoon by the water')
+  await expect(page.getByRole('button', { name: 'Make profile photo' })).toHaveCount(0)
+})
+
 test('adds to four, moves the profile photo, and promotes the next photo after removal', async ({ page }, info) => {
   await page.setViewportSize({width:320,height:740})
   const own = await galleryFixture(page)
@@ -81,7 +198,7 @@ test('adds to four, moves the profile photo, and promotes the next photo after r
   await expect(dialog.getByRole('img', {name:'Photo 4'})).toBeVisible()
   await page.screenshot({path:info.outputPath('manage-photos.png'),animations:'disabled',style:screenshotStyle})
   const newCover = page.waitForResponse(response => response.url().endsWith(`/profile-photo/${user}/5`))
-  const handle = dialog.getByRole('button',{name:'Reorder photo 4'})
+  const handle = dialog.getByRole('button',{name:'Preview photo 4'})
   await handle.scrollIntoViewIfNeeded()
   const start = (await handle.boundingBox())!
   const target = (await dialog.getByRole('img',{name:'Photo 1',exact:true}).boundingBox())!
@@ -89,6 +206,7 @@ test('adds to four, moves the profile photo, and promotes the next photo after r
   const from = { x:start.x+start.width/2, y:start.y+start.height/2 }
   const to = { x:target.x+target.width/2, y:target.y+target.height/2 }
   await cdp.send('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{x:Math.round(from.x),y:Math.round(from.y)}]})
+  await expect(dialog.locator('.drag-source')).toHaveCount(1)
   for (let i=1;i<=8;i++) await cdp.send('Input.dispatchTouchEvent', {type:'touchMove',
     touchPoints:[{x:Math.round(from.x+(to.x-from.x)*i/8),y:Math.round(from.y+(to.y-from.y)*i/8)}]})
   await expect(dialog.locator('.drop-target')).toHaveAttribute('data-gallery-position','1')
@@ -97,10 +215,12 @@ test('adds to four, moves the profile photo, and promotes the next photo after r
   await cdp.detach()
   await newCover
   expect(own).toEqual([photos[3],...photos.slice(0,3)])
-  await dialog.getByRole('button',{name:'Remove photo 1'}).click()
-  await expect(dialog.getByText('Remove your current profile photo?')).toBeVisible()
+  await dialog.getByRole('button',{name:'Preview photo 1'}).click()
+  const primaryPreview = page.getByRole('dialog', {name:'Profile photo',exact:true})
+  await primaryPreview.getByRole('button',{name:'Remove photo',exact:true}).click()
+  await expect(primaryPreview.getByText('Remove your current profile photo?')).toBeVisible()
   const nextCover = page.waitForResponse(response => response.url().endsWith(`/profile-photo/${user}/6`))
-  await dialog.getByRole('button',{name:'Remove photo',exact:true}).click()
+  await primaryPreview.getByRole('button',{name:'Confirm removal'}).click()
   await expect(dialog.getByText('3 of 4 photos')).toBeVisible()
   await nextCover
   expect(own[0]).toBe(photos[0])

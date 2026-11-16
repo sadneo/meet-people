@@ -18,7 +18,7 @@ vi.mock('../../src/features/account/profile-customization-client', async () => {
   return { useProfileCustomization: () => ({ query: { data: { revision: 0, customization: defaultProfileCustomization } }, value: defaultProfileCustomization, save: vi.fn() }) };
 });
 vi.mock('../../src/ui/PhotoGallery', async importOriginal => ({ ...await importOriginal<typeof import('../../src/ui/PhotoGallery')>(), PhotoGalleryPanel: () => null }));
-vi.mock('../../src/ui/ProfileCustomization', () => ({ AudienceSelect: () => null, GardenShowcasePicker: () => null, InterestOrderEditor: () => null, OwnProfilePreview: () => null, ProfileFinishCard: () => null }));
+vi.mock('../../src/ui/ProfileCustomization', () => ({ AudienceSelect: () => null, GardenShowcasePicker: () => null, InterestOrderEditor: () => null, OwnProfilePreview: () => null, ProfileFinishCard: () => null, PromptsEditor: () => null, PromptCards: () => null }));
 
 const upload = () => new File(['image'], 'photo.png', { type: 'image/png' });
 const choose = (file = upload()) => fireEvent.change(screen.getByLabelText('Choose a photo'), { target: { files: [file] } });

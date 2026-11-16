@@ -21,7 +21,8 @@ import { canonicalInterest, interestSelectionProblem } from '../../shared/intere
 import { MatchingSetup } from './MatchingSetup'
 import { DiscoverModes } from './DiscoverModes'
 import { haptic, prefersReducedMotion } from './feedback'
-import { useProfileShowcase } from '../features/account/profile-customization-client'
+import { useProfilePrompts, useProfileShowcase } from '../features/account/profile-customization-client'
+import { PromptCards } from './ProfileCustomization'
 import { orderInterests } from '../../shared/profile-customization'
 import { ArtPreview } from '../features/garden/ArtPreview'
 import { gardenItemName } from '../features/garden/showcase'
@@ -183,6 +184,7 @@ function Candidate({
   const top = showcase.data?.interestOrder.find(label => interests.includes(label));
   const sortedInterests = [...(top ? [top] : []), ...ownerOrder.filter(interest => interest !== top && shared.includes(interest)), ...ownerOrder.filter(interest => interest !== top && !shared.includes(interest))];
   const gardenItem = showcase.data?.gardenItem ?? null;
+  const prompts = useProfilePrompts(id, dating ? 'dating' : 'friends', photoGalleryActive);
   return (
     <article className={`dating-focus discovery-profile ${dating ? 'dating-profile' : 'friends-focus'}`}>
     <div className={`card dating-card ${dating ? '' : 'friends-card'}`}>
@@ -203,6 +205,7 @@ function Candidate({
       </div>
       <div className="dating-profile-body">
         {bio && <section><h3>About {name}</h3><p>{bio}</p></section>}
+        <PromptCards prompts={prompts.data ?? []}/>
         <section>
           <div className="dating-section-heading"><h3>Interests</h3>{sharedCount > 0 && <span>{sharedCount} in common</span>}</div>
           <div className="dating-interest-list">{sortedInterests.map(interest => <button type="button" key={interest} onClick={() => { setSelectedInterest(interest); setInterestError(''); }} className={`dating-interest ${shared.includes(interest) ? 'in-common' : ''} ${interest === top ? 'is-top' : ''}`}>

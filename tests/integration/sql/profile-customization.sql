@@ -28,7 +28,7 @@ do $$
 declare result jsonb;
 begin
  perform set_config('request.jwt.claim.sub','f9900000-0000-4000-8000-000000000001',true);
- assert public.get_profile_customization() = '{"revision":0,"customization":{"interestOrder":[],"audiences":{"education":"both","occupation":"both","languages":"both"},"gardenItem":null}}'::jsonb, 'Virtual default changed';
+ assert public.get_profile_customization() = '{"revision":0,"customization":{"interestOrder":[],"audiences":{"education":"both","occupation":"both","languages":"both"},"gardenItem":null,"prompts":[],"datingBio":null}}'::jsonb, 'Virtual default changed';
  result := public.save_profile_customization('{"expectedRevision":0,"customization":{"interestOrder":["Music","Coffee"],"audiences":{"education":"friends","occupation":"dating","languages":"both"},"gardenItem":"bench"}}');
  assert result->>'revision' = '1' and result->'customization'->'interestOrder' = '["Music","Coffee"]'::jsonb, 'Customization not saved';
  begin
