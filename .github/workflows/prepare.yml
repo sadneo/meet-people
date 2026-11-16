@@ -91,7 +91,8 @@ jobs:
           push: true
           tags: ${{ steps.tag.outputs.name }}:${{ inputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           cache-from: type=gha,scope=api
-          # CI owns the shared cache; avoid concurrent dev writers replacing it.
+          # PR CI caches are invisible to main/dev runs; branch caches are readable by PRs.
+          cache-to: type=gha,scope=api,mode=max
       - name: Record immutable image
         id: image
         env:

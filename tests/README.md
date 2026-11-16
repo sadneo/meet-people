@@ -90,8 +90,8 @@ selected by the built runner. Results use separate `test-results/` subdirectorie
 ## CI and historical reports
 
 `.github/workflows/checks.yml` calls the reusable `ci.yml` suite for PRs into
-`main` and `dev`. Releases run that same suite against the resolved source SHA;
-manual overrides require an explicit reason. See the
+`dev` only. PRs into `main` must come from `dev`, and releases do not re-run
+tests. See the
 [deployment runbook](../docs/deployment.md#releases). No test hooks run
 automatically on local commits.
 

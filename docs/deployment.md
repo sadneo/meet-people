@@ -38,20 +38,21 @@ API containers scale to zero, with a maximum of two instances per service.
 
 ## Releases
 
-Pushes to **main deploy only production**; pushes to **dev deploy only sandbox**.
-The environments use separate GitHub settings and backends. Feature branches
-are tested on PRs and do not overwrite sandbox. Both sandbox builds use one
-resolved commit, one API deployment and one database.
+Pushes to **main deploy production**. **Sandbox deploys only when run manually**
+(see below). The environments use separate GitHub settings and backends. Both
+sandbox builds use one resolved commit, one API deployment and one database.
 
-1. Open a PR into `dev` or `main`; `Pull request checks` runs full CI.
-2. Merge into `dev` to update both development domains; merge into `main` to update production.
-3. `Deploy` resolves one commit SHA and runs the same CI against that exact SHA.
-4. On `dev`, sandbox build preparation runs alongside CI. On `main`, release builds
-   start only after full CI passes. Only passing CI permits automatic publication.
-5. Deployment downloads frontend artifacts from the same workflow run and uses the
+1. Open a PR into `dev`; `Pull request checks` runs full CI and Android checks.
+   This is the only place tests run.
+2. Open a PR from `dev` into `main`. `Main source` (required check `Require dev`)
+   rejects PRs into `main` from any other branch or fork, so hotfixes go through
+   `dev` first. Use merge commits, not squash, so `dev` and `main` stay in step.
+3. Merging into `main` runs `Deploy`, which resolves one commit SHA and prepares
+   production frontend and API image builds without re-running tests.
+4. Deployment downloads frontend artifacts from the same workflow run and uses the
    prepared API image by digest. It does not rebuild them. It deploys Edge Functions,
    applies migrations without development seeds, configures services and deploys Hosting.
-6. Every deployed URL runs hosted smoke checks, even if another URL fails. Any
+5. Every deployed URL runs hosted smoke checks, even if another URL fails. Any
    failed smoke check fails the run; it does not automatically roll back changes.
 
 Version tags are release labels only. Production pipelines queue as complete runs
@@ -59,11 +60,8 @@ Version tags are release labels only. Production pipelines queue as complete run
 already-running release. GitHub queues by arrival at the concurrency group, not
 strict commit chronology. Active releases are never automatically cancelled.
 Production and sandbox have independent deployment locks, covering mutations and
-smoke checks. Dev CI/builds run concurrently; only its deployment job is serialized.
-GitHub may replace pending sandbox deployments. Once a sandbox job acquires its
-lock, an automatic release must still match the current remote `dev` head or fail
-before making changes. Manual sandbox rollbacks deliberately bypass this freshness
-check. A push arriving after the freshness check does not interrupt an active deployment.
+smoke checks. Sandbox builds run concurrently; only the deployment job is serialized,
+and GitHub may replace a pending sandbox deployment with a newer one.
 Hosting sites publish sequentially because each site's `pinTag` updates the shared
 API service. Concurrent site publishing can cause Cloud Run resource-version conflicts.
 
@@ -75,10 +73,12 @@ CI runs three independent lanes:
   deployment controls, optimized dev web/mobile and production web builds, and built-browser tests.
 
 Deployment checks leave the verified production-mode web frontend for the built-browser tests;
-the API compiles once outside Docker. Docker validation exports a GitHub Actions
-layer cache which release preparation reads. Production/sandbox frontend builds
-remain separate from local-test bundles because they embed different backend settings.
-The aggregate `Checks / CI` required check succeeds only if all three lanes pass.
+the API compiles once outside Docker. Release preparation writes the Docker layer
+cache (`scope=api`) from `main`/`dev`, where PR CI can read it; caches written by PR
+CI are invisible to releases. Production/sandbox frontend builds remain separate
+from local-test bundles because they embed different backend settings. Browser
+lanes use 4 Playwright workers (the 4 vCPUs of a public-repo runner).
+The aggregate `Checks / CI` required check on `dev` succeeds only if all three lanes pass.
 CI never resets a hosted database. Schema replay checks event filtering, pagination,
 details and service-role permissions on fresh and legacy databases. Built-browser
 checks also call the real events endpoint, so a missing RPC fails before deployment.
@@ -101,32 +101,27 @@ Actions → **Deploy** → **Run workflow**, using workflow branch **dev** or **
 
 - Environment: `sandbox`
 - Source ref: `dev` (or blank), or a full commit SHA already on dev
-- Skip checks: off unless deliberately overriding
-- Override reason: required if skipping
 
 ```sh
 gh workflow run release.yml --ref dev \
   -f environment=sandbox -f source_ref=dev
 ```
 
-The source is resolved once, tested and deployed at that SHA. Commits outside dev
-are rejected. Both sandbox sites are replaced. The next successful dev deployment
-updates them again. Production changes only on main releases.
+The source is resolved once and deployed at that SHA without re-running tests; it
+already passed its PR into dev. Commits outside dev are rejected. Both sandbox
+sites are replaced. Production changes only on main releases.
 
-### Manual production override
+### Manual production redeploy
 
-Normal deployments require passing CI. To bypass pre-deployment checks, supply a
-full 40-character SHA already on main and a reason:
+To redeploy (or roll back to) a commit already on main, supply its full 40-character SHA:
 
 ```sh
 gh workflow run release.yml --ref main \
-  -f environment=production -f source_ref=FULL_MAIN_COMMIT_SHA \
-  -f skip_checks=true -f override_reason='Explain the known failure and why this release is needed'
+  -f environment=production -f source_ref=FULL_MAIN_COMMIT_SHA
 ```
 
-Automatic runs cannot skip checks. Overrides still validate resource isolation,
-build, apply migrations and run hosted smoke checks. The summary records actor,
-SHA, reason, image, URLs and result. Repository write access permits workflow
+Every release validates resource isolation, builds, applies migrations and runs
+hosted smoke checks. The summary records actor, SHA, image, URLs and result. Repository write access permits workflow
 dispatch; admin merge bypass is a separate permission. Neither GitHub environment
 adds an approval prompt. OIDC uses the deployment workflow on the permitted branch, without
 downloaded service-account keys.
@@ -205,8 +200,8 @@ Production retains its existing deployment arguments and does not receive sandbo
 keys, approval or networking. Secret versions are pinned: rotation requires updating
 the references and, for the signing secret, coordinating the database value.
 
-Merging into `dev` runs checks, prepares both sandbox products, deploys the API and
-publishes Firebase Hosting with `pinTag`. Opening a PR alone does not deploy. The
+A manual sandbox deployment prepares both sandbox products, deploys the API and
+publishes Firebase Hosting with `pinTag`. Merging or opening a PR does not deploy sandbox. The
 mobile hosted smoke verifies the built JavaScript includes the expected browser
 key; it does not issue billable Google requests or prove authenticated save flows.
 After deployment, test search, pin movement, confirm, reopen and permission-denied

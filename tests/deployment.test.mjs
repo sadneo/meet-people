@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 import { test } from 'node:test'
-import { assertCurrentDeployment, resolveDeployment } from '../scripts/resolve-deployment.mjs'
+import { resolveDeployment } from '../scripts/resolve-deployment.mjs'
 import { deploymentConfiguration, validateFrontendConfiguration } from '../scripts/configure-deployment.mjs'
 import { reviewedMigrationFlags } from '../scripts/push-reviewed-migrations.mjs'
 
@@ -25,7 +25,7 @@ test('preview and apply use the same reviewed migration ordering guard', () => {
   assert.throws(() => reviewedMigrationFlags('unrecognized output', 'wacgxhsdhrqigrmqaonc'))
 })
 
-test('main deploys only production; dev deploys only sandbox; manual sources belong to the destination branch', () => {
+test('main pushes deploy production; sandbox is manual-only; manual sources belong to the destination branch', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-deployment-'))
   const git = args => execFileSync('git', ['-C', directory, ...args], {
     encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
@@ -44,48 +44,37 @@ test('main deploys only production; dev deploys only sandbox; manual sources bel
     git(['commit', '--allow-empty', '-m', 'feature'])
     const feature = git(['rev-parse', 'HEAD'])
     git(['update-ref', 'refs/remotes/origin/feature/demo', feature])
-    const env = { GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main', DEPLOY_ENVIRONMENT: 'production', SOURCE_REF: main, SKIP_CHECKS: 'true' }
-    assert.throws(() => resolveDeployment(env, git), /reason/)
-    assert.equal(resolveDeployment({ ...env, OVERRIDE_REASON: 'Known baseline test failures' }, git).sha, main)
-    assert.throws(() => resolveDeployment({ ...env, SOURCE_REF: feature, SKIP_CHECKS: 'false' }, git))
-    assert.throws(() => resolveDeployment({ ...env, SOURCE_REF: 'main', SKIP_CHECKS: 'false' }, git), /full commit SHA/)
+    const env = { GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main', DEPLOY_ENVIRONMENT: 'production', SOURCE_REF: main }
+    assert.deepEqual(resolveDeployment(env, git), { sha: main, branch: 'main', environment: 'production' })
+    assert.throws(() => resolveDeployment({ ...env, SOURCE_REF: feature }, git))
+    assert.throws(() => resolveDeployment({ ...env, SOURCE_REF: 'main' }, git), /full commit SHA/)
     assert.throws(() => resolveDeployment({ ...env, GITHUB_REF: 'refs/heads/dev' }, git), /Production must use the workflow on main/)
-    assert.throws(() => resolveDeployment({ ...env, SOURCE_REF: dev, SKIP_CHECKS: 'false' }, git))
-    assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'feature/demo', SKIP_CHECKS: 'false' }, git), /full commit SHA/)
-    assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: feature, SKIP_CHECKS: 'false' }, git))
-    const sandbox = resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: '', SKIP_CHECKS: 'false' }, git)
-    assert.equal(sandbox.sha, dev)
-    assert.equal(sandbox.branch, 'dev')
-    assert.equal(sandbox.environment, 'sandbox')
-    assert.equal(resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'dev', SKIP_CHECKS: 'false', GITHUB_REF: 'refs/heads/dev' }, git).sha, dev)
-    assert.equal(resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: main, SKIP_CHECKS: 'false' }, git).sha, main, 'Manual rollback accepts an ancestor of dev')
-    assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'main', SKIP_CHECKS: 'false' }, git), /full commit SHA/)
-    const automatic = resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main', GITHUB_SHA: main, SKIP_CHECKS: 'true' }, git)
-    assert.equal(automatic.skip_checks, 'false', 'Automatic deployments cannot skip checks')
-    assert.equal(automatic.environment, 'production')
-    assert.equal(automatic.branch, 'main')
-    const automaticDev = resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/dev', GITHUB_SHA: dev, SKIP_CHECKS: 'true', DEPLOY_ENVIRONMENT: 'production' }, git)
-    assert.deepEqual(automaticDev, { sha: dev, branch: 'dev', environment: 'sandbox', skip_checks: 'false' })
-    assert.throws(() => resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/dev', GITHUB_SHA: feature }, git))
+    assert.throws(() => resolveDeployment({ ...env, SOURCE_REF: dev }, git))
+    assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'feature/demo' }, git), /full commit SHA/)
+    assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: feature }, git))
+    const sandbox = resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: '' }, git)
+    assert.deepEqual(sandbox, { sha: dev, branch: 'dev', environment: 'sandbox' })
+    assert.equal(resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'dev', GITHUB_REF: 'refs/heads/dev' }, git).sha, dev)
+    assert.equal(resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: main }, git).sha, main, 'Manual rollback accepts an ancestor of dev')
+    assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'main' }, git), /full commit SHA/)
+    const automatic = resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main', GITHUB_SHA: main, DEPLOY_ENVIRONMENT: 'sandbox' }, git)
+    assert.deepEqual(automatic, { sha: main, branch: 'main', environment: 'production' })
+    assert.throws(() => resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/dev', GITHUB_SHA: dev }, git), /Production must use the workflow on main/, 'dev pushes never deploy')
     assert.throws(() => resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/feature/demo', GITHUB_SHA: feature }, git), /workflow on main or dev/)
     assert.throws(() => resolveDeployment({ ...env, GITHUB_EVENT_NAME: 'pull_request' }, git), /Unsupported/)
     assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'invalid' }, git), /Choose production or sandbox/)
   } finally { rmSync(directory, { recursive: true, force: true }) }
 })
 
-test('superseded automatic sandbox releases cannot mutate the environment; manual rollbacks remain available', () => {
-  const sha = 'a'.repeat(40)
-  const env = { GITHUB_EVENT_NAME: 'push', DEPLOY_ENVIRONMENT: 'sandbox', RELEASE_SHA: sha }
-  const git = args => {
-    assert.deepEqual(args, ['ls-remote', '--exit-code', 'origin', 'refs/heads/dev'])
-    return `${sha}\trefs/heads/dev`
-  }
-  assertCurrentDeployment(env, git)
-  assert.throws(() => assertCurrentDeployment({ ...env, RELEASE_SHA: 'b'.repeat(40) }, git), /Superseded sandbox release/)
-  assert.throws(() => assertCurrentDeployment(env, () => { throw new Error('Remote unavailable') }), /Remote unavailable/)
-  const noLookup = () => { throw new Error('Unexpected branch lookup') }
-  assertCurrentDeployment({ ...env, GITHUB_EVENT_NAME: 'workflow_dispatch' }, noLookup)
-  assertCurrentDeployment({ ...env, DEPLOY_ENVIRONMENT: 'production' }, noLookup)
+test('tests run on PRs into dev; main accepts only dev; releases deploy without re-running tests', () => {
+  const workflow = name => readFileSync(`.github/workflows/${name}.yml`, 'utf8')
+  for (const name of ['checks', 'android-checks']) assert.match(workflow(name), /pull_request:\n {4}branches: \[dev\]\n/)
+  assert.match(workflow('main-source'), /pull_request:\n {4}branches: \[main\]\n/)
+  assert.ok(workflow('main-source').includes('[ "$HEAD_REF" != dev ] || [ "$HEAD_REPO" != "$REPO" ]'))
+  const release = workflow('release')
+  assert.match(release, /push:\n {4}branches: \[main\]\n/)
+  for (const removed of ['ci.yml', 'skip_checks', 'override_reason', '--check-current']) assert.ok(!release.includes(removed), removed)
+  assert.ok(workflow('prepare').includes('cache-to: type=gha,scope=api,mode=max'), 'Release builds keep a cache readable from main and dev')
 })
 
 test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
