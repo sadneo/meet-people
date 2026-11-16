@@ -3,15 +3,20 @@ import { prefersReducedMotion } from './feedback'
 
 // Counts from the previous value to the new one. Increases also show a short
 // "+N" badge beside the number; decreases (spending) just count down.
-export function CountUp({ value, duration = 650 }: { value: number; duration?: number }) {
+// `live` stays false until the value is real data, so the first load doesn't
+// count up from a placeholder.
+export function CountUp({ value, duration = 650, live = true }: { value: number; duration?: number; live?: boolean }) {
   const [shown, setShown] = useState(value)
   const [gain, setGain] = useState<{ amount: number; key: number } | null>(null)
   const from = useRef(value)
+  const wasLive = useRef(live)
   useEffect(() => {
     const start = from.current
+    const animated = wasLive.current && live
     from.current = value
+    wasLive.current = live
     if (start === value) return
-    const reduced = prefersReducedMotion()
+    const reduced = prefersReducedMotion() || !animated
     const began = performance.now()
     let frame = 0, first = true
     const step = (now: number) => {
@@ -24,7 +29,7 @@ export function CountUp({ value, duration = 650 }: { value: number; duration?: n
     }
     frame = requestAnimationFrame(step)
     return () => { cancelAnimationFrame(frame); setShown(value) }
-  }, [value, duration])
+  }, [value, duration, live])
   useEffect(() => {
     if (!gain) return
     const timer = setTimeout(() => setGain(null), 1200)
