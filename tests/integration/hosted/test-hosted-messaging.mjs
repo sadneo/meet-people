@@ -11,13 +11,14 @@ import { execFileSync } from 'node:child_process'
 import { chromium, expect } from '@playwright/test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createClient } from '@supabase/supabase-js'
+import { supabaseRefs } from '../../../scripts/configure-deployment.mjs'
 
 const { fetch, AbortSignal } = globalThis
 
 const env = parseEnv(readFileSync('.env', 'utf8'))
 const target = new URL(env.SUPABASE_URL)
 const origin = new URL(env.VITE_API_BASE_URL)
-if (target.origin !== 'https://wacgxhsdhrqigrmqaonc.supabase.co' || origin.origin !== 'https://pebble.garden') throw new Error('Unexpected configured target')
+if (target.origin !== `https://${supabaseRefs.production}.supabase.co` || origin.origin !== 'https://pebble.garden') throw new Error('Unexpected configured target')
 const run = randomUUID(), password = randomBytes(28).toString('base64url') + '-Aa1!'
 const report = { target: target.host, api: origin.origin, run, checks: [], cleanup: {} }
 const users = [], clients = [], conversations = []

@@ -45,8 +45,8 @@ and `PUSH_DISPATCH_ENABLED=true`.
 - **Locally:** put those in `.env.local`, add `PUSH_DISPATCH_INTERVAL_MS=5000`, then
   `pnpm exec tsx --env-file=.env.local api/push-dispatcher-main.ts`.
 - **Hosted:** deploy it as a Cloud Run **Job** from the same image (command
-  `node dist/api/api/push-dispatcher-main.js`), the way `scripts/deploy-worker.sh` deploys the event-group
-  worker, and trigger it every minute with Cloud Scheduler. Alerts arrive within about a minute. For faster
+  `node dist/api/api/push-dispatcher-main.js`), as `scripts/deploy-workers.mjs` does in both
+  environments, and trigger it every minute with Cloud Scheduler. Alerts arrive within about a minute. For faster
   delivery, run it as an always-on process with `PUSH_DISPATCH_INTERVAL_MS=5000`.
 
 ## 5. Build and test

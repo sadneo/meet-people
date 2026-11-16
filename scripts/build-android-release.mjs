@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { resolve, join } from 'node:path'
 import process from 'node:process'
 import console from 'node:console'
+import { supabaseRefs } from './configure-deployment.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const tools = join(root, '.android-build')
@@ -15,7 +16,7 @@ const signing = JSON.parse(readFileSync(join(root, '.android-signing/release.jso
 const code = process.env.PEBBLE_VERSION_CODE
 const name = process.env.PEBBLE_VERSION_NAME
 if (!/^[1-9]\d*$/.test(code ?? '') || Number(code) > 2100000000 || !/^[0-9]+\.[0-9]+\.[0-9]+(?:-[a-z0-9.-]+)?$/.test(name ?? '')) throw new Error('Set an explicit positive PEBBLE_VERSION_CODE and semantic PEBBLE_VERSION_NAME.')
-if (supplied.VITE_API_BASE_URL !== 'https://pebble.garden' || supplied.VITE_SUPABASE_URL !== 'https://wacgxhsdhrqigrmqaonc.supabase.co') throw new Error('Production endpoints required.')
+if (supplied.VITE_API_BASE_URL !== 'https://pebble.garden' || supplied.VITE_SUPABASE_URL !== `https://${supabaseRefs.production}.supabase.co`) throw new Error('Production endpoints required.')
 const env = { ...process.env }
 for (const key of Object.keys(env)) if (/^(VITE_|SUPABASE_|GOOGLE_MAPS_|SEARCH_LOCATION_|PEBBLE_KEY)/.test(key)) delete env[key]
 for (const key of ['VITE_API_BASE_URL', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY', 'VITE_GOOGLE_MAPS_API_KEY']) {
@@ -42,7 +43,7 @@ const listing = execFileSync('unzip', ['-Z1', apk], { encoding: 'utf8' }).trim()
 if (listing.some(file => /(^|\/)\.env(?:\.|$)|\.jks$|\.keystore$|release\.json$/.test(file))) throw new Error('Unexpected private file in APK')
 const contents = execFileSync('unzip', ['-p', apk], { maxBuffer: 256 * 1024 * 1024 })
 for (const key of ['SUPABASE_SERVICE_ROLE_KEY', 'GOOGLE_MAPS_SERVER_API_KEY', 'SEARCH_LOCATION_SIGNING_KEY', 'VITE_DEV_LOGIN_EMAIL', 'VITE_DEV_LOGIN_PASSWORD']) if (supplied[key] && contents.includes(Buffer.from(supplied[key]))) throw new Error(`Forbidden credential bundled: ${key}`)
-if (contents.includes(Buffer.from('https://wixdiotkntapwrbibaom.supabase.co'))) throw new Error('Sandbox endpoint bundled')
+if (contents.includes(Buffer.from(`https://${supabaseRefs.sandbox}.supabase.co`))) throw new Error('Sandbox endpoint bundled')
 for (const key of ['VITE_API_BASE_URL', 'VITE_SUPABASE_URL', 'VITE_GOOGLE_MAPS_API_KEY']) if (!contents.includes(Buffer.from(supplied[key]))) throw new Error(`Expected production setting missing: ${key}`)
 run(join(env.ANDROID_HOME, 'build-tools/36.0.0/apksigner'), ['verify', '--verbose', '--print-certs', apk])
 const manifest = execFileSync(join(env.ANDROID_HOME, 'build-tools/36.0.0/aapt'), ['dump', 'badging', apk], { encoding: 'utf8', env })

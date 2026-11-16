@@ -8,6 +8,8 @@ case "$ENVIRONMENT" in production) SUFFIX= ;; sandbox) SUFFIX=-sandbox ;; *) exi
 REGION=us-east4
 DEPLOYER="github-deployer$SUFFIX@$GCP_PROJECT_ID.iam.gserviceaccount.com"
 RUNTIME="pebble-api$SUFFIX@$GCP_PROJECT_ID.iam.gserviceaccount.com"
+PUSH="pebble-push-dispatcher$SUFFIX@$GCP_PROJECT_ID.iam.gserviceaccount.com"
+SCHEDULER="pebble-worker-scheduler$SUFFIX@$GCP_PROJECT_ID.iam.gserviceaccount.com"
 REPOSITORY="meet-people$SUFFIX"
 PROVIDER="github-actions$SUFFIX"
 POOL="github$SUFFIX"
@@ -18,8 +20,9 @@ NUMBER=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumbe
 gcloud services enable run.googleapis.com artifactregistry.googleapis.com \
   cloudbuild.googleapis.com secretmanager.googleapis.com iamcredentials.googleapis.com \
   sts.googleapis.com firebase.googleapis.com firebasehosting.googleapis.com monitoring.googleapis.com \
+  cloudscheduler.googleapis.com fcm.googleapis.com \
   --project="$GCP_PROJECT_ID" --quiet
-for name in "github-deployer$SUFFIX" "pebble-api$SUFFIX" "$WORKER_ID"; do
+for name in "github-deployer$SUFFIX" "pebble-api$SUFFIX" "$WORKER_ID" "pebble-push-dispatcher$SUFFIX" "pebble-worker-scheduler$SUFFIX"; do
   if ! gcloud iam service-accounts describe "$name@$GCP_PROJECT_ID.iam.gserviceaccount.com" --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
     gcloud iam service-accounts create "$name" --project="$GCP_PROJECT_ID" --quiet
   fi
@@ -29,24 +32,32 @@ if ! gcloud artifacts repositories describe "$REPOSITORY" --location="$REGION" -
 fi
 gcloud artifacts repositories add-iam-policy-binding "$REPOSITORY" --location="$REGION" --project="$GCP_PROJECT_ID" \
   --member="serviceAccount:$DEPLOYER" --role=roles/artifactregistry.writer --condition=None --quiet >/dev/null
-for role in roles/run.admin roles/firebasehosting.admin roles/serviceusage.serviceUsageConsumer; do
+for role in roles/run.admin roles/firebasehosting.admin roles/serviceusage.serviceUsageConsumer roles/cloudscheduler.admin; do
   gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" --member="serviceAccount:$DEPLOYER" --role="$role" --condition=None --quiet >/dev/null
 done
-gcloud iam service-accounts add-iam-policy-binding "$RUNTIME" --project="$GCP_PROJECT_ID" \
-  --member="serviceAccount:$DEPLOYER" --role=roles/iam.serviceAccountUser --condition=None --quiet >/dev/null
 WORKER="$WORKER_ID@$GCP_PROJECT_ID.iam.gserviceaccount.com"
-gcloud iam service-accounts add-iam-policy-binding "$WORKER" --project="$GCP_PROJECT_ID" \
-  --member="serviceAccount:$DEPLOYER" --role=roles/iam.serviceAccountUser --condition=None --quiet >/dev/null
-if ! gcloud secrets describe "pebble-event-group-worker-jwt$SUFFIX" --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
-  gcloud secrets create "pebble-event-group-worker-jwt$SUFFIX" --replication-policy=automatic --project="$GCP_PROJECT_ID" --quiet
-fi
-gcloud secrets add-iam-policy-binding "pebble-event-group-worker-jwt$SUFFIX" --project="$GCP_PROJECT_ID" \
-  --member="serviceAccount:$WORKER" --role=roles/secretmanager.secretAccessor --condition=None --quiet >/dev/null
-if ! gcloud secrets describe "pebble-supabase-service-role$SUFFIX" --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
-  gcloud secrets create "pebble-supabase-service-role$SUFFIX" --replication-policy=automatic --project="$GCP_PROJECT_ID" --quiet
-fi
-gcloud secrets add-iam-policy-binding "pebble-supabase-service-role$SUFFIX" --project="$GCP_PROJECT_ID" \
-  --member="serviceAccount:$RUNTIME" --role=roles/secretmanager.secretAccessor --condition=None --quiet >/dev/null
+# Google Maps OAuth bills requests to the project, which needs serviceUsageConsumer.
+gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" --member="serviceAccount:$RUNTIME" --role=roles/serviceusage.serviceUsageConsumer --condition=None --quiet >/dev/null
+gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" --member="serviceAccount:$PUSH" --role=roles/firebasecloudmessaging.admin --condition=None --quiet >/dev/null
+for account in "$RUNTIME" "$WORKER" "$PUSH" "$SCHEDULER"; do
+  gcloud iam service-accounts add-iam-policy-binding "$account" --project="$GCP_PROJECT_ID" \
+    --member="serviceAccount:$DEPLOYER" --role=roles/iam.serviceAccountUser --condition=None --quiet >/dev/null
+done
+# Secret values are populated separately from stdin; see docs/deployment.md.
+grant_secret() {
+  secret=$1; shift
+  if ! gcloud secrets describe "$secret" --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
+    gcloud secrets create "$secret" --replication-policy=automatic --project="$GCP_PROJECT_ID" --quiet
+  fi
+  for account in "$@"; do
+    gcloud secrets add-iam-policy-binding "$secret" --project="$GCP_PROJECT_ID" \
+      --member="serviceAccount:$account" --role=roles/secretmanager.secretAccessor --condition=None --quiet >/dev/null
+  done
+}
+grant_secret "pebble-supabase-service-role$SUFFIX" "$RUNTIME" "$PUSH"
+grant_secret "pebble-event-group-worker-credentials-$ENVIRONMENT" "$WORKER"
+grant_secret "pebble-google-maps-server-key-$ENVIRONMENT" "$RUNTIME"
+grant_secret "pebble-search-location-signing-key-$ENVIRONMENT" "$RUNTIME"
 if ! gcloud iam workload-identity-pools describe "$POOL" --location=global --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
   gcloud iam workload-identity-pools create "$POOL" --location=global --display-name="GitHub $ENVIRONMENT" --project="$GCP_PROJECT_ID" --quiet
 fi
@@ -83,9 +94,9 @@ if [ "$ENVIRONMENT" = sandbox ]; then
   gh variable set FIREBASE_MOBILE_SITE_ID --repo "$GITHUB_REPOSITORY" --env sandbox --body "$GCP_PROJECT_ID-dev"
 fi
 
-if [ "$ENVIRONMENT" = production ] && [ -z "$(gcloud monitoring uptime list-configs --project="$GCP_PROJECT_ID" --filter='displayName=pebble-api-health' --format='value(name)')" ]; then
-  gcloud monitoring uptime create pebble-api-health --project="$GCP_PROJECT_ID" \
-    --resource-type=uptime-url --resource-labels="host=$GCP_PROJECT_ID.web.app,project_id=$GCP_PROJECT_ID" \
+if [ -z "$(gcloud monitoring uptime list-configs --project="$GCP_PROJECT_ID" --filter="displayName=pebble-api-health$SUFFIX" --format='value(name)')" ]; then
+  gcloud monitoring uptime create "pebble-api-health$SUFFIX" --project="$GCP_PROJECT_ID" \
+    --resource-type=uptime-url --resource-labels="host=$GCP_PROJECT_ID$SUFFIX.web.app,project_id=$GCP_PROJECT_ID" \
     --protocol=https --path=/api/health --validate-ssl=true --status-codes=200 \
     --matcher-content='"status":"ok"' --period=5 --timeout=30 \
     --regions=usa-iowa,usa-oregon,usa-virginia --quiet

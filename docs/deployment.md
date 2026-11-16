@@ -177,60 +177,52 @@ artifacts include `build-info.json` with product, branch, commit and Supabase UR
 Hosted smoke checks compare it with the intended release and verify the actual
 JavaScript's Supabase URL and web/mobile entry point.
 
-### Sandbox Maps deployment
+### Environment parity
 
-Sandbox Maps activation was approved by the project owner during setup. No
-production Maps activation is included. Configure **GitHub environment `sandbox`
-→ Variables → `VITE_GOOGLE_MAPS_API_KEY`** with the public, website-restricted
-`Pebble Map Browser` key. `prepare.yml` explicitly passes it to the frontend build;
-preparation fails before building if it is missing. Private Maps/signing values
-stay in Secret Manager and must never become `VITE_*` variables or build secrets.
+Sandbox and production run the same scripts with the same settings. Only resource
+names, the database, domains and secret values differ (`-sandbox` suffix, or the
+environment name in secret names). Deliberate exceptions:
 
-`scripts/deploy-api.sh` declares the approved sandbox configuration:
+- Sandbox also hosts the mobile product and builds with the developer toolbar.
+- Sandbox mirrors production's SB Engaged events instead of crawling the source.
+- Only production runs the backup-policy check before deploying.
 
-| Runtime setting | Sandbox value |
+The Supabase project refs live only in `supabaseRefs` in
+`scripts/configure-deployment.mjs`; other scripts import them. The exception is
+the SB Engaged Edge Function, which hard-codes the production export URL.
+
+### Maps deployment
+
+Configure **GitHub environment → Variables → `VITE_GOOGLE_MAPS_API_KEY`** with that
+environment's public, website-restricted browser key. `prepare.yml` passes it to
+the frontend build, which fails if it is missing. Private Maps/signing values stay
+in Secret Manager and must never become `VITE_*` variables or build secrets.
+
+`scripts/deploy-api.sh` declares, for each environment:
+
+| Runtime setting | Value |
 | --- | --- |
-| `GOOGLE_MAPS_SERVER_API_KEY` | Secret Manager `pebble-google-maps-server-key-sandbox`, version `1` |
-| `SEARCH_LOCATION_SIGNING_KEY` | Secret Manager `pebble-search-location-signing-key-sandbox`, version `1` |
+| `GOOGLE_MAPS_OAUTH_PROJECT` | The GCP project; Places/Geocoding use the runtime identity (ADC), not the server key |
+| `GOOGLE_MAPS_SERVER_API_KEY` | Secret Manager `pebble-google-maps-server-key-<environment>`, version `1` (unused while OAuth is set) |
+| `SEARCH_LOCATION_SIGNING_KEY` | Secret Manager `pebble-search-location-signing-key-<environment>`, version `1` |
 | `GOOGLE_MAPS_STORAGE_APPROVED` | `true` |
-| `GOOGLE_MAPS_REQUESTS_PER_DAY` | `2000` per API process, not an account-wide spending cap |
-| Direct VPC network / subnet | `pebble-sandbox-egress` / `pebble-sandbox-egress-us-east4` |
-| VPC egress | `all-traffic`, region `us-east4` |
+| `GOOGLE_MAPS_REQUESTS_PER_DAY` | `200` per API process, not an account-wide spending cap |
+| Direct VPC network / subnet | `pebble-<environment>-egress` / `pebble-<environment>-egress-us-east4`, `all-traffic` |
 
-The operator-created router `pebble-sandbox-egress-router` and NAT
-`pebble-sandbox-egress-nat` use the reserved address `pebble-sandbox-egress-ip`
-(`136.23.87.38`). Restrict the server key to that outbound IP and Places API (New)
-and Geocoding API. The browser key uses Maps JavaScript API and website restrictions,
-including `https://mobile.dev.pebble.garden/*`; retain localhost only as needed.
-Authorize additional hosted origins separately if testing there (for example the
-Firebase `web.app` alias); do not widen the key to arbitrary websites.
+The API runtime identity needs `roles/serviceusage.serviceUsageConsumer` (otherwise
+Google returns `USER_PROJECT_DENIED`) and Secret Accessor on both secrets;
+`scripts/bootstrap-gcp.sh` grants these. Each database's
+`location_private.map_signing_key` must hold the same bytes as its signing secret,
+and the owner-only purge must run at least every 15 minutes. See
+[Google search locations](google-search-locations.md).
 
-The sandbox runtime account must have Secret Accessor on both secrets. The default
-Cloud Run service agent needs its standard same-project Direct VPC permissions.
-This release does not create infrastructure, change IAM, read secret payloads or
-install/rotate database signing keys. Before rollout, the operator must install
-the **same signing bytes** in sandbox's `location_private.map_signing_key` and
-schedule the owner-only purge at least every 15 minutes. See
-[Google search locations](google-search-locations.md) for the privacy/retention gate.
-
-Sandbox uses `--update-env-vars` and `--update-secrets` to retain unrelated runtime
-settings while explicitly reconciling the listed Maps settings on every release.
-Production retains its existing deployment arguments and does not receive sandbox
-keys, approval or networking. Secret versions are pinned: rotation requires updating
-the references and, for the signing secret, coordinating the database value.
-
-A manual sandbox deployment prepares both sandbox products, deploys the API and
-publishes Firebase Hosting with `pinTag`. Merging or opening a PR does not deploy sandbox. The
-mobile hosted smoke verifies the built JavaScript includes the expected browser
-key; it does not issue billable Google requests or prove authenticated save flows.
-After deployment, test search, pin movement, confirm, reopen and permission-denied
-behavior on `mobile.dev.pebble.garden`. Monitor purge job execution and Google quotas.
+Both use `--update-env-vars`/`--update-secrets`, so unrelated runtime settings are
+kept. Secret versions are pinned: rotation requires updating the references and,
+for the signing secret, coordinating the database value.
 
 Emergency disable: set `GOOGLE_MAPS_STORAGE_APPROVED=false` on Cloud Run and route
-Hosting to that revision; **pause releases or change the declared approval in
-`deploy-api.sh` too**, otherwise the next sandbox release restores `true`. Keep the
-purge job running. NAT and its reserved IP continue incurring charges independently
-of the activation flag. Production is not part of this rollout.
+Hosting to that revision; **pause releases or change `deploy-api.sh` too**,
+otherwise the next release restores `true`.
 
 Site variables are `FIREBASE_WEB_SITE_ID=cse416-meet-people` in production;
 `FIREBASE_WEB_SITE_ID=cse416-meet-people-sandbox` and
@@ -374,11 +366,12 @@ releasing the already-active version directly, so a new clone is required.
   failed smoke checks do not automatically roll back a deployment.
 - Use Cloud Run and Supabase logs without logging tokens, request bodies, Vault
   values or provider keys.
-- `release.yml` hardcodes `EVENT_GROUP_WORKER_ENABLED=false`. It packages the worker
-  job but does not execute or schedule it. The runtime requires both worker/scoring
-  gates, a dedicated worker JWT, enabled registry/database gates and verified
-  provider configuration. Its job has zero retries; uncertain scoring must not be
-  automatically repeated. `scripts/deploy-worker.sh` defines the runtime settings.
+- `scripts/deploy-workers.mjs` deploys the push dispatcher (every minute) and the
+  event-group worker (every 2 minutes) as Cloud Run Jobs with Cloud Scheduler, in
+  both environments. Jobs have zero retries; uncertain scoring must not be
+  automatically repeated. The worker signs in with
+  `pebble-event-group-worker-credentials-<environment>`, an internal Auth identity
+  enabled in `event_group_private.workers`.
 
 ```sh
 pnpm test:deployment

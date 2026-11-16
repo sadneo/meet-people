@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 import process from 'node:process'
 import console from 'node:console'
 
-const supabaseRefs = { sandbox: 'wixdiotkntapwrbibaom', production: 'wacgxhsdhrqigrmqaonc' }
+export const supabaseRefs = { sandbox: 'wixdiotkntapwrbibaom', production: 'wacgxhsdhrqigrmqaonc' }
 
 export function validateFrontendConfiguration(env) {
   assert.ok(Object.hasOwn(supabaseRefs, env.DEPLOY_ENVIRONMENT), 'Choose sandbox or production')
@@ -14,9 +14,7 @@ export function validateFrontendConfiguration(env) {
   assert.match(env.VITE_BUILD_SHA ?? '', /^[0-9a-f]{40}$/, 'Frontend requires a resolved commit SHA')
   assert.equal(env.VITE_SUPABASE_URL, supabaseUrl, 'Frontend must use the matching Supabase project')
   assert.ok(env.VITE_SUPABASE_PUBLISHABLE_KEY, 'Missing frontend Supabase public key')
-  if (env.DEPLOY_ENVIRONMENT === 'sandbox') {
-    assert.ok(env.VITE_GOOGLE_MAPS_API_KEY?.trim(), 'Missing sandbox Maps browser key; configure VITE_GOOGLE_MAPS_API_KEY in the sandbox GitHub environment')
-  }
+  assert.ok(env.VITE_GOOGLE_MAPS_API_KEY?.trim(), 'Missing Maps browser key; configure VITE_GOOGLE_MAPS_API_KEY in the GitHub environment')
   return { branch, sha: env.VITE_BUILD_SHA, supabaseUrl }
 }
 

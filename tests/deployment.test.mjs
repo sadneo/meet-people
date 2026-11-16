@@ -23,11 +23,11 @@ test('release stages run backend then services in dependency order for each envi
   const backend = run('backend', stageEnv)
   assert.deepEqual(backend.slice(0, EDGE_FUNCTIONS.length), EDGE_FUNCTIONS.map(name => `pnpm exec supabase functions deploy ${name} --project-ref wixdiotkntapwrbibaom --use-api`))
   assert.deepEqual(backend.slice(EDGE_FUNCTIONS.length), ['node scripts/push-reviewed-migrations.mjs --yes', 'node scripts/deploy-product-schema.mjs', 'pnpm hosting:configure', 'node scripts/configure-sbengaged-sync.mjs'])
-  assert.deepEqual(run('services', stageEnv), ['sh scripts/deploy-api.sh', 'sh scripts/deploy-worker.sh'])
-  assert.deepEqual(run('services', { DEPLOY_ENVIRONMENT: 'production' }), ['sh scripts/deploy-api.sh', 'node scripts/deploy-production-workers.mjs', 'node scripts/deploy-dining-schedules.mjs', 'node scripts/retire-google-dining-schedule.mjs'])
+  assert.deepEqual(run('services', stageEnv), ['sh scripts/deploy-api.sh', 'node scripts/deploy-workers.mjs'])
+  assert.deepEqual(run('services', { DEPLOY_ENVIRONMENT: 'production' }), ['sh scripts/deploy-api.sh', 'node scripts/deploy-workers.mjs', 'node scripts/deploy-dining-schedules.mjs', 'node scripts/retire-google-dining-schedule.mjs'])
   const partial = []
   assert.throws(() => runStage('services', { DEPLOY_ENVIRONMENT: 'production' }, (command, args) => { partial.push(args[0]); if (partial.length === 2) throw new Error('worker failed') }), /worker failed/)
-  assert.deepEqual(partial, ['scripts/deploy-api.sh', 'scripts/deploy-production-workers.mjs'], 'A failed step stops later steps')
+  assert.deepEqual(partial, ['scripts/deploy-api.sh', 'scripts/deploy-workers.mjs'], 'A failed step stops later steps')
   for (const env of [{}, { DEPLOY_ENVIRONMENT: 'staging' }]) assert.throws(() => stageSteps('services', env), /production or sandbox/)
   assert.throws(() => stageSteps('backend', { DEPLOY_ENVIRONMENT: 'sandbox' }), /SUPABASE_PROJECT_REF/)
   assert.throws(() => stageSteps('hosting', stageEnv), /backend or services/)
@@ -186,7 +186,7 @@ test('frontend builds reject the wrong branch, project, missing key or unresolve
   assert.throws(() => validateFrontendConfiguration({ ...env, DEPLOY_ENVIRONMENT: 'other' }), /sandbox or production/)
   const production = { ...env, DEPLOY_ENVIRONMENT: 'production', VITE_BUILD_BRANCH: 'main', VITE_SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co' }
   assert.equal(validateFrontendConfiguration(production).branch, 'main')
-  assert.equal(validateFrontendConfiguration({ ...production, VITE_GOOGLE_MAPS_API_KEY: '' }).branch, 'main', 'Production does not require sandbox Maps configuration')
+  assert.throws(() => validateFrontendConfiguration({ ...production, VITE_GOOGLE_MAPS_API_KEY: '' }), /Maps browser key/)
   assert.throws(() => validateFrontendConfiguration({ ...production, VITE_BUILD_BRANCH: 'dev' }), /main/)
   assert.throws(() => validateFrontendConfiguration({ ...production, VITE_SUPABASE_URL: env.VITE_SUPABASE_URL }), /matching Supabase/)
 })
@@ -247,7 +247,7 @@ test('hosted smoke checks reject incorrect product, branch, commit, backend and 
   assert.throws(() => smoke({}, `${info.supabaseUrl} Continue with email`), /Command failed/, 'Missing Maps key must fail the mobile hosted smoke')
 })
 
-test('sandbox API deployment merges Maps references and static egress; production never inherits sandbox configuration', () => {
+test('both environments deploy the API identically, each with only its own resources', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-maps-deploy-'))
   try {
     // The script can invoke only this mock gcloud; no network or credentials are used.
@@ -270,7 +270,8 @@ test('sandbox API deployment merges Maps references and static egress; productio
     assert.ok(args.includes('--vpc-egress=all-traffic'))
     const vars = args.find(arg => arg.startsWith('--update-env-vars='))
     assert.ok(vars.includes('GOOGLE_MAPS_STORAGE_APPROVED=true'))
-    assert.ok(vars.includes('GOOGLE_MAPS_REQUESTS_PER_DAY=2000'))
+    assert.ok(vars.includes('GOOGLE_MAPS_REQUESTS_PER_DAY=200'))
+    assert.ok(vars.includes('GOOGLE_MAPS_OAUTH_PROJECT=cse416-meet-people'))
     assert.ok(vars.includes(`SUPABASE_URL=${base.SUPABASE_URL}`))
     assert.ok(args.includes('--update-secrets=SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role-sandbox:latest,GOOGLE_MAPS_SERVER_API_KEY=pebble-google-maps-server-key-sandbox:1,SEARCH_LOCATION_SIGNING_KEY=pebble-search-location-signing-key-sandbox:1'))
     assert.ok(!args.some(arg => arg.startsWith('--set-env-vars=') || arg.startsWith('--set-secrets=')))
@@ -283,7 +284,8 @@ test('sandbox API deployment merges Maps references and static egress; productio
     assert.ok(production.includes('--network=pebble-production-egress'))
     assert.ok(production.includes('--subnet=pebble-production-egress-us-east4'))
     assert.ok(production.includes('--vpc-egress=all-traffic'))
-    assert.ok(production.some(arg => arg.includes('GOOGLE_MAPS_REQUESTS_PER_DAY=200')))
+    const normalize = argv => argv.join('\n').replace(/-?(sandbox|production)/g, '').replaceAll(base.SUPABASE_URL, 'DATABASE').replaceAll('https://wacgxhsdhrqigrmqaonc.supabase.co', 'DATABASE')
+    assert.equal(normalize(args), normalize(production), 'Only resource names may differ between environments')
     for (const overrides of [
       { API_SERVICE: 'pebble-api' }, { API_SECRET: 'pebble-supabase-service-role' },
       { API_RUNTIME_ACCOUNT: 'pebble-api@cse416-meet-people.iam.gserviceaccount.com' },

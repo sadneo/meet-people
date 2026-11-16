@@ -2,10 +2,11 @@ import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { supabaseRefs } from './configure-deployment.mjs'
 
 const targets = {
-  production: { ref: 'wacgxhsdhrqigrmqaonc', mode: 'producer' },
-  sandbox: { ref: 'wixdiotkntapwrbibaom', mode: 'mirror' },
+  production: { ref: supabaseRefs.production, mode: 'producer' },
+  sandbox: { ref: supabaseRefs.sandbox, mode: 'mirror' },
 }
 const target = targets[process.env.DEPLOY_ENVIRONMENT]
 if (!target || process.env.SUPABASE_PROJECT_REF !== target.ref || process.env.SUPABASE_URL !== `https://${target.ref}.supabase.co`) {
