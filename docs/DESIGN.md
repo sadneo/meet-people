@@ -91,7 +91,7 @@ support Escape, focus containment and focus return. Keep visible keyboard focus,
 
 ## Real data and service states
 
-Supabase owns authentication. Existing Express `/api` contracts own account,
+Supabase owns authentication and private messaging change notifications. Existing Express `/api` contracts own account,
 preferences, matching, events, connections, messages, photos and safety receipts.
 Do not turn fixtures into apparently real people, notifications or saved settings.
 Loading, empty, unavailable, conflict and unconfirmed-write states stay distinct.

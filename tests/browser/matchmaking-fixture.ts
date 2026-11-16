@@ -8,7 +8,35 @@ export async function mockMatchingSession(page: Page, signedIn = true, signOutFa
     let session = ${signedIn ? JSON.stringify({ access_token: principal.token, user: { id: principal.id } }) : 'null'};
     let failures = ${signOutFailures};
     const listeners = new Set();
-    export const supabase = { auth: {
+    export const supabase = {
+      channel(topic, options) {
+        if (topic !== 'messaging:' + session?.user.id || options?.config?.private !== true) throw new Error('Expected private owner messaging channel');
+        let broadcast, typing, status;
+        const changed = () => broadcast?.();
+        const typed = event => typing?.({ payload: event.detail });
+        const reconnected = () => status?.('SUBSCRIBED');
+        const channel = {
+          on(type, filter, callback) {
+            if (type !== 'broadcast') throw new Error('Unexpected realtime event');
+            if (filter.event === 'changed') broadcast = callback;
+            else if (filter.event === 'typing') typing = callback;
+            else throw new Error('Unexpected realtime event');
+            return channel;
+          },
+          subscribe(callback) {
+            status = callback;
+            window.addEventListener('test:messaging-broadcast', changed);
+            window.addEventListener('test:messaging-reconnected', reconnected);
+            window.addEventListener('test:messaging-typing', typed);
+            queueMicrotask(reconnected);
+            return channel;
+          },
+          unsubscribe() { window.removeEventListener('test:messaging-broadcast', changed); window.removeEventListener('test:messaging-reconnected', reconnected); window.removeEventListener('test:messaging-typing', typed); }
+        };
+        return channel;
+      },
+      removeChannel(channel) { channel.unsubscribe(); return Promise.resolve('ok'); },
+      auth: {
       onAuthStateChange(callback) { listeners.add(callback); queueMicrotask(() => { if (listeners.has(callback)) callback('INITIAL_SESSION', session); }); return { data: { subscription: { unsubscribe() { listeners.delete(callback); } } } }; },
       signOut: async (options) => {
         if (options?.scope !== 'local') throw new Error('Expected browser-local sign-out');

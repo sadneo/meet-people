@@ -55,10 +55,65 @@ test('an uncertain request response requires read-only reconciliation before ano
   const fixture = await requestFixture(page, true)
   await page.goto('/messages/requests')
   await page.getByRole('button', { name: 'Accept', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Reload requests', exact: true })).toBeVisible()
+  await Promise.all([
+    page.waitForResponse(response => new URL(response.url()).pathname === '/api/connections' && response.request().method() === 'GET'),
+    page.evaluate(() => window.dispatchEvent(new Event('test:messaging-broadcast'))),
+  ])
   await expect(page.getByRole('button', { name: 'Decline', exact: true })).toBeDisabled()
   await page.getByRole('button', { name: 'Reload requests', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Decline', exact: true })).toBeEnabled()
   expect(fixture.writes()).toBe(1)
+})
+
+test('incoming Friends and Dating requests and withdrawals update live without mutations or polling', async ({ page }) => {
+  const fixture = await wiringFixture(page)
+  const friends = { id: peer, display_name: 'Taylor', avatar_url: null, requested_at: new Date().toISOString(), mode: 'friends' as const }
+  const dating = { ...friends, id: 'a0000000-0000-4000-8000-000000000003', display_name: 'Jordan', mode: 'dating' as const }
+  let pending: (typeof friends | typeof dating)[] = [], reads = 0
+  await page.route('**/api/connections', route => { reads++; return route.fulfill({ json: { incoming: pending, sent: [], connected: [] } }) })
+  await page.goto('/messages/requests')
+  await expect(page.getByText('No pending requests.', { exact: true })).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  const idleReads = reads
+  await page.waitForTimeout(1200)
+  expect(reads).toBe(idleReads)
+  pending = [friends, dating]
+  await page.evaluate(() => window.dispatchEvent(new Event('test:messaging-broadcast')))
+  await expect(page.getByRole('heading', { name: 'Taylor', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Jordan', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Accept', exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Like back', exact: true })).toBeEnabled()
+  pending = []
+  await page.evaluate(() => window.dispatchEvent(new Event('test:messaging-broadcast')))
+  await expect(page.getByText('No pending requests.', { exact: true })).toBeVisible()
+  expect(fixture.calls.filter(call => call.path.startsWith('/api/connections') && call.method !== 'GET')).toHaveLength(0)
+})
+
+test('requests defer hidden updates and catch up after visibility changes or reconnecting', async ({ page }) => {
+  await wiringFixture(page)
+  let pending = false, reads = 0
+  await page.route('**/api/connections', route => { reads++; return route.fulfill({ json: { incoming: pending ? [{ id: peer, display_name: 'Taylor', avatar_url: null, requested_at: new Date().toISOString(), mode: 'friends' }] : [], sent: [], connected: [] } }) })
+  await page.goto('/messages/requests')
+  await expect(page.getByText('No pending requests.', { exact: true })).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  const before = reads
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
+  pending = true
+  await page.evaluate(() => window.dispatchEvent(new Event('test:messaging-broadcast')))
+  await page.waitForTimeout(150)
+  expect(reads).toBe(before)
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
+  await expect(page.getByRole('heading', { name: 'Taylor', exact: true })).toBeVisible()
+  pending = false
+  await page.evaluate(() => window.dispatchEvent(new Event('test:messaging-reconnected')))
+  await expect(page.getByText('No pending requests.', { exact: true })).toBeVisible()
 })
 
 test('Friends and Dating request sections collapse independently', async ({ page }) => {

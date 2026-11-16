@@ -16,8 +16,11 @@ import {
   ReadStateSchema,
   MessagingActivitySchema,
   type Message,
+  type TypingEvent,
 } from "../../shared/messaging";
 import { messagingRequest } from "../features/messaging/client";
+import { useMessagingRealtime } from '../features/messaging/useMessagingRealtime';
+import { useConversationTyping } from '../features/messaging/useConversationTyping';
 import { useCachedLoad } from "../data/useCachedLoad";
 import { useMessageDraft } from '../data/message-drafts';
 import { useAction } from "./hooks";
@@ -53,6 +56,7 @@ export function Messages() {
     [query, setQuery] = useState(''),
     [findGroup,setFindGroup] = useState(false),
     [page, setPage] = useState(1);
+  const realtime = useMessagingRealtime(current.session.user.id);
   const inbox = useCachedLoad(
     useCallback(
       (signal) =>
@@ -66,7 +70,6 @@ export function Messages() {
   const reloadInbox=inbox.reload,reloadGroups=groups.reload,reloadActivity=activity.reload
   const changed=useCallback(()=>{reloadInbox();reloadGroups();reloadActivity()},[reloadInbox,reloadGroups,reloadActivity])
   useEffect(()=>{window.addEventListener('pebble:matching-changed',changed);return()=>window.removeEventListener('pebble:matching-changed',changed)},[changed])
-  useEffect(() => { const refresh = () => { if (document.visibilityState === 'visible') changed(); }; window.addEventListener('focus', refresh); return () => window.removeEventListener('focus', refresh); }, [changed]);
   const rows = [
     ...(groups.value?.groups ?? []).map(group => ({ id: group.id, group: true, title: group.name || group.members.filter(person => person.id !== current.session.user.id).map(person => person.display_name).join(', ') || 'Friends group',
       people: group.members.filter(person => person.id !== current.session.user.id).map(person => ({ id: person.id, display_name: person.display_name, avatar_url: null as string | null })),
@@ -91,6 +94,7 @@ export function Messages() {
           <Link className="round messages-activity" to="/activity" aria-label="Activity inbox"><Icon name="Bell" /></Link>
         </div>
       </div>
+      {realtime.error && <div><ErrorMessage>{realtime.error}</ErrorMessage><ActionButton secondary onClick={realtime.reconnect}>Reconnect live updates</ActionButton></div>}
       {findGroup&&<Modal title="Find a group" close={()=>setFindGroup(false)}><ActiveFriends key={current.session.user.id} close={()=>setFindGroup(false)} changed={changed}/></Modal>}
       <div className="live-messages">
         <aside className="live-inbox">
@@ -152,7 +156,7 @@ export function Messages() {
           )}
         </aside>
         {selected ? (
-          <Chat key={draftKey} draftKey={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} connectionLabel={rows.find(row => row.id === selected)?.label ?? ''} />
+          <Chat key={draftKey} draftKey={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} connectionLabel={rows.find(row => row.id === selected)?.label ?? ''} typing={realtime.typing} />
         ) : (
           <div className="chat-empty">
             <Icon name="Messages"/>
@@ -163,7 +167,7 @@ export function Messages() {
     </section>
   );
 }
-function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id: string; changed: () => void; isGroup?: boolean; connectionLabel?: string; draftKey: string }) {
+function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing }: { id: string; changed: () => void; isGroup?: boolean; connectionLabel?: string; draftKey: string; typing: TypingEvent[] }) {
   const [group,setGroup]=useState<ActiveGroup|null>(null)
   const [removeOpen, setRemoveOpen] = useState(false);
   const [peopleOpen, setPeopleOpen] = useState(false);
@@ -179,15 +183,16 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
         return {kind:'friends_group' as const,canSend:true,messages:value.messages,participants:group.members,nextCursor:value.nextCursor}
       },[token,id,isGroup]),
       ["message-history", isGroup ? "group" : "direct", id], 0,
-      { refetchInterval: 4000, refetchOnWindowFocus: 'always', retainDataOnError: true },
+      { retainDataOnError: true },
     );
-  // Display data survives a failed poll, but never grants stale send permissions.
+  // Display data survives a failed refresh, but never grants stale send permissions.
   const canSend = !!history.value?.canSend && !history.error && !history.refreshing;
   const historyPage=async(before:number)=>isGroup?matchingClient(token).history(id,before):messagingRequest(`/${encodeURIComponent(id)}/messages?before=${before}`,HistorySchema)
 
   const { draft, store } = useMessageDraft(draftKey);
   const { body, confirmed } = draft;
   const sending = draft.status === 'pending', uncertain = sending || draft.status === 'uncertain';
+  const announceTyping = useConversationTyping(id, isGroup, !!history.value?.canSend && !history.error && !uncertain, current.session.user.id)
   const [older, setOlder] = useState<Message[]>([]),
     [cursor, setCursor] = useState<number | null>(null),
     [readError, setReadError] = useState("");
@@ -207,11 +212,6 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
     };
   }, []);
   const reloadHistory=history.reload
-  useEffect(() => {
-    const refresh = () => { if (document.visibilityState === 'visible') reloadHistory(); };
-    window.addEventListener('focus', refresh);
-    return () => window.removeEventListener('focus', refresh);
-  }, [reloadHistory]);
   useEffect(()=>{const refresh=()=>{setOlder([]);reloadHistory()};window.addEventListener('pebble:matching-changed',refresh);return()=>window.removeEventListener('pebble:matching-changed',refresh)},[reloadHistory])
   const messages = [
     ...new Map(
@@ -258,6 +258,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
   async function send(event: FormEvent) {
     event.preventDefault();
     if (action.busy) return;
+    announceTyping(false)
     const saved = await store.send(draftKey, id, current.session.user.id, canSend, operation =>
       isGroup ? matchingClient(token).send(id, operation) : messagingRequest(`/${encodeURIComponent(id)}/messages`, MessageSchema, { body: operation }));
     if (saved && live.current) {
@@ -270,6 +271,8 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
       (person) => person.id !== current.session.user.id,
     ) ?? [];
   const olderCursor = cursor ?? history.value?.nextCursor;
+  const typists = history.value?.canSend && !history.error ? others.filter(person => typing.some(event => event.conversationId === id && event.isGroup === isGroup && event.userId === person.id)) : []
+  const typingLabel = typists.length === 1 ? `${typists[0].display_name} is typing` : `${typists.length} people are typing`
   return (
     <section className="live-chat">
       <header className="chat-header">
@@ -363,6 +366,10 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
           </Fragment>
         ))}
       </div>
+      {!!typists.length && <div className="chat-typing" role="status" aria-label={typingLabel}>
+        <span className="typing-dots" aria-hidden="true"><span/><span/><span/></span>
+        <span>{typingLabel}…</span>
+      </div>}
       <ErrorMessage>{action.error}</ErrorMessage>
       <ErrorMessage>{draft.error}</ErrorMessage>
       {history.value && !history.value.canSend && (
@@ -380,7 +387,8 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
           rows={1}
           placeholder="Message…"
           value={body}
-          onChange={(event) => store.edit(draftKey, event.target.value)}
+          onChange={(event) => { store.edit(draftKey, event.target.value); announceTyping(!!event.target.value.trim()) }}
+          onBlur={() => announceTyping(false)}
           onKeyDown={(event) => {
             if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             event.preventDefault();
