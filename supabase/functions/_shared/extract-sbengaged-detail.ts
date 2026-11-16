@@ -5,7 +5,7 @@ function decodeHtml(value: string) {
     .replace(/&#39;/g, "'")
 }
 
-function validUrl(value: unknown) {
+export function validSbEngagedImageUrl(value: unknown) {
   if (typeof value !== 'string' || !value.trim()) return null
   try {
     const text = decodeHtml(value.trim())
@@ -23,9 +23,9 @@ function imageValue(value: unknown): string | null {
   }
   if (value && typeof value === 'object') {
     const image = value as Record<string, unknown>
-    return validUrl(image.url) ?? validUrl(image.contentUrl)
+    return validSbEngagedImageUrl(image.url) ?? validSbEngagedImageUrl(image.contentUrl)
   }
-  return validUrl(value)
+  return validSbEngagedImageUrl(value)
 }
 
 function structuredImage(value: unknown): string | null {
@@ -59,14 +59,14 @@ export function extractSbEngagedDetailImage(html: string) {
   const metadata = [...html.matchAll(/<meta\b[^>]*>/gi)].map(match => attributes(match[0]))
   for (const key of ['og:image', 'og:image:secure_url', 'twitter:image', 'twitter:image:src']) {
     for (const tag of metadata) {
-      if ((tag.property ?? tag.name)?.toLowerCase() === key) { const valid = validUrl(tag.content); if (valid) return valid }
+      if ((tag.property ?? tag.name)?.toLowerCase() === key) { const valid = validSbEngagedImageUrl(tag.content); if (valid) return valid }
     }
   }
   // CampusGroups identifies the actual event banner in its alternative text.
   // Never substitute the first image, navigation icon or campus logo.
   for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
     const tag = attributes(match[0])
-    if (/\bbanner for\b/i.test(tag.alt ?? '')) { const valid = validUrl(tag.src); if (valid) return valid }
+    if (/\bbanner for\b/i.test(tag.alt ?? '')) { const valid = validSbEngagedImageUrl(tag.src); if (valid) return valid }
   }
   return null
 }
