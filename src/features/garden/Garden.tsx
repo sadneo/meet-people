@@ -15,15 +15,11 @@ import { haptic } from '../../ui/feedback'
 import { CountUp } from '../../ui/CountUp'
 import './garden.css'
 import { WeeklyActivity } from './WeeklyActivity'
+import { ArtPreview } from './ArtPreview'
 import { recordGardenDay, type GardenSnapshot } from './history'
 import { PageSkeleton } from '../../ui/loading/PageSkeleton'
 import type { GardenAction } from './reducer'
 
-function ArtPreview({ id }: { id: string }) {
-  const ref = useRef<HTMLCanvasElement>(null)
-  useEffect(() => { let active=true; void loadGardenArt().then(art => { if(active && ref.current) art.preview(ref.current.getContext('2d')!,id) }).catch(() => {}); return () => { active=false } }, [id])
-  return <canvas ref={ref} width={64} height={64} aria-hidden="true" />
-}
 
 export function Garden() {
   const { owner, state, dispatch:dispatchGarden, refresh, earn, available } = useGarden(), community = state.community

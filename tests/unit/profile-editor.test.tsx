@@ -12,6 +12,13 @@ vi.mock('../../src/features/account/usePhotoGallery', () => ({ usePhotoGallery: 
 vi.mock('../../src/features/account/useProfileDetails', () => ({ useProfileDetails: () => mocks.facts }));
 vi.mock('../../src/features/account/useDetailedSettings', () => ({ useDetailedSettings: () => mocks.detailed }));
 vi.mock('../../src/ui/Preferences', () => ({ DatingPreferencesPanel: () => null }));
+// Customization has its own tests; these cover photo staging and saves.
+vi.mock('../../src/features/account/profile-customization-client', async () => {
+  const { defaultProfileCustomization } = await import('../../shared/profile-customization');
+  return { useProfileCustomization: () => ({ query: { data: { revision: 0, customization: defaultProfileCustomization } }, value: defaultProfileCustomization, save: vi.fn() }) };
+});
+vi.mock('../../src/ui/PhotoGallery', async importOriginal => ({ ...await importOriginal<typeof import('../../src/ui/PhotoGallery')>(), PhotoGalleryPanel: () => null }));
+vi.mock('../../src/ui/ProfileCustomization', () => ({ AudienceSelect: () => null, GardenShowcasePicker: () => null, InterestOrderEditor: () => null, OwnProfilePreview: () => null, ProfileFinishCard: () => null }));
 
 const upload = () => new File(['image'], 'photo.png', { type: 'image/png' });
 const choose = (file = upload()) => fireEvent.change(screen.getByLabelText('Choose a photo'), { target: { files: [file] } });

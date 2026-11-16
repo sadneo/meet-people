@@ -1028,6 +1028,27 @@ export type Database = {
           },
         ]
       }
+      profile_customization: {
+        Row: {
+          customization: Json
+          revision: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          customization: Json
+          revision?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          customization?: Json
+          revision?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profile_details: {
         Row: {
           facts: Json
@@ -1445,10 +1466,12 @@ export type Database = {
         Args: { request_id_in: string }
         Returns: Json
       }
+      get_profile_customization: { Args: never; Returns: Json }
       get_profile_details: { Args: never; Returns: Json }
       get_profile_photo_gallery: { Args: { owner_in: string }; Returns: Json }
       get_profile_photo_reference: { Args: { owner_in: string }; Returns: Json }
       get_profile_photo_state: { Args: never; Returns: Json }
+      get_profile_showcase: { Args: { owner_in: string }; Returns: Json }
       get_progressive_matching_setup: { Args: never; Returns: Json }
       get_queue_match: {
         Args: never
@@ -1627,7 +1650,12 @@ export type Database = {
         Args: { me: string; other: string }
         Returns: number
       }
+      profile_customization_default: { Args: never; Returns: Json }
       profile_embedding: { Args: { p_id: string }; Returns: number[] }
+      profile_garden_item_owned: {
+        Args: { item: string; person: string }
+        Returns: boolean
+      }
       profile_language_key: { Args: { value_in: string }; Returns: string }
       profile_text: { Args: { p_id: string }; Returns: string }
       project_dating_candidate: { Args: { target_in: string }; Returns: Json }
@@ -1755,6 +1783,10 @@ export type Database = {
         Returns: Json
       }
       save_matchmaking_profile: { Args: { profile_in: Json }; Returns: Json }
+      save_profile_customization: {
+        Args: { customization_in: Json }
+        Returns: Json
+      }
       save_profile_details: { Args: { details_in: Json }; Returns: Json }
       save_profile_photo: { Args: { photo_in: Json }; Returns: Json }
       sbengaged_begin_sync: { Args: { p_mode: string }; Returns: Json }
@@ -1846,6 +1878,7 @@ export type Database = {
         Args: { prefs_in: Json }
         Returns: boolean
       }
+      valid_profile_customization: { Args: { value: Json }; Returns: boolean }
       valid_profile_facts: { Args: { facts_in: Json }; Returns: boolean }
       valid_profile_interests: {
         Args: { labels: Json; require_minimum: boolean }

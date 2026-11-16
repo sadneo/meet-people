@@ -49,6 +49,10 @@ export async function wiringFixture(
     blocked = false,
     friendRevision = 0,
     friends: FriendsPreferences | null = null;
+  let customization = {
+    revision: 0,
+    customization: { interestOrder: [] as string[], audiences: { education: 'both', occupation: 'both', languages: 'both' }, gardenItem: null as string | null },
+  };
   let facts = {
     revision: 0,
     facts: {
@@ -146,6 +150,12 @@ export async function wiringFixture(
         },
       });
     if (path.endsWith("/profile")) return reply({ profile: account.profile });
+    if (path.endsWith("/profile-customization")) {
+      if (method === "PUT") customization = { revision: customization.revision + 1, customization: body.customization };
+      return reply(customization);
+    }
+    if (path.includes("/profile-customization/"))
+      return reply({ interestOrder: customization.customization.interestOrder, gardenItem: customization.customization.gardenItem });
     if (path.endsWith("/profile-details")) {
       if (method === "PUT")
         facts = { revision: facts.revision + 1, facts: body.facts };
@@ -162,6 +172,8 @@ export async function wiringFixture(
         updatedAt: photoRevision ? now : null,
       });
     }
+    if (/\/profile-photo\/gallery\/[^/]+$/.test(path))
+      return reply({ revision: photoRevision, count: hasPhoto ? 1 : 0 });
     if (path.includes("/profile-photo/reference/"))
       return reply({ revision: 0, hasPhoto: false, updatedAt: null });
     if (path.includes("/profile-photo/"))
@@ -454,5 +466,5 @@ export async function wiringFixture(
   });
   await mockMatchingSession(page, !options.guest);
   const garden=await gardenFixture(page);
-  return { calls, sent, garden, getAccount: () => account };
+  return { calls, sent, garden, getAccount: () => account, getCustomization: () => customization };
 }

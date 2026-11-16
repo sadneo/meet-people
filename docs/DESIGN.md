@@ -106,6 +106,19 @@ bottom-tab labels so they still fit at doubled system text. Settings
 switches save as soon as they change. Reduced motion removes all decorative
 movement.
 
+## Profile customization
+
+Profile opens on your profile, with a Your profile / Preview switch; Preview
+shows the saved card as Friends or Dating would see it, without a dialog. A
+"Finish your profile" card lists only what is missing, each linking to that
+field. Photos are managed inline on Profile with the same controls as the photo
+manager. People can order their interests; the first is their top interest and
+leads their card. Ordering is presentation only: matching treats interests as
+an unordered set. Education, occupation and languages can each be shown to
+Friends and Dating, Friends only or Dating only. One owned Garden item (or the
+Pebble) can appear on the card. Another person's order and Garden item use the
+same audience as profile photos, and stale choices are dropped, never shown.
+
 ## Onboarding and matching setup
 
 Open with a single mobile form for display name, user-chosen username and private

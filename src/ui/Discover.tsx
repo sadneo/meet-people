@@ -21,6 +21,10 @@ import { canonicalInterest, interestSelectionProblem } from '../../shared/intere
 import { MatchingSetup } from './MatchingSetup'
 import { DiscoverModes } from './DiscoverModes'
 import { haptic, prefersReducedMotion } from './feedback'
+import { useProfileShowcase } from '../features/account/profile-customization-client'
+import { orderInterests } from '../../shared/profile-customization'
+import { ArtPreview } from '../features/garden/ArtPreview'
+import { gardenItemName } from '../features/garden/showcase'
 export function Connect({
   id,
   dating = false,
@@ -173,7 +177,12 @@ function Candidate({
   const viewerInterests = new Set(current.account?.profile?.interests.map(canonicalInterest) ?? []);
   const shared = interests.filter(interest => viewerInterests.has(canonicalInterest(interest)));
   const sharedCount = new Set(shared.map(canonicalInterest)).size;
-  const sortedInterests = [...shared, ...interests.filter(interest => !shared.includes(interest))];
+  // The owner's top interest leads, then shared ones, then the rest in their order.
+  const showcase = useProfileShowcase(id, photoGalleryActive);
+  const ownerOrder = orderInterests(interests, showcase.data?.interestOrder ?? []);
+  const top = showcase.data?.interestOrder.find(label => interests.includes(label));
+  const sortedInterests = [...(top ? [top] : []), ...ownerOrder.filter(interest => interest !== top && shared.includes(interest)), ...ownerOrder.filter(interest => interest !== top && !shared.includes(interest))];
+  const gardenItem = showcase.data?.gardenItem ?? null;
   return (
     <article className={`dating-focus discovery-profile ${dating ? 'dating-profile' : 'friends-focus'}`}>
     <div className={`card dating-card ${dating ? '' : 'friends-card'}`}>
@@ -190,13 +199,14 @@ function Candidate({
           {(city || intent || details?.occupation) && <p>{[details?.occupation, city].filter(Boolean).join(' · ')}{(city || details?.occupation) && intent && <br />}{intent}</p>}
         </div>
         <SafetyActions id={id} name={name} iconOnly />
+        {gardenItem && <span className="card-garden-item" role="img" aria-label={`From ${name}'s Garden: ${gardenItemName(gardenItem).replace('Your ', '')}`} title={gardenItemName(gardenItem).replace('Your ', '')}><ArtPreview id={gardenItem} size={40}/></span>}
       </div>
       <div className="dating-profile-body">
         {bio && <section><h3>About {name}</h3><p>{bio}</p></section>}
         <section>
           <div className="dating-section-heading"><h3>Interests</h3>{sharedCount > 0 && <span>{sharedCount} in common</span>}</div>
-          <div className="dating-interest-list">{sortedInterests.map(interest => <button type="button" key={interest} onClick={() => { setSelectedInterest(interest); setInterestError(''); }} className={`dating-interest ${shared.includes(interest) ? 'in-common' : ''}`}>
-            {shared.includes(interest) && <Icon name="Check" />}{interest}{shared.includes(interest) && <span className="sr-only"> · shared interest</span>}
+          <div className="dating-interest-list">{sortedInterests.map(interest => <button type="button" key={interest} onClick={() => { setSelectedInterest(interest); setInterestError(''); }} className={`dating-interest ${shared.includes(interest) ? 'in-common' : ''} ${interest === top ? 'is-top' : ''}`}>
+            {interest === top ? <Icon name="Star" /> : shared.includes(interest) && <Icon name="Check" />}{interest}{interest === top && <span className="sr-only"> · top interest</span>}{shared.includes(interest) && <span className="sr-only"> · shared interest</span>}
           </button>)}</div>
         </section>
         {sharedAvailability && <section className="dating-overlap" aria-label="Shared availability">

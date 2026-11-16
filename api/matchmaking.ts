@@ -13,6 +13,8 @@ import { EventGroupQueueSchema, MatchingNotificationsSchema, ListingIdSchema, Li
 import { AccountProfileSchema, type AccountProfile } from '../shared/account-profile.js'
 import type { SaveProfileDetails } from '../shared/profile-details.js'
 import { createProfileDetailsRouter } from './profile-details.js'
+import { createProfileCustomizationRouter } from './profile-customization.js'
+import type { SaveProfileCustomization } from '../shared/profile-customization.js'
 import type { SaveFriendsSearchPreferences } from '../shared/friends-search-preferences.js'
 import { createFriendsSearchPreferencesRouter } from './friends-search-preferences.js'
 import type { SaveDetailedSettings } from '../shared/detailed-settings.js'
@@ -52,6 +54,9 @@ export interface UserContextTransport {
     saveAccount?(account: SaveAccount): PromiseLike<RpcResponse>
     profileDetails?(): PromiseLike<RpcResponse>
     saveProfileDetails?(details: SaveProfileDetails): PromiseLike<RpcResponse>
+    profileCustomization?(): PromiseLike<RpcResponse>
+    saveProfileCustomization?(value: SaveProfileCustomization): PromiseLike<RpcResponse>
+    profileShowcase?(owner: string): PromiseLike<RpcResponse>
     friendsRuntime?(): PromiseLike<RpcResponse>
     activeFriendsStatus?(): PromiseLike<RpcResponse>
     activeFriendsCommand?(command: ActiveCommand): PromiseLike<RpcResponse>
@@ -139,6 +144,9 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         saveAccount: account => client.rpc('save_account', { account_in: account }),
         profileDetails: () => client.rpc('get_profile_details'),
         saveProfileDetails: details => client.rpc('save_profile_details', { details_in: details }),
+        profileCustomization: () => client.rpc('get_profile_customization'),
+        saveProfileCustomization: value => client.rpc('save_profile_customization', { customization_in: value }),
+        profileShowcase: owner => client.rpc('get_profile_showcase', { owner_in: owner }),
         friendsSearchPreferences: () => client.rpc('get_friends_search_preferences'),
         saveFriendsSearchPreferences: preferences => client.rpc('save_friends_search_preferences', { preferences_in: preferences }),
         detailedSettings: () => client.rpc('get_detailed_settings'),
@@ -245,6 +253,7 @@ export function createMatchmakingRouter(transport: UserContextTransport | null, 
   })
   const actor = (response: Response): ReturnType<UserContextTransport['actor']> => response.locals.actor
   router.use('/profile-details', createProfileDetailsRouter())
+  router.use('/profile-customization', createProfileCustomizationRouter())
   router.use('/friends-search-preferences', createFriendsSearchPreferencesRouter())
   router.use('/detailed-settings', createDetailedSettingsRouter())
   router.use('/dating-preferences', createDatingRouter())

@@ -69,6 +69,7 @@ await replay('uuid', (query, migrate) => {
   query(source('tests/integration/sql/garden-rewards.sql'))
   query(source('tests/integration/sql/progressive-onboarding.sql'))
   query(source('tests/integration/sql/profile-photo-gallery.sql'))
+  query(source('tests/integration/sql/profile-customization.sql'))
   console.info('PASS: fresh migration replay, native UUID preservation, product receipt, seeds and SQL security checks.')
 })
 
@@ -90,5 +91,6 @@ await replay('legacy', (query, migrate) => {
   query(source('tests/integration/sql/garden-rewards.sql'))
   query(source('tests/integration/sql/progressive-onboarding.sql'))
   query(source('tests/integration/sql/profile-photo-gallery.sql'))
+  query(source('tests/integration/sql/profile-customization.sql'))
   console.info('PASS: activated legacy upgrade, nonempty-store rollback, unchanged source receipt and duplicate-install refusal.')
 })
