@@ -93,10 +93,10 @@ for(const width of [390,1280])test(`prototype profile overview, preview, setting
  await page.setViewportSize({width,height:860});const fixture=await wiringFixture(page);await page.goto('/profile')
  await expect(page.getByRole('button',{name:/About you Photo/})).toBeVisible()
  await page.getByRole('button',{name:'Preview',exact:true}).click()
- const preview=page.getByRole('dialog',{name:'Your profile',exact:true})
+ const preview=page.getByRole('region',{name:'How others see your profile',exact:true})
  await expect(preview).toBeVisible();await expect(preview.getByRole('heading',{name:'Sam',exact:true})).toBeVisible()
  await expect(preview).not.toContainText(fixture.getAccount().profile!.birthdate!)
- await page.keyboard.press('Escape')
+ await page.getByRole('button',{name:'Your profile',exact:true}).click()
  await page.locator('.pagehead').getByRole('link',{name:'Settings',exact:true}).click()
  await expect(page.locator('.profile-settings-links .account-row')).toHaveCount(5)
  await page.goto('/matches');await expect(page.getByRole('heading',{name:'From a hello to a “see you there.”'})).toBeVisible()
@@ -131,12 +131,14 @@ test('Events accepts new responses without counts and Reset restores All without
  await expect(page.getByText(/\d+ people looking/)).toHaveCount(0)
 })
 
-test('profile rejects an under-18 birthdate without writing it',async({page})=>{
- const fixture=await wiringFixture(page);await page.goto('/profile?section=basics')
- await page.getByLabel('Birthdate (private)',{exact:true}).fill('2020-01-01')
- await page.getByRole('button',{name:'Save changes',exact:true}).click()
-  await expect(page.getByText('You must be at least 18 to use Pebble.')).toBeVisible()
- expect(fixture.calls.filter(c=>c.method==='PUT')).toHaveLength(0)
+test('a saved birthday is private and corrections go to support', async ({ page }) => {
+  await wiringFixture(page)
+  await page.goto('/profile?section=basics')
+  const birthday = page.getByRole('group', { name: 'Birthday', exact: true })
+  await expect(birthday.locator('time')).toHaveAttribute('datetime', '2000-01-01')
+  await expect(birthday.getByText('Private', { exact: true })).toBeVisible()
+  await expect(birthday.getByRole('link', { name: 'Contact support' })).toHaveAttribute('href', /^mailto:/)
+  await expect(page.locator('input[type=date]')).toHaveCount(0)
 })
 
 for(const mode of ['friends','dating',null] as const)test(`chat header uses recorded ${mode ?? 'unknown'} relationship and members come from the conversation`,async({page})=>{

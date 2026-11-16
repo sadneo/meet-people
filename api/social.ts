@@ -1,5 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod'
+import rateLimit from 'express-rate-limit'
+import { TypingRequestSchema, TypingResponseSchema } from '../shared/messaging.js'
 import { ConnectionListSchema, ConnectionStateSchema, ConnectionRequestAllowanceSchema } from '../shared/connections.js'
 import { ConversationsSchema, HistorySchema, MarkReadSchema, MessageSchema, MessagingActivitySchema, ReadStateSchema, SendMessageSchema } from '../shared/messaging.js'
 import type { UserContextTransport } from './matchmaking.js'
@@ -44,6 +46,7 @@ export function createSocialRouter(transport: UserContextTransport | null, kind:
       const user = await transport.verify(token)
       if (!user || !uuid.safeParse(user.id).success) throw new SocialFailure(401, 'Sign in to continue.')
       response.locals.actor = transport.actor(token)
+      response.locals.userId = user.id
       next()
     } catch (error) { next(error) }
   })
@@ -59,6 +62,15 @@ export function createSocialRouter(transport: UserContextTransport | null, kind:
     router.get('/:targetId', connection('get')); router.post('/:targetId', connection('request'))
     router.post('/:targetId/accept', connection('accept')); router.delete('/:targetId', connection('remove'))
   } else {
+    router.post('/:conversationId/typing', rateLimit({
+      windowMs: 60_000, limit: 120, keyGenerator: (_request, response) => response.locals.userId,
+      standardHeaders: true, legacyHeaders: false,
+    }), async (request, response) => {
+      noQuery(request); const conversation = id(request.params.conversationId), parsed = TypingRequestSchema.safeParse(request.body)
+      if (!parsed.success) throw new SocialFailure(400, 'Invalid typing status.')
+      const call = actor(response).socialTyping
+      response.json(await result(call && (() => call(conversation, parsed.data.isGroup, parsed.data.typing)), TypingResponseSchema))
+    })
     router.get('/activity', async (request, response) => { body(request); noQuery(request); response.json(await result(actor(response).socialActivity, MessagingActivitySchema)) })
     router.get('/', async (request, response) => {
       body(request); const values = query(request, z.object({ page: page.optional() }).strict()) as { page?: number }, call = actor(response).socialInbox

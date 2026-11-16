@@ -1,6 +1,6 @@
 /* The prototype's social layouts, with the live service controls retained. */
 .plans-page { max-width:none;margin:0; }
-.plans-page>.eyebrow { margin:22px 0 8px;font-size:10px; }
+.plans-page>.eyebrow { margin:22px 0 8px;font-size: 12px; }
 .plans-page>.pagehead h2 { max-width:700px;font-size:30px;line-height:1.2; }
 .plans-page>.pagehead>.btn { padding:10px 16px;font-size:13px; }
 .plans-page .tabs { display:flex;flex-wrap:wrap;gap:8px;margin:28px 0 25px; }
@@ -29,13 +29,13 @@
 .live-chat .composer textarea { font-size:16px;resize:none;min-height:44px;max-height:140px; }
 .chat-identity-button { flex:1;min-width:0;text-align:left;padding:8px 0; }
 .chat-identity-button h3 { margin:0 0 5px;font-size:14px; }
-.chat-identity-button .connection-kind { display:block;font-size:10px; }
+.chat-identity-button .connection-kind { display:block;font-size: 12px; }
 .conversation-members .item { gap:14px; }
 .conversation-members .item>.safety-actions { margin-left:auto; }
 .messaging-page .live-message,.messaging-page .live-message.mine { padding:0;background:transparent;border-radius:0; }
 .messaging-page .live-message>p { padding:12px 16px;background:#efeae3;border-radius:17px 17px 17px 4px;font-size:14px;line-height:1.5; }
 .messaging-page .live-message.mine>p { background:#e9d7c9;border-radius:17px 17px 4px 17px; }
-.messaging-page .live-message>time { padding:0 3px;font-size:9px; }
+.messaging-page .live-message>time { padding:0 3px;font-size: 12px; }
 .messaging-page .live-message.mine>time { text-align:right; }
 .messaging-page .live-message>.sender-name { display:block;margin:0 3px 6px;color:var(--muted); }
 .messaging-page .chat-options>summary { background:transparent;border:0; }
@@ -44,8 +44,6 @@
 .live-chat>p.sr-only { margin:0; }
 .event-detail .event-detail-header h1 { font-family:inherit;font-size:24px;font-weight:700;letter-spacing:-.8px; }
 @media(max-width:800px) {
- .messaging-page.chat-selected .live-messages { height:calc(100dvh - 160px - env(safe-area-inset-bottom)); }
- body:has(.messaging-page.chat-selected) .development-navigator { bottom:calc(90px + env(safe-area-inset-bottom)); }
  .messaging-page .chat-header { gap:8px; }
  .messaging-page .chat-back { width:44px;flex:none; }
 }

@@ -31,9 +31,16 @@ async function actor(letter) {
   let account = await rpc(client, 'get_account')
   if (!account.profile) account.profile = { username: `student-${login.data.user.id}`, display_name: `Test ${letter.toUpperCase()}`, bio: 'Local messaging test account', birthdate: null, location_city: null, avatar_url: null, interests: [], availability: [] }
   for (let chapter = account.completed.length; chapter < 4; chapter++) {
-    if (chapter === 1) account.profile.interests = ['Coffee']
+    if (chapter === 1) account.profile.interests = ['Music', 'Coffee', 'Art']
     if (chapter === 2) account.preferences.intents = ['Meet new people']
-    if (chapter === 3) { account.preferences.usual = ['Afternoons']; account.profile.availability = [{ dow: 1, start_time: '12:00:00', end_time: '17:00:00' }] }
+    if (chapter === 3) {
+      account.profile.birthdate = '2001-02-03'
+      account.profile.location_city = 'Synthetic campus'
+      account.profile.availability = [{ dow: 1, start_time: '12:00:00', end_time: '17:00:00' }]
+      account.preferences.usual = ['Afternoons']
+      account.preferences.distance = 'Nearby'
+      account.preferences.group = 'Either'
+    }
     account.completed.push(chapter)
     account = await rpc(client, 'save_account', { account_in: account })
   }
@@ -89,4 +96,4 @@ try {
   const removed = await admin.auth.admin.deleteUser(outsider.data.user.id)
   assert.ifError(removed.error)
 }
-console.log(`PASS: password login, onboarding, connection acceptance, two-way messaging, history, retry deduplication, unread/read state and outsider access rejection.\nAccounts retained: a@example.com / b@example.com; password: password\nOpen http://127.0.0.1:3000/messages/chat?conversation=${id}`)
+console.log(`PASS: password login, onboarding, connection acceptance, two-way messaging, history, retry deduplication, unread/read state and outsider access rejection.\nAccounts retained: a@example.com / b@example.com; password: password\nOpen http://127.0.0.1:3002/messages/chat?conversation=${id}`)

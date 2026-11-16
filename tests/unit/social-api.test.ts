@@ -3,6 +3,9 @@ import { expect, it, vi } from 'vitest'
 import type { Request, Response } from 'express'
 import { createSocialRouter } from '../../api/social'
 import { createUserContextTransport, type UserContextTransport } from '../../api/matchmaking'
+import express from 'express'
+import { once } from 'node:events'
+import type { AddressInfo } from 'node:net'
 const a = 'da000000-0000-4000-8000-000000000001', b = 'da000000-0000-4000-8000-000000000002'
 function request(kind: 'connections' | 'conversations', method: string, path: string, body: unknown, transport: UserContextTransport | null, token = 'synthetic') {
   return new Promise<{ status: number; data: unknown; cache: string }>((resolve, reject) => {
@@ -68,4 +71,40 @@ it('uses the actual SDK with only fixed RPC names and the actor JWT/public key',
   const transport = createUserContextTransport({ url: 'https://database.test', publicKey: 'sb_publishable_test', fetch })
   expect(await request('connections', 'POST', `/${b}`, {}, transport)).toMatchObject({ status: 200, cache: 'no-store', data: { status: 'sent' } })
   expect(calls).toEqual([{ name: 'user', body: null }, { name: 'social_connection', body: { target_in: b, action_in: 'request' } }])
+})
+
+it('validates typing flags and derives the sender from the verified actor, including group chats', async () => {
+  const call = vi.fn(async () => ({ data: { ok: true }, error: null as { code: string } | null }))
+  const app = express()
+  app.use(express.json())
+  app.use(createSocialRouter(configured({ socialTyping: call }), 'conversations'))
+  const server = app.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/${b}/typing`
+  const post = (body: unknown, token = 'synthetic') => fetch(url, { method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) })
+  try {
+    expect((await post({ isGroup: false, typing: true })).status).toBe(200)
+    expect(call).toHaveBeenLastCalledWith(b, false, true)
+    expect((await post({ isGroup: true, typing: false })).status).toBe(200)
+    expect(call).toHaveBeenLastCalledWith(b, true, false)
+    for (const body of [{ typing: true }, { isGroup: false, typing: 'yes' }, { isGroup: false, typing: true, userId: a }, { isGroup: false, typing: true, body: 'secret draft' }]) {
+      expect((await post(body)).status).toBe(400)
+    }
+    expect((await post({ isGroup: false, typing: true }, '')).status).toBe(401)
+    expect(call).toHaveBeenCalledTimes(2)
+    call.mockResolvedValueOnce({ data: { ok: true }, error: { code: '42501' } })
+    expect((await post({ isGroup: false, typing: true })).status).toBe(403)
+  } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())) }
+})
+
+it('sends typing through the fixed actor RPC without accepting a sender selector', async () => {
+  const calls: unknown[] = []
+  const transport = createUserContextTransport({ url: 'https://database.test', publicKey: 'sb_publishable_test', fetch: async (input, init) => {
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer synthetic')
+    calls.push({ rpc: new URL(String(input)).pathname.split('/').pop(), body: JSON.parse(String(init?.body)) })
+    return Response.json({ ok: true })
+  } })
+  await transport.actor('synthetic').socialTyping!(b, true, true)
+  expect(calls).toEqual([{ rpc: 'messaging_typing', body: { conversation_in: b, group_in: true, typing_in: true } }])
 })

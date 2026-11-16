@@ -7,7 +7,7 @@ export function seedSql(profiles:DemoProfile[],photos:Map<string,string>,reset=f
 begin;
 set local lock_timeout='5s';set local statement_timeout='60s';
 do $guard$ begin
- if current_database()<>'postgres' or current_user<>'postgres' or to_regprocedure('public.get_matching_scoring_settings()') is null or to_regprocedure('public.get_friends_runtime()') is null or to_regprocedure('public.get_dating_runtime()') is null then raise exception 'Local demo schema not ready';end if;
+ if current_database()<>'postgres' or current_user<>'postgres' or to_regprocedure('public.get_matching_scoring_settings()') is null or to_regprocedure('public.get_friends_runtime()') is null or to_regprocedure('public.get_dating_runtime()') is null or to_regprocedure('public.start_friends_discovery()') is null then raise exception 'Local demo schema not ready';end if;
  if not exists(select 1 from location_private.places where id='${campusId}' and enabled and verified_until>statement_timestamp()+interval '1 hour') then raise exception 'Reviewed Stony Brook catalogue entry missing/expired: review and renew it first';end if;
  if exists(select 1 from pg_trigger t where t.tgrelid='public.user_interests'::regclass and not t.tgisinternal and (t.tgname<>'trg_user_interests_embed' or t.tgfoid is distinct from to_regprocedure('public.user_interests_embed()') or t.tgenabled<>'O')) then raise exception 'Interest hooks changed; stop for review';end if;
 end $guard$;
@@ -57,11 +57,16 @@ do $seed$ declare plan jsonb:=${literal(data)};a jsonb;d jsonb;settings jsonb;f 
  receipt:=public.resolve_search_area(jsonb_build_object('requestId',gen_random_uuid(),'mode','dating','source','temporary','placeId','${campusId}'));
  search:=jsonb_set(search,'{searchArea}',jsonb_build_object('source','temporary','areaLabel','Stony Brook University','resolvedLocationRef',receipt->>'id'));
  perform public.save_dating_preferences(jsonb_build_object('expectedProfileRevision',d->'profileRevision','expectedSearchRevision',d->'searchRevision','profile',case when d->>'profileRevision'='0' or ${reset?'true':'false'} then plan->'dating' else d->'profile' end,'search',search));
- d:=public.get_dating_preferences();
- perform public.set_dating_enabled(jsonb_build_object('expectedProfileRevision',d->'profileRevision','expectedSearchRevision',d->'searchRevision','enabled',true));
  photo:=public.get_profile_photo_state();
- if plan->>'photo' is not null and (photo->>'revision'='0' or ${reset?'true':'false'}) then perform public.save_profile_photo(jsonb_build_object('expectedRevision',photo->'revision','requestId',gen_random_uuid(),'jpegBase64',plan->>'photo'));end if;
- if public.get_friends_runtime()->>'canJoin'<>'true' or public.get_dating_runtime()->>'canStart'<>'true' then raise exception 'Demo participation readback failed';end if;
+ if plan->>'photo' is not null and (photo->>'hasPhoto'<>'true' or ${reset?'true':'false'}) then
+  photo:=public.save_profile_photo(jsonb_build_object('expectedRevision',photo->'revision','requestId',gen_random_uuid(),'jpegBase64',plan->>'photo'));
+ end if;
+ if photo->>'hasPhoto'='true' then
+  perform public.start_friends_discovery();
+  d:=public.get_dating_preferences();
+  perform public.set_dating_enabled(jsonb_build_object('expectedProfileRevision',d->'profileRevision','expectedSearchRevision',d->'searchRevision','enabled',true));
+  if public.get_friends_discovery_status()->>'eligible'<>'true' or public.get_dating_runtime()->>'canStart'<>'true' then raise exception 'Demo participation readback failed';end if;
+ end if;
 end $seed$;
 `
  }

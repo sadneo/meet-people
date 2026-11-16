@@ -374,7 +374,7 @@
 }
 .account-edit-fields .account-check {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   min-height: 44px;
   margin: 9px 0;
@@ -385,7 +385,7 @@
   cursor: pointer;
 }
 .account-check input {
-  margin: 3px 0 0;
+  margin: 0;
   flex: none;
   width: 18px;
   height: 18px;
@@ -604,11 +604,29 @@
 }
 .account-modal .account-check {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   padding: 12px 0;
   min-height: 44px;
   font-size: 13px;
+}
+:is(.account-modal, .account-edit-fields) label:is(.check-row, .check),
+.matching-schedule label.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  line-height: 1.4;
+}
+:is(.account-modal, .account-edit-fields) .availability-inputs > label.check-row {
+  margin: 0;
+}
+:is(.account-modal, .account-edit-fields) label:is(.check-row, .check) > input[type="checkbox"],
+.matching-schedule label.check > input[type="checkbox"] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
 }
 .account-preview-modal .account-segments {
   margin-bottom: 12px;
@@ -802,7 +820,7 @@
 }
 .availability-tools > span {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: #89735d;
   margin: 0 0 8px;
 }
@@ -1067,7 +1085,7 @@
     padding: 11px 12px;
   }
   .account-segments > button {
-    font-size: 11px;
+    font-size: 12px;
   }
   .own-profile-facts {
     grid-template-columns: 1fr;
@@ -1148,3 +1166,65 @@
 .account-modal [hidden] {
   display: none !important;
 }
+
+.schedule-timezone { display: grid; gap: 6px; }
+.schedule-timezone-label { font-size: 13px; font-weight: 600; }
+.schedule-timezone small { color: var(--muted); }
+.matching-schedule .schedule-timezone-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  margin: 0;
+  text-align: left;
+  white-space: normal;
+}
+.schedule-timezone-trigger span:last-child { flex: none; color: var(--green); }
+.schedule-timezone-picker {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.schedule-timezone-picker label { display: block; margin: 12px 0 0; }
+.schedule-timezone-picker ul {
+  list-style: none;
+  max-height: 230px;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.schedule-timezone-picker li + li { border-top: 1px solid var(--line); }
+.schedule-timezone-picker li button {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px;
+  text-align: left;
+}
+
+.profile-birthday {
+  margin-block: 20px;
+}
+.profile-birthday-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--cream);
+}
+.profile-birthday-row > div { display: grid; gap: 3px; }
+.profile-birthday-row strong { font-size: 13px; }
+.profile-birthday-row time { font-size: 16px; }
+.profile-birthday-private {
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  font-size: 12px;
+  color: #6d6054;
+}
+.profile-birthday .account-note { margin: 8px 0 0; }
+.profile-birthday a { text-underline-offset: 2px; }

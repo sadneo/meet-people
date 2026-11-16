@@ -16,11 +16,16 @@ import {
   ReadStateSchema,
   MessagingActivitySchema,
   type Message,
+  type TypingEvent,
 } from "../../shared/messaging";
 import { messagingRequest } from "../features/messaging/client";
+import { useMessagingRealtime } from '../features/messaging/useMessagingRealtime';
+import { useConversationTyping } from '../features/messaging/useConversationTyping';
 import { useCachedLoad } from "../data/useCachedLoad";
 import { useMessageDraft } from '../data/message-drafts';
 import { useAction } from "./hooks";
+import { haptic } from "./feedback";
+import { SwipeReveal } from "./SwipeReveal";
 import {
   ActionButton,
   Avatar,
@@ -52,7 +57,9 @@ export function Messages() {
     selected = selectedGroup ?? search.get("conversation"),
     [query, setQuery] = useState(''),
     [findGroup,setFindGroup] = useState(false),
+    [groupSetupBusy,setGroupSetupBusy] = useState(false),
     [page, setPage] = useState(1);
+  const realtime = useMessagingRealtime(current.session.user.id);
   const inbox = useCachedLoad(
     useCallback(
       (signal) =>
@@ -66,7 +73,6 @@ export function Messages() {
   const reloadInbox=inbox.reload,reloadGroups=groups.reload,reloadActivity=activity.reload
   const changed=useCallback(()=>{reloadInbox();reloadGroups();reloadActivity()},[reloadInbox,reloadGroups,reloadActivity])
   useEffect(()=>{window.addEventListener('pebble:matching-changed',changed);return()=>window.removeEventListener('pebble:matching-changed',changed)},[changed])
-  useEffect(() => { const refresh = () => { if (document.visibilityState === 'visible') changed(); }; window.addEventListener('focus', refresh); return () => window.removeEventListener('focus', refresh); }, [changed]);
   const rows = [
     ...(groups.value?.groups ?? []).map(group => ({ id: group.id, group: true, title: group.name || group.members.filter(person => person.id !== current.session.user.id).map(person => person.display_name).join(', ') || 'Friends group',
       people: group.members.filter(person => person.id !== current.session.user.id).map(person => ({ id: person.id, display_name: person.display_name, avatar_url: null as string | null })),
@@ -91,14 +97,15 @@ export function Messages() {
           <Link className="round messages-activity" to="/activity" aria-label="Activity inbox"><Icon name="Bell" /></Link>
         </div>
       </div>
-      {findGroup&&<Modal title="Find a group" close={()=>setFindGroup(false)}><ActiveFriends key={current.session.user.id} close={()=>setFindGroup(false)} changed={changed}/></Modal>}
+      {realtime.error && <div><ErrorMessage>{realtime.error}</ErrorMessage><ActionButton secondary onClick={realtime.reconnect}>Reconnect live updates</ActionButton></div>}
+      {findGroup&&<Modal variant="sheet" title="Find a group" close={()=>{if(!groupSetupBusy)setFindGroup(false)}}><ActiveFriends key={current.session.user.id} close={()=>setFindGroup(false)} changed={changed} onSetupBusy={setGroupSetupBusy}/></Modal>}
       <div className="live-messages">
         <aside className="live-inbox">
           <div className="inbox-search">
             <label className="sr-only" htmlFor="chat-search">Search conversations</label>
             <input id="chat-search" type="search" placeholder="Search" value={query} onChange={event => setQuery(event.target.value)} />
           </div>
-          <Link className="requests-link" to="/messages/requests"><span>Requests{activity.value && activity.value.incomingRequests > 0 && <span className="request-count">{activity.value.incomingRequests}</span>}</span><span aria-hidden="true">›</span></Link>
+          <Link className="requests-link requests-row" to="/messages/requests"><span className="requests-row-icon" aria-hidden="true"><Icon name="AddFriend"/></span><span className="requests-row-copy"><b>Message requests</b><small>{activity.value && activity.value.incomingRequests > 0 ? `${activity.value.incomingRequests} waiting for you` : 'People who want to connect'}</small></span>{activity.value && activity.value.incomingRequests > 0 && <span className="request-count" aria-label={`${activity.value.incomingRequests} requests`}>{activity.value.incomingRequests}</span>}<span className="requests-row-chevron" aria-hidden="true">›</span></Link>
           <ResourceState
             loading={inbox.loading && !rows.length}
             error={inbox.error}
@@ -113,9 +120,12 @@ export function Messages() {
           )}
           {filtered.map(row => {
             return (
+              <SwipeReveal
+                key={`${row.group ? 'group' : 'direct'}:${row.id}`}
+                action={!row.group && row.people[0] ? <SafetyActions id={row.people[0].id} name={row.title} /> : null}
+              >
               <Link
                 className={`conversation-row contact-row ${selected === row.id ? "selected" : ""}`}
-                key={`${row.group ? 'group' : 'direct'}:${row.id}`}
                 to={`/messages/chat?${row.group ? 'group' : 'conversation'}=${encodeURIComponent(row.id)}`}
               >
                 {row.people.length > 1 ? <span className="group-avatar">{row.people.slice(0, 2).map(person => <PersonPhoto key={person.id} id={person.id} name={person.display_name} fallback={person.avatar_url} />)}</span>
@@ -128,6 +138,7 @@ export function Messages() {
                   {row.label && <span className={`connection-kind ${row.label === 'Dating' ? 'dating' : ''}`}>{row.label}</span>}
                 </span>
               </Link>
+              </SwipeReveal>
             );
           })}
           {query.trim() && rows.length > 0 && !filtered.length && <p className="contact-empty">No conversations match “{query.trim()}”.</p>}
@@ -152,7 +163,7 @@ export function Messages() {
           )}
         </aside>
         {selected ? (
-          <Chat key={draftKey} draftKey={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} connectionLabel={rows.find(row => row.id === selected)?.label ?? ''} />
+          <Chat key={draftKey} draftKey={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} connectionLabel={rows.find(row => row.id === selected)?.label ?? ''} typing={realtime.typing} />
         ) : (
           <div className="chat-empty">
             <Icon name="Messages"/>
@@ -163,7 +174,7 @@ export function Messages() {
     </section>
   );
 }
-function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id: string; changed: () => void; isGroup?: boolean; connectionLabel?: string; draftKey: string }) {
+function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing }: { id: string; changed: () => void; isGroup?: boolean; connectionLabel?: string; draftKey: string; typing: TypingEvent[] }) {
   const [group,setGroup]=useState<ActiveGroup|null>(null)
   const [removeOpen, setRemoveOpen] = useState(false);
   const [peopleOpen, setPeopleOpen] = useState(false);
@@ -179,15 +190,16 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
         return {kind:'friends_group' as const,canSend:true,messages:value.messages,participants:group.members,nextCursor:value.nextCursor}
       },[token,id,isGroup]),
       ["message-history", isGroup ? "group" : "direct", id], 0,
-      { refetchInterval: 4000, refetchOnWindowFocus: 'always', retainDataOnError: true },
+      { retainDataOnError: true },
     );
-  // Display data survives a failed poll, but never grants stale send permissions.
+  // Display data survives a failed refresh, but never grants stale send permissions.
   const canSend = !!history.value?.canSend && !history.error && !history.refreshing;
   const historyPage=async(before:number)=>isGroup?matchingClient(token).history(id,before):messagingRequest(`/${encodeURIComponent(id)}/messages?before=${before}`,HistorySchema)
 
   const { draft, store } = useMessageDraft(draftKey);
   const { body, confirmed } = draft;
   const sending = draft.status === 'pending', uncertain = sending || draft.status === 'uncertain';
+  const announceTyping = useConversationTyping(id, isGroup, !!history.value?.canSend && !history.error && !uncertain, current.session.user.id)
   const [older, setOlder] = useState<Message[]>([]),
     [cursor, setCursor] = useState<number | null>(null),
     [readError, setReadError] = useState("");
@@ -207,11 +219,6 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
     };
   }, []);
   const reloadHistory=history.reload
-  useEffect(() => {
-    const refresh = () => { if (document.visibilityState === 'visible') reloadHistory(); };
-    window.addEventListener('focus', refresh);
-    return () => window.removeEventListener('focus', refresh);
-  }, [reloadHistory]);
   useEffect(()=>{const refresh=()=>{setOlder([]);reloadHistory()};window.addEventListener('pebble:matching-changed',refresh);return()=>window.removeEventListener('pebble:matching-changed',refresh)},[reloadHistory])
   const messages = [
     ...new Map(
@@ -220,6 +227,8 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
       ),
     ).values(),
   ].sort((a, b) => a.seq - b.seq);
+  // Messages that arrive after the conversation opens animate in.
+  const [openedAt] = useState(() => Date.now());
   const newest = history.value?.messages.at(-1)?.seq ?? 0;
   const acknowledgedRead = useRef(0);
   const pendingRead = useRef<{ seq: number; controller: AbortController } | null>(null);
@@ -258,9 +267,11 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
   async function send(event: FormEvent) {
     event.preventDefault();
     if (action.busy) return;
+    announceTyping(false)
     const saved = await store.send(draftKey, id, current.session.user.id, canSend, operation =>
       isGroup ? matchingClient(token).send(id, operation) : messagingRequest(`/${encodeURIComponent(id)}/messages`, MessageSchema, { body: operation }));
     if (saved && live.current) {
+      haptic('light');
       history.reload();
       changed();
     }
@@ -270,6 +281,8 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
       (person) => person.id !== current.session.user.id,
     ) ?? [];
   const olderCursor = cursor ?? history.value?.nextCursor;
+  const typists = history.value?.canSend && !history.error ? others.filter(person => typing.some(event => event.conversationId === id && event.isGroup === isGroup && event.userId === person.id)) : []
+  const typingLabel = typists.length === 1 ? `${typists[0].display_name} is typing` : `${typists.length} people are typing`
   return (
     <section className="live-chat">
       <header className="chat-header">
@@ -306,8 +319,8 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
           </div>
         </details>
       </header>
-      {peopleOpen && <Modal title={isGroup ? 'Group members' : 'Conversation members'} close={() => setPeopleOpen(false)}><div className="conversation-members">{history.value?.participants.map(person => <div className="row item" key={person.id}><PersonPhoto id={person.id} name={person.display_name} fallback={person.avatar_url}/><div><b>{person.id === current.session.user.id ? 'You' : person.display_name}</b></div>{person.id !== current.session.user.id && <SafetyActions id={person.id} name={person.display_name}/>}</div>)}</div></Modal>}
-      {removeOpen && others[0] && <Modal title="Remove connection?" close={() => setRemoveOpen(false)}>
+      {peopleOpen && <Modal variant="sheet" title={isGroup ? 'Group members' : 'Conversation members'} close={() => setPeopleOpen(false)}><div className="conversation-members">{history.value?.participants.map(person => <div className="row item" key={person.id}><PersonPhoto id={person.id} name={person.display_name} fallback={person.avatar_url}/><div><b>{person.id === current.session.user.id ? 'You' : person.display_name}</b></div>{person.id !== current.session.user.id && <SafetyActions id={person.id} name={person.display_name}/>}</div>)}</div></Modal>}
+      {removeOpen && others[0] && <Modal variant="sheet" title="Remove connection?" close={() => setRemoveOpen(false)}>
         <p>Remove your connection with {others[0].display_name}? This does not block the account or erase saved messages.</p>
         <ErrorMessage>{action.error}</ErrorMessage>
         <ActionButton disabled={action.busy} onClick={() => { void action.run(async () => {
@@ -351,7 +364,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
           <Fragment key={message.id}>
           {(index === 0 || new Date(messages[index - 1].created_at).toDateString() !== new Date(message.created_at).toDateString()) && <div className="chat-date">{new Date(message.created_at).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}</div>}
           <div
-            className={`live-message ${message.sender_id === current.session.user.id ? "mine" : ""}`}
+            className={`live-message ${message.sender_id === current.session.user.id ? "mine" : ""} ${Date.parse(message.created_at) > openedAt ? "is-new" : ""}`}
           >
             {isGroup && message.sender_id !== current.session.user.id && <small className="sender-name">{history.value?.participants.find(person => person.id === message.sender_id)?.display_name ?? 'Group member'}</small>}
             <p>{message.body}</p>
@@ -363,6 +376,10 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
           </Fragment>
         ))}
       </div>
+      {!!typists.length && <div className="chat-typing" role="status" aria-label={typingLabel}>
+        <span className="typing-dots" aria-hidden="true"><span/><span/><span/></span>
+        <span>{typingLabel}…</span>
+      </div>}
       <ErrorMessage>{action.error}</ErrorMessage>
       <ErrorMessage>{draft.error}</ErrorMessage>
       {history.value && !history.value.canSend && (
@@ -380,7 +397,8 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
           rows={1}
           placeholder="Message…"
           value={body}
-          onChange={(event) => store.edit(draftKey, event.target.value)}
+          onChange={(event) => { store.edit(draftKey, event.target.value); announceTyping(!!event.target.value.trim()) }}
+          onBlur={() => announceTyping(false)}
           onKeyDown={(event) => {
             if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             event.preventDefault();

@@ -409,6 +409,57 @@ export type Database = {
         }
         Relationships: []
       }
+      dining_menus: {
+        Row: {
+          created_at: string
+          external_id: string
+          id: string
+          items: Json
+          last_synced_at: string
+          location_name: string
+          location_slug: string
+          menu_date: string
+          menu_name: string
+          menu_slug: string
+          notices: Json
+          source: string
+          source_url: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_id: string
+          id?: string
+          items?: Json
+          last_synced_at: string
+          location_name: string
+          location_slug: string
+          menu_date: string
+          menu_name: string
+          menu_slug: string
+          notices?: Json
+          source: string
+          source_url: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_id?: string
+          id?: string
+          items?: Json
+          last_synced_at?: string
+          location_name?: string
+          location_slug?: string
+          menu_date?: string
+          menu_name?: string
+          menu_slug?: string
+          notices?: Json
+          source?: string
+          source_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_group_members: {
         Row: {
           event_id: string
@@ -589,16 +640,19 @@ export type Database = {
         Row: {
           preferences: Json
           revision: number
+          setup_started: boolean
           user_id: string
         }
         Insert: {
           preferences: Json
           revision: number
+          setup_started?: boolean
           user_id: string
         }
         Update: {
           preferences?: Json
           revision?: number
+          setup_started?: boolean
           user_id?: string
         }
         Relationships: []
@@ -974,6 +1028,27 @@ export type Database = {
           },
         ]
       }
+      profile_customization: {
+        Row: {
+          customization: Json
+          revision: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          customization: Json
+          revision?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          customization?: Json
+          revision?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profile_details: {
         Row: {
           facts: Json
@@ -1229,6 +1304,7 @@ export type Database = {
       }
       dating_targets: { Args: { p: Json }; Returns: Json }
       detailed_settings_masters: { Args: { value_in: Json }; Returns: Json }
+      edit_profile_photo_gallery: { Args: { edit_in: Json }; Returns: Json }
       effective_detailed_settings: {
         Args: { choices_in: Json; masters_in: Json }
         Returns: Json
@@ -1390,9 +1466,13 @@ export type Database = {
         Args: { request_id_in: string }
         Returns: Json
       }
+      get_profile_customization: { Args: never; Returns: Json }
       get_profile_details: { Args: never; Returns: Json }
+      get_profile_photo_gallery: { Args: { owner_in: string }; Returns: Json }
       get_profile_photo_reference: { Args: { owner_in: string }; Returns: Json }
       get_profile_photo_state: { Args: never; Returns: Json }
+      get_profile_showcase: { Args: { owner_in: string }; Returns: Json }
+      get_progressive_matching_setup: { Args: never; Returns: Json }
       get_queue_match: {
         Args: never
         Returns: {
@@ -1558,6 +1638,10 @@ export type Database = {
         Args: { p_conversation_id: string; p_user_id: string }
         Returns: string
       }
+      messaging_typing: {
+        Args: { conversation_in: string; group_in: boolean; typing_in: boolean }
+        Returns: Json
+      }
       person_dating_score: {
         Args: { me: string; other: string }
         Returns: number
@@ -1566,7 +1650,12 @@ export type Database = {
         Args: { me: string; other: string }
         Returns: number
       }
+      profile_customization_default: { Args: never; Returns: Json }
       profile_embedding: { Args: { p_id: string }; Returns: number[] }
+      profile_garden_item_owned: {
+        Args: { item: string; person: string }
+        Returns: boolean
+      }
       profile_language_key: { Args: { value_in: string }; Returns: string }
       profile_text: { Args: { p_id: string }; Returns: string }
       project_dating_candidate: { Args: { target_in: string }; Returns: Json }
@@ -1615,6 +1704,10 @@ export type Database = {
       }
       read_profile_photo: {
         Args: { owner_in: string; revision_in: number }
+        Returns: Json
+      }
+      read_profile_photo_slot: {
+        Args: { owner_in: string; position_in: number; revision_in: number }
         Returns: Json
       }
       reconcile_active_friends_job: { Args: { unit_in: string }; Returns: Json }
@@ -1690,8 +1783,50 @@ export type Database = {
         Returns: Json
       }
       save_matchmaking_profile: { Args: { profile_in: Json }; Returns: Json }
+      save_profile_customization: {
+        Args: { customization_in: Json }
+        Returns: Json
+      }
       save_profile_details: { Args: { details_in: Json }; Returns: Json }
       save_profile_photo: { Args: { photo_in: Json }; Returns: Json }
+      sbengaged_begin_sync: { Args: { p_mode: string }; Returns: Json }
+      sbengaged_claim_photos: { Args: never; Returns: Json }
+      sbengaged_complete_photo: {
+        Args: {
+          p_http: number
+          p_id: string
+          p_image: string
+          p_outcome: string
+          p_retry_seconds: number
+          p_token: string
+        }
+        Returns: undefined
+      }
+      sbengaged_export_snapshot: { Args: never; Returns: Json }
+      sbengaged_finish_sync: {
+        Args: {
+          p_ends: string
+          p_full: boolean
+          p_seen: string[]
+          p_starts: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      sbengaged_origin_cooldown: {
+        Args: { p_seconds: number }
+        Returns: undefined
+      }
+      sbengaged_release_photos: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
+      sbengaged_release_sync: { Args: { p_token: string }; Returns: undefined }
+      sbengaged_runtime_config: { Args: never; Returns: Json }
+      sbengaged_upsert_events: {
+        Args: { p_rows: Json; p_token: string }
+        Returns: number
+      }
       search_location_places: { Args: { query_in: string }; Returns: Json }
       search_people: {
         Args: { max_results?: number; q: string }
@@ -1730,6 +1865,7 @@ export type Database = {
         Args: { body_in: string; conversation_in: string; request_in: string }
         Returns: Json
       }
+      start_friends_discovery: { Args: never; Returns: Json }
       submit_safety_report: { Args: { report_in: Json }; Returns: Json }
       sweep_active_friends: { Args: never; Returns: Json }
       unblock_owner_target: { Args: { target_in: string }; Returns: Json }
@@ -1742,6 +1878,7 @@ export type Database = {
         Args: { prefs_in: Json }
         Returns: boolean
       }
+      valid_profile_customization: { Args: { value: Json }; Returns: boolean }
       valid_profile_facts: { Args: { facts_in: Json }; Returns: boolean }
       valid_profile_interests: {
         Args: { labels: Json; require_minimum: boolean }

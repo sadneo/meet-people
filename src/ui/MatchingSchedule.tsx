@@ -11,7 +11,13 @@ export function MatchingSchedule({ token, disabled, onSaved, compact = false, on
   const [saved, setSaved] = useState<Settings | null>(null), [zone, setZone] = useState('')
   const [visible,setVisible]=useState(false)
   const [expanded, setExpanded] = useState(compact)
+  const [choosing, setChoosing] = useState(false), [search, setSearch] = useState('')
   const zones = useMemo(() => timezoneOptions(zone), [zone])
+  const device = zones.find(option => option.device)
+  const selected = zones.find(option => option.value === zone)
+  const terms = search.trim().toLowerCase().split(/\s+/)
+  const results = search.trim() ? zones.filter(option => terms.every(term =>
+    (option.label + ' ' + option.value.replaceAll('_', ' ')).toLowerCase().includes(term))) : []
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('')
   useEffect(() => { onBusyChange?.(busy) }, [busy, onBusyChange])
   const controller = useRef<AbortController | null>(null), active = useRef(true), locked = useRef(false)
@@ -47,17 +53,40 @@ export function MatchingSchedule({ token, disabled, onSaved, compact = false, on
       }
     } finally { if (active.current && !abort.signal.aborted) { locked.current = false; setBusy(false) } }
   }
+  function choose(nextZone: string) {
+    setChoosing(false); setSearch(''); setZone(nextZone)
+    picker.current?.focus()
+    if (compact) void save(nextZone)
+  }
+  const picker = useRef<HTMLButtonElement>(null)
+  const lockedOut = !saved || busy || disabled
   return <details className="matching-schedule" open={expanded} onToggle={event => { setExpanded(event.currentTarget.open); if (!compact && event.currentTarget.open && !saved && !busy) void load() }}>
     <summary hidden={compact}>Timezone & shared availability</summary>
-    <p className="account-note">{compact ? 'Timezone and sharing changes save immediately. Weekly time windows save with the rest of this form. ' : 'Choose the timezone for your saved weekly availability. '}Discovery shows only a coarse shared-time summary when both people allow it. Group proposals can show a common time when everyone allows it, never your full weekly schedule.</p>
-    {busy && <p role="status">Loading or saving Schedule settings…</p>}
+    {busy && <p role="status">Loading or saving schedule settings…</p>}
     {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
-    <label htmlFor={id}>Timezone</label>
-    {compact ? <select id={id} disabled={!saved || busy || disabled} value={zone} onChange={event => { const nextZone = event.target.value; setZone(nextZone); void save(nextZone); }}>
-      <option value="" disabled>Select a timezone</option>
-      {zones.map(option => <option key={option.value} value={option.value}>{option.label}{option.device ? ' · Your device' : ''}</option>)}
-    </select> : <input id={id} disabled={!saved || busy || disabled} value={zone} placeholder="America/New_York" onChange={event => setZone(event.target.value)} />}
-    <label className="check"><input type="checkbox" checked={visible} disabled={!saved || busy || disabled} onChange={event=>{setVisible(event.target.checked);if(compact)void save(zone,event.target.checked)}}/>Allow shared-time explanations</label>
+    <div className="schedule-timezone">
+      <span className="schedule-timezone-label">Timezone</span>
+      <button type="button" className="btn light schedule-timezone-trigger" ref={picker} aria-label={'Timezone: ' + (selected?.label ?? 'Choose a timezone')}
+        aria-expanded={choosing} aria-controls={choosing ? id : undefined} disabled={lockedOut}
+        onClick={() => { setChoosing(!choosing); setSearch('') }}>
+        <span>{selected?.label ?? 'Choose a timezone'}</span><span>{zone ? 'Change' : 'Choose'}</span>
+      </button>
+      {device?.value === zone && <small>Matches this device</small>}
+      {choosing && <div id={id} className="schedule-timezone-picker" role="group" aria-label="Choose a timezone" onKeyDown={event => {
+        if (event.key === 'Escape') { event.stopPropagation(); setChoosing(false); picker.current?.focus() }
+        if (event.key === 'Enter' && event.target instanceof HTMLInputElement) event.preventDefault()
+      }}>
+        {device && <button type="button" className="btn light" disabled={lockedOut} onClick={() => choose(device.value)}>Use device timezone</button>}
+        <label>Search by city or timezone
+          <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="e.g. Chicago or GMT+1" disabled={lockedOut}/>
+        </label>
+        {search.trim() && (results.length ? <ul aria-label="Timezone results">
+          {results.map(option => <li key={option.value}><button type="button" disabled={lockedOut} onClick={() => choose(option.value)}>{option.label}</button></li>)}
+        </ul> : <p role="status">No timezones found.</p>)}
+      </div>}
+    </div>
+    <label className="check"><input type="checkbox" checked={visible} disabled={!saved || busy || disabled} onChange={event=>{setVisible(event.target.checked);if(compact)void save(zone,event.target.checked)}}/><span>Allow shared-time explanations</span></label>
+    <p className="account-note">Group proposals can show a common time when everyone allows it. Your full weekly schedule stays private.</p>
     <div className="row">
       {(!compact || error) && <button type="button" className="btn light" disabled={busy || disabled} onClick={() => void load()}>Reload timezone</button>}
       {!compact && <button type="button" className="btn light" disabled={!saved || busy || disabled} onClick={() => void save()}>Save timezone & sharing</button>}

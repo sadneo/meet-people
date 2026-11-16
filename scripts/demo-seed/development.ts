@@ -18,6 +18,7 @@ do $development$ declare a jsonb;d jsonb;settings jsonb;f jsonb;search jsonb;rec
  perform set_config('request.jwt.claims','{"sub":"${primary.id}","role":"authenticated"}',true);
  a:=public.get_account();
  if a->'profile'='null'::jsonb or jsonb_array_length(a->'completed')<>4 then raise exception 'Complete the dedicated development account onboarding first';end if;
+ if public.get_progressive_matching_setup()->>'profileReady'<>'true' then raise exception 'Add at least one interest and a profile photo to the dedicated development account first';end if;
  if a->'settings'->>'discoverable'<>'true' then perform public.save_account(jsonb_set(a,'{settings}',a->'settings'||'{"discoverable":true}'));end if;
  settings:=public.get_detailed_settings();
  if settings->'settings'->>'friendsDiscovery'<>'true' or settings->'settings'->>'datingDiscovery'<>'true' then
@@ -28,6 +29,7 @@ do $development$ declare a jsonb;d jsonb;settings jsonb;f jsonb;search jsonb;rec
  receipt:=public.resolve_search_area(jsonb_build_object('requestId',gen_random_uuid(),'mode','friends','source','temporary','placeId','${campusId}'));
  search:=jsonb_set(search,'{searchArea}',jsonb_build_object('source','temporary','areaLabel','${campusLabel}','resolvedLocationRef',receipt->>'id'));
  perform public.save_friends_search_preferences(jsonb_build_object('expectedRevision',f->'revision','preferences',search));
+ perform public.start_friends_discovery();
  d:=public.get_dating_preferences();
  if d->'profile'->>'enabled'='true' then perform public.set_dating_enabled(jsonb_build_object('expectedProfileRevision',d->'profileRevision','expectedSearchRevision',d->'searchRevision','enabled',false));d:=public.get_dating_preferences();end if;
  -- Only a wholly empty fictional development persona receives test defaults.
@@ -38,7 +40,7 @@ do $development$ declare a jsonb;d jsonb;settings jsonb;f jsonb;search jsonb;rec
  perform public.save_dating_preferences(jsonb_build_object('expectedProfileRevision',d->'profileRevision','expectedSearchRevision',d->'searchRevision','profile',d->'profile','search',search));
  d:=public.get_dating_preferences();
  perform public.set_dating_enabled(jsonb_build_object('expectedProfileRevision',d->'profileRevision','expectedSearchRevision',d->'searchRevision','enabled',true));
- if public.get_friends_runtime()->>'canJoin'<>'true' or public.get_dating_runtime()->>'canStart'<>'true' then raise exception 'Development discovery setup incomplete; review saved preferences';end if;
+ if public.get_friends_discovery_status()->>'eligible'<>'true' or public.get_dating_runtime()->>'canStart'<>'true' then raise exception 'Development discovery setup incomplete; review saved preferences';end if;
 end $development$;
 `
 }

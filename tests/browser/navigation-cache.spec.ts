@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { conversationId, peer, wiringFixture } from './wiring-fixture'
 
-test('tab navigation reuses the account loader and recent event and inbox reads', async ({ page }) => {
+test('tab navigation reuses cached reads while the messaging subscription catches up once', async ({ page }) => {
   const fixture = await wiringFixture(page)
   await page.goto('/')
   const nav = page.getByRole('navigation', { name: 'Main navigation' })
@@ -11,17 +11,33 @@ test('tab navigation reuses the account loader and recent event and inbox reads'
   await expect(page.getByRole('heading', { name: 'Campus coffee walk', exact: true })).toBeVisible()
   await nav.getByRole('link', { name: /^Messages/ }).click()
   await expect(page.getByText('Taylor', { exact: true })).toBeVisible()
+  // Finish the first subscription's catch-up before measuring the next visit.
+  await page.waitForLoadState('networkidle')
   await nav.getByRole('link', { name: 'Garden', exact: true }).click()
   const accountReads = fixture.calls.filter(call => call.path === '/api/matchmaking/account').length
   const eventReads = fixture.calls.filter(call => call.path === '/api/events').length
   const inboxReads = fixture.calls.filter(call => call.path === '/api/conversations').length
+  let catchUpReads = 0, release: () => void = () => {}
+  const held = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/api/conversations?**', async route => {
+    catchUpReads++
+    await held
+    return route.fallback()
+  })
   await nav.getByRole('link', { name: 'Events', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Campus coffee walk', exact: true })).toBeVisible()
   await nav.getByRole('link', { name: /^Messages/ }).click()
-  await expect(page.getByText('Taylor', { exact: true })).toBeVisible()
-  expect(fixture.calls.filter(call => call.path === '/api/matchmaking/account')).toHaveLength(accountReads)
-  expect(fixture.calls.filter(call => call.path === '/api/events')).toHaveLength(eventReads)
-  expect(fixture.calls.filter(call => call.path === '/api/conversations')).toHaveLength(inboxReads)
+  try {
+    await expect(page.getByText('Taylor', { exact: true })).toBeVisible()
+    await expect.poll(() => catchUpReads).toBe(1)
+    expect(fixture.calls.filter(call => call.path === '/api/matchmaking/account')).toHaveLength(accountReads)
+    expect(fixture.calls.filter(call => call.path === '/api/events')).toHaveLength(eventReads)
+    expect(fixture.calls.filter(call => call.path === '/api/conversations')).toHaveLength(inboxReads)
+  } finally { release() }
+  await expect.poll(() => fixture.calls.filter(call => call.path === '/api/conversations').length).toBe(inboxReads + 1)
+  await page.waitForLoadState('networkidle')
+  expect(catchUpReads).toBe(1)
+  expect(fixture.calls.filter(call => call.path === '/api/conversations')).toHaveLength(inboxReads + 1)
 })
 
 test('stale events stay visible while a deliberately held background refresh updates them', async ({ page }) => {

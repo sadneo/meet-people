@@ -1,17 +1,20 @@
 import { canShowDating } from './age-visibility'
+import { PullToRefresh } from './PullToRefresh'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { connections } from '../features/connections/client'
 import { useAction } from './hooks'
 import { useCachedLoad } from '../data/useCachedLoad'
-import { ActionButton, ErrorMessage, Icon, PersonPhoto, ResourceState } from './common'
+import { ActionButton, EmptyState, ErrorMessage, Icon, PersonPhoto, ResourceState } from './common'
 import { respondToConnectionRequest } from './request-actions'
 import { useCurrent } from './current'
 import { SafetyActions } from './Safety'
 import { PageSkeleton } from './loading/PageSkeleton'
+import { useMessagingRealtime } from '../features/messaging/useMessagingRealtime'
 
 export function Requests() {
   const current = useCurrent(), navigate = useNavigate(), action = useAction()
+  const realtime = useMessagingRealtime(current.session.user.id)
   const people = useCachedLoad(useCallback(signal => connections.list(signal), []), ['connections'], 0)
   const [uncertain, setUncertain] = useState(false)
   const live = useRef(true)
@@ -52,9 +55,10 @@ export function Requests() {
       <Link className="round requests-close" to="/messages" aria-label="Close requests"><Icon name="Skip" /></Link>
     </header>
     <ErrorMessage>{action.error}</ErrorMessage>
-    <ResourceState loading={people.loading} error={people.error} reload={people.reload} skeleton={<PageSkeleton view="list" label="Loading requests"/>}/>
+    <ResourceState loading={people.loading} error={people.error || realtime.error} reload={() => { people.reload(); if (realtime.error) realtime.reconnect() }} skeleton={<PageSkeleton view="list" label="Loading requests"/>}/>
     {uncertain && !action.busy && <div className="requests-reconcile"><p role="status">The response could not be confirmed. Reload requests before trying again.</p><ActionButton secondary onClick={() => void reconcile()}>Reload requests</ActionButton></div>}
-    {people.value && people.value.incoming.length === 0 && <p className="muted">No pending requests.</p>}
+    <PullToRefresh onRefresh={people.reload} label="Refreshing requests"/>
+    {people.value && people.value.incoming.length === 0 && <EmptyState icon="AddFriend" title="No pending requests." text="When someone wants to connect, they’ll show up here." action={<Link className="btn" to="/matchmaking">Go to Discover</Link>}/>}
     {people.value && people.value.incoming.length > 0 && sections.filter(section => section.mode !== 'dating' || canShowDating(current.account?.profile?.birthdate)).filter(section => section.mode !== 'earlier' || section.people.length > 0).map(section => <details className={`requests-group ${section.mode}`} key={section.mode} open>
       <summary><Icon name={section.icon} /><span>{section.title}</span><span className="request-count">{section.people.length}</span><span className="requests-chevron" aria-hidden="true">⌄</span></summary>
       {section.people.length === 0 && <p className="muted requests-group-empty">No pending {section.title.toLowerCase()} {section.mode === 'dating' ? 'likes' : 'requests'}.</p>}

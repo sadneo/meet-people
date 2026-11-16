@@ -55,3 +55,9 @@ main.onboarding { max-width:480px;min-height:100dvh;margin:0 auto;padding:40px 2
 }
 .password-visibility-toggle:hover { color: var(--ink); }
 .password-visibility-toggle .ui-icon { width: 20px; height: 20px; }
+.auth-form-wrap .auth-consent {
+  text-align: center;
+  text-wrap: balance;
+  margin: 16px auto 0;
+  line-height: 1.55;
+}

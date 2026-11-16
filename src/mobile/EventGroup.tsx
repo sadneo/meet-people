@@ -1,9 +1,12 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { EventGroupQueue } from '../../shared/matchmaking'
 import { matchmakingClient } from '../features/matchmaking/client'
 import { useCurrent } from '../ui/current'
 import { useAction, useLoad } from '../ui/hooks'
 import { ActionButton, ErrorMessage, PersonPhoto, ResourceState } from '../ui/common'
+import { MatchingSetup } from '../ui/MatchingSetup'
+import { useMatchingSetupStatus } from '../ui/useMatchingSetupStatus'
+import { Link } from 'react-router'
 
 export function EventGroup({ id, available }: { id: string; available: boolean }) {
   const current = useCurrent(),
@@ -20,6 +23,15 @@ export function EventGroup({ id, available }: { id: string; available: boolean }
     useCallback((signal) => client.groupQueue(id, signal), [client, id]),
     { intervalMs: 3000, shouldPoll },
   );
+  const canJoin = available && state.value?.state === 'idle'
+  const readiness = useMatchingSetupStatus(canJoin)
+  const [setupOpen, setSetupOpen] = useState(false)
+  const setupReady = readiness.value?.profileReady && readiness.value.friendsAreaReady
+  const discoveryOff = current.account?.settings.discoverable === false
+  function closeSetup() {
+    setSetupOpen(false)
+    readiness.reload()
+  }
   return (
     <section className="event-group-controls">
       <h3 className="event-group-heading" aria-live="polite">
@@ -55,20 +67,27 @@ export function EventGroup({ id, available }: { id: string; available: boolean }
         state.value && (
           <p>
             {!available
-              ? "Group matching is closed for this event."
+              ? "This event has started or ended, so new groups can’t form."
               : state.value.state === "waiting"
                 ? "You’re in this event’s queue. Your group will appear here automatically when it’s ready."
-                : "Join the queue to find other people interested in going."}
+                : discoveryOff ? "Turn on discovery to find a group."
+                : setupReady ? "Join the queue to find other people interested in going."
+                : "Finish setup to match with people who plan to go."}
           </p>
         )
       )}
+      {canJoin && !discoveryOff && <ResourceState loading={readiness.loading} error={readiness.error} reload={readiness.reload}/>}
+      <div className="event-group-actions">
+      {canJoin && discoveryOff && <Link className="btn light" to="/profile?section=discovery">Discovery settings</Link>}
+      {canJoin && readiness.value && !setupReady && !discoveryOff && <ActionButton onClick={() => setSetupOpen(true)}>Set up event matching</ActionButton>}
+      {setupOpen && <MatchingSetup mode="event" close={closeSetup} done={closeSetup}/>}
       <div className="row wrap">
         {state.value && state.value.state !== "idle" && (
           <ActionButton disabled={action.busy || state.loading} onClick={state.reload}>
             Refresh group status
           </ActionButton>
         )}
-        {state.value && (state.value.state !== "idle" || available) && (
+        {state.value && (state.value.state !== "idle" || (available && setupReady && !discoveryOff)) && (
           <ActionButton
             secondary={state.value.state !== "idle"}
             disabled={action.busy || state.loading}
@@ -79,6 +98,7 @@ export function EventGroup({ id, available }: { id: string; available: boolean }
                   else await client.groupLeave(id);
                 } finally {
                   state.reload();
+                  readiness.reload();
                 }
               });
             }}
@@ -86,6 +106,7 @@ export function EventGroup({ id, available }: { id: string; available: boolean }
             {state.value.state === "idle" ? "Join group queue" : "Leave group queue"}
           </ActionButton>
         )}
+      </div>
       </div>
     </section>
   );

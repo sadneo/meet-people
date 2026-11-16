@@ -31,6 +31,12 @@ export const SendMessageSchema = z.object({
   body: z.string().trim().min(1).max(MESSAGE_MAX_LENGTH), clientRequestId: z.string().uuid(),
 }).strict()
 export const MarkReadSchema = z.object({ seq }).strict()
+export const TypingRequestSchema = z.object({ typing: z.boolean(), isGroup: z.boolean() }).strict()
+export const TypingResponseSchema = z.object({ ok: z.literal(true) }).strict()
+export const TypingEventSchema = z.object({
+  conversationId: z.uuid(), userId: z.uuid(), isGroup: z.boolean(), typing: z.boolean(),
+})
+export type TypingEvent = z.infer<typeof TypingEventSchema>
 export const ReadStateSchema = z.object({ lastReadSeq: seq })
 export const MessagingActivitySchema = z.object({ unreadConversations: seq, incomingRequests: seq })
 export type Message = z.infer<typeof MessageSchema>

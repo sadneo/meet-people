@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchNavigation } from '../data/navigation';
 import { useCurrent } from '../ui/current';
@@ -22,6 +22,7 @@ import { SessionQueryProvider } from "../data/SessionQueryProvider";
 import { Private } from "../ui/session";
 import { Auth, AuthCallback } from "../ui/Auth";
 import { Discover } from "../ui/Discover";
+import { Food } from "../ui/Food";
 import { Profile } from "../ui/Profile";
 import { Onboarding } from "../ui/Onboarding";
 import { Settings } from "../ui/Settings";
@@ -43,6 +44,8 @@ import {
   Icon,
 } from "../ui/common";
 import PushBridge from "../platform/PushBridge";
+import { prefersReducedMotion } from "../ui/feedback";
+import { Toaster } from "../ui/FeedbackUi";
 
 const DevelopmentNavigator = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS === 'true'
   ? lazy(() => import('./DevelopmentNavigator'))
@@ -60,7 +63,29 @@ function Shell() {
     return () => clearTimeout(timer);
   }, [client, current.session.access_token]);
   const location = useLocation(),
-    garden = ["/", "/home", "/community"].includes(location.pathname);
+    garden = ["/", "/home", "/community"].includes(location.pathname),
+    inChat = location.pathname === '/messages/chat';
+  const main = useRef<HTMLElement>(null);
+  const previous = useRef<{ tab: string; depth: number } | null>(null);
+  // Animate the content area without remounting the routed screen: tabs
+  // cross-fade, deeper screens slide in from the right and back from the left.
+  useLayoutEffect(() => {
+    const next = routePlace(location.pathname, location.search);
+    const before = previous.current;
+    previous.current = next;
+    if (!before || !main.current || prefersReducedMotion() || typeof main.current.animate !== 'function') return;
+    if (before.tab === next.tab && before.depth === next.depth) return;
+    // Event cards morph into the detail cover via a view transition instead.
+    if (before.tab === 'events' && next.tab === 'events') return;
+    const shift = before.tab !== next.tab ? 0 : next.depth > before.depth ? 28 : -28;
+    // Offsets, not transforms: a transform would re-anchor fixed bars
+    // (navigation, save and action bars) to the moving content.
+    main.current.animate(
+      shift ? [{ opacity: 0.4, left: `${shift}px` }, { opacity: 1, left: '0px' }]
+        : [{ opacity: 0, top: '6px' }, { opacity: 1, top: '0px' }],
+      { duration: shift ? 260 : 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    );
+  }, [location.pathname, location.search]);
   const activity = useCachedLoad(
     useCallback(
       (signal) =>
@@ -86,7 +111,7 @@ function Shell() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <div className="shell">
+      <div className={`shell ${inChat ? "in-chat" : ""}`}>
         <nav className="app-navigation" aria-label="Main navigation">
           <Brand />
           {links.map(([label, to]) => label === 'Garden' ? (
@@ -110,12 +135,21 @@ function Shell() {
             <Link className={location.pathname === "/profile" && location.search.includes("section=settings") ? "active" : undefined} to="/profile?section=settings">Settings</Link>
           </div>
         </nav>
-        <main id="main" className={garden ? "sky-garden-main" : location.pathname === '/matchmaking' ? 'mobile-dating-main' : ''}>
+        <main ref={main} id="main" className={garden ? "sky-garden-main" : location.pathname === '/matchmaking' ? 'mobile-dating-main' : ''}>
           <Outlet />
         </main>
       </div>
+      <Toaster />
     </>
   );
+}
+function routePlace(pathname: string, search: string) {
+  const parts = pathname.split('/').filter(Boolean);
+  const tab = ['', 'home', 'community'].includes(parts[0] ?? '') ? 'garden' : parts[0] === 'matches' ? 'activity' : parts[0];
+  const section = new URLSearchParams(search).get('section');
+  if (tab === 'profile' && section) return { tab, depth: section === 'settings' ? 1 : 2 };
+  if (tab === 'matchmaking') return { tab, depth: 0 };
+  return { tab, depth: parts.length - 1 };
 }
 function Logout() {
   const action = useAction(),
@@ -184,6 +218,7 @@ export default function App() {
             <Route path="/home" element={<Garden />} />
             <Route path="/community" element={<Garden />} />
             <Route path="/matchmaking" element={<Discover />} />
+            <Route path="/matchmaking/food" element={<Food />} />
             <Route path="/events" element={<Events />} />
             <Route path="/events/:id" element={<EventDetail renderGroup={(id, available) => <EventGroup id={id} available={available} />} />} />
             <Route path="/messages" element={<Messages />} />

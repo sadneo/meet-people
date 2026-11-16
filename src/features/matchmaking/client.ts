@@ -1,5 +1,5 @@
 import { type z } from 'zod'
-import { AccountSchema, SaveAccountSchema, type Account } from '../../../shared/account'
+import { AccountSchema, SaveAccountSchema, type SaveAccount } from '../../../shared/account'
 import { JoinQueueSchema, QueueStatusSchema, MatchResultSchema, MatchingProfileSchema, ProfileResponseSchema, SavedProfileResponseSchema, MatchingErrorSchema, type MatchingMode, type MatchingProfile } from '../../../shared/matchmaking'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, EventCompatibilityResponseSchema, ListingIdSchema, ListingMatchmakingStatusSchema } from '../../../shared/matchmaking'
 import { AccountProfileSchema, AccountProfileResponseSchema, SavedAccountProfileResponseSchema, type AccountProfile } from '../../../shared/account-profile'
@@ -37,7 +37,7 @@ export function matchmakingClient(token: string) {
     accountProfile: () => request('account-profile', AccountProfileResponseSchema),
     saveAccountProfile: (profile: AccountProfile) => request('account-profile', SavedAccountProfileResponseSchema, 'PUT', AccountProfileSchema.parse(profile)),
     account: () => request('account', AccountSchema),
-    saveAccount: (account: Account) => request('account', AccountSchema, 'PUT', SaveAccountSchema.parse(account)),
+    saveAccount: (account: SaveAccount) => request('account', AccountSchema, 'PUT', SaveAccountSchema.parse(account)),
     status: () => request('status', QueueStatusSchema),
     join: (mode: MatchingMode) => request('queue', QueueStatusSchema, 'POST', JoinQueueSchema.parse({ mode })),
     leave: () => request('queue', QueueStatusSchema, 'DELETE'),

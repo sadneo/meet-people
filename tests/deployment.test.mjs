@@ -25,6 +25,21 @@ test('preview and apply use the same reviewed migration ordering guard', () => {
   assert.throws(() => reviewedMigrationFlags('unrecognized output', 'wacgxhsdhrqigrmqaonc'))
 })
 
+test('dining and onboarding can follow the previous dev database without an ordering exception', () => {
+  const versions = readdirSync('supabase/migrations').filter(name => name.endsWith('.sql'))
+  for (const pending of ['_dining_menu_ingestion.sql', '_progressive_onboarding.sql']) {
+    const firstPending = versions.find(name => name.endsWith(pending))
+    assert.ok(firstPending)
+    const ledger = versions.map(name => {
+      const version = name.split('_')[0]
+      return `${version} | ${name < firstPending ? version : ''} | time`
+    }).join('\n')
+    for (const project of ['sandbox', 'wacgxhsdhrqigrmqaonc']) {
+      assert.deepEqual(reviewedMigrationFlags(ledger, project), [])
+    }
+  }
+})
+
 test('main pushes deploy production; sandbox is manual-only; manual sources belong to the destination branch', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-deployment-'))
   const git = args => execFileSync('git', ['-C', directory, ...args], {

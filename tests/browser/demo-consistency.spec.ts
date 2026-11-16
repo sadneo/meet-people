@@ -46,7 +46,7 @@ test('profile tabs highlight their state and keep the demo save bar above mobile
   await expect(about).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByText('Edit availability', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('From', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('Timezone', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Timezone:/ })).toBeVisible();
 });
 
 test('Profile and its editor retain the prototype Preview and photo controls', async ({ page }) => {

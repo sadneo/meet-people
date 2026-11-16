@@ -21,17 +21,23 @@ function open() {
   const details = screen.getByText('Timezone & shared availability').parentElement as HTMLDetailsElement
   details.open = true; fireEvent(details, new Event('toggle'))
 }
+async function chooseCity(city: string) {
+  const picker = screen.getByRole('button', { name: /^Timezone:/ }) as HTMLButtonElement
+  await waitFor(() => expect(picker.disabled).toBe(false))
+  fireEvent.click(picker)
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search by city or timezone' }), { target: { value: city } })
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(city, 'i') }))
+}
 it('reads only when opened, requires a chosen timezone and preserves hidden availability', async () => {
   const onSaved = vi.fn()
   render(<MatchingSchedule token="owner-token" disabled={false} onSaved={onSaved}/>)
   expect(fetch).not.toHaveBeenCalled()
   open()
-  const input = screen.getByLabelText('Timezone') as HTMLInputElement
-  await waitFor(() => expect(input.disabled).toBe(false))
-  expect(input.value).toBe('')
+  const picker = screen.getByRole('button', { name: 'Timezone: Choose a timezone' }) as HTMLButtonElement
+  await waitFor(() => expect(picker.disabled).toBe(false))
   expect(fetch).toHaveBeenCalledOnce()
   expect(new Headers(fetch.mock.calls[0][1]?.headers).get('Authorization')).toBe('Bearer owner-token')
-  fireEvent.change(input, { target: { value: 'America/New_York' } })
+  await chooseCity('New York')
   fireEvent.click(screen.getByRole('button', { name: 'Save timezone & sharing' }))
   await screen.findByText('Timezone and sharing preference saved.')
   expect(stored).toEqual({ revision: 1, timeZone: 'America/New_York', showAvailability: false })
@@ -40,8 +46,7 @@ it('reads only when opened, requires a chosen timezone and preserves hidden avai
 it('requires a read after an uncertain save and does not automatically retry a write', async () => {
   render(<MatchingSchedule token="owner-token" disabled={false} onSaved={vi.fn()}/>)
   open()
-  await waitFor(() => expect((screen.getByLabelText('Timezone') as HTMLInputElement).disabled).toBe(false))
-  fireEvent.change(screen.getByLabelText('Timezone'), { target: { value: 'America/New_York' } })
+  await chooseCity('New York')
   failSave = true
   fireEvent.click(screen.getByRole('button', { name: 'Save timezone & sharing' }))
   await screen.findByRole('alert')
@@ -51,17 +56,17 @@ it('requires a read after an uncertain save and does not automatically retry a w
   await waitFor(() => expect((screen.getByRole('button', { name: 'Save timezone & sharing' }) as HTMLButtonElement).disabled).toBe(false))
   expect(fetch.mock.calls.filter(call => call[1]?.method === 'PUT')).toHaveLength(1)
 })
-it('offers a compact timezone dropdown and saves only after an explicit selection', async () => {
+it('offers a compact timezone search and saves only after an explicit selection', async () => {
   const onSaved = vi.fn()
   render(<MatchingSchedule compact token="owner-token" disabled={false} onSaved={onSaved}/> )
   open()
-  const select = screen.getByRole('combobox', { name: 'Timezone' }) as HTMLSelectElement
-  await waitFor(() => expect(select.disabled).toBe(false))
-  expect(select.value).toBe('')
+  const picker = screen.getByRole('button', { name: /^Timezone:/ }) as HTMLButtonElement
+  await waitFor(() => expect(picker.disabled).toBe(false))
+  expect(picker.textContent).toContain('Choose a timezone')
   expect(fetch.mock.calls.filter(call => call[1]?.method === 'PUT')).toHaveLength(0)
   expect(screen.queryByRole('button', { name: 'Save timezone & sharing' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Reload timezone' })).toBeNull()
-  fireEvent.change(select, { target: { value: 'America/New_York' } })
+  await chooseCity('New York')
   await screen.findByText('Timezone and sharing preference saved.')
   expect(stored).toEqual({ revision: 1, timeZone: 'America/New_York', showAvailability: false })
   expect(onSaved).toHaveBeenCalledOnce()
@@ -69,14 +74,14 @@ it('offers a compact timezone dropdown and saves only after an explicit selectio
 it('offers recovery rather than automatically retrying a failed compact timezone save', async () => {
   render(<MatchingSchedule compact token="owner-token" disabled={false} onSaved={vi.fn()}/> )
   open()
-  const select = screen.getByRole('combobox', { name: 'Timezone' }) as HTMLSelectElement
-  await waitFor(() => expect(select.disabled).toBe(false))
+  const picker = screen.getByRole('button', { name: /^Timezone:/ }) as HTMLButtonElement
+  await waitFor(() => expect(picker.disabled).toBe(false))
   failSave = true
-  fireEvent.change(select, { target: { value: 'Europe/London' } })
+  await chooseCity('London')
   await screen.findByRole('alert')
-  expect(select.disabled).toBe(true)
+  expect(picker.disabled).toBe(true)
   fireEvent.click(screen.getByRole('button', { name: 'Reload timezone' }))
-  await waitFor(() => expect(select.disabled).toBe(false))
-  expect(select.value).toBe('')
+  await waitFor(() => expect(picker.disabled).toBe(false))
+  expect(picker.textContent).toContain('Choose a timezone')
   expect(fetch.mock.calls.filter(call => call[1]?.method === 'PUT')).toHaveLength(1)
 })
