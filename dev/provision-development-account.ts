@@ -1,3 +1,4 @@
+import { constants } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
@@ -13,11 +14,11 @@ const marker = 'local-development-v1'
 export async function provisionDevelopmentAccount(existing?: { accountId: string; email: string; password: string; url: string; publicKey: string }) {
   const env = { ...loadEnv('development', process.cwd(), ''), ...process.env }
   const stack = requireStack()
-  const url = env.SUPABASE_URL
-  if (!url || !env.SUPABASE_SERVICE_ROLE_KEY || !env.SUPABASE_PUBLISHABLE_KEY) throw new Error('Local Supabase configuration required')
-  try { assertLocalStack(url, stack) } catch { throw new Error('Local Supabase configuration required') }
-  if (existing && (existing.accountId !== accountId || existing.email !== email || existing.url !== url)) throw new Error('Unexpected development identity')
-  const credentials = existing ?? { accountId, email, password: randomBytes(32).toString('base64url'), url, publicKey: env.SUPABASE_PUBLISHABLE_KEY }
+  const url = stack.apiUrl
+  if (!env.SUPABASE_SERVICE_ROLE_KEY || !env.SUPABASE_PUBLISHABLE_KEY) throw new Error('Local Supabase configuration required')
+  if (env.SUPABASE_URL) try { assertLocalStack(env.SUPABASE_URL, stack) } catch { throw new Error('Local Supabase configuration required') }
+  if (existing && (existing.accountId !== accountId || existing.email !== email)) throw new Error('Unexpected development identity')
+  const credentials = existing ? { ...existing, url } : { accountId, email, password: randomBytes(32).toString('base64url'), url, publicKey: env.SUPABASE_PUBLISHABLE_KEY }
   const options = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: ((input, init) => {
     if (new URL(String(input)).origin !== stack.apiUrl) throw new Error('Nonlocal provisioning refused')
     return fetch(input, { ...init, redirect: 'error', signal: AbortSignal.timeout(5000) })
@@ -27,10 +28,10 @@ export async function provisionDevelopmentAccount(existing?: { accountId: string
   if (found.error && found.error.status !== 404) throw found.error
   if (found.data.user && (found.data.user.email !== email || found.data.user.app_metadata.pebble_development !== marker)) throw new Error('Reserved identity is not a development account')
   if (!existing && found.data.user) throw new Error('Existing development credentials missing; account preserved')
+  const directory = credentialsDir(stack.projectId), file = join(directory, 'development-account.json')
   if (!existing) {
-    const directory = credentialsDir(stack.projectId)
     await mkdir(directory, { recursive: true, mode: 0o700 })
-    await writeFile(join(directory, 'development-account.json'), JSON.stringify(credentials), { mode: 0o600, flag: 'wx' })
+    await writeFile(file, JSON.stringify(credentials), { mode: 0o600, flag: 'wx' })
   }
   if (!found.data.user) {
     const created = await admin.auth.admin.createUser({ id: accountId, email, password: credentials.password, email_confirm: true, app_metadata: { pebble_development: marker } })
@@ -39,6 +40,8 @@ export async function provisionDevelopmentAccount(existing?: { accountId: string
   const actor = createClient(url, credentials.publicKey, options)
   const signed = await actor.auth.signInWithPassword({ email, password: credentials.password })
   if (signed.error || signed.data.user?.id !== accountId) throw new Error('Development sign-in failed')
+  // Identity, marker and password are verified on this stack: repair the url of a file written for another port.
+  if (existing && existing.url !== url) await writeFile(file, JSON.stringify(credentials), { mode: 0o600, flag: constants.O_WRONLY | constants.O_TRUNC | constants.O_NOFOLLOW })
   const current = await actor.rpc('get_account')
   if (current.error) throw current.error
   if (!current.data?.profile || (current.data.completed?.length ?? 0) < 4) {

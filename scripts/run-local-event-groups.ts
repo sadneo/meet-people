@@ -2,14 +2,13 @@ import { constants } from 'node:fs'
 import { mkdir,open,readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { randomBytes,randomUUID } from 'node:crypto'
-import { execFileSync } from 'node:child_process'
 import { parseArgs } from 'node:util'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { createEventGroupWorkerTransport,runEventGroupCycle } from '../api/event-group-worker.js'
 import { readDevelopmentCredentials } from '../dev/development-login.js'
 import { psql,verifiedStack } from './demo-seed/local.js'
-import { assertLocalStack,credentialsDir } from './lib/stack.mjs'
+import { assertLocalStack,credentialsDir,supabaseStatus } from './lib/stack.mjs'
 import { localWorkerFailure,workerDiagnosticMessage,type LocalWorkerStage } from './local-worker-diagnostics.js'
 
 let flags={setup:false,watch:false}
@@ -42,7 +41,7 @@ async function main(){
  stage='database'
  const stack=verifiedStack('Local Supabase for this worktree is required'),origin=stack.apiUrl
  stage='configuration'
- const status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:131072,env:{...process.env,SUPABASE_PROJECT_ID:stack.projectId}}))
+ const status=supabaseStatus(stack)
  assertLocalStack(status.API_URL,stack)
  if(!status.ANON_KEY||!status.SERVICE_ROLE_KEY)throw new Error('Verified local runtime configuration required')
  const boundedFetch:typeof fetch=(input,init)=>{if(new URL(String(input)).origin!==origin)throw new Error('Worker refused a nonlocal request');return fetch(input,{...init,redirect:'error',signal:init?.signal??AbortSignal.timeout(15000)})}

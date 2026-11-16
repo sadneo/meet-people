@@ -45,6 +45,32 @@ it('refuses a loopback origin that is not this stack\'s before credential or acc
   expect(mocks.getUserById).not.toHaveBeenCalled()
   expect(mocks.writeFile).not.toHaveBeenCalled()
 })
+it('repairs a stale credential url in place once the marked user and password verify on this stack', async () => {
+  const stale = { ...credentials, url: 'http://127.0.0.1:55999' }
+  mocks.getUserById.mockResolvedValue({ data: { user: { email: credentials.email, app_metadata: { pebble_development: 'local-development-v1' } } }, error: null })
+  mocks.rpc.mockResolvedValue({ data: { profile: {}, completed: [0, 1, 2, 3] }, error: null })
+  const result = await provisionDevelopmentAccount(stale)
+  expect(result).toEqual(credentials)
+  expect(mocks.writeFile).toHaveBeenCalledTimes(1)
+  expect(mocks.writeFile).toHaveBeenCalledWith(expect.stringMatching(/meet-people-wt-unit[\\/]development-account\.json$/), JSON.stringify(credentials), { mode: 0o600, flag: expect.any(Number) })
+  expect(mocks.createUser).not.toHaveBeenCalled()
+})
+it('does not rewrite a stale file when the reserved identity is not a development account', async () => {
+  mocks.getUserById.mockResolvedValue({ data: { user: { email: 'other@example.test', app_metadata: {} } }, error: null })
+  await expect(provisionDevelopmentAccount({ ...credentials, url: 'http://127.0.0.1:55999' })).rejects.toThrow('Reserved identity')
+  expect(mocks.writeFile).not.toHaveBeenCalled()
+})
+it('does not rewrite a stale file for a different identity or when sign-in fails', async () => {
+  const stale = { ...credentials, url: 'http://127.0.0.1:55999' }
+  await expect(provisionDevelopmentAccount({ ...stale, email: 'someone@example.test' })).rejects.toThrow('Unexpected development identity')
+  mocks.signInWithPassword.mockResolvedValue({ data: { user: null }, error: new Error('bad') })
+  await expect(provisionDevelopmentAccount(stale)).rejects.toThrow('sign-in failed')
+  expect(mocks.writeFile).not.toHaveBeenCalled()
+})
+it('takes the origin from the stack, not SUPABASE_URL', async () => {
+  mocks.loadEnv.mockReturnValue({ SUPABASE_PUBLISHABLE_KEY: credentials.publicKey, SUPABASE_SERVICE_ROLE_KEY: 'synthetic-server-only' })
+  expect((await provisionDevelopmentAccount()).url).toBe(credentials.url)
+})
 it('refuses to provision without a local stack', async () => {
   vi.stubEnv('PEBBLE_SUPABASE_PROJECT_ID', ''); vi.stubEnv('PEBBLE_SUPABASE_URL', '')
   await expect(provisionDevelopmentAccount()).rejects.toThrow('No local stack for this worktree. Run pnpm dev first.')

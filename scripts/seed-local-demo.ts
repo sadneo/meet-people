@@ -1,12 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
-import { execFileSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { createClient,type SupabaseClient } from '@supabase/supabase-js'
 import { demoInitialsPhoto } from './demo-seed/photos.js'
 import { demoPlan,developmentDemoPlan,seedMarker } from './demo-seed/plan.js'
 import { psql,verifiedStack } from './demo-seed/local.js'
-import { assertLocalStack } from './lib/stack.mjs'
+import { assertLocalStack,supabaseStatus } from './lib/stack.mjs'
 import { seedSql } from './demo-seed/sql.js'
 import { scenarioPlan,scenarioSql } from './demo-seed/scenarios.js'
 import { eventQueueSql } from './demo-seed/event.js'
@@ -63,7 +62,7 @@ async function main(){
  }
  const stack=verifiedStack('Expected running local Supabase container for this worktree; no remote target is supported'),url=stack.apiUrl
  let status:Record<string,string>
- try{status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:131072,env:{...process.env,SUPABASE_PROJECT_ID:stack.projectId}}))}catch{throw new Error('Local Supabase runtime configuration unavailable; no keys printed')}
+ try{status=supabaseStatus(stack)}catch{throw new Error('Local Supabase runtime configuration unavailable; no keys printed')}
  const target=new URL(status.API_URL)
  assertLocalStack(target.href,stack)
  if(!status.SERVICE_ROLE_KEY||!status.ANON_KEY)throw new Error('Refusing nonlocal or incomplete Supabase configuration')

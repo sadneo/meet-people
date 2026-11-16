@@ -11,14 +11,22 @@ import { validatePrivateDevelopmentFile } from './private-development-file.js'
 import { provisionDevelopmentAccount } from './provision-development-account.js'
 
 const loopback = (value: string | undefined) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '')
-const localUrl = (value: string) => {
+const stackUrl = (value: string) => {
   try { assertLocalStack(value, requireStack()); return true } catch { return false }
+}
+// A stored file may predate a port change; only provisioning may repair its url.
+const loopbackUrl = (value: string) => {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' && url.hostname === '127.0.0.1' && !!url.port && url.pathname === '/' && !url.search && !url.hash && !url.username && !url.password
+  } catch { return false }
 }
 const publicKey = (value: string) => {
   if (value.startsWith('sb_publishable_')) return value.length > 15
   try { return JSON.parse(Buffer.from(value.split('.')[1], 'base64url').toString()).role === 'anon' && value.split('.').length === 3 } catch { return false }
 }
-const Credentials = z.object({ accountId: z.uuid(), email: z.email().max(254), password: z.string().min(1).max(128), url: z.string().refine(localUrl), publicKey: z.string().max(4096).refine(publicKey) }).strict()
+const Credentials = z.object({ accountId: z.uuid(), email: z.email().max(254), password: z.string().min(1).max(128), url: z.string().refine(stackUrl), publicKey: z.string().max(4096).refine(publicKey) }).strict()
+const StoredCredentials = Credentials.extend({ url: z.string().refine(loopbackUrl) })
 export const parseDevelopmentCredentials = (value: unknown) => Credentials.parse(value)
 type Credentials = z.infer<typeof Credentials>
 const unavailable = 'Development account provisioning is unavailable. Check that local Supabase is running and .env.local contains its local connection settings.'
@@ -34,7 +42,7 @@ export async function readDevelopmentCredentials() {
     const buffer = Buffer.alloc(8193)
     const { bytesRead } = await file.read(buffer, 0, buffer.length, 0)
     if (bytesRead > 8192) throw new Error('Invalid credential file')
-    return parseDevelopmentCredentials(JSON.parse(buffer.subarray(0, bytesRead).toString('utf8')))
+    return StoredCredentials.parse(JSON.parse(buffer.subarray(0, bytesRead).toString('utf8')))
   } finally { await file.close() }
 }
 

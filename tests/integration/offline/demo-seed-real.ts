@@ -1,16 +1,16 @@
 /** Explicit local seed acceptance; runtime-only admin key/password. No app-user data. */
 import assert from 'node:assert/strict'
 import { randomBytes,randomUUID } from 'node:crypto'
-import { execFileSync,spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { createClient } from '@supabase/supabase-js'
 import sharp from 'sharp'
 import { demoPlan,seedMarker } from '../../../scripts/demo-seed/plan.js'
 import { seedSql } from '../../../scripts/demo-seed/sql.js'
 import { containerResult } from '../../../scripts/lib/containers.mjs'
-import { assertLocalStack,requireStack } from '../../../scripts/lib/stack.mjs'
+import { assertLocalStack,requireStack,supabaseStatus } from '../../../scripts/lib/stack.mjs'
 const plan=demoPlan(2),ids=plan.map(p=>p.id),password=randomBytes(24).toString('base64url')
-let status:Record<string,string>;try{status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}))}catch{throw new Error('Local status unavailable; no keys printed')}
 const stack=requireStack()
+let status:Record<string,string>;try{status=supabaseStatus(stack)}catch{throw new Error('Local status unavailable; no keys printed')}
 assertLocalStack(status.API_URL,stack)
 const settings={auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}
 const admin=createClient(status.API_URL,status.SERVICE_ROLE_KEY,settings)

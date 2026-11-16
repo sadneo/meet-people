@@ -1,11 +1,11 @@
 // Local-only launch: select the public anon key in memory, never print/write it.
 // No .env file inspection, service-role client, provider changes or Auth bypass.
-import { execFileSync,spawn } from 'node:child_process'
-import { assertLocalStack,requireStack } from './lib/stack.mjs'
+import { spawn } from 'node:child_process'
+import { assertLocalStack,requireStack,supabaseStatus } from './lib/stack.mjs'
 const stack=requireStack()
 let key
 try {
- const status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:131072,env:{...process.env,SUPABASE_PROJECT_ID:stack.projectId}}))
+ const status=supabaseStatus(stack)
  assertLocalStack(status.API_URL,stack)
  key=status.ANON_KEY
  if(typeof key!=='string'||JSON.parse(Buffer.from(key.split('.')[1],'base64url').toString()).role!=='anon')throw new Error()

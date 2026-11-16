@@ -24,4 +24,5 @@ export function reapTestStacks(deps?: {
 }): Promise<string[]>
 export function currentStack(root?: string, env?: Record<string, string | undefined>): Stack | null
 export function requireStack(root?: string, env?: Record<string, string | undefined>): Stack
+export function supabaseStatus(stack: Stack): Record<string, string>
 export function assertLocalStack(url: string, stack: Stack): void

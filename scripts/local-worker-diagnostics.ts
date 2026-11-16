@@ -1,4 +1,6 @@
+import { join } from 'node:path'
 import type { WorkerDiagnostic } from '../api/event-group-worker.js'
+import { credentialsDir, currentStack } from './lib/stack.mjs'
 
 const stages = {
   runtime: ['runtime', 'Check command arguments and run pnpm run doctor.'],
@@ -19,7 +21,9 @@ export type LocalWorkerStage = keyof typeof stages
 
 export function localWorkerFailure(stage: LocalWorkerStage) {
   const [code, guidance] = Object.hasOwn(stages, stage) ? stages[stage] : stages.runtime
-  return `Local group worker stopped [${code}]. ${guidance} No credentials printed; no automatic replay.`
+  const stack = currentStack()
+  const worker = stack ? join(credentialsDir(stack.projectId), 'event-group-worker.json') : "event-group-worker.json in the current stack's credentials directory"
+  return `Local group worker stopped [${code}]. ${guidance.replace('<credentialsDir>/event-group-worker.json', worker)} No credentials printed; no automatic replay.`
 }
 
 export function workerDiagnosticMessage(diagnostic: WorkerDiagnostic) {

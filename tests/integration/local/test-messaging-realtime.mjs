@@ -1,23 +1,18 @@
 // Real local Auth -> private Realtime channels -> database-triggered broadcasts.
 // Requires the Realtime migration; creates and removes only synthetic fixtures.
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
 import { setTimeout, clearTimeout } from 'node:timers'
 import console from 'node:console'
 import { createClient } from '@supabase/supabase-js'
 import { containerSync } from '../../../scripts/lib/containers.mjs'
-import { assertLocalStack, requireStack } from '../../../scripts/lib/stack.mjs'
+import { assertLocalStack, requireStack, supabaseStatus } from '../../../scripts/lib/stack.mjs'
 
 const { fetch } = globalThis
-const status = execFileSync('sh', ['scripts/supabase.sh', 'status', '--output', 'env'], { encoding: 'utf8', stdio: 'pipe' })
-const values = Object.fromEntries(status.trim().split('\n').map(line => {
-  const [key, value] = line.split(/=(.*)/s, 2)
-  return [key, value.replace(/^"|"$/g, '')]
-}))
-const url = values.API_URL ?? values.SUPA_API_URL
 const stack = requireStack()
+const values = supabaseStatus(stack)
+const url = values.API_URL
 assertLocalStack(url, stack)
 const key = values.PUBLISHABLE_KEY ?? values.ANON_KEY
 const options = { auth: { persistSession: false, autoRefreshToken: false } }

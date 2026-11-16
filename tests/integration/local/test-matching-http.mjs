@@ -7,9 +7,10 @@ import process from 'node:process'
 import console from 'node:console'
 import {setTimeout as delay} from 'node:timers/promises'
 import {createClient} from '@supabase/supabase-js'
-import {assertLocalStack,requireStack} from '../../../scripts/lib/stack.mjs'
-const status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}))
-assertLocalStack(status.API_URL,requireStack())
+import {assertLocalStack,requireStack,supabaseStatus} from '../../../scripts/lib/stack.mjs'
+const stack=requireStack()
+const status=supabaseStatus(stack)
+assertLocalStack(status.API_URL,stack)
 const admin=createClient(status.API_URL,status.SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}})
 for(const email of ['pebble-demo-001@example.test','pebble-demo-002@example.test']) {
  const {data,error}=await admin.auth.admin.listUsers({page:1,perPage:1000});assert.ifError(error)

@@ -1,13 +1,12 @@
 import process from 'node:process';
 import console from 'node:console';
 if (process.env.PEBBLE_LOCAL_DOWNTIME_TEST !== '1') throw Error('Set PEBBLE_LOCAL_DOWNTIME_TEST=1 to authorize one disposable local Auth account. No Gemini calls.');
-const { execFileSync } = await import('node:child_process');
 const { chromium, expect } = await import('@playwright/test');
 const { randomBytes } = await import('node:crypto');
 const { containerSync } = await import('../../../scripts/lib/containers.mjs');
-const { assertLocalStack, requireStack } = await import('../../../scripts/lib/stack.mjs');
-const v=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}));
+const { assertLocalStack, requireStack, supabaseStatus } = await import('../../../scripts/lib/stack.mjs');
 const stack=requireStack();
+const v=supabaseStatus(stack);
 try{assertLocalStack(v.API_URL,stack)}catch{throw Error('Local-only Supabase required')}
 const queueRows=containerSync(['exec',stack.dbContainer,'psql','-X','-U','postgres','-d','postgres','-Atc','select count(*) from public.queue_entries;']);
 if(queueRows!=='0') throw Error('Abort: populated queue could invoke Gemini. Empty isolated local queue required.');

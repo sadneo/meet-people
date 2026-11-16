@@ -1,4 +1,4 @@
-import { spawn, execFile } from 'node:child_process'
+import { spawn, execFile, execFileSync } from 'node:child_process'
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
@@ -76,6 +76,15 @@ export function requireStack(root, env) {
   const stack = currentStack(root, env)
   if (!stack) throw new Error('No local stack for this worktree. Run pnpm dev first.')
   return stack
+}
+
+const portVars = { api: 'SUPABASE_API_PORT', db: 'SUPABASE_DB_PORT', shadow: 'SUPABASE_DB_SHADOW_PORT', studio: 'SUPABASE_STUDIO_PORT', mail: 'SUPABASE_INBUCKET_PORT' }
+
+// status derives API_URL from config.toml unless the port env is set, so pass this stack's.
+export function supabaseStatus(stack) {
+  const env = { ...process.env, SUPABASE_PROJECT_ID: stack.projectId }
+  for (const [name, variable] of Object.entries(portVars)) if (stack.ports[name]) env[variable] = String(stack.ports[name])
+  return JSON.parse(execFileSync('sh', ['scripts/supabase.sh', 'status', '--output', 'json'], { cwd: repoRoot, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 8 * 1024 * 1024 }))
 }
 
 export function assertLocalStack(url, stack) {
