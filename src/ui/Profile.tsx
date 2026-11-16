@@ -1,6 +1,7 @@
 import { PhotoGalleryEditor, PhotoGalleryPanel } from './PhotoGallery';
 import { AudienceSelect, GardenShowcasePicker, InterestOrderEditor, OwnProfilePreview, ProfileFinishCard } from './ProfileCustomization';
 import { useProfileCustomization } from '../features/account/profile-customization-client';
+import { haptic } from './feedback';
 import { sameCustomization, type ProfileCustomizationValue } from '../../shared/profile-customization';
 import { usePhotoGallery } from '../features/account/usePhotoGallery';
 import { legalPublication } from '../features/public/legal-content';
@@ -360,8 +361,8 @@ export function Profile() {
         <div className="row">{section && <button type="button" className="btn light small" onClick={() => setPreview(true)}>Preview</button>}{!section && <Link className="round" aria-label="Settings" to="/profile?section=settings"><Icon name="Settings"/></Link>}</div>
       </div>
       {!section && <div className="profile-view-switch" role="group" aria-label="Profile view">
-        <button type="button" aria-pressed={view === 'profile'} onClick={() => setView('profile')}>Your profile</button>
-        <button type="button" aria-pressed={view === 'preview'} onClick={() => setView('preview')}>Preview</button>
+        <button type="button" aria-pressed={view === 'profile'} onClick={() => { if (view !== 'profile') haptic('light'); setView('profile'); }}>Your profile</button>
+        <button type="button" aria-pressed={view === 'preview'} onClick={() => { if (view !== 'preview') haptic('light'); setView('preview'); }}>Preview</button>
       </div>}
       {!section && view === 'preview' ? <OwnProfilePreview ownerId={current.session.user.id} account={current.account!} details={facts.details ?? null} photoRevision={photo.snapshot?.revision} adult={adult}/>
       : !section ? <div className="profile-overview">
@@ -518,6 +519,7 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
         }
         setPhotoReconcile(false);
       }
+      haptic('success');
       done();
     } catch (failure) {
       setError(photoAttempted

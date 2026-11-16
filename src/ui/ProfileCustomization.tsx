@@ -8,6 +8,7 @@ import { ArtPreview } from '../features/garden/ArtPreview'
 import { gardenItemName, showcaseChoices } from '../features/garden/showcase'
 import { useGarden } from '../features/garden/state'
 import { Icon } from './common'
+import { haptic } from './feedback'
 import { DiscoverPhotos } from './PhotoGallery'
 import './profile-customization.css'
 
@@ -18,6 +19,8 @@ export function InterestOrderEditor({ interests, order, change, disabled }: {
   const ordered = orderInterests(interests, order)
   if (ordered.length < 2) return null
   function move(index: number, to: number) {
+    // A new top interest gets a firmer tap than an ordinary move.
+    haptic(to === 0 ? 'medium' : 'light')
     const next = [...ordered]
     const [item] = next.splice(index, 1)
     next.splice(to, 0, item)
@@ -45,7 +48,7 @@ export function AudienceSelect({ field, value, change, disabled }: {
 }) {
   return <label className="audience-select">
     <span>Show {field} to</span>
-    <select value={value} disabled={disabled} onChange={event => change(event.target.value as DetailAudience)}>
+    <select value={value} disabled={disabled} onChange={event => { haptic('light'); change(event.target.value as DetailAudience) }}>
       {(Object.keys(audienceLabels) as DetailAudience[]).map(option => <option key={option} value={option}>{audienceLabels[option]}</option>)}
     </select>
   </label>
@@ -60,12 +63,12 @@ export function GardenShowcasePicker({ value, change, disabled }: { value: strin
     <p className="account-note">Show one item from your Garden on your card. Buy more in the Garden.</p>
     <div className="garden-showcase-options">
       <label className={value === null ? 'is-selected' : ''}>
-        <input type="radio" name="garden-showcase" checked={value === null} onChange={() => change(null)}/>
+        <input type="radio" name="garden-showcase" checked={value === null} onChange={() => { haptic('light'); change(null) }}/>
         <span className="garden-showcase-art garden-showcase-none" aria-hidden="true">—</span>
         <span>None</span>
       </label>
       {choices.map(id => <label key={id} className={value === id ? 'is-selected' : ''}>
-        <input type="radio" name="garden-showcase" checked={value === id} onChange={() => change(id)}/>
+        <input type="radio" name="garden-showcase" checked={value === id} onChange={() => { haptic('light'); change(id) }}/>
         <span className="garden-showcase-art"><ArtPreview id={id} size={48}/></span>
         <span>{gardenItemName(id)}</span>
       </label>)}
@@ -115,7 +118,7 @@ export function OwnProfilePreview({ ownerId, account, details, photoRevision, ad
     facts && facts.visibility[key] && facts[key].length > 0 && (value.audiences[key] === 'both' || value.audiences[key] === mode))
   return <section className="own-preview" aria-label="How others see your profile">
     {adult && <div className="own-preview-modes" role="group" aria-label="Preview as">
-      {(['friends', 'dating'] as const).map(option => <button key={option} type="button" aria-pressed={mode === option} onClick={() => setMode(option)}>{option === 'friends' ? 'In Friends' : 'In Dating'}</button>)}
+      {(['friends', 'dating'] as const).map(option => <button key={option} type="button" aria-pressed={mode === option} onClick={() => { if (mode !== option) haptic('light'); setMode(option) }}>{option === 'friends' ? 'In Friends' : 'In Dating'}</button>)}
     </div>}
     <article className="own-preview-card">
       <div className="photo discovery-photo own-preview-photo">
