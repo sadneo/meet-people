@@ -1,0 +1,975 @@
+{
+  "start_date": "2026-11-02",
+  "menu_type_id": "2368",
+  "days": [
+    {
+      "date": "2026-11-01",
+      "has_unpublished_menus": false,
+      "menu_items": [
+        {
+          "id": 432737220,
+          "is_section_title": true,
+          "text": "Hot Breakfast Buffet",
+          "blank_line": false,
+          "food": null,
+          "is_holiday": false,
+          "is_station_header": true,
+          "price": null
+        },
+        {
+          "id": 432737221,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1423344,
+            "name": "Scrambled Eggs with Cream and Butter",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/Ey/Eypvxpx7jWxT2yxCS8Scv2/1769065619_6264653__878_ScrambledEgg.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 170.0,
+              "g_fat": 14.0,
+              "g_saturated_fat": 6.0,
+              "g_trans_fat": null,
+              "mg_cholesterol": 317.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 115.0,
+              "mg_sodium": 400.0,
+              "g_fiber": 0.0,
+              "g_protein": 10.0,
+              "mg_iron": 1.4,
+              "mg_calcium": 60.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": 88.2,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Milk",
+                  "enabled": true
+                },
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg^, Whipping Cream, Unsalted Butter, Salt, Black Pepper"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        },
+        {
+          "id": 432737222,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1358791,
+            "name": "Scrambled Egg Whites",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/BK/BKQPQtfE7qAQZKE4xq98ML/1769150317_285308__36736.13ScrambedEggWhitesDisplay2.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 60.0,
+              "g_fat": 0.0,
+              "g_saturated_fat": 0.0,
+              "g_trans_fat": 0.0,
+              "mg_cholesterol": 0.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 200.0,
+              "mg_sodium": 200.0,
+              "g_fiber": 0.0,
+              "g_protein": 12.0,
+              "mg_iron": 0.0,
+              "mg_calcium": 10.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": null,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Soy",
+                  "enabled": true
+                },
+                {
+                  "name": "Eat Well",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg White^, Pan Coating^"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-02",
+      "has_unpublished_menus": false,
+      "menu_items": [
+        {
+          "id": 432737237,
+          "is_section_title": true,
+          "text": "Hot Breakfast Buffet",
+          "blank_line": false,
+          "food": null,
+          "is_holiday": false,
+          "is_station_header": true,
+          "price": null
+        },
+        {
+          "id": 432737238,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1423344,
+            "name": "Scrambled Eggs with Cream and Butter",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/Ey/Eypvxpx7jWxT2yxCS8Scv2/1769065619_6264653__878_ScrambledEgg.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 170.0,
+              "g_fat": 14.0,
+              "g_saturated_fat": 6.0,
+              "g_trans_fat": null,
+              "mg_cholesterol": 317.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 115.0,
+              "mg_sodium": 400.0,
+              "g_fiber": 0.0,
+              "g_protein": 10.0,
+              "mg_iron": 1.4,
+              "mg_calcium": 60.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": 88.2,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Milk",
+                  "enabled": true
+                },
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg^, Whipping Cream, Unsalted Butter, Salt, Black Pepper"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        },
+        {
+          "id": 432737239,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1358791,
+            "name": "Scrambled Egg Whites",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/BK/BKQPQtfE7qAQZKE4xq98ML/1769150317_285308__36736.13ScrambedEggWhitesDisplay2.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 60.0,
+              "g_fat": 0.0,
+              "g_saturated_fat": 0.0,
+              "g_trans_fat": 0.0,
+              "mg_cholesterol": 0.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 200.0,
+              "mg_sodium": 200.0,
+              "g_fiber": 0.0,
+              "g_protein": 12.0,
+              "mg_iron": 0.0,
+              "mg_calcium": 10.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": null,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Soy",
+                  "enabled": true
+                },
+                {
+                  "name": "Eat Well",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg White^, Pan Coating^"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-03",
+      "has_unpublished_menus": false,
+      "menu_items": [
+        {
+          "id": 432737244,
+          "is_section_title": true,
+          "text": "Hot Breakfast Buffet",
+          "blank_line": false,
+          "food": null,
+          "is_holiday": false,
+          "is_station_header": true,
+          "price": null
+        },
+        {
+          "id": 432737245,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1423344,
+            "name": "Scrambled Eggs with Cream and Butter",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/Ey/Eypvxpx7jWxT2yxCS8Scv2/1769065619_6264653__878_ScrambledEgg.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 170.0,
+              "g_fat": 14.0,
+              "g_saturated_fat": 6.0,
+              "g_trans_fat": null,
+              "mg_cholesterol": 317.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 115.0,
+              "mg_sodium": 400.0,
+              "g_fiber": 0.0,
+              "g_protein": 10.0,
+              "mg_iron": 1.4,
+              "mg_calcium": 60.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": 88.2,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Milk",
+                  "enabled": true
+                },
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg^, Whipping Cream, Unsalted Butter, Salt, Black Pepper"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        },
+        {
+          "id": 432737246,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1358791,
+            "name": "Scrambled Egg Whites",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/BK/BKQPQtfE7qAQZKE4xq98ML/1769150317_285308__36736.13ScrambedEggWhitesDisplay2.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 60.0,
+              "g_fat": 0.0,
+              "g_saturated_fat": 0.0,
+              "g_trans_fat": 0.0,
+              "mg_cholesterol": 0.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 200.0,
+              "mg_sodium": 200.0,
+              "g_fiber": 0.0,
+              "g_protein": 12.0,
+              "mg_iron": 0.0,
+              "mg_calcium": 10.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": null,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Soy",
+                  "enabled": true
+                },
+                {
+                  "name": "Eat Well",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg White^, Pan Coating^"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-04",
+      "has_unpublished_menus": false,
+      "menu_items": [
+        {
+          "id": 432737258,
+          "is_section_title": true,
+          "text": "Hot Breakfast Buffet",
+          "blank_line": false,
+          "food": null,
+          "is_holiday": false,
+          "is_station_header": true,
+          "price": null
+        },
+        {
+          "id": 432737259,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1423344,
+            "name": "Scrambled Eggs with Cream and Butter",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/Ey/Eypvxpx7jWxT2yxCS8Scv2/1769065619_6264653__878_ScrambledEgg.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 170.0,
+              "g_fat": 14.0,
+              "g_saturated_fat": 6.0,
+              "g_trans_fat": null,
+              "mg_cholesterol": 317.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 115.0,
+              "mg_sodium": 400.0,
+              "g_fiber": 0.0,
+              "g_protein": 10.0,
+              "mg_iron": 1.4,
+              "mg_calcium": 60.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": 88.2,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Milk",
+                  "enabled": true
+                },
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg^, Whipping Cream, Unsalted Butter, Salt, Black Pepper"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        },
+        {
+          "id": 432737260,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1358791,
+            "name": "Scrambled Egg Whites",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/BK/BKQPQtfE7qAQZKE4xq98ML/1769150317_285308__36736.13ScrambedEggWhitesDisplay2.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 60.0,
+              "g_fat": 0.0,
+              "g_saturated_fat": 0.0,
+              "g_trans_fat": 0.0,
+              "mg_cholesterol": 0.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 200.0,
+              "mg_sodium": 200.0,
+              "g_fiber": 0.0,
+              "g_protein": 12.0,
+              "mg_iron": 0.0,
+              "mg_calcium": 10.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": null,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Soy",
+                  "enabled": true
+                },
+                {
+                  "name": "Eat Well",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg White^, Pan Coating^"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-05",
+      "has_unpublished_menus": false,
+      "menu_items": [
+        {
+          "id": 432737251,
+          "is_section_title": true,
+          "text": "Hot Breakfast Buffet",
+          "blank_line": false,
+          "food": null,
+          "is_holiday": false,
+          "is_station_header": true,
+          "price": null
+        },
+        {
+          "id": 432737252,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1423344,
+            "name": "Scrambled Eggs with Cream and Butter",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/Ey/Eypvxpx7jWxT2yxCS8Scv2/1769065619_6264653__878_ScrambledEgg.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 170.0,
+              "g_fat": 14.0,
+              "g_saturated_fat": 6.0,
+              "g_trans_fat": null,
+              "mg_cholesterol": 317.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 115.0,
+              "mg_sodium": 400.0,
+              "g_fiber": 0.0,
+              "g_protein": 10.0,
+              "mg_iron": 1.4,
+              "mg_calcium": 60.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": 88.2,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Milk",
+                  "enabled": true
+                },
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg^, Whipping Cream, Unsalted Butter, Salt, Black Pepper"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        },
+        {
+          "id": 432737253,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1358791,
+            "name": "Scrambled Egg Whites",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/BK/BKQPQtfE7qAQZKE4xq98ML/1769150317_285308__36736.13ScrambedEggWhitesDisplay2.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 60.0,
+              "g_fat": 0.0,
+              "g_saturated_fat": 0.0,
+              "g_trans_fat": 0.0,
+              "mg_cholesterol": 0.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 200.0,
+              "mg_sodium": 200.0,
+              "g_fiber": 0.0,
+              "g_protein": 12.0,
+              "mg_iron": 0.0,
+              "mg_calcium": 10.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": null,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Soy",
+                  "enabled": true
+                },
+                {
+                  "name": "Eat Well",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg White^, Pan Coating^"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-06",
+      "has_unpublished_menus": false,
+      "menu_items": [
+        {
+          "id": 432737265,
+          "is_section_title": true,
+          "text": "Hot Breakfast Buffet",
+          "blank_line": false,
+          "food": null,
+          "is_holiday": false,
+          "is_station_header": true,
+          "price": null
+        },
+        {
+          "id": 432737266,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1423344,
+            "name": "Scrambled Eggs with Cream and Butter",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/Ey/Eypvxpx7jWxT2yxCS8Scv2/1769065619_6264653__878_ScrambledEgg.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 170.0,
+              "g_fat": 14.0,
+              "g_saturated_fat": 6.0,
+              "g_trans_fat": null,
+              "mg_cholesterol": 317.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 115.0,
+              "mg_sodium": 400.0,
+              "g_fiber": 0.0,
+              "g_protein": 10.0,
+              "mg_iron": 1.4,
+              "mg_calcium": 60.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": 88.2,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Milk",
+                  "enabled": true
+                },
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg^, Whipping Cream, Unsalted Butter, Salt, Black Pepper"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        },
+        {
+          "id": 432737267,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1358791,
+            "name": "Scrambled Egg Whites",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/BK/BKQPQtfE7qAQZKE4xq98ML/1769150317_285308__36736.13ScrambedEggWhitesDisplay2.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 60.0,
+              "g_fat": 0.0,
+              "g_saturated_fat": 0.0,
+              "g_trans_fat": 0.0,
+              "mg_cholesterol": 0.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 200.0,
+              "mg_sodium": 200.0,
+              "g_fiber": 0.0,
+              "g_protein": 12.0,
+              "mg_iron": 0.0,
+              "mg_calcium": 10.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": null,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Soy",
+                  "enabled": true
+                },
+                {
+                  "name": "Eat Well",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg White^, Pan Coating^"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-07",
+      "has_unpublished_menus": false,
+      "menu_items": [
+        {
+          "id": 433696510,
+          "is_section_title": true,
+          "text": "Hot Breakfast Buffet",
+          "blank_line": false,
+          "food": null,
+          "is_holiday": false,
+          "is_station_header": true,
+          "price": null
+        },
+        {
+          "id": 433696513,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1423344,
+            "name": "Scrambled Eggs with Cream and Butter",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/Ey/Eypvxpx7jWxT2yxCS8Scv2/1769065619_6264653__878_ScrambledEgg.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 170.0,
+              "g_fat": 14.0,
+              "g_saturated_fat": 6.0,
+              "g_trans_fat": null,
+              "mg_cholesterol": 317.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 115.0,
+              "mg_sodium": 400.0,
+              "g_fiber": 0.0,
+              "g_protein": 10.0,
+              "mg_iron": 1.4,
+              "mg_calcium": 60.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": 88.2,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Milk",
+                  "enabled": true
+                },
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg^, Whipping Cream, Unsalted Butter, Salt, Black Pepper"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        },
+        {
+          "id": 433696514,
+          "is_section_title": false,
+          "text": "",
+          "blank_line": false,
+          "food": {
+            "id": 1358791,
+            "name": "Scrambled Egg Whites",
+            "description": "",
+            "image_url": "https://client-food-images.nutrislice.com/images/BK/BKQPQtfE7qAQZKE4xq98ML/1769150317_285308__36736.13ScrambedEggWhitesDisplay2.jpg.1024x0_q85.jpg",
+            "price": null,
+            "rounded_nutrition_info": {
+              "calories": 60.0,
+              "g_fat": 0.0,
+              "g_saturated_fat": 0.0,
+              "g_trans_fat": 0.0,
+              "mg_cholesterol": 0.0,
+              "g_carbs": 1.0,
+              "g_added_sugar": null,
+              "g_sugar": 0.0,
+              "mg_potassium": 200.0,
+              "mg_sodium": 200.0,
+              "g_fiber": 0.0,
+              "g_protein": 12.0,
+              "mg_iron": 0.0,
+              "mg_calcium": 10.0,
+              "mg_vitamin_c": 0.0,
+              "iu_vitamin_a": null,
+              "re_vitamin_a": null,
+              "mcg_vitamin_a": null,
+              "mg_vitamin_d": null,
+              "mcg_vitamin_d": null
+            },
+            "serving_size_info": {
+              "serving_size_amount": "0.5",
+              "serving_size_unit": "cups"
+            },
+            "icons": {
+              "food_icons": [
+                {
+                  "name": "Egg",
+                  "enabled": true
+                },
+                {
+                  "name": "Soy",
+                  "enabled": true
+                },
+                {
+                  "name": "Eat Well",
+                  "enabled": true
+                },
+                {
+                  "name": "Vegetarian",
+                  "enabled": true
+                }
+              ]
+            },
+            "ingredients": "Liquid Egg White^, Pan Coating^"
+          },
+          "is_holiday": false,
+          "is_station_header": false,
+          "price": null
+        }
+      ]
+    }
+  ],
+  "id": 308462,
+  "last_updated": "2026-10-26T15:21:30.322310Z",
+  "bold_all_entrees_enabled": false
+}

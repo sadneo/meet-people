@@ -22,6 +22,7 @@ function cancelDialog() {
 }
 
 function fallback(pathname: string, search: string) {
+  if (pathname.startsWith('/matchmaking/')) return '/matchmaking'
   if (pathname.startsWith('/messages/')) return '/messages'
   if (pathname.startsWith('/events/')) return `/events${search}`
   if (pathname === '/profile' && new URLSearchParams(search).has('section')) return '/profile'

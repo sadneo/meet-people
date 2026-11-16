@@ -3,6 +3,7 @@ import { createGardenRouter } from './garden.js'
 import { createClient } from '@supabase/supabase-js'
 import { env } from './env.js'
 import { createEventsRouter } from './events.js'
+import { createDiningRouter } from './dining.js'
 import { createAuthRouter } from './auth.js'
 import { createAccountRouter } from './account.js'
 import { createPushRouter } from './push.js'
@@ -74,6 +75,7 @@ app.use('/api/matchmaking', boundedMatchingBodyError, createMatchmakingRouter(ow
 app.use('/api/connections', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'connections'))
 app.use('/api/conversations', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'conversations'))
 app.use('/api/garden', createGardenRouter(ownerTransport))
+app.use('/api/dining', createDiningRouter(eventsClient, ownerTransport))
 
 app.get('/api/health', (_request, response) => {
   response.json(HealthResponseSchema.parse({ status: 'ok' }))

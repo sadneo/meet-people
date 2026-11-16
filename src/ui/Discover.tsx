@@ -17,6 +17,7 @@ import { useDiscoveryDeck } from './useDiscoveryDeck'
 import { useRequestAllowance, type RequestAllowanceControl } from './useRequestAllowance'
 import { useQueryClient } from '@tanstack/react-query'
 import { canonicalInterest, interestSelectionProblem } from '../../shared/interests'
+import './food.css'
 export function Connect({
   id,
   dating = false,
@@ -288,6 +289,7 @@ export function Discover(){
   const revision=JSON.stringify([epoch,current.account?.profile])
   return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className="area-link" aria-label="Search area & preferences" onClick={()=>setPreferences(true)}>⌖ {area.loading ? 'Search area' : area.error ? 'Check search area' : area.value || 'Choose an area'} <span aria-hidden="true">⌄</span></button></div>
   <div className="discovertools"><div className="mode-toggle" role="group" aria-label="Matchmaking mode"><span className={`mode-toggle-indicator ${mode==='Dating'?'dating':''}`} aria-hidden="true"/>{(['Friends','Dating'] as const).filter(item=>item==='Friends'||adult).map(item=><button key={item} data-mode={item} className={mode===item?'selected':''} aria-pressed={mode===item} onClick={()=>setMode(item)}><Icon name={item}/>{item}</button>)}</div><div className="row"><button className="round" aria-label={`${mode} preferences`} onClick={()=>setPreferences(true)}><Icon name="DiscoveryPreferences"/></button><Link className="round discovery-activity" to="/matches" aria-label="Matches and activity"><Icon name="DiscoveryActivity" /></Link></div></div>
+  <Link className="discovery-food-link" to="/matchmaking/food" state={{discoverSearch:search.toString()}}><Icon name="Food"/>Food menus<Icon name="ChevronRight"/></Link>
   <ResourceState loading={!allowance.value && allowance.checking} error={allowance.error} reload={()=>void allowance.refresh()} skeleton={<span className="sr-only" role="status">Checking request availability</span>}/>
  {allowance.limited ? <section className="friends-waiting discovery-request-limit" aria-labelledby="request-limit-title">
   <Icon name="Clock"/><h2 id="request-limit-title">You’ve reached today’s request limit.</h2>

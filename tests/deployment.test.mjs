@@ -25,6 +25,19 @@ test('preview and apply use the same reviewed migration ordering guard', () => {
   assert.throws(() => reviewedMigrationFlags('unrecognized output', 'wacgxhsdhrqigrmqaonc'))
 })
 
+test('dining migration can follow an up-to-date dev database without an ordering exception', () => {
+  const versions = readdirSync('supabase/migrations').filter(name => name.endsWith('.sql'))
+  const dining = versions.find(name => name.endsWith('_dining_menu_ingestion.sql'))
+  assert.ok(dining)
+  const ledger = versions.map(name => {
+    const version = name.split('_')[0]
+    return `${version} | ${name === dining ? '' : version} | time`
+  }).join('\n')
+  for (const project of ['sandbox', 'wacgxhsdhrqigrmqaonc']) {
+    assert.deepEqual(reviewedMigrationFlags(ledger, project), [])
+  }
+})
+
 test('main deploys only production; dev deploys only sandbox; manual sources belong to the destination branch', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-deployment-'))
   const git = args => execFileSync('git', ['-C', directory, ...args], {
