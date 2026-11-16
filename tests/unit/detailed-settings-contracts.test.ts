@@ -5,16 +5,16 @@ import { SaveAccountSchema } from '../../shared/account'
 import { accountFixture, requiredPreferences } from './complete-profile-fixture'
 
 const on = { messages: true, plans: true, matches: true, friendsDiscovery: true, datingDiscovery: true }
-it('defaults Friends on while keeping Dating and notifications opt-in', () => {
-  expect(emptyDetailedSettings()).toEqual({ messages: false, plans: false, matches: false, friendsDiscovery: true, datingDiscovery: false })
-  expect(DetailedSettingsSchema.parse({ revision: 0, settings: emptyDetailedSettings(), masters: { notifications: true, discoverable: true }, effective: emptyDetailedSettings() }).settings.datingDiscovery).toBe(false)
+it('defaults Friends and Dating discovery on while keeping notifications opt-in', () => {
+  expect(emptyDetailedSettings()).toEqual({ messages: false, plans: false, matches: false, friendsDiscovery: true, datingDiscovery: true })
+  expect(DetailedSettingsSchema.parse({ revision: 0, settings: emptyDetailedSettings(), masters: { notifications: true, discoverable: true }, effective: emptyDetailedSettings() }).settings.datingDiscovery).toBe(true)
   expect(DetailedSettingsSchema.safeParse({ revision: 0, settings: on, masters: null, effective: emptyDetailedSettings() }).success).toBe(false)
 })
 it('applies persisted global masters to every category/mode and fails closed for unknown masters', () => {
   for (const notifications of [false, true]) for (const discoverable of [false, true]) {
     expect(effectiveDetailedSettings(on, { notifications, discoverable })).toEqual({ messages: notifications, plans: notifications, matches: notifications, friendsDiscovery: discoverable, datingDiscovery: discoverable })
   }
-  expect(effectiveDetailedSettings(on, null)).toEqual({ ...emptyDetailedSettings(), friendsDiscovery: false })
+  expect(effectiveDetailedSettings(on, null)).toEqual({ ...emptyDetailedSettings(), friendsDiscovery: false, datingDiscovery: false })
   expect(mastersFromLegacySettings({ notifications: true, availability: false, discoverable: false, location: true })).toEqual({ notifications: true, discoverable: false })
   for (const value of [null, {}, { notifications: true, discoverable: true }, { notifications: 'true', availability: true, discoverable: true, location: false }]) expect(mastersFromLegacySettings(value)).toBeNull()
   expect(DetailedSettingsSchema.safeParse({ revision: 1, settings: on, masters: null, effective: on }).success).toBe(false)
