@@ -1283,6 +1283,7 @@ export type Database = {
       }
       dating_targets: { Args: { p: Json }; Returns: Json }
       detailed_settings_masters: { Args: { value_in: Json }; Returns: Json }
+      edit_profile_photo_gallery: { Args: { edit_in: Json }; Returns: Json }
       effective_detailed_settings: {
         Args: { choices_in: Json; masters_in: Json }
         Returns: Json
@@ -1325,7 +1326,6 @@ export type Database = {
         Returns: Json
       }
       garden_account: { Args: { command_in?: Json }; Returns: Json }
-      edit_profile_photo_gallery: { Args: { edit_in: Json }; Returns: Json }
       get_account: { Args: never; Returns: Json }
       get_account_profile: { Args: never; Returns: Json }
       get_active_friends_group: { Args: { group_in: string }; Returns: Json }
