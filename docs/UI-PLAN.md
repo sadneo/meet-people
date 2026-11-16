@@ -114,16 +114,22 @@ confirmed response clears its draft even after leaving chat. Navigating or readi
 history never replays a send; an explicit retry retains the original request ID.
 Changing accounts or signing out clears this state. No message drafts or send IDs
 are added to persistent browser storage, and process restarts do not restore them.
-Messages subscribes to a private Supabase Realtime channel for the signed-in
-account. Database notifications refresh inbox, direct/event/group history and
+Messages and the standalone Requests page subscribe to a private Supabase Realtime
+channel for the signed-in account. Database notifications refresh connection
+requests, inbox, direct/event/group history and
 read receipts through the existing API, with no periodic HTTP polling. Subscribe,
 reconnect and returning to the foreground catch up on missed changes. Leaving
-Messages or changing accounts removes the subscription. Connection errors expose
+both messaging views or changing accounts removes the subscription. Connection errors expose
 an explicit reconnect action. Drafts and loaded history remain during background
 refresh; stale or failed permission reads cannot authorize sends. Automatic reads
 never retry a message send, and read acknowledgements are deduplicated by message
-sequence. This requires `20261113000000_messaging_realtime.sql`; see
+sequence. This requires `20261115030000_messaging_realtime.sql`; see
 `docs/messaging-realtime.md` for activation and verification.
+Typing uses throttled, authenticated activity flags and the same private owner
+channels. Current participants see a named three-dot indicator; draft text stays
+on the device. Indicators stop on send/blur/inactivity and expire after five
+seconds. This requires `20261115040000_messaging_typing.sql`. Sent/Read labels
+reflect confirmed storage and participant read positions, refreshed live.
 The one-interest readiness policy requires additive migration
 `20261101000000_one_interest_minimum.sql` on existing databases before rolling out
 the relaxed client rule. Existing profiles remain intact; five-total/two-custom

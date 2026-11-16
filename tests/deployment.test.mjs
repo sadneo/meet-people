@@ -29,9 +29,10 @@ test('dining migration can follow an up-to-date dev database without an ordering
   const versions = readdirSync('supabase/migrations').filter(name => name.endsWith('.sql'))
   const dining = versions.find(name => name.endsWith('_dining_menu_ingestion.sql'))
   assert.ok(dining)
+  const diningVersion = dining.split('_')[0]
   const ledger = versions.map(name => {
     const version = name.split('_')[0]
-    return `${version} | ${name === dining ? '' : version} | time`
+    return `${version} | ${version < diningVersion ? version : ''} | time`
   }).join('\n')
   for (const project of ['sandbox', 'wacgxhsdhrqigrmqaonc']) {
     assert.deepEqual(reviewedMigrationFlags(ledger, project), [])

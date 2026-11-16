@@ -2,18 +2,26 @@ import { useCallback, useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../../supabase'
+import { TypingEventSchema, type TypingEvent } from '../../../shared/messaging'
 
-const messagingKeys = new Set(['inbox', 'groups', 'activity', 'message-history'])
+const messagingKeys = new Set(['inbox', 'groups', 'activity', 'message-history', 'connections'])
 // The SDK reuses channels with the same topic. Await the previous leave before
 // rejoining, including rapid navigation, explicit reconnect and Strict Mode.
 let channelRemoval: Promise<unknown> = Promise.resolve()
 
-/** Broadcasts only invalidate display reads. The API still owns permissions,
- * message content, read acknowledgements and idempotent sends. */
+/** Change broadcasts refresh display reads; typing flags expire in memory.
+ * The API still owns permissions, content, read acknowledgements and sends. */
 export function useMessagingRealtime(userId: string) {
   const client = useQueryClient()
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
+  const [typing, setTyping] = useState<{ owner: string; peers: (TypingEvent & { expires: number })[] }>({ owner: userId, peers: [] })
+  useEffect(() => {
+    if (!typing.peers.length) return
+    const timer = setTimeout(() => setTyping(value => ({ ...value, peers: value.peers.filter(peer => peer.expires > Date.now()) })),
+      Math.max(0, Math.min(...typing.peers.map(peer => peer.expires)) - Date.now()))
+    return () => clearTimeout(timer)
+  }, [typing])
   const reconnect = useCallback(() => setAttempt(value => value + 1), [])
   useEffect(() => {
     if (!supabase) return
@@ -44,12 +52,26 @@ export function useMessagingRealtime(userId: string) {
       // A send also updates its sender's read sequence; combine that burst.
       timer = setTimeout(() => { timer = undefined; void flush() }, 30)
     }
-    const foreground = () => { if (visible()) refresh() }
+    const foreground = () => {
+      setTyping(value => ({ owner: userId, peers: visible() && value.owner === userId ? value.peers.filter(peer => peer.expires > Date.now()) : [] }))
+      if (visible()) refresh()
+    }
     let channel: RealtimeChannel | undefined
     void channelRemoval.then(() => {
       if (!active) return
       channel = sdk.channel(`messaging:${userId}`, { config: { private: true } })
       .on('broadcast', { event: 'changed' }, refresh)
+      .on('broadcast', { event: 'typing' }, ({ payload }: { payload: unknown }) => {
+        if (!active || !visible()) return
+        const parsed = TypingEventSchema.safeParse(payload)
+        if (!parsed.success || parsed.data.userId === userId) return
+        const event = parsed.data
+        setTyping(value => {
+          const peers = (value.owner === userId ? value.peers : []).filter(peer => peer.expires > Date.now() &&
+            !(peer.conversationId === event.conversationId && peer.isGroup === event.isGroup && peer.userId === event.userId))
+          return { owner: userId, peers: event.typing ? [...peers.slice(-63), { ...event, expires: Date.now() + 5000 }] : peers }
+        })
+      })
       .subscribe(status => {
         if (!active) return
         if (status === 'SUBSCRIBED') {
@@ -58,6 +80,7 @@ export function useMessagingRealtime(userId: string) {
           refresh()
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           setError('Live updates are unavailable.')
+          setTyping({ owner: userId, peers: [] })
         }
       })
     }).catch(() => { if (active) setError('Live updates are unavailable.') })
@@ -73,5 +96,5 @@ export function useMessagingRealtime(userId: string) {
       if (channel) channelRemoval = sdk.removeChannel(channel).catch(() => undefined)
     }
   }, [client, userId, attempt])
-  return { error, reconnect }
+  return { error, reconnect, typing: typing.owner === userId ? typing.peers : [] }
 }

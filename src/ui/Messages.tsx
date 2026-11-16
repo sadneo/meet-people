@@ -16,9 +16,11 @@ import {
   ReadStateSchema,
   MessagingActivitySchema,
   type Message,
+  type TypingEvent,
 } from "../../shared/messaging";
 import { messagingRequest } from "../features/messaging/client";
 import { useMessagingRealtime } from '../features/messaging/useMessagingRealtime';
+import { useConversationTyping } from '../features/messaging/useConversationTyping';
 import { useCachedLoad } from "../data/useCachedLoad";
 import { useMessageDraft } from '../data/message-drafts';
 import { useAction } from "./hooks";
@@ -154,7 +156,7 @@ export function Messages() {
           )}
         </aside>
         {selected ? (
-          <Chat key={draftKey} draftKey={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} connectionLabel={rows.find(row => row.id === selected)?.label ?? ''} />
+          <Chat key={draftKey} draftKey={draftKey} id={selected} changed={changed} isGroup={!!selectedGroup} connectionLabel={rows.find(row => row.id === selected)?.label ?? ''} typing={realtime.typing} />
         ) : (
           <div className="chat-empty">
             <Icon name="Messages"/>
@@ -165,7 +167,7 @@ export function Messages() {
     </section>
   );
 }
-function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id: string; changed: () => void; isGroup?: boolean; connectionLabel?: string; draftKey: string }) {
+function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing }: { id: string; changed: () => void; isGroup?: boolean; connectionLabel?: string; draftKey: string; typing: TypingEvent[] }) {
   const [group,setGroup]=useState<ActiveGroup|null>(null)
   const [removeOpen, setRemoveOpen] = useState(false);
   const [peopleOpen, setPeopleOpen] = useState(false);
@@ -190,6 +192,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
   const { draft, store } = useMessageDraft(draftKey);
   const { body, confirmed } = draft;
   const sending = draft.status === 'pending', uncertain = sending || draft.status === 'uncertain';
+  const announceTyping = useConversationTyping(id, isGroup, !!history.value?.canSend && !history.error && !uncertain, current.session.user.id)
   const [older, setOlder] = useState<Message[]>([]),
     [cursor, setCursor] = useState<number | null>(null),
     [readError, setReadError] = useState("");
@@ -255,6 +258,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
   async function send(event: FormEvent) {
     event.preventDefault();
     if (action.busy) return;
+    announceTyping(false)
     const saved = await store.send(draftKey, id, current.session.user.id, canSend, operation =>
       isGroup ? matchingClient(token).send(id, operation) : messagingRequest(`/${encodeURIComponent(id)}/messages`, MessageSchema, { body: operation }));
     if (saved && live.current) {
@@ -267,6 +271,8 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
       (person) => person.id !== current.session.user.id,
     ) ?? [];
   const olderCursor = cursor ?? history.value?.nextCursor;
+  const typists = history.value?.canSend && !history.error ? others.filter(person => typing.some(event => event.conversationId === id && event.isGroup === isGroup && event.userId === person.id)) : []
+  const typingLabel = typists.length === 1 ? `${typists[0].display_name} is typing` : `${typists.length} people are typing`
   return (
     <section className="live-chat">
       <header className="chat-header">
@@ -360,6 +366,10 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
           </Fragment>
         ))}
       </div>
+      {!!typists.length && <div className="chat-typing" role="status" aria-label={typingLabel}>
+        <span className="typing-dots" aria-hidden="true"><span/><span/><span/></span>
+        <span>{typingLabel}…</span>
+      </div>}
       <ErrorMessage>{action.error}</ErrorMessage>
       <ErrorMessage>{draft.error}</ErrorMessage>
       {history.value && !history.value.canSend && (
@@ -377,7 +387,8 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey }: { id
           rows={1}
           placeholder="Message…"
           value={body}
-          onChange={(event) => store.edit(draftKey, event.target.value)}
+          onChange={(event) => { store.edit(draftKey, event.target.value); announceTyping(!!event.target.value.trim()) }}
+          onBlur={() => announceTyping(false)}
           onKeyDown={(event) => {
             if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             event.preventDefault();

@@ -11,6 +11,7 @@
     "test:doctor": "node --test tests/doctor.test.mjs",
     "dev:web": "vite",
     "dev:mobile": "vite --config vite.mobile.config.ts",
+    "dev:remote": "node scripts/run-remote-messaging.mjs",
     "dev:api": "tsx watch --env-file-if-exists=.env.local api/server.ts",
     "dev:alt": "node src/alt/serve.mjs",
     "dev:groups": "tsx scripts/run-local-event-groups.ts --setup --watch",
@@ -48,6 +49,7 @@
     "test:integration:browser": "playwright test --config playwright.integration.config.ts",
 
     "test:hosted": "node tests/integration/hosted/test-hosted.mjs",
+    "test:hosted:messaging": "node tests/integration/hosted/test-hosted-messaging.mjs",
     "test:hosted:account": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=\"$(command -v chromium || true)\" node --env-file-if-exists=.env.hosting.local tests/integration/hosted/test-hosted-account.mjs",
     "test:hosted:product": "node --env-file-if-exists=.env.hosting.local tests/integration/hosted/test-hosted-product.mjs",
 

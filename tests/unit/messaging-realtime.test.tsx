@@ -44,7 +44,7 @@ beforeEach(() => {
   realtime.broadcast = undefined; realtime.status = undefined
   realtime.channel.mockImplementation(() => {
     const channel = {
-      on: (_type: string, _filter: unknown, callback: () => void) => { realtime.broadcast = callback; return channel },
+      on: (_type: string, filter: { event: string }, callback: () => void) => { if (filter.event === 'changed') realtime.broadcast = callback; return channel },
       subscribe: (callback: (status: string) => void) => { realtime.status = callback; return channel },
     }
     return channel

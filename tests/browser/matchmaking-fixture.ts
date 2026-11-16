@@ -11,19 +11,27 @@ export async function mockMatchingSession(page: Page, signedIn = true, signOutFa
     export const supabase = {
       channel(topic, options) {
         if (topic !== 'messaging:' + session?.user.id || options?.config?.private !== true) throw new Error('Expected private owner messaging channel');
-        let broadcast, status;
+        let broadcast, typing, status;
         const changed = () => broadcast?.();
+        const typed = event => typing?.({ payload: event.detail });
         const reconnected = () => status?.('SUBSCRIBED');
         const channel = {
-          on(type, filter, callback) { if (type !== 'broadcast' || filter.event !== 'changed') throw new Error('Unexpected realtime event'); broadcast = callback; return channel; },
+          on(type, filter, callback) {
+            if (type !== 'broadcast') throw new Error('Unexpected realtime event');
+            if (filter.event === 'changed') broadcast = callback;
+            else if (filter.event === 'typing') typing = callback;
+            else throw new Error('Unexpected realtime event');
+            return channel;
+          },
           subscribe(callback) {
             status = callback;
             window.addEventListener('test:messaging-broadcast', changed);
             window.addEventListener('test:messaging-reconnected', reconnected);
+            window.addEventListener('test:messaging-typing', typed);
             queueMicrotask(reconnected);
             return channel;
           },
-          unsubscribe() { window.removeEventListener('test:messaging-broadcast', changed); window.removeEventListener('test:messaging-reconnected', reconnected); }
+          unsubscribe() { window.removeEventListener('test:messaging-broadcast', changed); window.removeEventListener('test:messaging-reconnected', reconnected); window.removeEventListener('test:messaging-typing', typed); }
         };
         return channel;
       },
