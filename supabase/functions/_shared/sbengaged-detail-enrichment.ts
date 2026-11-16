@@ -1,4 +1,4 @@
-import { extractSbEngagedDetailImage } from './extract-sbengaged-detail.ts'
+import { extractSbEngagedDetailImage, validSbEngagedImageUrl } from './extract-sbengaged-detail.ts'
 
 export type ExistingSbEngagedDetail = { external_id: string; image_url: string | null; details_synced_at: string | null }
 export type SbEngagedDetail = { externalId: string; success: true; imageUrl: string | null; attempts: number } | { externalId: string; success: false; attempts: number }
@@ -48,7 +48,28 @@ export async function fetchSbEngagedDetail(externalId: string, network: typeof f
       if (!response) return { externalId, success: false, attempts: requests }
       if (response.ok) {
         const html = await response.text()
-        if (html.length <= 2 * 1024 * 1024) return { externalId, success: true, imageUrl: extractSbEngagedDetailImage(html), attempts: requests }
+        if (html.length <= 2 * 1024 * 1024) {
+          const imageUrl = extractSbEngagedDetailImage(html)
+          if (imageUrl || !/src=["']\/w\/assets\//i.test(html)) return { externalId, success: true, imageUrl, attempts: requests }
+          // New CampusGroups pages are empty app shells. Read only the public
+          // event's own photo; never mistake the shell for a posterless event.
+          const eventId = btoa(`stonybrook:Event:${externalId}`)
+          requests++
+          const detail = await network('https://sbengaged.stonybrook.edu/api/v2/graphql', {
+            method: 'POST', redirect: 'error', signal,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: 'query EventPoster($id: ID!) { event(id: $id) { id photo { url } } }', variables: { id: eventId } }),
+          })
+          if (!detail.ok) { await detail.body?.cancel(); return { externalId, success: false, attempts: requests } }
+          const body = await detail.text()
+          if (body.length > 2 * 1024 * 1024) return { externalId, success: false, attempts: requests }
+          const payload = JSON.parse(body) as { errors?: unknown[]; data?: { event?: { id: string; photo?: { url: unknown } | null } } }
+          const event = payload.data?.event
+          if (payload.errors?.length || !event || event.id !== eventId || event.photo === undefined) return { externalId, success: false, attempts: requests }
+          const photo = event.photo === null ? null : validSbEngagedImageUrl(event.photo.url)
+          if (event.photo !== null && !photo) return { externalId, success: false, attempts: requests }
+          return { externalId, success: true, imageUrl: photo, attempts: requests }
+        }
       } else if (attempt === 1 && (response.status === 429 || response.status >= 500)) {
         const retryAfter = response.headers.get('retry-after'), seconds = retryAfter === null ? NaN : Number(retryAfter)
         await response.body?.cancel()

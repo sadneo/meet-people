@@ -409,6 +409,57 @@ export type Database = {
         }
         Relationships: []
       }
+      dining_menus: {
+        Row: {
+          created_at: string
+          external_id: string
+          id: string
+          items: Json
+          last_synced_at: string
+          location_name: string
+          location_slug: string
+          menu_date: string
+          menu_name: string
+          menu_slug: string
+          notices: Json
+          source: string
+          source_url: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_id: string
+          id?: string
+          items?: Json
+          last_synced_at: string
+          location_name: string
+          location_slug: string
+          menu_date: string
+          menu_name: string
+          menu_slug: string
+          notices?: Json
+          source: string
+          source_url: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_id?: string
+          id?: string
+          items?: Json
+          last_synced_at?: string
+          location_name?: string
+          location_slug?: string
+          menu_date?: string
+          menu_name?: string
+          menu_slug?: string
+          notices?: Json
+          source?: string
+          source_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_group_members: {
         Row: {
           event_id: string
@@ -1558,6 +1609,10 @@ export type Database = {
         Args: { p_conversation_id: string; p_user_id: string }
         Returns: string
       }
+      messaging_typing: {
+        Args: { conversation_in: string; group_in: boolean; typing_in: boolean }
+        Returns: Json
+      }
       person_dating_score: {
         Args: { me: string; other: string }
         Returns: number
@@ -1692,6 +1747,44 @@ export type Database = {
       save_matchmaking_profile: { Args: { profile_in: Json }; Returns: Json }
       save_profile_details: { Args: { details_in: Json }; Returns: Json }
       save_profile_photo: { Args: { photo_in: Json }; Returns: Json }
+      sbengaged_begin_sync: { Args: { p_mode: string }; Returns: Json }
+      sbengaged_claim_photos: { Args: never; Returns: Json }
+      sbengaged_complete_photo: {
+        Args: {
+          p_http: number
+          p_id: string
+          p_image: string
+          p_outcome: string
+          p_retry_seconds: number
+          p_token: string
+        }
+        Returns: undefined
+      }
+      sbengaged_export_snapshot: { Args: never; Returns: Json }
+      sbengaged_finish_sync: {
+        Args: {
+          p_ends: string
+          p_full: boolean
+          p_seen: string[]
+          p_starts: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      sbengaged_origin_cooldown: {
+        Args: { p_seconds: number }
+        Returns: undefined
+      }
+      sbengaged_release_photos: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
+      sbengaged_release_sync: { Args: { p_token: string }; Returns: undefined }
+      sbengaged_runtime_config: { Args: never; Returns: Json }
+      sbengaged_upsert_events: {
+        Args: { p_rows: Json; p_token: string }
+        Returns: number
+      }
       search_location_places: { Args: { query_in: string }; Returns: Json }
       search_people: {
         Args: { max_results?: number; q: string }

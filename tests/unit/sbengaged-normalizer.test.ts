@@ -1,11 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { extractSbEngagedDetailImage } from '../../supabase/functions/_shared/extract-sbengaged-detail.ts'
 import { normalizeSbEngagedEvent } from '../../supabase/functions/_shared/normalize-sbengaged.ts'
-import { parseSbEngagedICal } from '../../supabase/functions/_shared/parse-sbengaged-ical.ts'
+import { parseSbEngagedICal, selectSbEngagedWindow } from '../../supabase/functions/_shared/parse-sbengaged-ical.ts'
 
 const syncedAt = new Date('2026-09-20T12:00:00.000Z')
 
 describe('SB Engaged iCal normalization', () => {
+  it('refreshes ongoing and upcoming events while excluding expired and out-of-window entries', () => {
+    const events = [
+      { summary: 'Upcoming', startsAt: '2026-11-16T18:00:00.000Z' },
+      { summary: 'Ongoing', startsAt: '2026-11-02T18:00:00.000Z', endsAt: '2026-12-01T18:00:00.000Z' },
+      { summary: 'Expired', startsAt: '2026-11-15T18:00:00.000Z', endsAt: '2026-11-15T19:00:00.000Z' },
+      { summary: 'Past without end', startsAt: '2026-11-15T18:00:00.000Z' },
+      { summary: 'Tomorrow', startsAt: '2026-11-17T12:00:00.000Z' },
+      { summary: 'Undated' },
+    ]
+    expect(selectSbEngagedWindow(events, '2026-11-16T12:00:00.000Z', '2026-11-17T12:00:00.000Z').map(event => event.summary)).toEqual(['Ongoing', 'Upcoming'])
+  })
   it('parses a public event and maps it to a listing', () => {
     const [event] = parseSbEngagedICal(`BEGIN:VCALENDAR
 BEGIN:VEVENT

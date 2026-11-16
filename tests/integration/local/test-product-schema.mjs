@@ -44,6 +44,7 @@ async function replay(track, check) {
     assert.ok(ready, 'Disposable PostgreSQL did not finish initialization')
     query('create schema if not exists extensions; create extension if not exists pgcrypto with schema extensions; drop schema auth cascade;')
     query(auth)
+    query(source('tests/integration/sql/realtime-bootstrap.sql'))
     await check(query, migrate)
   } finally { execFileSync('docker', ['rm', '--force', '--volumes', container], { stdio: 'pipe' }) }
 }

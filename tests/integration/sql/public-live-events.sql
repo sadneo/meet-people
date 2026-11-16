@@ -28,11 +28,11 @@ do $$
 declare category_in text := current_setting('test.events_category'); event_out record;
 begin
   assert (select array_agg(id) from public.public_live_events(p_category => category_in)) = array[
-    'ea000000-0000-4000-8000-000000000001'::uuid,
     'ea000000-0000-4000-8000-000000000002'::uuid,
-    'ea000000-0000-4000-8000-000000000003'::uuid
-  ], 'List must exclude unavailable/non-event rows and order by start time then ID';
-  assert (select id from public.public_live_events(p_category => category_in, p_offset => 1, p_limit => 1)) = 'ea000000-0000-4000-8000-000000000002'::uuid;
+    'ea000000-0000-4000-8000-000000000003'::uuid,
+    'ea000000-0000-4000-8000-000000000001'::uuid
+  ], 'List must exclude unavailable/non-event rows and show upcoming events before ongoing events';
+  assert (select id from public.public_live_events(p_category => category_in, p_offset => 1, p_limit => 1)) = 'ea000000-0000-4000-8000-000000000003'::uuid;
   assert not exists(select 1 from public.public_live_events(p_category => category_in, p_offset => 3));
   assert not exists(select 1 from public.public_live_events(p_category => category_in || '-missing'));
   assert public.event_categories() @> to_jsonb(array[category_in]);
