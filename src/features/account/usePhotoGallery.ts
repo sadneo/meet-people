@@ -30,3 +30,20 @@ export function usePhotoSlot(token: string, owner: string, revision: number, pos
     },
   })
 }
+
+// Captions for each photo, keyed by the gallery revision they belong to.
+export function usePhotoCaptions(owner: string | undefined, revision: number | undefined, enabled = true) {
+  const account = useAccount()
+  const token = account?.loaded ? account.session?.access_token : undefined
+  return useQuery({
+    queryKey: ['profile-photo', owner, 'captions', revision],
+    enabled: !!token && !!owner && enabled && (revision ?? 0) > 0,
+    staleTime: 30_000,
+    retry: false,
+    queryFn: async ({ signal }) => {
+      const captions = await profilePhotoClient(token!).captions(owner!, signal)
+      if (captions.revision !== revision) throw new Error('Photos changed. Reload to see the latest captions.')
+      return captions
+    },
+  })
+}

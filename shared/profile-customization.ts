@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ProfilePromptsSchema } from './profile-prompts.js'
 
 // Presentation only. Matching scores treat interests as an unordered set, so
 // the order and top interest never change who is recommended.
@@ -11,6 +12,10 @@ export const ProfileCustomizationValueSchema = z.object({
   interestOrder,
   audiences: z.object({ education: DetailAudienceSchema, occupation: DetailAudienceSchema, languages: DetailAudienceSchema }).strict(),
   gardenItem,
+  // Optional for documents saved before prompts existed.
+  prompts: ProfilePromptsSchema.optional(),
+  // Optional bio shown in Dating instead of the main bio.
+  datingBio: z.string().min(1).max(1000).refine(value => value === value.trim(), 'Remove extra spaces.').nullable().optional(),
 }).strict()
 export type ProfileCustomizationValue = z.infer<typeof ProfileCustomizationValueSchema>
 const revision = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
@@ -33,6 +38,8 @@ export const defaultProfileCustomization: ProfileCustomizationValue = {
   interestOrder: [],
   audiences: { education: 'both', occupation: 'both', languages: 'both' },
   gardenItem: null,
+  prompts: [],
+  datingBio: null,
 }
 
 // Chosen order first (the first is the top interest), then the rest as saved.
@@ -45,5 +52,9 @@ export function sameCustomization(a: ProfileCustomizationValue, b: ProfileCustom
   return a.gardenItem === b.gardenItem && a.interestOrder.length === b.interestOrder.length &&
     a.interestOrder.every((label, index) => label === b.interestOrder[index]) &&
     a.audiences.education === b.audiences.education && a.audiences.occupation === b.audiences.occupation &&
-    a.audiences.languages === b.audiences.languages
+    a.audiences.languages === b.audiences.languages &&
+    JSON.stringify(a.prompts ?? []) === JSON.stringify(b.prompts ?? []) &&
+    (a.datingBio ?? null) === (b.datingBio ?? null)
 }
+
+export const PublicProfilePromptsSchema = ProfilePromptsSchema

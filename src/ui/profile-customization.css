@@ -61,10 +61,6 @@
 
 .profile-photos-section { display: grid; gap: 10px; margin: 0 0 18px; scroll-margin-top: 20px; }
 .profile-photos-section > h3 { margin: 0; font-size: 16px; }
-.photo-gallery-inline .photo-gallery-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.photo-gallery-inline .photo-gallery-position { font-size: 12px; }
-.photo-gallery-inline .photo-gallery-count,
-.photo-gallery-inline .photo-gallery-reorder-note { font-size: 13px; color: var(--muted); }
 
 .profile-view-switch {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 0 0 18px; padding: 4px;
@@ -77,11 +73,6 @@
 .profile-view-switch button[aria-pressed="true"] { background: #fffdf9; color: #302b28; box-shadow: 0 2px 8px #30251f14; }
 
 .own-preview { display: grid; gap: 12px; animation: rise-in 260ms var(--ease-out); }
-.own-preview-modes { display: inline-flex; gap: 6px; }
-.own-preview-modes button {
-  min-height: 40px; padding: 0 14px; border: 1px solid #e7dfd5; border-radius: 999px; background: #fffdf9; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
-}
-.own-preview-modes button[aria-pressed="true"] { border-color: #9d503d; background: #fbefea; color: #8a3f2c; }
 .own-preview-card { overflow: hidden; border-radius: 22px; background: #fffdf9; box-shadow: 0 6px 20px #4934210f; }
 .own-preview-photo { position: relative; height: clamp(320px, 62vw, 460px); }
 .own-preview-body { display: grid; gap: 16px; padding: 18px; }
@@ -106,3 +97,68 @@
 .account-edit-fields .audience-select select { flex: 0 1 auto; width: auto; min-width: 0; max-width: 100%; min-height: 40px; margin: 0; font-size: 13px; }
 .account-edit-fields .garden-showcase-options label,
 .account-modal .garden-showcase-options label { margin: 0; }
+
+/* Prompts: editor cards and how answers read on a profile. */
+.prompts-editor { display: grid; gap: 10px; margin-top: 22px; }
+.prompts-editor h3 { margin: 0; }
+.prompts-editor h3 span { color: var(--muted); font-weight: 500; font-size: 13px; }
+.prompts-editor > .account-note { margin: 0 0 2px; }
+.prompt-edit-card {
+  display: grid; gap: 8px; padding: 14px; border: 1px solid #e7dfd5; border-radius: 16px; background: #fffdf9;
+  animation: rise-in 240ms var(--ease-out);
+}
+.prompt-edit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.prompt-edit-head b { font-size: 14px; }
+.prompt-dating-tag { flex: none; padding: 2px 8px; border-radius: 999px; background: #f6e4ea; color: #8a3550; font-size: 12px; font-weight: 700; }
+.prompt-edit-card textarea { min-height: 64px; margin: 0; resize: vertical; }
+.prompt-edit-meta { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; }
+.prompt-edit-meta .prompt-hint { color: #8a3f2c; }
+.prompt-edit-actions { display: flex; align-items: center; gap: 6px; }
+.prompt-edit-actions .round { width: 40px; height: 40px; min-height: 40px; display: grid; place-items: center; padding: 0; border: 1px solid #e7dfd5; background: #fffdf9; }
+.prompt-edit-actions .round:disabled { opacity: 0.35; }
+.prompt-edit-actions .account-edit-text { margin-left: auto; min-height: 40px; }
+.prompt-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.prompt-add select, .prompt-add .btn { margin: 0; min-width: 0; }
+.prompt-cards { display: grid; gap: 10px; }
+.prompt-card {
+  margin: 0; padding: 14px 16px; border-radius: 16px; background: #f6efe7;
+  animation: rise-in 300ms var(--ease-out) both;
+}
+.prompt-card + .prompt-card { animation-delay: 60ms; }
+.prompt-card figcaption { color: #8a6f5c; font-size: 13px; font-weight: 700; }
+.prompt-card blockquote { margin: 6px 0 0; color: #302b28; font-size: 17px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.prompt-add { grid-template-columns: 1fr; }
+.prompt-add .btn { justify-self: start; }
+.own-preview > .discover-modes { justify-self: start; }
+
+/* Prompts per mode. */
+.prompts-editor-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.prompt-counts { display: inline-flex; gap: 10px; color: var(--muted); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.prompt-edit-question { font-size: 14px; }
+.prompt-edit-actions { flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.prompt-modes { display: inline-flex; gap: 6px; }
+.prompt-modes button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px;
+  border: 1px solid #e7dfd5; border-radius: 999px; background: #fffdf9; color: #66594e;
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 140ms var(--ease-out);
+}
+.prompt-modes button:active:not(:disabled) { transform: scale(var(--press-scale)); }
+.prompt-modes .ui-icon { width: 16px; height: 16px; }
+.prompt-modes [data-mode="Friends"] .ui-icon { color: #a77c43; }
+.prompt-modes [data-mode="Dating"] .ui-icon { color: #b56e83; }
+.prompt-modes [data-mode="Friends"][aria-pressed="true"] { background: #524c3d; border-color: #524c3d; color: #fffdf9; }
+.prompt-modes [data-mode="Dating"][aria-pressed="true"] { background: #64444d; border-color: #64444d; color: #fffdf9; }
+.prompt-modes [data-mode="Friends"][aria-pressed="true"] .ui-icon { color: #f2cf91; }
+.prompt-modes [data-mode="Dating"][aria-pressed="true"] .ui-icon { color: #f4b9cb; }
+.prompt-modes button:disabled { cursor: default; }
+.prompt-modes button[aria-pressed="false"]:disabled { opacity: 0.45; }
+.prompt-edit-move { display: inline-flex; gap: 4px; margin-left: auto; }
+.prompt-edit-actions .prompt-remove { color: #9d3d2d; }
+.prompt-edit-card .prompt-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.prompt-edit-card .prompt-edit-move { margin-left: 0; flex: none; }
+.prompt-edit-card .prompt-edit-move .round { width: 36px; height: 36px; min-height: 36px; display: grid; place-items: center; padding: 0; border: 1px solid #e7dfd5; background: #fffdf9; }
+.prompt-edit-card .prompt-edit-move .round:disabled { opacity: 0.35; }
+.prompt-edit-card .prompt-edit-move .ui-icon { width: 16px; height: 16px; }
+/* A pressed mode stays clearly on even when it can't be turned off. */
+.prompt-modes button[aria-pressed="true"]:disabled { opacity: 1; }

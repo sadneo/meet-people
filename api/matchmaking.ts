@@ -15,6 +15,7 @@ import type { SaveProfileDetails } from '../shared/profile-details.js'
 import { createProfileDetailsRouter } from './profile-details.js'
 import { createProfileCustomizationRouter } from './profile-customization.js'
 import type { SaveProfileCustomization } from '../shared/profile-customization.js'
+import type { SavePhotoCaption } from '../shared/profile-prompts.js'
 import type { SaveFriendsSearchPreferences } from '../shared/friends-search-preferences.js'
 import { createFriendsSearchPreferencesRouter } from './friends-search-preferences.js'
 import type { SaveDetailedSettings } from '../shared/detailed-settings.js'
@@ -57,6 +58,9 @@ export interface UserContextTransport {
     profileCustomization?(): PromiseLike<RpcResponse>
     saveProfileCustomization?(value: SaveProfileCustomization): PromiseLike<RpcResponse>
     profileShowcase?(owner: string): PromiseLike<RpcResponse>
+    profilePrompts?(owner: string, mode: 'friends' | 'dating'): PromiseLike<RpcResponse>
+    photoCaptions?(owner: string): PromiseLike<RpcResponse>
+    savePhotoCaption?(value: SavePhotoCaption): PromiseLike<RpcResponse>
     friendsRuntime?(): PromiseLike<RpcResponse>
     activeFriendsStatus?(): PromiseLike<RpcResponse>
     activeFriendsCommand?(command: ActiveCommand): PromiseLike<RpcResponse>
@@ -147,6 +151,9 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         profileCustomization: () => client.rpc('get_profile_customization'),
         saveProfileCustomization: value => client.rpc('save_profile_customization', { customization_in: value }),
         profileShowcase: owner => client.rpc('get_profile_showcase', { owner_in: owner }),
+        profilePrompts: (owner, mode) => client.rpc('get_profile_prompts', { owner_in: owner, mode_in: mode }),
+        photoCaptions: owner => client.rpc('get_profile_photo_captions', { owner_in: owner }),
+        savePhotoCaption: value => client.rpc('set_profile_photo_caption', { caption_in: value }),
         friendsSearchPreferences: () => client.rpc('get_friends_search_preferences'),
         saveFriendsSearchPreferences: preferences => client.rpc('save_friends_search_preferences', { preferences_in: preferences }),
         detailedSettings: () => client.rpc('get_detailed_settings'),
