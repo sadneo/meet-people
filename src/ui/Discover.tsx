@@ -1,7 +1,7 @@
 import { DiscoverPhotos } from './PhotoGallery'
 import { canShowDating } from './age-visibility'
 import { PageSkeleton } from './loading/PageSkeleton'
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { connections } from '../features/connections/client'
 import { datingLiveClient, DatingLiveError } from '../features/matchmaking/dating-live-client'
@@ -135,17 +135,16 @@ function Candidate({
     else setInterestError('Your interests could not be confirmed. Reload your saved profile before trying again.');
   }
   const content = useRef<HTMLDivElement>(null), moving = useRef(false), live = useRef(true), animation = useRef<Animation | null>(null);
-  const swipe = useRef<{ id: number; x: number; y: number; dx: number; active: boolean } | null>(null);
   const [lean, setLean] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
   useEffect(() => {
     live.current = true;
     return () => { live.current = false; animation.current?.cancel(); };
   }, []);
-  async function decide(direction: 'pass' | 'connect', from = 0) {
+  async function decide(direction: 'pass' | 'connect') {
     if (moving.current) return;
     const action = direction === 'pass' ? onSkip : onConnect;
-    if (!action || (direction === 'connect' && connectDisabled)) { springBack(); return; }
+    if (!action || (direction === 'connect' && connectDisabled)) return;
     moving.current = true;
     setTransitioning(true);
     setLean(direction === 'pass' ? -1 : 1);
@@ -155,9 +154,9 @@ function Candidate({
         // The card leaves in the chosen direction; the next card rises in.
         const sign = direction === 'pass' ? -1 : 1, width = content.current.offsetWidth || 360;
         animation.current = content.current.animate([
-          { transform: `translateX(${from}px) rotate(${from / 22}deg)` },
+          { transform: 'none' },
           { transform: `translateX(${sign * (width + 80)}px) rotate(${sign * 14}deg)` },
-        ], { duration: from ? 200 : 280, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
+        ], { duration: 280, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
         await animation.current.finished;
       }
       if (live.current) action();
@@ -171,44 +170,6 @@ function Candidate({
       if (live.current) { setTransitioning(false); setLean(0); }
     }
   }
-  function springBack() {
-    const element = content.current;
-    setLean(0);
-    if (!element) return;
-    const offset = swipe.current?.dx ?? 0;
-    element.style.transform = '';
-    if (offset && !prefersReducedMotion()) element.animate([{ transform: `translateX(${offset}px) rotate(${offset / 22}deg)` }, { transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
-  }
-  // Horizontal drag on the card decides; vertical movement keeps scrolling.
-  // A multi-photo viewer keeps its own swipe between photos.
-  const swipeHandlers = onConnect ? {
-    onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (moving.current || event.button !== 0 || (event.target as Element).closest('button, a, input, [data-swipe]')) return;
-      swipe.current = { id: event.pointerId, x: event.clientX, y: event.clientY, dx: 0, active: false };
-    },
-    onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => {
-      const state = swipe.current;
-      if (!state || state.id !== event.pointerId || !content.current) return;
-      const dx = event.clientX - state.x, dy = event.clientY - state.y;
-      if (!state.active) {
-        if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { swipe.current = null; return; }
-        if (Math.abs(dx) < 12) return;
-        state.active = true;
-        event.currentTarget.setPointerCapture(event.pointerId);
-      }
-      state.dx = dx;
-      content.current.style.transform = `translateX(${dx}px) rotate(${dx / 22}deg)`;
-      setLean(Math.max(-1, Math.min(1, dx / 110)));
-    },
-    onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => {
-      const state = swipe.current;
-      if (!state || state.id !== event.pointerId) return;
-      if (state.active && Math.abs(state.dx) > 110) void decide(state.dx < 0 ? 'pass' : 'connect', state.dx);
-      else if (state.active) springBack();
-      swipe.current = null;
-    },
-    onPointerCancel: () => { if (swipe.current?.active) springBack(); swipe.current = null; },
-  } : {};
   const viewerInterests = new Set(current.account?.profile?.interests.map(canonicalInterest) ?? []);
   const shared = interests.filter(interest => viewerInterests.has(canonicalInterest(interest)));
   const sharedCount = new Set(shared.map(canonicalInterest)).size;
@@ -216,10 +177,10 @@ function Candidate({
   return (
     <article className={`dating-focus discovery-profile ${dating ? 'dating-profile' : 'friends-focus'}`}>
     <div className={`card dating-card ${dating ? '' : 'friends-card'}`}>
-      <div className={`discovery-profile-content ${onConnect ? 'is-swipeable' : ''}`} ref={content} {...swipeHandlers}>
+      <div className="discovery-profile-content" ref={content}>
       <div className="photo discovery-photo">
-        {onConnect && <><span className="swipe-stamp pass" aria-hidden="true" style={{ opacity: Math.max(0, -lean) }}>Pass</span>
-        <span className="swipe-stamp connect" aria-hidden="true" style={{ opacity: Math.max(0, lean) }}>{dating ? 'Like' : 'Connect'}</span></>}
+        {onConnect && <><span className="decision-stamp pass" aria-hidden="true" style={{ opacity: Math.max(0, -lean) }}>Pass</span>
+        <span className="decision-stamp connect" aria-hidden="true" style={{ opacity: Math.max(0, lean) }}>{dating ? 'Like' : 'Connect'}</span></>}
         <DiscoverPhotos id={id} name={name} revision={photoRevision} fallback={avatar} active={photoGalleryActive}/>
         <div className="phototext">
         <h2>

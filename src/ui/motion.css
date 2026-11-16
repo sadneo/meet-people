@@ -351,7 +351,7 @@ dialog.account-modal.is-closing::backdrop {
   animation: spin 700ms linear infinite;
 }
 
-/* Discover: a clear area chip, labelled tools and swipeable cards. */
+/* Discover: a clear area chip, labelled tools and decision feedback. */
 .discovery-page .area-link {
   display: inline-flex;
   align-items: center;
@@ -429,14 +429,10 @@ dialog.account-modal.is-closing::backdrop {
   color: var(--muted);
   line-height: 1;
 }
-.discovery-profile-content.is-swipeable {
-  touch-action: pan-y;
-  will-change: transform;
-}
 .discovery-photo {
   position: relative;
 }
-.swipe-stamp {
+.decision-stamp {
   position: absolute;
   top: 28px;
   z-index: 3;
@@ -450,12 +446,12 @@ dialog.account-modal.is-closing::backdrop {
   pointer-events: none;
   background: #fffdf9cc;
 }
-.swipe-stamp.pass {
+.decision-stamp.pass {
   right: 22px;
   color: #6b625a;
   transform: rotate(12deg);
 }
-.swipe-stamp.connect {
+.decision-stamp.connect {
   left: 22px;
   color: #4f7a3a;
   transform: rotate(-12deg);
@@ -475,12 +471,8 @@ dialog.account-modal.is-closing::backdrop {
     padding-bottom: 132px;
   }
 }
-.discovery-profile-content.is-swipeable {
-  -webkit-user-select: none;
-  user-select: none;
-}
 @media (max-width: 800px) {
-  /* Keep fixed controls above a card while it is dragged or flies out. */
+  /* Keep fixed controls above a card while it flies out. */
   .discovery-profile .dating-card .dating-actions { z-index: 6; }
 }
 

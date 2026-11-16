@@ -97,8 +97,8 @@ Motion explains change; it never delays a confirmed result. Dialogs and sheets
 lift or slide in and reverse on close. Tabs cross-fade; deeper screens slide in
 from the right and back from the left. Pressed controls scale slightly. New
 messages, newly placed Garden items, earned Pebbles and completed steps get a
-short entrance. Discover cards can be swiped left (pass) or right (connect);
-buttons remain for every decision. Lists support pull-to-refresh on touch while
+short entrance. Discover decisions use the Pass and Connect buttons; the card
+leaves in that direction. Swiping a Discover card only moves between its photos. Lists support pull-to-refresh on touch while
 keeping a visible Refresh control. Confirmations use a brief toast; errors that
 need a decision stay inline. Native builds add light haptics to key actions.
 Conversations hide the bottom navigation. Text is at least 12px, except 11px
