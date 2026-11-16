@@ -1,0 +1,24 @@
+[
+  {
+    "id": 6333,
+    "slug": "east-side-dining",
+    "name": "East Side Dine-In",
+    "active_menu_types": [
+      {
+        "id": 24322,
+        "name": "Today's Dine-In Specials",
+        "slug": "todays-dine-in-specials-esd"
+      },
+      {
+        "id": 23022,
+        "name": "Self Serve Pancakes and Waffles",
+        "slug": "dine-in-self-serve-pancakes-and-waffles"
+      },
+      {
+        "id": 2368,
+        "name": "Breakfast Specials",
+        "slug": "dine-in-hot-breakfast-buffet"
+      }
+    ]
+  }
+]

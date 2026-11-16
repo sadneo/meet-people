@@ -60,6 +60,41 @@ it('does not fetch arbitrary URLs or repeatedly retry non-public events', async 
   expect(network).toHaveBeenCalledOnce()
 })
 
+const appShell = '<html><head><script type="module" src="/w/assets/index-current.js"></script></head><body><div id="root"></div></body></html>'
+
+it('reads the public event photo when CampusGroups serves its JavaScript app shell', async () => {
+  const network = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(new Response(appShell))
+    .mockResolvedValueOnce(Response.json({ data: { event: { id: btoa('stonybrook:Event:123'), photo: { url: '/upload/poster.png?a=1&amp;b=2' } } } }))
+  expect(await fetchSbEngagedDetail('123', network)).toEqual({ externalId: '123', success: true, attempts: 2, imageUrl: 'https://sbengaged.stonybrook.edu/upload/poster.png?a=1&b=2' })
+  expect(network.mock.calls[1][0]).toBe('https://sbengaged.stonybrook.edu/api/v2/graphql')
+  expect(JSON.parse(String(network.mock.calls[1][1]?.body))).toEqual({
+    query: 'query EventPoster($id: ID!) { event(id: $id) { id photo { url } } }', variables: { id: btoa('stonybrook:Event:123') },
+  })
+  expect(network.mock.calls[1][1]).toMatchObject({ method: 'POST', redirect: 'error' })
+})
+
+it('does not record a successful photo check for GraphQL errors, missing events, wrong IDs or unsafe photos', async () => {
+  for (const payload of [
+    { errors: [{ message: 'not available' }], data: { event: null } },
+    { data: { event: null } },
+    { data: { event: { id: btoa('stonybrook:Event:456'), photo: { url: '/upload/other.png' } } } },
+    { data: { event: { id: btoa('stonybrook:Event:123') } } },
+    { data: { event: { id: btoa('stonybrook:Event:123'), photo: { url: 'javascript:alert(1)' } } } },
+  ]) {
+    const network = vi.fn<typeof fetch>().mockResolvedValueOnce(new Response(appShell)).mockResolvedValueOnce(Response.json(payload))
+    expect(await fetchSbEngagedDetail('123', network)).toEqual({ externalId: '123', success: false, attempts: 2 })
+  }
+  const network = vi.fn<typeof fetch>().mockResolvedValueOnce(new Response(appShell)).mockResolvedValueOnce(new Response('', { status: 503 }))
+  expect(await fetchSbEngagedDetail('123', network)).toMatchObject({ success: false, attempts: 2 })
+})
+
+it('accepts an explicitly posterless public event without choosing unrelated imagery', async () => {
+  const network = vi.fn<typeof fetch>().mockResolvedValueOnce(new Response(appShell))
+    .mockResolvedValueOnce(Response.json({ data: { event: { id: btoa('stonybrook:Event:123'), photo: null } } }))
+  expect(await fetchSbEngagedDetail('123', network)).toEqual({ externalId: '123', success: true, imageUrl: null, attempts: 2 })
+})
+
 it('stops enrichment between four-page batches when its time budget is used', async () => {
   let elapsed = 0
   const load = vi.fn(async (externalId: string) => { elapsed += 15; return { externalId, success: true as const, imageUrl: null, attempts: 1 } })
