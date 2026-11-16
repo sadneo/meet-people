@@ -104,3 +104,5 @@
   margin: -4px 0 16px 30px; font-size: 13px; font-weight: 600; color: var(--muted);
 }
 .account-edit-fields .audience-select select { flex: 0 1 auto; width: auto; min-width: 0; max-width: 100%; min-height: 40px; margin: 0; font-size: 13px; }
+.account-edit-fields .garden-showcase-options label,
+.account-modal .garden-showcase-options label { margin: 0; }
