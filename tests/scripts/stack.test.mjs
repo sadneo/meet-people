@@ -16,8 +16,8 @@ test('main checkout keeps meet-people', () => {
 })
 
 test('worktree gets slugged id', () => {
-  assert.equal(devProjectId('/x/Pebble Friend_UI'), 'meet-people-pebble-friend-ui')
-  assert.equal(devProjectId(`/x/${'a'.repeat(60)}`), `meet-people-${'a'.repeat(40)}`)
+  assert.equal(devProjectId('/x/Pebble Friend_UI'), 'meet-people-wt-pebble-friend-ui')
+  assert.equal(devProjectId(`/x/${'a'.repeat(60)}`), `meet-people-wt-${'a'.repeat(40)}`)
 })
 
 test('credentialsDir for main and worktree', () => {
@@ -76,7 +76,7 @@ test('reaps stacks whose owner pid is gone', async () => {
   const container = async args => {
     calls.push(args)
     if (args[0] === 'ps') return 'c1\nc2\nc3'
-    if (args[0] === 'inspect') return args.slice(3).map(id => labels[id]).join('\n')
+    if (args[0] === 'inspect') return labels[args.at(-1)]
     return ''
   }
   const removed = await reapTestStacks({ container, owner: id => owners[id], remove: async id => { calls.push(['remove', id]) } })
@@ -85,10 +85,30 @@ test('reaps stacks whose owner pid is gone', async () => {
 })
 
 test('reaps test stacks with no owner file but never other stacks', async () => {
-  const container = async args => args[0] === 'ps' ? 'c1\nc2' : args[0] === 'inspect' ? 'meet-people-test-z\ncomfy-room' : ''
+  const container = async args => args[0] === 'ps' ? 'c1\nc2' : args[0] === 'inspect' ? { c1: 'meet-people-test-z', c2: 'comfy-room' }[args.at(-1)] : ''
   const gone = []
   assert.deepEqual(await reapTestStacks({ container, owner: () => undefined, remove: async id => { gone.push(id) } }), ['meet-people-test-z'])
   assert.deepEqual(gone, ['meet-people-test-z'])
+})
+
+test('a worktree named test-auth is a dev stack the reaper ignores', async () => {
+  const projectId = devProjectId('/x/test-auth')
+  assert.equal(projectId, 'meet-people-wt-test-auth')
+  const container = async args => args[0] === 'ps' ? 'c1' : args[0] === 'inspect' ? projectId : ''
+  assert.deepEqual(await reapTestStacks({ container, owner: () => undefined, remove: async () => { assert.fail('reaped a dev stack') } }), [])
+})
+
+test('reap tolerates objects removed between listing and inspect', async () => {
+  const labels = { c1: 'meet-people-test-a', c3: 'meet-people-test-c' }
+  const container = async args => {
+    if (args[0] === 'ps') return 'c1\nc2\nc3'
+    if (args[0] !== 'inspect') return ''
+    const id = args.at(-1)
+    if (!labels[id]) throw new Error('no such object')
+    return labels[id]
+  }
+  const removed = []
+  assert.deepEqual(await reapTestStacks({ container, owner: () => undefined, remove: async id => { removed.push(id) } }), ['meet-people-test-a', 'meet-people-test-c'])
 })
 
 test('assertLocalStack accepts only the stack origin', () => {

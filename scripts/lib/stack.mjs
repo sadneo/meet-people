@@ -1,5 +1,5 @@
 import { spawn, execFile } from 'node:child_process'
-import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -20,7 +20,7 @@ const devFile = root => join(root, '.pebble/dev.json')
 export function devProjectId(root = repoRoot) {
   try { if (statSync(join(root, '.git')).isDirectory()) return 'meet-people' } catch { /* no .git: treat as a worktree */ }
   const slug = basename(root).toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 40).replace(/^-+|-+$/g, '')
-  return `meet-people-${slug || 'worktree'}`
+  return `meet-people-wt-${slug || 'worktree'}`
 }
 
 export function credentialsDir(projectId, home = homedir()) {
@@ -91,7 +91,9 @@ function alive(pid) {
 export async function startStack(stack, { minimal = false, workdir, siteUrl } = {}) {
   if (minimal || stack.projectId.startsWith(testPrefix)) {
     mkdirSync(ownerDir(), { recursive: true })
-    writeFileSync(ownerFile(stack.projectId), JSON.stringify({ pid: process.pid }))
+    const pending = `${ownerFile(stack.projectId)}.${process.pid}.tmp`
+    writeFileSync(pending, JSON.stringify({ pid: process.pid }))
+    renameSync(pending, ownerFile(stack.projectId))
   }
   const env = { ...process.env, ...stackEnv(stack), ...(siteUrl && { SUPABASE_AUTH_SITE_URL: siteUrl }) }
   const base = ['scripts/supabase.sh', ...(workdir ? ['--workdir', workdir] : [])]
@@ -121,7 +123,9 @@ async function projectsWithResources(container) {
   const found = new Set()
   for (const [list, inspect, path] of kinds) {
     const ids = lines(await container([...list, '--filter', `label=${label}`]))
-    if (ids.length) lines(await container([...inspect, '--format', `{{index .${path} "${label}"}}`, ...ids])).forEach(id => found.add(id))
+    for (const id of ids) {
+      try { found.add(await container([...inspect, '--format', `{{index .${path} "${label}"}}`, id])) } catch { /* removed since the listing */ }
+    }
   }
   return [...found]
 }

@@ -14,7 +14,7 @@
 
 - pnpm only; never npm/npx (`pnpm dlx` / `pnpm exec`).
 - No new dependencies.
-- Main checkout keeps project id `meet-people` and credentials directly in `~/.local/share/pebble/`; linked worktrees use `meet-people-<slug>` and `~/.local/share/pebble/<project_id>/`; test stacks are `meet-people-test-<run-id>`.
+- Main checkout keeps project id `meet-people` and credentials directly in `~/.local/share/pebble/`; linked worktrees use `meet-people-wt-<slug>` and `~/.local/share/pebble/<project_id>/`; test stacks are `meet-people-test-<run-id>`.
 - Every local-only guard stays: loopback `http:` origin, no userinfo/path/query, container label `com.supabase.cli.project` equal to the expected project id. Only the literal port/name becomes the current stack's.
 - Credential file checks unchanged: regular non-symlink, owner uid, mode `0600`, ≤ 8192 bytes, strict keys.
 - Teardown removes containers, volumes and networks by label `com.supabase.cli.project=<id>`; `supabase stop` is not trusted (it fails to prune volumes on Podman).

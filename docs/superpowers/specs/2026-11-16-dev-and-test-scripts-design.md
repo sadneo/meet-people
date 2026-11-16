@@ -146,7 +146,7 @@ aggregate job is unchanged. `prepare.yml` uses inline `VITE_DEV_TOOLS=true`.
 
 - **Existing data is kept.** The main checkout (where `.git` is a directory)
   keeps project id `meet-people` and the credential files directly in
-  `~/.local/share/pebble/`. Linked worktrees use `meet-people-<slug>` and
+  `~/.local/share/pebble/`. Linked worktrees use `meet-people-wt-<slug>` and
   `~/.local/share/pebble/<project_id>/`. Test stacks are `meet-people-test-<run-id>`.
 - **Auth redirects on any port.** `config.toml` allows
   `http://127.0.0.1:*/**` and `http://localhost:*/**`; `site_url` is set per
