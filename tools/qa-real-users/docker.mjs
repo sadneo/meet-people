@@ -1,10 +1,6 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import { container } from '../../scripts/lib/containers.mjs';
 
-const execute = promisify(execFile);
-export async function docker(args) {
-  return (await execute('docker', args, { maxBuffer: 8 * 1024 * 1024 })).stdout.trim();
-}
+export const docker = container;
 const lines = value => value ? value.split('\n').filter(Boolean) : [];
 export async function imageInventory() { return lines(await docker(['image', 'ls', '-aq', '--no-trunc'])); }
 
