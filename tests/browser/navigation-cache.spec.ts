@@ -55,7 +55,8 @@ test('stale events stay visible while a deliberately held background refresh upd
     // Pass through to the fixture after the simulated slow network finishes.
     await route.fallback()
   })
-  await page.clock.setFixedTime(now + 31_000)
+  // Measure from the page's clock: a slow first load would otherwise keep the cache fresh.
+  await page.clock.setFixedTime(await page.evaluate(() => Date.now()) + 31_000)
   try {
     await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Events', exact: true }).click()
     await expect.poll(() => started).toBe(true)
