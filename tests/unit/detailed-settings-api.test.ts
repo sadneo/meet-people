@@ -5,7 +5,7 @@ import { emptyDetailedSettings, effectiveDetailedSettings, type DetailedSettings
 
 const id = 'a0000000-0000-4000-8000-000000000001', other = 'a0000000-0000-4000-8000-000000000002'
 const choices = { messages: true, plans: false, matches: true, friendsDiscovery: true, datingDiscovery: false }
-const off = { ...emptyDetailedSettings(), friendsDiscovery: false }
+const off = { ...emptyDetailedSettings(), friendsDiscovery: false, datingDiscovery: false }
 let stored: Map<string, { revision: number; settings: typeof choices }>, masters: DetailedSettings['masters'], rpcError: string | null
 const reads = vi.fn(), writes = vi.fn()
 const snapshot = (owner: string) => {

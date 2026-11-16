@@ -18,19 +18,20 @@ it.each([
   expect(completedAccountChapters({ ...account, profile: { ...account.profile!, interests } })).toEqual([0, 1, 2, 3]);
 });
 it.each([
-  [],
   ['   '],
   ['x'.repeat(121)],
   ['Coffee', 'Art', 'Music', 'Food', 'Gaming', 'Movies'],
   ['Coffee', 'Art', 'Custom one', 'Custom two', 'Custom three'],
   ['Coffee', 'Coffee', 'Art'],
-])('rejects missing, invalid, duplicate or excess interests: %j', (...interests) => {
+])('rejects invalid, duplicate or excess interests: %j', (...interests) => {
   expect(interestSelectionProblem(interests)).not.toBe('');
   const value = { ...account, profile: { ...account.profile, interests } };
   expect(SaveAccountSchema.safeParse(value).success).toBe(false);
-  expect(completedAccountChapters(value)).toEqual([0]);
 });
-it('permits partial onboarding drafts but never reads old saved labels as corrupt data', () => {
+it('requires interests for matching setup', () => {
+  expect(interestSelectionProblem([])).toBe('Choose at least one interest.');
+});
+it('permits basic onboarding without interests but never reads old saved labels as corrupt data', () => {
   expect(SaveAccountSchema.safeParse({ ...account, completed: [0], profile: { ...account.profile, interests: [] } }).success).toBe(true);
   const old = { ...account, profile: { ...account.profile, interests: ['Coffee', 'Art', 'Music', 'Food', 'Gaming', 'Movies'] } };
   expect(AccountSchema.safeParse(old).success).toBe(true);

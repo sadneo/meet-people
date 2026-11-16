@@ -1,114 +1,194 @@
 import { expect, test, type Page } from '@playwright/test'
-import { wiringFixture } from './wiring-fixture'
+import { eventId, wiringFixture } from './wiring-fixture'
+import { mockLocationPicker } from './location-picker-fixture'
 
 async function identity(page: Page) {
-  await page.getByLabel('Display name', { exact: true }).fill('Jamie')
-  await page.getByLabel('Username', { exact: true }).fill('jamie')
-  await page.getByLabel('Birthdate · private').fill('2001-01-02')
-  await page.getByLabel('City or campus area', { exact: true }).fill('Stony Brook')
+  await page.getByLabel('Display name').fill('Jamie')
+  await page.getByLabel('Username').fill('jamie')
+  await page.getByLabel('Month', { exact: true }).fill('1')
+  await page.getByLabel('Day', { exact: true }).fill('2')
+  await page.getByLabel('Year', { exact: true }).fill('2001')
 }
-const continueChapter = (page: Page) => page.getByRole('button', { name: 'Save & continue', exact: true }).click()
-const fits = async (page: Page) => expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+const submit = (page: Page) => page.getByRole('button', { name: 'Enter Pebble', exact: true }).click()
 
-for (const width of [320, 1280]) {
-  test(`the restored stone journey saves and resumes real chapters at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: width === 320 ? 640 : 900 })
-    await page.emulateMedia({ reducedMotion: 'reduce' })
+for (const width of [320, 390, 1280]) {
+  test(`basic onboarding opens the requested page with one save at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width <= 390 ? 640 : 900 })
     const fixture = await wiringFixture(page, { fresh: true })
-    let schedule = { revision: 0, timeZone: null as string | null, showAvailability: false }
-    await page.route('**/api/matchmaking/schedule', route => {
-      if (route.request().method() === 'PUT') {
-        const input = route.request().postDataJSON()
-        schedule = { revision: schedule.revision + 1, timeZone: input.timeZone, showAvailability: input.showAvailability }
-      }
-      return route.fulfill({ json: schedule })
-    })
     await page.goto('/events')
-    await expect(page.getByRole('heading', { name: 'A little beginning.' })).toBeVisible()
-    await fits(page)
-    await page.screenshot({ path: test.info().outputPath(`pebble-onboarding-opening-${width}.png`), fullPage: true })
-    await page.getByRole('button', { name: 'Start my profile' }).click()
-    await expect(page.getByRole('button', { name: 'Your week', exact: true })).toBeDisabled()
+    await expect(page.getByRole('heading', { name: 'Create your profile' })).toBeVisible()
+    await expect(page.getByText('The name people see.')).toBeVisible()
+    await expect(page.getByText('Your unique @handle.')).toBeVisible()
+    await expect(page.getByLabel('Username')).toBeEmpty()
+    await expect(page.getByLabel(/city|campus|availability/i)).toHaveCount(0)
     await identity(page)
-    await page.screenshot({ path: test.info().outputPath(`pebble-onboarding-basics-${width}.png`), fullPage: true })
-    await fits(page)
-    await continueChapter(page)
-    await expect(page.getByText('1 of 4 pieces saved', { exact: true })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: test.info().outputPath(`basic-onboarding-${width}.png`), fullPage: true })
+    await submit(page)
+    await expect(page).toHaveURL(/\/events$/)
+    expect(fixture.getAccount().profile).toMatchObject({
+      username: 'jamie', display_name: 'Jamie', birthdate: '2001-01-02',
+      location_city: null, interests: [], availability: [],
+    })
+    const writes = fixture.calls.filter(call => call.method === 'PUT')
+    expect(writes).toHaveLength(1)
+    const deviceZone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)
+    expect(writes[0].body).toMatchObject({ initialTimeZone: deviceZone })
     await page.reload()
-    await expect(page.getByRole('heading', { name: 'Your kind of things.' })).toBeVisible()
-    await expect(page.getByLabel('Onboarding progress').locator('[aria-current=step]')).toContainText('Your interests')
-    const chosenInterest = width === 320 ? 'Ceramics' : 'Coffee'
-    if (width === 320) {
-      await page.getByLabel('Custom interest', { exact: true }).fill(chosenInterest)
-      await page.getByRole('button', { name: 'Add', exact: true }).click()
-    } else await page.getByRole('button', { name: chosenInterest, exact: true }).click()
-    await fits(page)
-    await page.screenshot({ path: test.info().outputPath(`pebble-onboarding-interests-${width}.png`), fullPage: true })
-    await continueChapter(page)
-    await page.getByRole('checkbox', { name: /^Make friends/ }).check()
-    await page.getByRole('checkbox', { name: /^Go to events together/ }).check()
-    await page.getByRole('checkbox', { name: /^Explore Dating/ }).check()
-    await fits(page)
-    await page.screenshot({ path: test.info().outputPath(`pebble-onboarding-intentions-${width}.png`), fullPage: true })
-    await continueChapter(page)
-    await page.getByRole('combobox', { name: 'Comfortable distance', exact: true }).selectOption('5 miles')
-    await page.getByRole('combobox', { name: 'Group preference', exact: true }).selectOption('Either')
-    await page.getByRole('button', { name: 'Add a time window' }).click()
-    await expect(page.getByRole('button', { name: 'Finish setup' })).toBeEnabled()
-    await page.getByRole('button', { name: 'Finish setup' }).click()
-    await expect(page.getByRole('alert')).toContainText('Choose a timezone')
-    expect(fixture.getAccount().completed).toEqual([0, 1, 2])
-    await page.getByRole('combobox', { name: 'Timezone', exact: true }).selectOption('America/New_York')
-    await expect(page.getByText('Timezone and sharing preference saved.', { exact: true })).toBeVisible()
-    await fits(page)
-    await page.screenshot({ path: test.info().outputPath(`pebble-onboarding-week-${width}.png`), fullPage: true })
-    await page.getByRole('button', { name: 'Finish setup' }).click()
-    await expect(page.getByRole('heading', { name: 'Your Pebble is ready.' })).toBeVisible()
-    await page.screenshot({ path: test.info().outputPath(`pebble-onboarding-ending-${width}.png`), fullPage: true })
-    await fits(page)
-    expect(fixture.getAccount().completed).toEqual([0, 1, 2, 3])
-    expect(fixture.getAccount().profile?.interests).toEqual([chosenInterest])
-    expect(fixture.getAccount().preferences.intents).toEqual(['Make friends', 'Go to events together', 'Date'])
-    expect(schedule).toEqual({ revision: 1, timeZone: 'America/New_York', showAvailability: false })
-    expect(fixture.calls.filter(call => call.method !== 'GET').every(call => call.path === '/api/matchmaking/account')).toBe(true)
-    await page.getByRole('link', { name: 'Enter Pebble' }).click()
     await expect(page).toHaveURL(/\/events$/)
   })
 }
 
-test('an unconfirmed chapter save keeps the draft and requires reconciliation before advancing', async ({ page }) => {
+test('an unconfirmed basic save keeps the draft and requires a readback', async ({ page }) => {
   const fixture = await wiringFixture(page, { fresh: true })
   let stored = fixture.getAccount(), writes = 0
   await page.route('**/api/matchmaking/account', route => {
-    if (route.request().method() === 'PUT') { writes++; stored = route.request().postDataJSON(); return route.abort() }
+    if (route.request().method() === 'PUT') {
+      writes++; stored = route.request().postDataJSON(); delete (stored as typeof stored & { initialTimeZone?: string }).initialTimeZone
+      return route.abort()
+    }
     return route.fulfill({ json: stored })
   })
-  await page.goto('/onboarding')
-  await page.getByRole('button', { name: 'Start my profile' }).click()
+  await page.goto('/events')
   await identity(page)
-  await continueChapter(page)
+  await submit(page)
   await expect(page.getByRole('alert')).toContainText('Account save could not be confirmed')
-  await expect(page.getByLabel('Display name', { exact: true })).toHaveValue('Jamie')
-  await expect(page.getByRole('heading', { name: 'Start with you.' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Save & continue', exact: true })).toBeDisabled()
-  await page.getByRole('button', { name: 'Reload account and replace draft before saving again' }).click()
-  await expect(page.getByRole('heading', { name: 'Your kind of things.' })).toBeVisible()
+  await expect(page.getByLabel('Display name')).toHaveValue('Jamie')
+  await expect(page.getByRole('button', { name: 'Enter Pebble' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Reload saved profile' }).click()
+  await expect(page).toHaveURL(/\/events$/)
   expect(writes).toBe(1)
 })
 
-test('interest limits and empty intent validation use current rules', async ({ page }) => {
-  await wiringFixture(page, { incomplete: true })
-  await page.goto('/onboarding')
-  await continueChapter(page)
-  await expect(page.getByRole('alert')).toHaveText('Choose at least one interest.')
-  for (const label of ['Coffee', 'Art', 'Music', 'Gaming', 'Sports']) await page.getByRole('button', { name: label, exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Fitness', exact: true })).toBeDisabled()
-  await continueChapter(page)
-  await continueChapter(page)
-  await expect(page.getByRole('alert')).toHaveText('Choose at least one thing you’d like to do.')
-  await page.getByRole('checkbox', { name: /^Make friends/ }).check()
-  await continueChapter(page)
-  // Accounts that started the older onboarding can still supply missing basics.
-  await expect(page.getByLabel('Birthdate · private')).toBeVisible()
-  await expect(page.getByLabel('City or campus area', { exact: true })).toBeVisible()
+test('validates the birthday and lets the user correct a taken username', async ({ page }) => {
+  const fixture = await wiringFixture(page, { fresh: true })
+  await page.route('**/api/matchmaking/account', route =>
+    route.request().method() === 'PUT' && route.request().postDataJSON().profile.username === 'jamie'
+      ? route.fulfill({ status: 400, json: { code: 'invalid', error: 'That username is already taken. Choose another.' } })
+      : route.fallback())
+  await page.goto('/events')
+  await identity(page)
+  await page.getByLabel('Month', { exact: true }).fill('2')
+  await page.getByLabel('Day', { exact: true }).fill('31')
+  await submit(page)
+  await expect(page.getByRole('alert')).toHaveText('Enter a valid birthday.')
+  await page.getByLabel('Day', { exact: true }).fill('28')
+  await submit(page)
+  await expect(page.getByRole('alert')).toHaveText('That username is already taken. Choose another.')
+  await page.getByLabel('Username').fill('jamie_p')
+  await submit(page)
+  await expect(page).toHaveURL(/\/events$/)
+  expect(fixture.getAccount().profile?.username).toBe('jamie_p')
+})
+
+async function confirmArea(page: Page) {
+  await page.getByRole('button', { name: /Search area Choose an area/ }).click()
+  await page.getByRole('combobox', { name: 'Search city or neighborhood' }).fill('Brooklyn')
+  await page.getByRole('button', { name: 'Brooklyn, NY', exact: true }).click()
+  await page.getByRole('button', { name: 'Set search area', exact: true }).click()
+  await expect(page.getByRole('button', { name: /Search area Brooklyn, NY/ })).toBeVisible()
+}
+
+test('shared matching setup carries forward while Friends and Dating start independently', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 780 })
+  const fixture = await wiringFixture(page, { fresh: true })
+  const { calls: mapCalls } = await mockLocationPicker(page)
+  await page.goto('/matchmaking')
+  await identity(page)
+  await submit(page)
+  await page.getByRole('button', { name: 'Set up Friends', exact: true }).click()
+  const friends = page.getByRole('dialog', { name: 'Set up Friends matchmaking' })
+  await friends.getByRole('button', { name: 'Save and continue' }).click()
+  await expect(friends.getByRole('alert')).toHaveText('Choose at least one interest.')
+  await friends.getByRole('button', { name: 'Coffee', exact: true }).click()
+  await friends.getByRole('button', { name: 'Save and continue' }).click()
+  await expect(friends.getByRole('alert')).toHaveText('Upload a profile photo to continue.')
+  const photoPanel = friends.getByRole('region', { name: 'Your photo' })
+  const portrait = photoPanel.locator('.matching-photo-portrait')
+  async function expectSameBottom(first: typeof portrait, second: typeof portrait) {
+    const [a, b] = await Promise.all([first.boundingBox(), second.boundingBox()])
+    expect(Math.abs(a!.y + a!.height - b!.y - b!.height)).toBeLessThan(1)
+  }
+  await expectSameBottom(portrait, photoPanel.getByRole('button', { name: 'Add photo' }))
+  await expectSameBottom(friends.getByLabel('Custom interest'), friends.getByRole('button', { name: 'Add', exact: true }))
+  const [picker] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    friends.getByRole('button', { name: 'Add photo', exact: true }).click(),
+  ])
+  await picker.setFiles({
+    name: 'profile.png', mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jf1sAAAAASUVORK5CYII=', 'base64'),
+  })
+  await expect(friends.getByRole('button', { name: 'Choose another' })).toBeVisible()
+  await expectSameBottom(portrait, photoPanel.getByRole('button', { name: 'Choose another' }))
+  await friends.getByRole('button', { name: 'Upload photo' }).click()
+  await expect(friends.getByRole('button', { name: 'Change photo' })).toBeEnabled()
+  await expect(friends.getByRole('img', { name: 'Jamie' })).toBeVisible()
+  await friends.getByRole('button', { name: 'Save and continue' }).click()
+  await expect(friends.getByRole('heading', { name: 'Choose your search area' })).toBeVisible()
+  await page.screenshot({ path: test.info().outputPath('friends-setup-mobile.png') })
+  await confirmArea(page)
+  expect(fixture.calls.some(call => call.path.endsWith('/friends/start'))).toBe(false)
+  await friends.getByRole('button', { name: 'Save and start Friends' }).click()
+  await expect(friends).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Dating', exact: true }).click()
+  await page.getByRole('button', { name: 'Set up Dating', exact: true }).click()
+  const dating = page.getByRole('dialog', { name: 'Set up Dating' })
+  await expect(dating.getByRole('heading', { name: 'Your matching profile' })).toHaveCount(0)
+  await dating.getByRole('combobox', { name: 'Gender', exact: true }).selectOption('Man')
+  await dating.getByRole('combobox', { name: 'Sexuality', exact: true }).selectOption('Straight')
+  await dating.getByLabel('Looking for').selectOption('Long-term relationship')
+  await dating.getByLabel('Relationship style').selectOption('Monogamy')
+  await confirmArea(page)
+  await dating.getByRole('button', { name: 'Continue', exact: true }).click()
+  await expect(dating.getByRole('button', { name: 'Save and start Dating' })).toBeVisible()
+  expect(fixture.calls.some(call => call.path.endsWith('/dating/enabled'))).toBe(false)
+  await dating.getByRole('button', { name: 'Save and start Dating' }).click()
+  await expect(dating).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Pause Dating', exact: true })).toBeVisible()
+  expect(fixture.getAccount().profile?.availability).toEqual([])
+  expect(mapCalls.filter(call => call.path.endsWith('/map/confirm')).map(call => call.body.mode)).toEqual(['friends', 'dating'])
+})
+
+test('event matching prompts beside the queue and group matching requires a saved time', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 })
+  await page.clock.install({ time: new Date('2026-11-03T12:00:00Z') })
+  const fixture = await wiringFixture(page)
+  let groupScheduleReady = false, areaReady = false
+  await page.route('**/api/matchmaking/friends/setup', route => route.fulfill({
+    json: { profileReady: true, friendsAreaReady: areaReady, groupScheduleReady },
+  }))
+  await page.goto(`/events/${eventId}`)
+  await expect(page.getByRole('button', { name: 'Join group queue' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Set up event matching' }).click()
+  const event = page.getByRole('dialog', { name: 'Set up event matching' })
+  await expect(event.getByRole('heading', { name: 'Choose your search area' })).toBeVisible()
+  await event.getByRole('button', { name: 'Close' }).click()
+
+  areaReady = true
+  fixture.getAccount().profile!.availability = []
+  await page.goto('/messages')
+  await page.getByRole('button', { name: 'Find a group', exact: true }).click()
+  const group = page.getByRole('dialog', { name: 'Find a group' })
+  await group.getByRole('button', { name: 'Set up group matching' }).click()
+  await expect(group.getByRole('heading', { name: 'When can you meet?' })).toBeVisible()
+  await group.getByRole('button', { name: 'Save and continue' }).click()
+  await expect(group.getByRole('alert')).toHaveText('Choose at least one hour when you can meet.')
+  await group.getByRole('button', { name: 'Add a time window' }).click()
+  for (const name of ['Ends at midnight', 'Allow shared-time explanations']) {
+    const distance = await group.getByRole('checkbox', { name, exact: true }).evaluate(input => {
+      const box = input.getBoundingClientRect()
+      const copy = input.closest('label')!.querySelector('span')!.getBoundingClientRect()
+      return Math.abs(box.top + box.height / 2 - copy.top - copy.height / 2)
+    })
+    expect(distance).toBeLessThan(2)
+  }
+  groupScheduleReady = true
+  await group.getByRole('button', { name: 'Save and continue' }).click()
+  await group.getByRole('button', { name: 'Finish setup' }).click()
+  await expect(group.getByRole('button', { name: 'Find a group', exact: true })).toBeEnabled()
+  expect(fixture.calls.filter(call => call.method === 'POST' &&
+    /\/(friends\/start|active-friends\/queue|group-queue)$/.test(call.path))).toHaveLength(0)
 })

@@ -3,10 +3,13 @@ import { AccountSchema, SaveAccountSchema, completedAccountChapters, emptyAccoun
 
 const profile = { username: 'explicit', display_name: 'Explicit', bio: null, avatar_url: null, interests: ['Coffee', 'Music', 'Art'], birthdate: '2001-02-03', location_city: 'Chosen campus', availability: [{ dow: 0, start_time: '21:00:00', end_time: '24:00:00' }] }
 const account = { ...emptyAccount, profile, preferences: { ...emptyAccount.preferences, intents: ['Make friends'], distance: 'Nearby' as const, group: 'Either' as const }, completed: [0, 1, 2, 3] }
-it('requires all persisted fields for claimed completion, while bio/photo remain optional', () => {
-  expect(SaveAccountSchema.safeParse(account).success).toBe(true)
-  for (const patch of [{ interests: [] }, { birthdate: null }, { location_city: '' }, { availability: [] }]) expect(SaveAccountSchema.safeParse({ ...account, profile: { ...profile, ...patch } }).success).toBe(false)
-  for (const patch of [{ intents: [] }, { distance: '' }, { group: '' }]) expect(SaveAccountSchema.safeParse({ ...account, preferences: { ...account.preferences, ...patch } }).success).toBe(false)
+it('requires identity and birthday for app entry and accepts empty matching preferences', () => {
+  const basic = { ...emptyAccount, profile: { ...profile, interests: [], location_city: null, availability: [] }, completed: [0] }
+  expect(SaveAccountSchema.safeParse(basic).success).toBe(true)
+  expect(completedAccountChapters(basic)).toEqual([0, 1, 2, 3])
+  for (const patch of [{ birthdate: null }, { username: '' }, { display_name: '' }]) {
+    expect(SaveAccountSchema.safeParse({ ...account, profile: { ...profile, ...patch } }).success).toBe(false)
+  }
 })
 it('reads historical completion markers without granting readiness or permitting incomplete saves', () => {
   const legacy = { ...account, profile: { ...profile, birthdate: null, location_city: null } }
@@ -17,9 +20,9 @@ it('reads historical completion markers without granting readiness or permitting
   expect(AccountSchema.safeParse({ ...legacy, completed: [0, 2] }).success).toBe(false)
   expect(AccountSchema.safeParse({ ...legacy, settings: null }).success).toBe(false)
 })
-it('maps valid stored data to the first missing chapter without inventing preferences or replaying completed work', () => {
+it('reads an existing basic profile as complete without inventing matching preferences', () => {
   expect(completedAccountChapters({ ...account, completed: [] })).toEqual([0, 1, 2, 3])
-  expect(completedAccountChapters({ ...emptyAccount, profile })).toEqual([0, 1])
+  expect(completedAccountChapters({ ...emptyAccount, profile })).toEqual([0, 1, 2, 3])
   expect(completedAccountChapters(emptyAccount)).toEqual([])
   expect(emptyAccount.preferences.intents).toEqual([])
   expect(emptyAccount.preferences.distance).toBe('')

@@ -15,10 +15,10 @@ function ready(enabled = false): DatingRuntime {
 for (const [reason, title, link] of [
   ['age', 'Dating is for adults 18 and older.', 'Review birthdate'],
   ['discovery_off', 'Dating discovery is off.', 'Discovery settings'],
-  ['profile', 'Complete your Dating profile.', 'Edit Dating profile'],
-  ['preferences', 'Set up your Dating search.', 'Set up Dating preferences'],
-  ['location', 'Confirm your Dating search area again.', 'Review Dating preferences'],
-  ['unavailable', 'Review your Dating setup.', 'Review Dating preferences'],
+  ['profile', 'Set up Dating.', 'Set up Dating'],
+  ['preferences', 'Set up Dating.', 'Set up Dating'],
+  ['location', 'Confirm your Dating search area.', 'Review Dating setup'],
+  ['unavailable', 'Set up Dating.', 'Set up Dating'],
 ] as const) {
   test(`Dating explains ${reason} before starting discovery`, async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 640 })
@@ -32,7 +32,8 @@ for (const [reason, title, link] of [
     await page.route('**/api/matchmaking/dating/status', route => route.fulfill({ json: value }))
     await page.goto('/matchmaking?mode=dating')
     await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
-    await expect(page.getByRole('link', { name: link, exact: true })).toBeVisible()
+    const action = reason === 'age' || reason === 'discovery_off' ? 'link' : 'button'
+    await expect(page.getByRole(action, { name: link, exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Start Dating discovery', exact: true })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Send Dating request', exact: true })).toHaveCount(0)
     expect(fixture.calls.some(call => call.path.endsWith('/dating/recommendations') || call.path.endsWith('/dating/enabled'))).toBe(false)
@@ -50,7 +51,7 @@ test('expiry during Dating scoring switches to area guidance while Pause remains
     return route.fulfill({ status: 409, json: { code: 'dating_setup_required', error: 'Review your Dating setup.' } })
   })
   await page.goto('/matchmaking?mode=dating')
-  await expect(page.getByRole('heading', { name: 'Confirm your Dating search area again.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Confirm your Dating search area.' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Pause Dating', exact: true })).toBeEnabled()
   await expect(page.getByRole('alert')).toHaveCount(0)
   expect(batches).toBe(1)
@@ -80,7 +81,7 @@ test('a rejected Dating opt-in refreshes setup without claiming the write is unc
   })
   await page.goto('/matchmaking?mode=dating')
   await page.getByRole('button', { name: 'Start Dating discovery', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Confirm your Dating search area again.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Confirm your Dating search area.' })).toBeVisible()
   await expect(page.getByText(/Participation is unconfirmed/)).toHaveCount(0)
   expect(writes).toBe(1)
 })

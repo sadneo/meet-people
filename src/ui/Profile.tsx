@@ -1,3 +1,6 @@
+import { PhotoGalleryEditor } from './PhotoGallery';
+import { usePhotoGallery } from '../features/account/usePhotoGallery';
+import { legalPublication } from '../features/public/legal-content';
 import { canShowDating, meetsMinimumAge } from './age-visibility'
 import { PageSkeleton } from './loading/PageSkeleton'
 import './parity-account.css'
@@ -78,8 +81,8 @@ export function Interests({
           </button>
         ))}
       </div>
-      <div className="row">
-        <label className="grow">
+      <div className="custom-interest-row">
+        <label>
           {compact ? 'Add your own' : 'Custom interest'}
           <input
             maxLength={120}
@@ -202,7 +205,7 @@ export function Availability({
                 )
               }
             />
-            Ends at midnight
+            <span>Ends at midnight</span>
           </label>
           <ActionButton
             secondary
@@ -228,105 +231,92 @@ export function Availability({
     </fieldset>
   );
 }
-export function PhotoEditor({ compact = false }: { compact?: boolean }) {
-  const photo = useProfilePhoto(),
-    current = useCurrent(),
-    action = useAction(),
-    [reconcile, setReconcile] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const inputId = useId();
-  async function save(remove: boolean) {
-    await action.run(async () => {
-      if (!photo.client || !photo.snapshot || (!remove && !file) || reconcile)
-        return;
-      if (
-        file &&
-        !remove &&
-        (!["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-          file.size > 5 * 1024 * 1024)
-      )
-        throw new Error("Choose a JPEG, PNG or WebP image up to 5 MB.");
-      setReconcile(true);
-      await photo.client.save(
-        remove ? null : file,
-        photo.snapshot.revision,
-        crypto.randomUUID(),
-      );
-      window.dispatchEvent(
-        new CustomEvent(photoChangedEvent, { detail: current.session.user.id }),
-      );
-      setReconcile(false);
-      setFile(null);
-    });
+export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boolean) => void }) {
+  const photo = useProfilePhoto();
+  const current = useCurrent();
+  const action = useAction();
+  const input = useRef<HTMLInputElement>(null);
+  const [reconcile, setReconcile] = useState(false);
+  const [selection, setSelection] = useState<{ file: File; preview: string } | null>(null);
+  const [selectionError, setSelectionError] = useState('');
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const preview = selection?.preview;
+  const disabled = action.busy || photo.loading || !!photo.error || !photo.snapshot || reconcile;
+
+  useEffect(() => {
+    return () => { if (preview) URL.revokeObjectURL(preview); };
+  }, [preview]);
+
+  function choose(file: File) {
+    action.clearError();
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setSelectionError('Choose a JPEG, PNG or WebP image up to 5 MB.');
+      return;
+    }
+    setSelectionError('');
+    setSelection({ file, preview: URL.createObjectURL(file) });
   }
-  return (
-    <section className={compact ? 'profile-photo-editor' : 'account-panel'}>
-      {!compact && <h3>Your photo</h3>}
-      <div className={compact ? 'profile-edit-photo' : undefined}>
-      <Avatar
-        name={current.account?.profile?.display_name ?? ""}
-        url={photo.url}
-        large
-      />
-      {compact && <div><label className="account-edit-text" htmlFor={inputId}>Edit Photo</label>{photo.snapshot?.hasPhoto && <button className="account-edit-text is-danger" aria-label="Remove photo" type="button" disabled={photo.loading || action.busy || reconcile} onClick={() => void save(true)}>Remove</button>}</div>}
+
+  async function upload() {
+    if (!selection || !photo.client || !photo.snapshot || disabled) return;
+    const client = photo.client, revision = photo.snapshot.revision;
+    onSavingChange(true);
+    try {
+      await action.run(async () => {
+        setReconcile(true);
+        await client.save(selection.file, revision, crypto.randomUUID());
+        setSelection(null);
+        setSelectionError('');
+        window.dispatchEvent(new CustomEvent(photoChangedEvent, { detail: current.session.user.id }));
+        if (!await photo.reload()) throw new Error('Photo saved. Reload its current state before continuing.');
+        setReconcile(false);
+      });
+    } finally {
+      onSavingChange(false);
+    }
+  }
+
+  return <section className="account-panel matching-photo-panel" aria-label="Your photo">
+    <div className="matching-photo-heading">
+      <h3>Your photo</h3>
+      <span>{selection ? 'Preview' : photo.snapshot?.hasPhoto ? 'Added' : 'Required'}</span>
+    </div>
+    <div className="matching-photo-row">
+      <div className="matching-photo-portrait">
+        {preview || photo.url ? <Avatar name={current.account?.profile?.display_name ?? ''} url={preview ?? photo.url} large/> :
+          <svg viewBox="0 0 80 100" fill="none" aria-hidden="true">
+            <circle cx="40" cy="34" r="16"/>
+            <path d="M12 88V78c0-15 12-27 28-27s28 12 28 27v10"/>
+          </svg>}
       </div>
-      <ResourceState
-        loading={photo.loading}
-        error={photo.error}
-        reload={photo.reload}
-      />
-      <label className={compact ? 'sr-only' : undefined}>
-        Choose a photo
-        <input
-          type="file"
-          id={inputId}
-          accept="image/jpeg,image/png,image/webp"
-          disabled={action.busy || photo.loading || !!photo.error || reconcile}
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-        />
-      </label>
-      <ErrorMessage>{action.error}</ErrorMessage>
-      <div className="row wrap">
-        {(!compact || file) && <ActionButton
-          disabled={
-            !file ||
-            !photo.snapshot ||
-            photo.loading ||
-            !!photo.error ||
-            action.busy ||
-            reconcile
-          }
-          onClick={() => void save(false)}
-        >
-          Upload photo
-        </ActionButton>}
-        {!compact && <ActionButton
-          secondary
-          disabled={
-            !photo.snapshot?.hasPhoto ||
-            photo.loading ||
-            !!photo.error ||
-            action.busy ||
-            reconcile
-          }
-          onClick={() => void save(true)}
-        >
-          Remove photo
-        </ActionButton>}
-        {reconcile && (
-          <ActionButton
-            secondary
-            disabled={action.busy}
-            onClick={() => {
-              void photo.reload().then(saved => { if (saved) setReconcile(false); });
-            }}
-          >
-            Reload photo before retrying
-          </ActionButton>
-        )}
+      <div className="matching-photo-actions">
+        <p className="matching-photo-title">{selection ? 'Looking like you?' : photo.snapshot?.hasPhoto ? 'Ready to meet people' : 'Put a face to your name'}</p>
+        <p className="matching-photo-hint">{selection ? 'Upload to add this photo to your profile.' : photo.snapshot?.hasPhoto ? 'Your photo is on your matching profile.' : 'Choose a clear photo of yourself.'}</p>
+        {selection && <ActionButton disabled={disabled} onClick={() => void upload()}>{action.busy ? 'Uploading…' : 'Upload photo'}</ActionButton>}
+        <ActionButton secondary={!!selection || !!photo.snapshot?.hasPhoto} disabled={disabled} onClick={() => input.current?.click()}>
+          {selection ? 'Choose another' : photo.snapshot?.hasPhoto ? 'Change photo' : 'Add photo'}
+        </ActionButton>
       </div>
-    </section>
-  );
+    </div>
+    {!selection && !photo.snapshot?.hasPhoto && <p className="matching-photo-formats">JPG, PNG or WebP · Up to 5 MB</p>}
+    {!selection && photo.snapshot?.hasPhoto && <div className="matching-photo-gallery-action">
+      <ActionButton secondary disabled={disabled} onClick={() => setGalleryOpen(true)}>Manage photos</ActionButton>
+    </div>}
+    {galleryOpen && <PhotoGalleryEditor close={() => setGalleryOpen(false)}/>}
+    <div hidden>
+      <input ref={input} aria-label="Choose a photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={disabled}
+        onChange={event => {
+          const file = event.currentTarget.files?.[0];
+          event.currentTarget.value = '';
+          if (file) choose(file);
+        }}/>
+    </div>
+    <ResourceState loading={photo.loading} error={photo.error} reload={photo.reload}/>
+    <ErrorMessage>{selectionError || action.error}</ErrorMessage>
+    {reconcile && <ActionButton secondary disabled={action.busy || photo.loading} onClick={() => {
+      void photo.reload().then(saved => { if (saved) setReconcile(false); });
+    }}>Reload photo before retrying</ActionButton>}
+  </section>;
 }
 export function Profile() {
   const current = useCurrent(),
@@ -369,7 +359,7 @@ export function Profile() {
         <div className="profile-summary"><Avatar name={profile?.display_name ?? ''} url={photo.url} large/><div><h3>{profile?.display_name}</h3><p>{profile?.location_city || 'Add your home area'}</p></div><button className="account-edit-text" aria-label="Edit profile" onClick={() => setSection('basics')}>Edit</button></div>
         <p className="profile-saved-bio">{profile?.bio || 'Add a little about yourself.'}</p>
         <div className="account-group">
-          <button className="account-row" onClick={() => setSection('basics')}><span className="account-row-icon"><Icon name="Profile"/></span><span className="account-row-copy"><b>About you</b><small>Photo, bio, home & personal details</small></span><Icon name="ChevronRight"/></button>
+          <button className="account-row" onClick={() => setSection('basics')}><span className="account-row-icon"><Icon name="Profile"/></span><span className="account-row-copy"><b>About you</b><small>Photo, bio, hometown & personal details</small></span><Icon name="ChevronRight"/></button>
           <button className="account-row" onClick={() => setSection('interests')}><span className="account-row-icon"><Icon name="Events"/></span><span className="account-row-copy"><b>Interests & availability</b><small>{profile?.interests.length ?? 0} interests · {profile?.availability.length ?? 0} saved time windows</small></span><Icon name="ChevronRight"/></button>
           {adult && <button className="account-row" onClick={() => setSection('dating')}><span className="account-row-icon"><Icon name="Dating"/></span><span className="account-row-copy"><b>Dating details</b><small>Your identity & intentions</small></span><Icon name="ChevronRight"/></button>}
         </div>
@@ -405,7 +395,10 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
   done: () => void;
 }) {
   const current = useCurrent(), formId = useId();
-  const photo = useProfilePhoto(), photoInputId = useId();
+  const photo = useProfilePhoto(), photoInput = useRef<HTMLInputElement>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const { query: gallery } = usePhotoGallery(current.session.user.id, section === 'basics' && !!photo.snapshot?.hasPhoto);
+  const hasGallery = (gallery.data?.count ?? 0) > 1;
   const [photoDraft, setPhotoDraft] = useState<{ file: File | null; revision: number; preview: string | null } | null>(null);
   const [photoReconcile, setPhotoReconcile] = useState(false);
   const saveLock = useRef(false);
@@ -492,10 +485,18 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
       {section === 'basics' && <section className="profile-photo-editor">
         <div className="profile-edit-photo">
           <Avatar name={profile.display_name} url={photoDraft ? photoDraft.preview : photo.url} large/>
-          <div><label className="account-edit-text" htmlFor={photoInputId}>Edit Photo</label>{(photoDraft ? !!photoDraft.file : photo.snapshot?.hasPhoto) && <button className="account-edit-text is-danger" aria-label="Remove photo" type="button" disabled={busy || photo.loading || !!photo.error || photoReconcile} onClick={() => stagePhoto(null)}>Remove</button>}</div>
+          <div className="profile-photo-actions">
+            <ActionButton secondary disabled={busy || !!photoDraft || photoReconcile} onClick={() => setGalleryOpen(true)}>Manage photos</ActionButton>
+            {!hasGallery && <ActionButton secondary disabled={busy || photo.loading || !!photo.error || !photo.snapshot || photoReconcile} onClick={() => photoInput.current?.click()}>
+              {(photoDraft ? !!photoDraft.file : photo.snapshot?.hasPhoto) ? 'Change photo' : 'Add photo'}
+            </ActionButton>}
+            {!hasGallery && (photoDraft ? !!photoDraft.file : photo.snapshot?.hasPhoto) &&
+              <button className="account-edit-text is-danger" aria-label="Remove photo" type="button" disabled={busy || photo.loading || !!photo.error || photoReconcile} onClick={() => stagePhoto(null)}>Remove</button>}
+          </div>
         </div>
+        {galleryOpen && <PhotoGalleryEditor close={() => setGalleryOpen(false)}/>}
         <ResourceState loading={photo.loading} error={photo.error} reload={() => { void photo.reload(); }}/>
-        <label className="sr-only">Choose a photo<input id={photoInputId} type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || photo.loading || !!photo.error || !photo.snapshot || photoReconcile} onChange={event => { const file = event.target.files?.[0]; if (file) stagePhoto(file); event.target.value = ''; }}/></label>
+        <label hidden>Choose a photo<input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || photo.loading || !!photo.error || !photo.snapshot || photoReconcile} onChange={event => { const file = event.target.files?.[0]; if (file) stagePhoto(file); event.target.value = ''; }}/></label>
       </section>}
       {photoDraft && <p className="account-note">Photo {photoDraft.file ? 'selection' : 'removal'} will be saved with Save changes.</p>}
       {photoReconcile && <ActionButton secondary disabled={busy || photo.loading} onClick={() => { void photo.reload().then(saved => { if (saved) { setPhotoDraft(null); setPhotoReconcile(false); setError('Saved photo reloaded. Any unsaved photo selection was discarded.'); } }); }}>Reload saved photo and discard photo draft</ActionButton>}
@@ -504,10 +505,20 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
           <div hidden={section !== 'basics'}>
             <label>Display name<input required maxLength={120} autoComplete="nickname" value={profile.display_name} onChange={event => update({ display_name: event.target.value })}/></label>
             <label>Bio <span className="profile-bio-count">{profile.bio?.length ?? 0}/1000</span><textarea maxLength={1000} rows={3} value={profile.bio ?? ''} onChange={event => update({ bio: event.target.value || null })}/></label>
-            <label>Birthdate (private)<input type="date" value={profile.birthdate ?? ''} max={new Date().toISOString().slice(0,10)} onChange={event => update({ birthdate: event.target.value || null })}/></label>
-            <p className="account-note">Your birthdate is private. Only your age is shown.</p>
-            <label>Home area<input maxLength={120} value={profile.location_city ?? ''} onChange={event => update({ location_city: event.target.value || null })}/></label>
-            <p className="account-note">A general area only. Temporary search areas are separate.</p>
+            <div className="profile-birthday" role="group" aria-label="Birthday">
+              <div className="profile-birthday-row">
+                <div>
+                  <strong>Birthday</strong>
+                  {profile.birthdate
+                    ? <time dateTime={profile.birthdate}>{new Intl.DateTimeFormat(undefined, { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(profile.birthdate + 'T00:00:00Z'))}</time>
+                    : <span>Not on file</span>}
+                </div>
+                <span className="profile-birthday-private">Private</span>
+              </div>
+              <p className="account-note">Only your age is shown. <a href={`mailto:${legalPublication.contactEmail}`}>Contact support</a> for corrections.</p>
+            </div>
+            <label>Hometown<input aria-describedby="profile-hometown-note" maxLength={120} value={profile.location_city ?? ''} onChange={event => update({ location_city: event.target.value || null })}/></label>
+            <p id="profile-hometown-note" className="account-note">Search area is separate.</p>
             <fieldset disabled={!factsResource.canWrite}>
               {(['education', 'occupation'] as const).map(key => <div key={key}>
                 <label>{key === 'education' ? 'Education' : 'Occupation'} (optional)<input maxLength={120} value={facts[key]} onChange={event => setFacts({ ...facts, [key]: event.target.value })}/></label>

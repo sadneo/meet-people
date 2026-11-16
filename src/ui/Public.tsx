@@ -29,7 +29,10 @@ export function Legal({ kind }: { kind: keyof typeof legalDocuments }) {
           </section>
         ))}
         {(kind === 'privacy' || kind === 'terms') && <p>Map features are subject to the <a href="https://maps.google.com/help/terms_maps/">Google Maps Terms of Service</a> and <a href="https://policies.google.com/privacy">Google Privacy Policy</a>.</p>}
-        <nav aria-label="Safety and account requests"><Link to="/delete-account">Delete your account</Link>{' · '}<Link to="/child-safety">Child safety standards</Link></nav>
+        <nav className="legal-resource-links" aria-label="Safety and account requests">
+          <Link to="/delete-account">Delete your account</Link>
+          <Link to="/child-safety">Child safety standards</Link>
+        </nav>
         <p>
           Contact{" "}
           <a href={`mailto:${legalPublication.contactEmail}`}>

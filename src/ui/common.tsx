@@ -65,6 +65,7 @@ export function ActionButton({
 }
 export function Icon({ name }: { name: string }) {
   const paths: Record<string, ReactNode> = {
+    DragHandle: <path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" strokeWidth="3"/>,
     Food: <><path d="M3 11h18a9 9 0 0 1-18 0ZM8 21h8M8 3v4m4-5v5m4-4v4" /></>,
     External: <path d="M7 17 17 7M7 7h10v10" />,
     Back: <path d="m15 18-6-6 6-6" />,

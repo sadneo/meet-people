@@ -43,7 +43,7 @@
 @media(max-width:1000px){.garden-inventory-dock{left:0;right:0;width:100%;max-width:none}.integrated-sky-garden .garden-bottom{bottom:84px}.integrated-sky-garden .garden-selection{bottom:84px}}
 @media(max-width:800px){.shell>main.sky-garden-main{height:calc(100dvh - 79px - env(safe-area-inset-bottom,0px));min-height:0}.integrated-sky-garden .garden-heading{top:23px;left:21px;right:20px}.integrated-sky-garden .garden-balance{font-size:12px}.integrated-sky-garden .garden-balance img{width:24px;height:24px}.integrated-sky-garden .garden-bottom{left:17px;bottom:83px}.integrated-sky-garden .garden-activity{padding:11px 14px;gap:8px;border-radius:18px}.integrated-sky-garden .garden-activity span{font-size:11px}.integrated-sky-garden .garden-activity small{font-size:9px}.garden-inventory-dock .garden-build{min-height:62px}.integrated-sky-garden .garden-drawer{width:100%;max-width:none;height:calc(83dvh - 60px);max-height:calc(100dvh - 120px);margin:auto 0 calc(79px + env(safe-area-inset-bottom,0px));border-radius:25px 25px 0 0}}
 @media(prefers-reduced-motion:no-preference){.integrated-sky-garden .garden-drawer[open]{animation:garden-inventory-rise .22s cubic-bezier(.22,1,.36,1)}}
-@keyframes garden-inventory-rise{from{transform:translateY(80px);opacity:.7}to{transform:translateY(0);opacity:1}}
+@keyframes garden-inventory-rise{from{transform:translateY(80px)}to{transform:translateY(0)}}
 
 /* Garden catalog and compact, non-modal daily history. */
 .integrated-sky-garden .garden-build-section{border-bottom:1px solid #e7e7d9;margin:0}

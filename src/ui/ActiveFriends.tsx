@@ -9,9 +9,13 @@ import { useAction, useLoad } from './hooks'
 import { FriendsPreferencesPanel } from './Preferences'
 import { MatchingSchedule } from './MatchingSchedule'
 import { SafetyActions } from './Safety'
+import { MatchingSetupContent } from './MatchingSetup'
+import { useMatchingSetupStatus } from './useMatchingSetupStatus'
 export type ActiveGroup = z.infer<typeof ActiveGroupSchema>
 function unknownWrite(error: unknown) { return !(error instanceof MatchingError) || error.status === 0 || error.status >= 500 }
-export function ActiveFriends({ close, changed }: { close: () => void; changed: () => void }) {
+export function ActiveFriends({ close, changed, onSetupBusy }: {
+ close: () => void; changed: () => void; onSetupBusy: (busy: boolean) => void
+}) {
  const current=useCurrent(),client=useMemo(()=>matchingClient(current.session.access_token),[current.session.access_token])
  const [status,setStatus]=useState<ActiveStatus|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[uncertain,setUncertain]=useState(false)
  const [ideal,setIdeal]=useState(3),[allowExisting,setAllowExisting]=useState(false),[preferences,setPreferences]=useState(false)
@@ -35,13 +39,19 @@ export function ActiveFriends({ close, changed }: { close: () => void; changed: 
   finally{lock.current=false;if(live.current)setBusy(false)}
  }
  const disabled=loading||busy||uncertain,active=status&&['queued','reserved','accepted'].includes(status.state)
+ const [setupOpen,setSetupOpen]=useState(false)
+ const readiness=useMatchingSetupStatus(!!status?.enabled&&!status.proposal&&!active&&status.state!=='formed')
+ const setupReady=readiness.value?.profileReady&&readiness.value.friendsAreaReady&&readiness.value.groupScheduleReady
+ if(setupOpen)return <MatchingSetupContent mode="group" onBusyChange={onSetupBusy} done={()=>{setSetupOpen(false);readiness.reload();void refresh()}}/>
  return <div className="active-friends-flow">
   <ResourceState loading={loading} error={error} reload={()=>void refresh()}/>
   {uncertain&&<p role="status">Your action may already be saved. Refresh search status before another change.</p>}
   {status?.proposal?<ProposalReview key={status.proposal.id} status={status} disabled={disabled} mutate={mutate}/>:status?.state==='formed'&&status.groupId?
    <div className="card"><h3>Your group is ready.</h3><Link className="btn" onClick={close} to={`/messages/chat?group=${encodeURIComponent(status.groupId)}`}>Open group chat</Link><ActionButton secondary disabled={disabled} onClick={()=>void refresh()}>Refresh search status</ActionButton></div>:
    active?<div className="card" role="status"><h3>Looking for a group…</h3><p>Different interests are welcome. You’ll review the full roster before joining.</p><div className="row"><ActionButton disabled={disabled} onClick={()=>void mutate('check')}>Check for a group</ActionButton><ActionButton secondary disabled={disabled} onClick={()=>void mutate('cancel')}>Cancel search</ActionButton></div></div>:
-   <><section className="group-search-summary"><h3>Find a group</h3><p>You + {ideal} new friends</p><ActionButton disabled={disabled||!status?.enabled||current.busy} onClick={()=>void mutate('join',{preferredNewFriends:ideal,minimumGroupSize:2,maximumGroupSize:ideal+1,allowExistingGroups:allowExisting})}>Find a group</ActionButton></section>
+   <><section className="group-search-summary"><h3>Find a group</h3><p>You + {ideal} new friends</p><ActionButton disabled={disabled||!status?.enabled||!setupReady||current.busy} onClick={()=>void mutate('join',{preferredNewFriends:ideal,minimumGroupSize:2,maximumGroupSize:ideal+1,allowExistingGroups:allowExisting})}>Find a group</ActionButton></section>
+    {status?.enabled&&<ResourceState loading={readiness.loading} error={readiness.error} reload={readiness.reload}/>}
+    {status?.enabled&&readiness.value&&!setupReady&&<div className="group-search-summary"><p>Finish setup with an interest, a photo, a search area, and a time you can meet.</p><ActionButton onClick={()=>setSetupOpen(true)}>Set up group matching</ActionButton></div>}
     {status?.lastOutcome&&<p role="status">{status.lastOutcome==='expired'?'The previous proposal expired.':'The previous search ended.'}</p>}
     <label htmlFor="active-group-size">New friends · You + {ideal}<input id="active-group-size" type="range" min={1} max={8} value={ideal} disabled={disabled} onChange={event=>setIdeal(+event.target.value)}/></label>
     <label className="check"><input type="checkbox" checked={allowExisting} disabled={disabled} onChange={event=>setAllowExisting(event.target.checked)}/>Open to joining an existing group</label>
@@ -50,8 +60,8 @@ export function ActiveFriends({ close, changed }: { close: () => void; changed: 
     {status&&!status.enabled&&<p role="status">Group search is not available right now.</p>}
    </>}
   <div className="row"><ActionButton secondary disabled={busy||loading} onClick={()=>void refresh()}>Refresh search status</ActionButton><ActionButton secondary disabled={busy} onClick={()=>setPreferences(value=>!value)}>Search preferences</ActionButton></div>
-  {preferences&&<FriendsPreferencesPanel done={()=>{setPreferences(false);void refresh()}}/>}
-  <details className="group-schedule"><summary>Availability &amp; timezone</summary><MatchingSchedule token={current.session.access_token} disabled={disabled} onSaved={()=>void refresh()}/></details>
+  {preferences&&<FriendsPreferencesPanel done={()=>{setPreferences(false);readiness.reload();void refresh()}}/>}
+  <details className="group-schedule"><summary>Availability &amp; timezone</summary><MatchingSchedule token={current.session.access_token} disabled={disabled} onSaved={()=>{readiness.reload();void refresh()}}/></details>
  </div>
 }
 function ProposalReview({status,disabled,mutate}:{status:ActiveStatus;disabled:boolean;mutate:(action:ActiveCommand['action'],data:Record<string,unknown>)=>Promise<void>}){

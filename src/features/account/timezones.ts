@@ -9,10 +9,15 @@ const commonLabels: Record<string, string> = {
   UTC: 'Coordinated Universal Time · UTC',
 };
 
+export function deviceTimeZone(): string | undefined {
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return zone === 'UTC' || zone?.includes('/') ? zone : undefined;
+}
+
 export function timezoneOptions(savedZone: string) {
   const fallback = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Asia/Kolkata', 'Asia/Shanghai', 'Asia/Tokyo', 'Australia/Sydney'];
   const zones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : fallback;
-  const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const deviceZone = deviceTimeZone() ?? '';
   return [...new Set(['UTC', ...zones, deviceZone, savedZone].filter(Boolean))].map(value => {
     const parts = value.split('/');
     const name = commonLabels[value] ?? `${parts.at(-1)!.replaceAll('_', ' ')}${parts.length > 1 ? ` · ${parts[0]}` : ''}`;

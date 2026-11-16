@@ -21,7 +21,10 @@ for (const width of [320, 390, 630]) {
     await expect(page.getByLabel('Message', { exact: true })).toBeVisible()
     const composer = (await page.locator('.live-composer').boundingBox())!
     const nav = (await page.getByRole('navigation', { name: 'Main navigation' }).boundingBox())!
-    expect(composer.y + composer.height).toBeLessThanOrEqual(nav.y)
+    const chat = (await page.locator('.live-messages').boundingBox())!
+    expect(chat.x).toBe(0)
+    expect(chat.width).toBe(width)
+    expect(Math.abs(composer.y + composer.height - nav.y)).toBeLessThanOrEqual(1)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.getByRole('link', { name: 'Back to conversations' }).click()
     await expect(page.getByLabel('Search conversations')).toBeVisible()

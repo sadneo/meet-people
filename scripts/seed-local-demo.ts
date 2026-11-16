@@ -17,6 +17,7 @@ const forDevelopment=!!options['for-development-account']
 if(forDevelopment&&(!options.scenarios||options['reset-passwords']||options['password-stdin']))throw new Error('Development-account mode requires --scenarios and preserves fixture passwords; use demo:seed separately to choose fixture passwords')
 const plan=(forDevelopment?developmentDemoPlan:demoPlan)(Number(options.count??(forDevelopment?'60':options.scenarios?'12':'50')))
 let scenarios=options.scenarios?scenarioPlan(plan.length,forDevelopment?{id:'d0000000-0000-4000-8000-000000000000',email:'development@example.test',username:'development'}:undefined):null
+if(options['no-photos']&&scenarios)throw new Error('Matching scenarios require profile photos; omit --no-photos')
 if(options['refresh-events']&&!scenarios)throw new Error('--refresh-events requires --scenarios')
 async function passwordInput(){
  if(options['password-stdin']){
@@ -67,7 +68,7 @@ async function main(){
  if(target.protocol!=='http:'||!['127.0.0.1','localhost'].includes(target.hostname)||target.port!=='54321'||target.username||target.password||!status.SERVICE_ROLE_KEY||!status.ANON_KEY)throw new Error('Refusing nonlocal or incomplete Supabase configuration')
  if(options['refresh-location'])pg(readFileSync(new URL('../supabase/schema-sources/stony-brook-demo-location.sql',import.meta.url),'utf8'),'supabase_admin')
  // Check safety prerequisites BEFORE creating any Auth fixtures.
- pg(`begin read only;do $$ begin if to_regprocedure('public.get_matching_scoring_settings()') is null or to_regprocedure('public.get_dating_runtime()') is null or to_regprocedure('public.get_friends_runtime()') is null or not exists(select 1 from location_private.places where id='b641ad29-9f92-4e66-9490-0b616f8fd85c' and enabled and verified_until>statement_timestamp()+interval '1 hour') then raise exception 'Local demo prerequisites missing/expired';end if;end $$;rollback;`)
+ pg(`begin read only;do $$ begin if to_regprocedure('public.get_matching_scoring_settings()') is null or to_regprocedure('public.get_dating_runtime()') is null or to_regprocedure('public.start_friends_discovery()') is null or not exists(select 1 from location_private.places where id='b641ad29-9f92-4e66-9490-0b616f8fd85c' and enabled and verified_until>statement_timestamp()+interval '1 hour') then raise exception 'Local demo prerequisites missing/expired';end if;end $$;rollback;`)
  const password=forDevelopment?randomBytes(32).toString('base64url')+'-Aa1!':await passwordInput();if(password.length<8||password.length>128)throw new Error('Use a password with8–128 characters')
  const boundedFetch:typeof fetch=(input,init)=>{
   const target=new URL(String(input));if(target.origin!==url||!['/auth/v1/','/rest/v1/rpc/'].some(prefix=>target.pathname.startsWith(prefix)))throw new Error('Nonlocal seed request refused')
@@ -86,6 +87,8 @@ async function main(){
   if(signed.error||signed.data.user?.id!==credentials.accountId)throw new Error('Dedicated development authentication failed')
   const existing=await client.rpc('get_account'),account=AccountSchema.safeParse(existing.data)
   if(existing.error||!account.success||!account.data.profile||account.data.completed.length!==4)throw new Error('Dedicated development account must finish onboarding first')
+  const matchingSetup=await client.rpc('get_progressive_matching_setup')
+  if(matchingSetup.error||!matchingSetup.data?.profileReady)throw new Error('Add an interest and a profile photo to the development account before seeding matches')
   primary={anchor:DevelopmentAnchorSchema.parse({id:credentials.accountId,email:credentials.email,username:account.data.profile.username}),client}
   scenarios=scenarioPlan(plan.length,primary.anchor)
  }
@@ -118,8 +121,12 @@ async function main(){
   console.log(`${events.length} future active event queues populated with labeled test contacts, including regular SBU events.`)
  }
  for(let i=0;i<actors.length;i++){
-  const account=await actors[i].rpc('get_account'),friends=await actors[i].rpc('get_friends_runtime'),dating=await actors[i].rpc('get_dating_runtime')
-  if(account.error||account.data?.completed?.length!==4||friends.error||friends.data?.canJoin!==true||dating.error||dating.data?.canStart!==true||dating.data?.aggregate?.profile?.enabled!==true)throw new Error(`Demo ${i+1} persisted readback failed; state may already be saved. Rerun to reconcile.`)
+  const account=await actors[i].rpc('get_account'),friends=await actors[i].rpc('get_friends_discovery_status'),dating=await actors[i].rpc('get_dating_runtime')
+  if(account.error||account.data?.completed?.length!==4||friends.error||dating.error||(!options['no-photos']&&(!friends.data?.eligible||!dating.data?.canStart||!dating.data?.aggregate?.profile?.enabled)))throw new Error(`Demo ${i+1} persisted readback failed; state may already be saved. Rerun to reconcile.`)
+ }
+ if(options['no-photos']){
+  console.log(`Ready: ${plan.length} demo profiles. Accounts without a saved photo need one before matching.`)
+  return
  }
  const observer=primary?.client??actors[0]
  const dating=await observer.rpc('find_dating_candidate',{excluded_in:[]})

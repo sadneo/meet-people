@@ -10,7 +10,7 @@ configuration and account deletion. No commit, push or deployment performed.
 | Action | Pebbles | Limit |
 | --- | ---: | --- |
 | First account Garden | 300 | Once per confirmed account; initialized on first read |
-| Finish onboarding, then collect | 100 | Once; eligibility comes from stored `get_account()` chapters |
+| Finish onboarding, then collect | 100 | Once, after saving display name, username and birthday |
 | Check in from the flag panel | 20 | Once per UTC calendar day |
 | Check in on five distinct days | 50 | Automatically with the fifth claim in a Monday–Sunday UTC week |
 

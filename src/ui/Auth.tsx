@@ -308,7 +308,7 @@ export function Auth({
           </>
         )}
         {(register || forgot) && <Link className="auth-home-link" to="/login">Back to sign in</Link>}
-        {mode !== "login" && <p className="account-note">
+        {mode !== "login" && <p className="account-note auth-consent">
           By continuing, you agree to our <Link to="/terms">Terms</Link> and{" "}
           <Link to="/privacy">Privacy Policy</Link>.
         </p>}
@@ -388,8 +388,10 @@ export function AuthCallback() {
           <ErrorMessage>
             This link could not be verified. Request a new link.
           </ErrorMessage>
-          <Link to="/auth/forgot-password">Request recovery link</Link>
-          <Link to="/login">Sign in</Link>
+          <div className="auth-recovery-options">
+            <Link to="/auth/forgot-password">Request recovery link</Link>
+            <Link to="/login">Sign in</Link>
+          </div>
         </>
       ) : (
         <p role="status">

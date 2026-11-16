@@ -44,8 +44,6 @@
 .live-chat>p.sr-only { margin:0; }
 .event-detail .event-detail-header h1 { font-family:inherit;font-size:24px;font-weight:700;letter-spacing:-.8px; }
 @media(max-width:800px) {
- .messaging-page.chat-selected .live-messages { height:calc(100dvh - 160px - env(safe-area-inset-bottom)); }
- body:has(.messaging-page.chat-selected) .development-navigator { bottom:calc(90px + env(safe-area-inset-bottom)); }
  .messaging-page .chat-header { gap:8px; }
  .messaging-page .chat-back { width:44px;flex:none; }
 }

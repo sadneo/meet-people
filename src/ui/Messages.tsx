@@ -55,6 +55,7 @@ export function Messages() {
     selected = selectedGroup ?? search.get("conversation"),
     [query, setQuery] = useState(''),
     [findGroup,setFindGroup] = useState(false),
+    [groupSetupBusy,setGroupSetupBusy] = useState(false),
     [page, setPage] = useState(1);
   const realtime = useMessagingRealtime(current.session.user.id);
   const inbox = useCachedLoad(
@@ -95,7 +96,7 @@ export function Messages() {
         </div>
       </div>
       {realtime.error && <div><ErrorMessage>{realtime.error}</ErrorMessage><ActionButton secondary onClick={realtime.reconnect}>Reconnect live updates</ActionButton></div>}
-      {findGroup&&<Modal title="Find a group" close={()=>setFindGroup(false)}><ActiveFriends key={current.session.user.id} close={()=>setFindGroup(false)} changed={changed}/></Modal>}
+      {findGroup&&<Modal className="matching-setup-modal" title="Find a group" close={()=>{if(!groupSetupBusy)setFindGroup(false)}}><ActiveFriends key={current.session.user.id} close={()=>setFindGroup(false)} changed={changed} onSetupBusy={setGroupSetupBusy}/></Modal>}
       <div className="live-messages">
         <aside className="live-inbox">
           <div className="inbox-search">

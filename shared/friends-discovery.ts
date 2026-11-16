@@ -8,6 +8,13 @@ export const FriendsDiscoveryStatusSchema = z.object({
   reason: z.enum(['profile', 'age', 'discovery_off', 'preferences', 'location']).nullable(),
 }).strict().refine(value => value.eligible === (value.reason === null))
 
+export const MatchingSetupStatusSchema = z.object({
+  profileReady: z.boolean(),
+  friendsAreaReady: z.boolean(),
+  groupScheduleReady: z.boolean(),
+}).strict()
+export type MatchingSetupStatus = z.infer<typeof MatchingSetupStatusSchema>
+
 export const FriendsBatchRequestSchema = z.object({
   excludedIds: z.array(id).max(200).refine(values => new Set(values).size === values.length, 'Choose distinct IDs.'),
   limit: z.number().int().min(1).max(10).default(10),

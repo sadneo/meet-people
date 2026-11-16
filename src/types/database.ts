@@ -640,16 +640,19 @@ export type Database = {
         Row: {
           preferences: Json
           revision: number
+          setup_started: boolean
           user_id: string
         }
         Insert: {
           preferences: Json
           revision: number
+          setup_started?: boolean
           user_id: string
         }
         Update: {
           preferences?: Json
           revision?: number
+          setup_started?: boolean
           user_id?: string
         }
         Relationships: []
@@ -1280,6 +1283,7 @@ export type Database = {
       }
       dating_targets: { Args: { p: Json }; Returns: Json }
       detailed_settings_masters: { Args: { value_in: Json }; Returns: Json }
+      edit_profile_photo_gallery: { Args: { edit_in: Json }; Returns: Json }
       effective_detailed_settings: {
         Args: { choices_in: Json; masters_in: Json }
         Returns: Json
@@ -1442,8 +1446,10 @@ export type Database = {
         Returns: Json
       }
       get_profile_details: { Args: never; Returns: Json }
+      get_profile_photo_gallery: { Args: { owner_in: string }; Returns: Json }
       get_profile_photo_reference: { Args: { owner_in: string }; Returns: Json }
       get_profile_photo_state: { Args: never; Returns: Json }
+      get_progressive_matching_setup: { Args: never; Returns: Json }
       get_queue_match: {
         Args: never
         Returns: {
@@ -1672,6 +1678,10 @@ export type Database = {
         Args: { owner_in: string; revision_in: number }
         Returns: Json
       }
+      read_profile_photo_slot: {
+        Args: { owner_in: string; position_in: number; revision_in: number }
+        Returns: Json
+      }
       reconcile_active_friends_job: { Args: { unit_in: string }; Returns: Json }
       reconcile_event_group_job: {
         Args: { job_id_in: string; lease_token_in: string }
@@ -1785,6 +1795,7 @@ export type Database = {
         Args: { body_in: string; conversation_in: string; request_in: string }
         Returns: Json
       }
+      start_friends_discovery: { Args: never; Returns: Json }
       submit_safety_report: { Args: { report_in: Json }; Returns: Json }
       sweep_active_friends: { Args: never; Returns: Json }
       unblock_owner_target: { Args: { target_in: string }; Returns: Json }

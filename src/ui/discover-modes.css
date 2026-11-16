@@ -1,0 +1,47 @@
+.discover-modes {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 13px;
+  background: #ece5dc;
+}
+.discover-modes > :is(button, a) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  color: #66594e;
+}
+/* Keep the original mode accents, including when switching back from Food. */
+.discover-modes .ui-icon { width: 16px; height: 16px; flex: none; stroke-width: 1.8; }
+.discover-modes [data-mode="Friends"] .ui-icon { color: #a77c43; }
+.discover-modes [data-mode="Dating"] .ui-icon { color: #b56e83; }
+.discover-modes [data-mode="Food"] .ui-icon { color: #54745b; }
+.discover-modes [data-mode="Friends"][aria-pressed="true"] .ui-icon { color: #f2cf91; }
+.discover-modes [data-mode="Dating"][aria-pressed="true"] .ui-icon { color: #f4b9cb; }
+.discover-modes [aria-current="page"] .ui-icon { color: #e1efdf; }
+.discover-modes [data-mode="Friends"] .ui-icon circle { fill: currentColor; fill-opacity: 0.22; }
+.discover-modes [data-mode="Dating"] .ui-icon path { fill: currentColor; fill-opacity: 0.16; }
+.discover-modes > [aria-pressed="true"] { background: #524c3d; color: #fffdf9; box-shadow: 0 2px 6px #4934211a; }
+.discover-modes > [data-mode="Dating"][aria-pressed="true"] { background: #64444d; }
+.discover-modes > [aria-current="page"] { background: #365b46; color: #fffdf9; cursor: default; }
+.discover-modes > :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.food-page > .discover-modes { margin-bottom: 16px; }
+@media (max-width: 460px) {
+  .discover-modes > :is(button, a) { padding-inline: 7px; }
+  .discovery-page .discovertools { gap: 6px; }
+  .discovery-page .discovertools > .row { gap: 4px; }
+}
+@media (max-width: 350px) {
+  .discover-modes > :is(button, a) { flex-direction: column; gap: 2px; font-size: 12px; padding: 4px 7px; }
+}

@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 import { campusDate, MenuDateSchema, type DiningItem, type DiningMenu } from '../../shared/dining'
 import { readDiningMenus } from '../features/dining/client'
 import { useCachedLoad } from '../data/useCachedLoad'
 import { ActionButton, Empty, Icon, Modal, ResourceState } from './common'
 import { PageSkeleton } from './loading/PageSkeleton'
 import { sourceLink } from '../features/events/client'
+import { useCurrent } from './current'
+import { DiscoverModes } from './DiscoverModes'
+import { canShowDating } from './age-visibility'
 import './food.css'
 
 const dayDate = (date: string) => new Date(`${date}T12:00:00Z`)
@@ -82,6 +85,7 @@ function MenuContent({ menu, search }: { menu: DiningMenu; search: string }) {
 }
 
 export function Food() {
+  const current = useCurrent()
   const [params, setParams] = useSearchParams()
   const location = useLocation()
   const today = useCampusDate()
@@ -113,7 +117,7 @@ export function Food() {
   }
 
   return <section className="food-page" aria-labelledby="food-title">
-    <Link className="food-back" to={`/matchmaking${backSearch ? `?${backSearch}` : ''}`}><Icon name="Back" />Discover</Link>
+    <DiscoverModes adult={canShowDating(current.account?.profile?.birthdate)} mode="Food" discoverSearch={backSearch}/>
     <header className="food-page-heading"><div><h1 id="food-title">Food menus</h1><p>Stony Brook dining.</p></div><ActionButton secondary disabled={resource.refreshing} onClick={resource.reload}>{resource.refreshing && resource.value ? 'Refreshing…' : 'Refresh'}</ActionButton></header>
     <div className="food-date-heading"><h2>{date === today ? 'Today' : formatDate(date, { weekday: 'long' })}<span>{formatDate(date, { month: 'long', day: 'numeric' })}</span></h2><label className="food-calendar"><span>Choose a date</span><input type="date" aria-label="Menu date" min="0001-01-01" max="9999-12-31" value={date} onChange={event => { if (MenuDateSchema.safeParse(event.target.value).success) update('date', event.target.value) }} /></label></div>
     <div className="food-days" role="group" aria-label="Menu days">{days.map(day => <button type="button" key={day} aria-label={formatDate(day, { weekday: 'long', month: 'long', day: 'numeric' })} aria-pressed={date === day} onClick={() => update('date', day)}><span>{day === today ? 'Today' : formatDate(day, { weekday: 'short' })}</span><strong>{formatDate(day, { day: 'numeric' })}</strong></button>)}</div>

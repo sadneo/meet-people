@@ -77,10 +77,9 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
           <option value="">All events</option>
           {categories.map(item => <option key={item} value={item}>{categoryLabel(item)}</option>)}
         </select>
-        <div className="row wrap">
+        <div className="event-filter-actions">
+          <ActionButton secondary disabled={!category} onClick={() => selectCategory('')}>Reset filters</ActionButton>
           <ActionButton onClick={() => setFiltersOpen(false)}>Done</ActionButton>
-          <ActionButton secondary onClick={() => selectCategory('')}>Reset filters</ActionButton>
-          <ActionButton secondary disabled={resource.loading} onClick={resource.reload}>Refresh events</ActionButton>
         </div>
       </Modal>}
       <ResourceState
