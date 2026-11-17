@@ -42,11 +42,11 @@ Pushes to **main deploy production**. **Sandbox deploys only when run manually**
 (see below). The environments use separate GitHub settings and backends. Both
 sandbox builds use one resolved commit, one API deployment and one database.
 
-1. Open a PR into `dev`; `Pull request checks` runs full CI and Android checks.
-   This is the only place tests run.
+1. Open a PR into `dev`. GitHub runs full CI and Android compilation.
 2. Open a PR from `dev` into `main`. `Main source` (required check `Require dev`)
    rejects PRs into `main` from any other branch or fork, so hotfixes go through
-   `dev` first. Use merge commits, not squash, so `dev` and `main` stay in step.
+   `dev` first. Full CI also verifies the proposed production merge and supplies
+   the required `Checks / CI` result on the PR. Use a merge commit to preserve ancestry.
 3. Merging into `main` runs `Deploy`, which resolves one commit SHA and prepares
    production frontend and API image builds without re-running tests.
 4. Deployment downloads frontend artifacts from the same workflow run and uses the
