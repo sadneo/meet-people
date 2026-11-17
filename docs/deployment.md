@@ -38,11 +38,13 @@ API containers scale to zero, with a maximum of two instances per service.
 
 ## Releases
 
-Pushes to **main deploy production**. **Sandbox deploys only when run manually**
-(see below). The environments use separate GitHub settings and backends. Both
+Pushes to **main deploy production** and pushes to **dev deploy sandbox**, through
+the same workflow and stages. Both can also be run manually (see below). The
+environments use separate GitHub settings and backends. Both
 sandbox builds use one resolved commit, one API deployment and one database.
 
-1. Open a PR into `dev`. GitHub runs full CI and Android compilation.
+1. Open a PR into `dev`. GitHub runs full CI and Android compilation. Merging it
+   deploys sandbox, so every change is exercised there before production.
 2. Open a PR from `dev` into `main`. `Main source` (required check `Require dev`)
    rejects PRs into `main` from any other branch or fork, so hotfixes go through
    `dev` first. Full CI also verifies the proposed production merge and supplies
@@ -56,7 +58,7 @@ sandbox builds use one resolved commit, one API deployment and one database.
    |---|---|---|
    | Preflight | `release.yml` | settings validation, image check, production recovery policy, migration preview. Changes nothing. |
    | Backend | `deploy-stages.mjs backend` | Edge Functions, reviewed migrations (no development seeds), product schema, hosted config, event sync |
-   | Services | `deploy-stages.mjs services` | API; sandbox's disabled event worker, or production's workers and schedules, the 6 a.m. Supabase dining cron, then retiring the legacy Google dining schedule |
+   | Services | `deploy-stages.mjs services` | API, push and event-group workers with their schedules, the 6 a.m. Supabase dining cron, then (production only) retiring the legacy Google dining schedule |
    | Hosting | `release.yml` | web site, then sandbox's mobile site |
    | Verify | `release.yml` | hosted smoke checks and summary |
 
@@ -116,7 +118,8 @@ first successful runs of the parallel pipeline before claiming a speedup.
 
 ### Manual sandbox deployment
 
-Actions → **Deploy** → **Run workflow**, using workflow branch **dev** or **main**:
+Merging into dev deploys sandbox automatically. To redeploy or roll sandbox back,
+use Actions → **Deploy** → **Run workflow**, with workflow branch **dev** or **main**:
 
 - Environment: `sandbox`
 - Source ref: `dev` (or blank), or a full commit SHA already on dev
@@ -262,8 +265,9 @@ Populate each runtime secret from stdin before deploying its API.
 After migrations and Edge deployment, `pnpm hosting:configure` preserves generated
 shared tokens, synchronizes Vault/Edge secrets and pushes hosted Auth settings.
 Set `SUPABASE_PROJECT_REF` to the intended environment and `HOSTED_CONFIG_WORKDIR`
-to `hosting/deployment` for generated settings; its default `hosting` directory
-contains the production fallback. Optional provider secrets can be supplied through
+to `hosting/deployment`, which `node scripts/configure-deployment.mjs` generates
+for that environment. There is no fallback, so one environment's Auth settings can
+never be pushed to the other. Optional provider secrets can be supplied through
 ignored `.env.hosting.local`. Unsupplied Edge secrets are preserved.
 
 ### Database sources

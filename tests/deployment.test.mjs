@@ -44,13 +44,11 @@ test('preview and apply use the same reviewed migration ordering guard', () => {
   const apply = stageSteps('backend', stageEnv).map(([, , args]) => args.join(' ')).filter(args => args.startsWith('scripts/push-reviewed-migrations.mjs'))
   assert.deepEqual(apply, ['scripts/push-reviewed-migrations.mjs --yes'])
   const head = '20261114010000 | 20261114010000 | time'
-  assert.deepEqual(reviewedMigrationFlags(`${head}\n20261113010000 | | time`, 'wacgxhsdhrqigrmqaonc'), ['--include-all'])
-  assert.deepEqual(reviewedMigrationFlags(`${head}\n20261115010000 | | time`, 'wacgxhsdhrqigrmqaonc'), [])
-  assert.deepEqual(reviewedMigrationFlags(head, 'sandbox'), [])
-  assert.throws(() => reviewedMigrationFlags(`${head}\n20261113010000 | | time`, 'sandbox'))
-  assert.throws(() => reviewedMigrationFlags(`${head}\n20261112010000 | | time`, 'wacgxhsdhrqigrmqaonc'))
-  assert.throws(() => reviewedMigrationFlags('| 20261114010000 | time', 'wacgxhsdhrqigrmqaonc'))
-  assert.throws(() => reviewedMigrationFlags('unrecognized output', 'wacgxhsdhrqigrmqaonc'))
+  assert.deepEqual(reviewedMigrationFlags(`${head}\n20261115010000 | | time`), [])
+  assert.deepEqual(reviewedMigrationFlags(head), [])
+  assert.throws(() => reviewedMigrationFlags(`${head}\n20261113010000 | | time`), /out-of-order/)
+  assert.throws(() => reviewedMigrationFlags('| 20261114010000 | time'))
+  assert.throws(() => reviewedMigrationFlags('unrecognized output'))
 })
 
 test('dining and onboarding can follow the previous dev database without an ordering exception', () => {
@@ -62,13 +60,11 @@ test('dining and onboarding can follow the previous dev database without an orde
       const version = name.split('_')[0]
       return `${version} | ${name < firstPending ? version : ''} | time`
     }).join('\n')
-    for (const project of ['sandbox', 'wacgxhsdhrqigrmqaonc']) {
-      assert.deepEqual(reviewedMigrationFlags(ledger, project), [])
-    }
+    assert.deepEqual(reviewedMigrationFlags(ledger), [])
   }
 })
 
-test('main pushes deploy production; sandbox is manual-only; manual sources belong to the destination branch', () => {
+test('main pushes deploy production; dev pushes deploy sandbox; manual sources belong to the destination branch', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-deployment-'))
   const git = args => execFileSync('git', ['-C', directory, ...args], {
     encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
@@ -102,7 +98,7 @@ test('main pushes deploy production; sandbox is manual-only; manual sources belo
     assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'main' }, git), /full commit SHA/)
     const automatic = resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main', GITHUB_SHA: main, DEPLOY_ENVIRONMENT: 'sandbox' }, git)
     assert.deepEqual(automatic, { sha: main, branch: 'main', environment: 'production' })
-    assert.throws(() => resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/dev', GITHUB_SHA: dev }, git), /Production must use the workflow on main/, 'dev pushes never deploy')
+    assert.deepEqual(resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/dev', GITHUB_SHA: dev, DEPLOY_ENVIRONMENT: 'production' }, git), { sha: dev, branch: 'dev', environment: 'sandbox' })
     assert.throws(() => resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/feature/demo', GITHUB_SHA: feature }, git), /workflow on main or dev/)
     assert.throws(() => resolveDeployment({ ...env, GITHUB_EVENT_NAME: 'pull_request' }, git), /Unsupported/)
     assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'invalid' }, git), /Choose production or sandbox/)
@@ -116,7 +112,7 @@ test('dev and main PRs run CI, main accepts only dev, and releases reuse reviewe
   assert.match(workflow('main-source'), /pull_request:\n {4}branches: \[main\]\n/)
   assert.ok(workflow('main-source').includes('[ "$HEAD_REF" != dev ] || [ "$HEAD_REPO" != "$REPO" ]'))
   const release = workflow('release')
-  assert.match(release, /push:\n {4}branches: \[main\]\n/)
+  assert.match(release, /push:\n {4}branches: \[main, dev\]\n/)
   for (const removed of ['ci.yml', 'skip_checks', 'override_reason', '--check-current']) assert.ok(!release.includes(removed), removed)
   assert.ok(workflow('prepare').includes('cache-to: type=gha,scope=api,mode=max'), 'Release builds keep a cache readable from main and dev')
 })

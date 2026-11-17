@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
     inputs:
       environment:
@@ -21,7 +21,7 @@ permissions:
 # Tests run on PRs into dev; releases deploy already-reviewed commits without re-running them.
 # Queue complete production pipelines in release order. Sandbox runs lock only their deploy job.
 concurrency:
-  group: release-${{ (github.event_name == 'push' || inputs.environment == 'production') && 'production' || github.run_id }}
+  group: release-${{ ((github.event_name == 'push' && github.ref_name == 'main') || inputs.environment == 'production') && 'production' || github.run_id }}
   queue: max
   cancel-in-progress: false
 
