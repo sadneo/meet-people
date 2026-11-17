@@ -19,9 +19,9 @@ for(const email of ['pebble-demo-001@example.test','pebble-demo-002@example.test
 const secret=randomUUID()+'Aa1!',clients=[]
 let server,seeded=false
 const env={...process.env,SUPABASE_URL:status.API_URL,SUPABASE_PUBLISHABLE_KEY:status.ANON_KEY,SUPABASE_SERVICE_ROLE_KEY:status.SERVICE_ROLE_KEY}
-const run=(args,input)=>execFileSync('pnpm',args,{input,env,encoding:'utf8',stdio:[input===undefined?'ignore':'pipe','pipe','pipe'],timeout:120000})
+const run=(args,input)=>execFileSync('node',['scripts/demo.mjs',...args],{input,env,encoding:'utf8',stdio:[input===undefined?'ignore':'pipe','pipe','pipe'],timeout:120000})
 try {
- run(['demo:seed','--count','2','--password-stdin','--refresh-location'],secret+'\n');seeded=true
+ run(['seed','--count','2','--password-stdin','--refresh-location'],secret+'\n');seeded=true
  for(let i=1;i<=2;i++){
   const client=createClient(status.API_URL,status.ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false}})
   const signed=await client.auth.signInWithPassword({email:`pebble-demo-00${i}@example.test`,password:secret});assert.ifError(signed.error)
@@ -40,8 +40,8 @@ try {
  }
  const sent=await call(0,`/friends/requests/${clients[1].id}`,{});assert.equal(sent.status,'sent')
  const connected=await call(1,`/friends/requests/${clients[0].id}/accept`,{});assert.equal(connected.status,'connected')
- run(['demo:active','--count','2','--new-friends','1','--enable-active'])
- run(['matchmaking:active:once'])
+ run(['active','--count','2','--new-friends','1','--enable-active'])
+ run(['matchmaking-once'])
  const states=await Promise.all([0,1].map(i=>call(i,'/active-friends/status')))
  assert.equal(states[0].state,'reserved');assert.equal(states[0].proposal.id,states[1].proposal.id)
  const proposal=states[0].proposal.id
@@ -53,5 +53,5 @@ try {
  console.log('PASS: real local Auth, passive Friends/Dating batches, explicit Friends acceptance, active enrollment/reservation/all-member acceptance, group history and idempotent messaging.')
 } finally {
  server?.kill('SIGTERM')
- if(seeded)run(['demo:remove','--count','2'])
+ if(seeded)run(['remove','--count','2'])
 }

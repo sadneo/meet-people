@@ -162,11 +162,11 @@ test('frontend builds reject the wrong branch, project, missing key or unresolve
 test('dev web and mobile include their own screens and toolbar; production web excludes mobile and development controls', () => {
   const env = { ...process.env, DEPLOY_ENVIRONMENT: 'sandbox', VITE_BUILD_BRANCH: 'dev', VITE_BUILD_SHA: 'a'.repeat(40), VITE_SUPABASE_URL: 'https://wixdiotkntapwrbibaom.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', VITE_GOOGLE_MAPS_API_KEY: 'test-browser-maps-key', GOOGLE_MAPS_SERVER_API_KEY: 'private-server-key-must-not-be-bundled', SEARCH_LOCATION_SIGNING_KEY: 'private-signing-key-must-not-be-bundled' }
   const bundle = (product = 'web') => readdirSync(`dist/${product}/assets`).filter(file => file.endsWith('.js')).map(file => readFileSync(`dist/${product}/assets/${file}`, 'utf8')).join('\n')
-  execFileSync('pnpm', ['build:web:devtools'], { stdio: 'inherit', env })
+  execFileSync('pnpm', ['build:web'], { stdio: 'inherit', env: { ...env, VITE_DEV_TOOLS: 'true' } })
   assert.ok(bundle().includes('Development navigation'))
   assert.ok(!bundle().includes('/__dev/login'))
   assert.ok(!bundle().includes('Continue with email'))
-  execFileSync('pnpm', ['build:mobile:devtools'], { stdio: 'inherit', env })
+  execFileSync('pnpm', ['build:mobile'], { stdio: 'inherit', env: { ...env, VITE_DEV_TOOLS: 'true' } })
   assert.ok(bundle('mobile').includes('Development navigation'))
   assert.ok(bundle('mobile').includes('Continue with email'))
   assert.ok(!bundle('mobile').includes('/__dev/login'))

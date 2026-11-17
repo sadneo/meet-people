@@ -47,9 +47,9 @@ positions advance and their change notifications refresh history.
 
 Verification:
 
-- `pnpm typecheck`, `pnpm lint`, `pnpm test:unit`.
+- `pnpm typecheck`, `pnpm lint`, `pnpm test`.
 - `pnpm test:browser tests/browser/messages-realtime.spec.ts tests/browser/messages-retry-navigation.spec.ts`.
-- `pnpm test:integration:schema` replays both database tracks in disposable
+- `pnpm test:integration` replays both database tracks in disposable
   containers and checks notification recipients, read no-ops, departures and
   owner-only receive/no client publish permissions. Those containers use a
   test stand-in for the platform-owned Realtime schema; they do not prove
@@ -72,7 +72,7 @@ values may also be supplied. After the two migrations above are installed on
 that project, run:
 
 ```sh
-pnpm run dev:remote
+pnpm dev --remote
 ```
 
 Open `http://127.0.0.1:3302/messages` in separate normal/private windows and sign
@@ -85,7 +85,7 @@ With that app running, the Supabase CLI logged in, and the root `.env` targeting
 the production project, run the complete acceptance check in another terminal:
 
 ```sh
-pnpm run test:hosted:messaging
+pnpm test:hosted <url> --messaging
 ```
 
 This opt-in check creates three marked, temporary remote accounts. It checks
@@ -116,7 +116,7 @@ pnpm run dev
 ```
 
 ```sh
-pnpm run dev:mobile
+pnpm dev
 ```
 
 Then run the real API acceptance check:

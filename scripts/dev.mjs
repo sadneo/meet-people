@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import concurrently from 'concurrently'
 import { engineReachable as reachable } from './lib/containers.mjs'
 import { freePorts } from './lib/ports.mjs'
-import { credentialsDir, currentStack, devProjectId, startDevStack, stackEnv } from './lib/stack.mjs'
+import { childEnv, credentialsDir, currentStack, devProjectId, startDevStack } from './lib/stack.mjs'
 import { waitForRun } from './lib/wait.mjs'
 import { main as doctor } from './doctor.mjs'
 import { ensureLocalEnv } from './write-local-env.mjs'
@@ -52,11 +52,8 @@ async function launch(context, stack, keys, { log, interrupt, signal }) {
   const runId = randomUUID()
   const list = parts({ ...context, ports })
   const env = {
-    ...process.env, ...stackEnv(stack),
+    ...childEnv(stack, keys),
     PATH: `${join(root, 'node_modules/.bin')}${delimiter}${process.env.PATH}`,
-    SUPABASE_URL: keys.apiUrl, VITE_SUPABASE_URL: keys.apiUrl,
-    SUPABASE_PUBLISHABLE_KEY: keys.publishableKey, VITE_SUPABASE_PUBLISHABLE_KEY: keys.publishableKey,
-    SUPABASE_SERVICE_ROLE_KEY: keys.serviceRoleKey,
     API_PORT: String(ports.api), PEBBLE_RUN_ID: runId,
   }
   const active = list.filter(part => part.command && part.ready)

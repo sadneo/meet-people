@@ -191,7 +191,7 @@ fields elsewhere also remain display-only.
 
 ## Verification and remaining activation work
 
-Run `pnpm verify`, `pnpm test:unit`, and `pnpm test:browser`.
+Run `pnpm verify`, `pnpm test`, and `pnpm test:browser`.
 Focused suites: `tests/matchmaking-contracts.test.ts` exercises the actual
 Express router in memory (no listening service) and the real SDK transport
 with injected mock fetch;

@@ -149,7 +149,7 @@ async function main(){
   console.log('Event proposals require the existing worker. No worker/scoring configuration or group chats were created.')
  }else{
   console.log(`Ready: ${plan.length} onboarded demo accounts. New accounts are not queued; existing queue memberships are preserved. Dating opted in. Real Dating matcher readback: ${dating.data?.candidate?'candidate found':'no candidate'}.`)
-  console.log('Passive Friends and Dating need no queue. For Messages groups: pnpm demo:active --count 3 --enable-active, then pnpm matchmaking:active:once. Each member must accept their proposal.')
+  console.log('Passive Friends and Dating need no queue. For Messages groups: pnpm demo active --count 3 --enable-active, then pnpm demo matchmaking-once. Each member must accept their proposal.')
  }
  console.log(primary?'Sign in as development user. Contacts 001–006 are in Messages; 007/008 have incoming requests; 009 has an outgoing request. All contacts have labeled profile details and demo avatars. Existing passwords unchanged; no credentials saved.':`Logins: ${plan[0].email} through ${plan.at(-1)!.email}; use the password you entered. Fictional labelled avatars ${options['no-photos']?'omitted':'included'}. No credentials saved.`)
 }

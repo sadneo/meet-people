@@ -16,7 +16,7 @@ const settings={auth:{persistSession:false,autoRefreshToken:false,detectSessionI
 const admin=createClient(status.API_URL,status.SERVICE_ROLE_KEY,settings)
 const sql=(source:string)=>containerResult(['exec','-i',stack.dbContainer,'psql','-X','-qAt','-U','postgres','-v','ON_ERROR_STOP=1','-d','postgres'],{input:source})
 const checked=(source:string)=>{const result=sql(source);assert.equal(result.status,0,'Scoped seed SQL failed');return result.stdout.trim()}
-const run=()=>spawnSync('pnpm',['demo:seed','--count','2','--password-stdin'],{input:password+'\n',encoding:'utf8',timeout:120000})
+const run=()=>spawnSync('node',['scripts/demo.mjs','seed','--count','2','--password-stdin'],{input:password+'\n',encoding:'utf8',timeout:120000})
 for(const p of plan){const exists=await admin.auth.admin.getUserById(p.id);assert.equal(exists.error?.status,404,'Reserved test identities occupied; refusing to touch them')}
 let owns=false
 try{
@@ -31,7 +31,7 @@ try{
   actors.push(actor)
  }
  assert.equal((await actors[0].rpc('get_queue_status')).data[0].my_queue,null)
- const queue=(...args:string[])=>spawnSync('pnpm',['demo:queue',...args],{encoding:'utf8',timeout:30000})
+ const queue=(...args:string[])=>spawnSync('node',['scripts/demo.mjs','queue',...args],{encoding:'utf8',timeout:30000})
  assert.equal(queue('--count','1').status,0)
  assert.equal((await actors[0].rpc('get_queue_status')).data[0].my_queue,'matchmaking')
  assert.equal((await actors[1].rpc('get_queue_status')).data[0].my_queue,null)

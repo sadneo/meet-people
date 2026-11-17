@@ -360,7 +360,7 @@ releasing the already-active version directly, so a new clone is required.
   automatically repeated. `scripts/deploy-worker.sh` defines the runtime settings.
 
 ```sh
-pnpm test:deployment
+pnpm test
 pnpm test:hosted https://pebble.garden
 pnpm test:hosted https://web.dev.pebble.garden
 pnpm test:hosted https://mobile.dev.pebble.garden

@@ -98,7 +98,7 @@ try {
     execFileSync('pnpm',['exec','supabase','db','query','--linked','--project-ref',target.hostname.split('.')[0],'--file',cleanupProbe,'--output','json'],{stdio:'pipe',encoding:'utf8',timeout:30000})
   } catch { throw new Error('Run supabase login before testing; SQL cleanup access is required') }
   const readiness = await fetch('http://127.0.0.1:3302/api/health',{signal:AbortSignal.timeout(5000)})
-  requireValue(readiness.status===200,'Start pnpm run dev:remote before this test')
+  requireValue(readiness.status===200,'Start pnpm dev --remote before this test')
   const shape = await admin.from('conversations').select('id,source_key').limit(0)
   requireValue(!shape.error || ['42703', 'PGRST204'].includes(shape.error.code), `conversation_schema_${shape.error?.code}`)
   native = !shape.error

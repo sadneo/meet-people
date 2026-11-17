@@ -32,4 +32,7 @@ export function reapTestStacks(deps?: {
 export function currentStack(root?: string, env?: Record<string, string | undefined>): Stack | null
 export function requireStack(root?: string, env?: Record<string, string | undefined>): Stack
 export function supabaseStatus(stack: Stack): Record<string, string>
+type Keys = { apiUrl: string; publishableKey: string; serviceRoleKey: string }
+export function stackKeys(stack: Stack): Keys
+export function childEnv(stack: Stack, keys: Keys): NodeJS.ProcessEnv
 export function assertLocalStack(url: string, stack: Stack): void

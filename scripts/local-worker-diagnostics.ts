@@ -3,8 +3,8 @@ import type { WorkerDiagnostic } from '../api/event-group-worker.js'
 import { credentialsDir, currentStack } from './lib/stack.mjs'
 
 const stages = {
-  runtime: ['runtime', 'Check command arguments and run pnpm run doctor.'],
-  database: ['local_database', 'Check Docker and the owned local Supabase project with pnpm run doctor. Doctor starts nothing.'],
+  runtime: ['runtime', 'Check command arguments and run pnpm dev --check.'],
+  database: ['local_database', 'Check Docker and the owned local Supabase project with pnpm dev --check. Doctor starts nothing.'],
   configuration: ['local_configuration', "Check pnpm exec supabase status and the current stack's API (see pnpm dev --help). Do not share its keys or raw output."],
   credentials: ['private_credentials', 'Check the <credentialsDir>/event-group-worker.json file: owner-only 0600, regular non-symlink, valid contents. Do not delete or publish it.'],
   identity: ['worker_identity', 'Check local Auth availability and existing worker identity ownership. Do not replace its identity or reset its password to bypass this check.'],
@@ -13,7 +13,7 @@ const stages = {
   workerSetup: ['worker_setup', 'Worker registration or enabling could not be confirmed. Inspect existing local worker/settings state before explicitly rerunning setup. No rollback is implied.'],
   policyCheck: ['matching_policy', 'The local matching policy is absent or its read check failed. Check database readiness and docs/demo-data.md before explicitly running setup. Do not reset the database.'],
   authentication: ['worker_authentication', 'Check local Auth availability and existing private worker credentials. No automatic login retry or password reset was attempted.'],
-  transport: ['worker_transport', 'Check local API availability and public-key configuration with pnpm run doctor. No scoring retry was attempted.'],
+  transport: ['worker_transport', 'Check local API availability and public-key configuration with pnpm dev --check. No scoring retry was attempted.'],
   personalCycle: ['development_queue', 'A development-account cycle stopped. Inspect existing jobs, leases and proposals before restarting or explicitly rejoining. Do not replay scoring/completion.'],
   generalCycle: ['general_queue', 'A general queue cycle stopped. Inspect existing jobs, leases and proposals before restarting or explicitly rejoining. Do not replay scoring/completion.'],
 } as const

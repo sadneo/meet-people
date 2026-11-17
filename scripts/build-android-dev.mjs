@@ -1,5 +1,5 @@
 // Builds the Android dev variant (the one with the "skip login" button) and syncs it into android/.
-// The release path is unchanged: `pnpm build:android` still builds `--mode android` from .env.android.
+// The release path is unchanged: `pnpm android` still builds `--mode android` from .env.android.
 import { spawnSync } from 'node:child_process'
 
 const shell = process.platform === 'win32' // pnpm is a .cmd shim on Windows

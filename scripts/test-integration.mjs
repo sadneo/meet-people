@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { container } from './lib/containers.mjs'
-import { reapTestStacks, removeStack, startStack, stackEnv, testStack } from './lib/stack.mjs'
+import { childEnv, reapTestStacks, removeStack, startStack, testStack } from './lib/stack.mjs'
 import { runBuilt } from './test-built.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
@@ -32,16 +32,6 @@ const run = (command, args, env) => new Promise(resolve => {
   current = spawn(command, args, { cwd: root, env, stdio: 'inherit' })
   current.once('error', error => { console.error(error.message); resolve(1) })
   current.once('close', code => resolve(code ?? 1))
-})
-
-const childEnv = (stack, keys) => ({
-  ...process.env,
-  ...stackEnv(stack),
-  SUPABASE_URL: keys.apiUrl,
-  VITE_SUPABASE_URL: keys.apiUrl,
-  SUPABASE_PUBLISHABLE_KEY: keys.publishableKey,
-  VITE_SUPABASE_PUBLISHABLE_KEY: keys.publishableKey,
-  SUPABASE_SERVICE_ROLE_KEY: keys.serviceRoleKey,
 })
 
 async function dbTypes(env) {

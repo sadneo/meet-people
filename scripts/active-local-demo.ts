@@ -15,6 +15,6 @@ try {
   if(result.status!==0) throw new Error(`Transaction rolled back. Check matching migrations, seed ownership, active policy, availability timezone and trusted search areas. ${result.stderr.trim()}`)
   if(action==='status') console.log(result.stdout.trim())
   console.log('Done. All selected actions committed.')
-  if(action==='join') console.log('Run pnpm matchmaking:active:once, then open Messages → Find a group → Check. Proposals still require every member’s explicit acceptance; this tool never accepts for them.')
+  if(action==='join') console.log('Run pnpm demo matchmaking-once, then open Messages → Find a group → Check. Proposals still require every member’s explicit acceptance; this tool never accepts for them.')
  }
 } catch(error) { console.error(error instanceof Error?error.message:'Local demo action failed');process.exitCode=1 }

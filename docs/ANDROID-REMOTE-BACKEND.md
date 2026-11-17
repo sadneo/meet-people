@@ -7,7 +7,7 @@ local stack is configuration plus one-time hosting setup. Do the steps in order;
 ## 1. Hosted Supabase
 1. Create a project; note the **URL**, **publishable key** and **service-role key** (Settings -> API Keys).
 2. Push the schema: `pnpm exec supabase link --project-ref <ref>` then `pnpm exec supabase db push`.
-3. Regenerate types only against local (`pnpm supabase:types`); do not point it at production by accident.
+3. Regenerate types only against local (`pnpm db:types`); do not point it at production by accident.
 
 ## 2. Supabase Auth settings (Authentication -> URL Configuration)
 - **Site URL**: your web URL.

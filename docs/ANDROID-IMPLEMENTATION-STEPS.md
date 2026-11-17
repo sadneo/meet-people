@@ -18,7 +18,6 @@ The zip changes 12 existing files of yours and adds the rest. If you applied my 
 
 ## 2. Package scripts and dependencies
 ```
-node scripts/apply-android-changes.mjs              # adds the 4 npm scripts to package.json
 pnpm add @capacitor/push-notifications google-auth-library
 ```
 Commit `pnpm-lock.yaml` too: the Dockerfile installs with a frozen lockfile.
@@ -27,10 +26,10 @@ Your `.gitignore` probably ignores `.env.*`, so keep the example file with `git 
 ## 3. Database (local)
 `config.toml` and `seed.sql` changed, so restart and rebuild:
 ```
-pnpm supabase:stop
-pnpm supabase:start
-pnpm supabase:reset        # rebuilds the local database: migrations + fixed seed. This wipes local data.
-pnpm env:local
+pnpm supabase stop
+pnpm supabase start
+pnpm supabase db reset        # rebuilds the local database: migrations + fixed seed. This wipes local data.
+pnpm dev
 ```
 To keep your local data instead of resetting, run the fix and the two push migrations by hand (all are safe to repeat):
 ```
@@ -49,26 +48,26 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<the local publishable key already in your .env.an
 VITE_DEV_LOGIN_EMAIL=android-dev@example.com
 VITE_DEV_LOGIN_PASSWORD=pick-something-local-only-123
 ```
-Then start the API in its own terminal (`pnpm dev:api`) and in another:
+Then start the API in its own terminal (`pnpm dev`) and in another:
 ```
-pnpm android:dev-user
+pnpm android --user
 ```
 
 ## 5. Checks
 ```
 pnpm typecheck
-pnpm test:unit        # the new tests should pass; other failures may already exist in your repo
-pnpm test:alt
+pnpm test        # the new tests should pass; other failures may already exist in your repo
+node src/alt/tests/account-ui.check.cjs
 ```
 If `pnpm lint` complains about `src/alt/`, add `src/alt/**` to the ignores in `eslint.config.js`.
 
 ## 6. Run it on the emulator
 ```
-pnpm android:dev
+pnpm android --dev
 ```
 In Android Studio press Run, then tap **Skip login (dev account)** on the login screen.
-Dev builds only appear with `pnpm android:dev`. **Before building anything to install elsewhere, run
-`pnpm build:android`** so the app is built from `.env.android` and has no dev button.
+Dev builds only appear with `pnpm android --dev`. **Before building anything to install elsewhere, run
+`pnpm android`** so the app is built from `.env.android` and has no dev button.
 
 ## 7. Later
 - **Push notifications:** needs a Firebase project and `google-services.json`; see `PUSH-NOTIFICATIONS.md`.

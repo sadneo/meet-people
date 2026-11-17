@@ -1,7 +1,7 @@
 # Local messaging preview
 
-Run `pnpm demo:messages` after `pnpm demo:seed --count 20` and development-account
-sign-in. `pnpm demo:messages --dry-run` previews without database or Docker access.
+Run `pnpm demo messages` after `pnpm demo seed --count 20` and development-account
+sign-in. `pnpm demo messages --dry-run` previews without database or Docker access.
 
 The guarded script targets only the running local `meet-people` Docker database.
 It verifies the development account's admin-owned marker and all four reserved

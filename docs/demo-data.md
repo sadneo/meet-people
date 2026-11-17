@@ -9,9 +9,9 @@ These commands target **only** the running `supabase_db_meet-people` local proje
 ## Populate the main testing scenarios
 
 ```sh
-pnpm demo:populate --dry-run          # preview everything, no database access
-pnpm demo:populate                    # 60 contacts for the development login
-pnpm demo:populate --count 100        # optional 12–100 contacts
+pnpm demo populate --dry-run          # preview everything, no database access
+pnpm demo populate                    # 60 contacts for the development login
+pnpm demo populate --count 100        # optional 12–100 contacts
 ```
 
 The command renews the existing reviewed Stony Brook campus catalogue entry and
@@ -55,7 +55,7 @@ the development account. Existing unrelated queue memberships are preserved.
 Run the local matching worker in a separate terminal:
 
 ```sh
-pnpm dev:groups
+pnpm dev
 ```
 
 It installs the local matching policy, enables its dedicated worker and processes
@@ -78,7 +78,7 @@ The retired `/api/events/:id/company` feature is not reinstated.
 
 ### Worker diagnostics and recovery
 
-`pnpm dev:groups` now identifies the failed startup step or queue operation rather
+`pnpm dev` now identifies the failed startup step or queue operation rather
 than printing one generic error. For example:
 
 ```text
@@ -95,7 +95,7 @@ but the worker still stops instead of taking another job.
 
 | Stop category | Safe next action |
 | --- | --- |
-| `local_database`, `local_configuration`, `worker_transport` | Run `pnpm run doctor`; check local Docker/Supabase/API availability. Doctor does not start anything. |
+| `local_database`, `local_configuration`, `worker_transport` | Run `pnpm dev --check`; check local Docker/Supabase/API availability. Doctor does not start anything. |
 | `private_credentials`, `worker_identity`, `worker_authentication` | Inspect local Auth availability and private file ownership/permissions. Do not publish credentials, replace an identity or reset passwords to bypass checks. |
 | `worker_provisioning`, `policy_setup`, `worker_setup` | Earlier setup work may already be committed. Inspect existing identity/schema/worker state before explicitly rerunning setup; failure does not imply rollback. |
 | `matching_policy` | Check database readiness and the local policy installation before explicitly running setup. Do not reset existing data. |
@@ -111,21 +111,21 @@ or schema changes beyond the command's existing explicit `--setup` behavior.
 To fill all currently available events without rerunning the full profile seed:
 
 ```sh
-pnpm demo:event --all
+pnpm demo event --all
 ```
 
 Each event has its own queue. To populate only one regular event, first **Join
 group queue** as the development user, then copy the UUID from its URL and run:
 
 ```sh
-pnpm demo:event --event-id <event-uuid> --dry-run
-pnpm demo:event --event-id <event-uuid>
+pnpm demo event --event-id <event-uuid> --dry-run
+pnpm demo event --event-id <event-uuid>
 ```
 
 This queues 17 existing labeled demo contacts for that event only (`--count 1–50`
 changes the number). It skips connected or blocked contacts and requires a future
 active event. It preserves the imported event, profiles, existing enrollments and
-matching attempts. Keep `pnpm dev:groups` running; the waiting page updates
+matching attempts. Keep `pnpm dev` running; the waiting page updates
 automatically. It refuses single-event population when the development account
 has not joined.
 
@@ -136,7 +136,7 @@ or otherwise incompatible fixture edits cause a checked failure rather than
 silently removing safeguards. To renew only this script's expired/cancelled events:
 
 ```sh
-pnpm demo:populate --refresh-events
+pnpm demo populate --refresh-events
 ```
 
 The development-account command preserves existing contact passwords and assigns
@@ -145,7 +145,7 @@ It does not need you to sign into the contacts. To deliberately set a shared log
 password for the seeded contacts, use the separate interactive tool:
 
 ```sh
-pnpm demo:seed --count 60 --refresh-location --reset-passwords
+pnpm demo seed --count 60 --refresh-location --reset-passwords
 ```
 
 This resets passwords only on marked fixture accounts; it preserves the dedicated
@@ -160,18 +160,18 @@ uncertain responses do not imply a full-run rollback.
 ## Profiles and separate Friends queue tools
 
 ```sh
-pnpm demo:seed --dry-run              # preview 50; no database/network access
-pnpm demo:seed                        # create/onboard 50; hidden password prompt
-pnpm demo:queue --count 2             # queue accounts 001 and 002 for Friends
+pnpm demo seed --dry-run              # preview 50; no database/network access
+pnpm demo seed                        # create/onboard 50; hidden password prompt
+pnpm demo queue --count 2             # queue accounts 001 and 002 for Friends
 ```
 
 Sign in to your own onboarded demo account at http://127.0.0.1:3000. Choose **Find Friends**, then **Check for a match**. The real matcher chooses at most one candidate per check. Queuing two accounts does not create a group, a connection, online presence, a request, or a completed match. Reciprocal age/distance filters, discovery and safety rules still apply. Use Stony Brook University as the reviewed temporary search area for this local demo. Queued fixtures need no browser window open.
 
 ```sh
-pnpm demo:queue --count 1             # only 001
-pnpm demo:queue --start 3 --count 2   # 003 and 004 instead
-pnpm demo:queue --count 2 --leave     # remove only 001 and 002 from queue
-pnpm demo:queue --count 2 --dry-run   # preview selection without changing anything
+pnpm demo queue --count 1             # only 001
+pnpm demo queue --start 3 --count 2   # 003 and 004 instead
+pnpm demo queue --count 2 --leave     # remove only 001 and 002 from queue
+pnpm demo queue --count 2 --dry-run   # preview selection without changing anything
 ```
 
 Joining is idempotent. A missing/unowned identity or failed eligibility/readback rolls back the entire selected queue batch. Existing normal accounts are never enqueued or edited. Queue commands preserve profile data, preferences and Dating participation.
@@ -187,11 +187,11 @@ New profiles are **not queued** by `demo:seed`. Existing queue memberships survi
 ## Options and reruns
 
 ```sh
-pnpm demo:seed --count 10             # 2–100 deterministic reserved identities
-pnpm demo:seed --no-photos            # omit initial avatars; don't remove existing ones
-pnpm demo:seed --reset-profiles       # explicitly replace owned fixture profile/facts/filters/photos
-pnpm demo:seed --reset-passwords      # explicitly replace owned fixture passwords
-pnpm demo:seed --refresh-location     # renew reviewed local Stony Brook catalogue for seven days
+pnpm demo seed --count 10             # 2–100 deterministic reserved identities
+pnpm demo seed --no-photos            # omit initial avatars; don't remove existing ones
+pnpm demo seed --reset-profiles       # explicitly replace owned fixture profile/facts/filters/photos
+pnpm demo seed --reset-passwords      # explicitly replace owned fixture passwords
+pnpm demo seed --refresh-location     # renew reviewed local Stony Brook catalogue for seven days
 ```
 
 Default reruns preserve completed owner profile/facts/identity edits and removed-photo tombstones, resume incomplete onboarding, refresh trusted campus references, and opt fixtures back into discovery/Dating with downtime off. They intentionally keep every selected fixture's temporary location at Stony Brook. Existing preferences remain authoritative; incompatible owner edits can prevent matches. Rerun with the original password unless explicitly resetting it. `--password-stdin` is available to an automated runner; pass secrets through stdin, never command arguments or committed files.
@@ -207,7 +207,7 @@ Focused unit tests validate 50 varied schema-valid profiles, canonical chapter p
 ```sh
 pnpm exec vitest run --config vite.config.ts tests/unit/demo-seed.test.ts
 pnpm exec tsc -p tsconfig.demo.json
-pnpm test:demo-populate
+pnpm exec tsx tests/integration/offline/demo-scenarios.ts
 # Optional real Auth test; refuses occupied fixture identities:
 pnpm exec tsx tests/integration/offline/demo-seed-real.ts
 ```
@@ -226,4 +226,4 @@ It also verifies a synthetic development-account hub with 60 rich contacts, six
 conversations/18 messages, incoming/outgoing requests, unread state, many Friends
 and Dating candidates, shared event queues, preserved development profile edits,
 and idempotent reruns. The older six-user standalone scenarios remain supported
-with `pnpm demo:seed --scenarios --count 6 --refresh-location`.
+with `pnpm demo seed --scenarios --count 6 --refresh-location`.

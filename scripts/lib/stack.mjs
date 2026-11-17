@@ -91,6 +91,22 @@ export function supabaseStatus(stack) {
   return JSON.parse(execFileSync('sh', ['scripts/supabase.sh', 'status', '--output', 'json'], { cwd: repoRoot, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 8 * 1024 * 1024 }))
 }
 
+export function stackKeys(stack) {
+  const status = supabaseStatus(stack)
+  return { apiUrl: status.API_URL, publishableKey: status.PUBLISHABLE_KEY ?? status.ANON_KEY, serviceRoleKey: status.SERVICE_ROLE_KEY }
+}
+
+// Explicit values win over the shell's, which may still point at another checkout's stack.
+export const childEnv = (stack, keys) => ({
+  ...process.env,
+  ...stackEnv(stack),
+  SUPABASE_URL: keys.apiUrl,
+  VITE_SUPABASE_URL: keys.apiUrl,
+  SUPABASE_PUBLISHABLE_KEY: keys.publishableKey,
+  VITE_SUPABASE_PUBLISHABLE_KEY: keys.publishableKey,
+  SUPABASE_SERVICE_ROLE_KEY: keys.serviceRoleKey,
+})
+
 export function assertLocalStack(url, stack) {
   if (new URL(url).href !== `${stack.apiUrl}/`) throw new Error(`Refusing ${url}: not the local stack ${stack.apiUrl}.`)
 }

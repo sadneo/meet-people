@@ -30,6 +30,6 @@ async function main(){
   completed++
   if(!flags.all)console.log(`${result.title}: ${result.testProfiles} labeled test profiles queued. /events/${result.eventId}`)
  }
- console.log(`${completed} events populated with ${count} labeled test profiles each. Join any populated event, then Refresh group status. Keep pnpm dev:groups running. Started/cancelled events are excluded; listings and your existing queue choices are preserved.`)
+ console.log(`${completed} events populated with ${count} labeled test profiles each. Join any populated event, then Refresh group status. Keep pnpm dev running. Started/cancelled events are excluded; listings and your existing queue choices are preserved.`)
 }
 main().catch(error=>{console.error(error instanceof z.ZodError?'Use --event-id <event UUID> and optionally --count 1–50.':error instanceof Error?error.message:'Local event population failed');process.exitCode=1})

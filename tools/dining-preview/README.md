@@ -1,7 +1,7 @@
 # Temporary dining menu viewer
 
-Start with `pnpm dining:preview`, then open http://127.0.0.1:5175.
-Use `pnpm dining:preview --port 5176` if that port is occupied.
+Start with `pnpm demo dining-preview`, then open http://127.0.0.1:5175.
+Use `pnpm demo dining-preview --port 5176` if that port is occupied.
 
 Click **Fetch fresh menus** to run both scrapers in full, read-only mode. The
 viewer caches their real JSON output in this folder's ignored `.cache/` directory

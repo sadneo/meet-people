@@ -4,7 +4,7 @@ Run commands from the repository root. Use pnpm exclusively.
 
 | Directory | Command | Boundary |
 | --- | --- | --- |
-| `tests/unit/` | `pnpm test:unit` | Vitest logic, React components/hooks, mocked transports and source-contract checks |
+| `tests/unit/` | `pnpm test` | Vitest logic, React components/hooks, mocked transports and source-contract checks |
 | `tests/browser/` | `pnpm test:browser` | Playwright UI journeys against isolated Vite source on a free port |
 | `tests/integration/` | `pnpm test:integration` | A temporary local Supabase stack: types, SQL contracts, Auth/account persistence, schema replay, built app |
 
@@ -15,8 +15,8 @@ runs no browser, integration or hosted checks and needs no services.
 ## Unit tests
 
 ```sh
-pnpm test:unit
-pnpm test:unit tests/unit/unified-account-readback.test.tsx
+pnpm test
+pnpm exec vitest run tests/unit/unified-account-readback.test.tsx
 pnpm exec vitest list --config vite.config.ts --filesOnly
 ```
 
@@ -65,7 +65,7 @@ Additional existing checks remain explicit:
 
 | Location / command | Prerequisites |
 | --- | --- |
-| `pnpm test:integration:browser` | Real Express/SQL journey; requires the existing guarded offline database fixture named in `tests/integration/offline/disposable.ts` |
+| `node scripts/test-browser.mjs --config playwright.integration.config.ts` | Real Express/SQL journey; requires the existing guarded offline database fixture named in `tests/integration/offline/disposable.ts` |
 | `tests/integration/offline/` | Individual API/SQL/race harnesses; each retains its original disposable database/container guards |
 | `tests/integration/offline/demo-scenarios.ts` | Currently out of date with the demo seed; not run by `test:integration` |
 | `tests/integration/sql/` | SQL acceptance sources and fixtures; run only against their documented target/schema prerequisites |

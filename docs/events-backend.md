@@ -7,9 +7,9 @@ routes and the ingestion branch's navigation stay as they were.
 ## Run locally
 
 ```bash
-pnpm supabase:start
+pnpm supabase start
 pnpm exec supabase migration up --local
-pnpm env:local
+pnpm dev
 pnpm dev
 ```
 
@@ -18,7 +18,7 @@ populates `listings`; only active/rescheduled upcoming or ongoing events appear.
 The migration does not seed fictional events. An empty local database or one
 containing only past events produces an empty calendar.
 
-`pnpm env:local` writes both public browser configuration and private API
+`pnpm dev` writes both public browser configuration and private API
 configuration to ignored `.env.local`. The API development command loads that
 file. Deployed APIs need `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` set in
 their environment; never put the service-role key in a `VITE_*` variable.
