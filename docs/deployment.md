@@ -226,9 +226,11 @@ discovered pooler. The old `SUPABASE_DB_URL` secret is not consumed.
 `hosting/deployment/supabase/config.toml`. The generated Auth configuration enables
 signup with email confirmation and secure password changes. It allows callback
 and reset routes on the environment's custom domains and `web.app` origins, plus
-the existing `com.cse416.meetpeople://app/` native callback/reset routes. Sandbox's
-default Auth URL is `https://mobile.dev.pebble.garden`; production's remains
-`https://pebble.garden`. Mobile clients request their explicit callback destination.
+the existing `com.cse416.meetpeople://app/` native callback/reset routes. Sandbox
+also allows the `com.cse416.meetpeople.dev://app/` routes used by the side-by-side
+Pebble Dev APK. The default Auth URL is `https://mobile.dev.pebble.garden` in
+sandbox and `https://pebble.garden` in production. Mobile clients request their
+explicit callback destination.
 Do not push local development `supabase/config.toml` to hosted projects.
 
 ### Recreate infrastructure
