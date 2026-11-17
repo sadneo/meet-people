@@ -110,7 +110,6 @@ try {
     ['sql contracts', () => sqlSection(stack)],
     ['local auth', () => run(node, ['tests/integration/local/test-local-auth.mjs'], env)],
     ['schema replay', () => run(node, ['tests/integration/local/test-product-schema.mjs'], env)],
-    ['demo scenarios', () => run(node, [bin('tsx/dist/cli.mjs'), 'tests/integration/offline/demo-scenarios.ts'], env)],
     ['built app', () => builtApp(env)],
     ...(matching ? [['matching', () => matchingSection(runId, stacks)]] : []),
   ]

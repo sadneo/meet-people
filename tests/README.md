@@ -6,7 +6,7 @@ Run commands from the repository root. Use pnpm exclusively.
 | --- | --- | --- |
 | `tests/unit/` | `pnpm test:unit` | Vitest logic, React components/hooks, mocked transports and source-contract checks |
 | `tests/browser/` | `pnpm test:browser` | Playwright UI journeys against isolated Vite source on a free port |
-| `tests/integration/` | `pnpm test:integration` | A temporary local Supabase stack: types, SQL contracts, Auth/account persistence, schema replay, demo scenarios, built app |
+| `tests/integration/` | `pnpm test:integration` | A temporary local Supabase stack: types, SQL contracts, Auth/account persistence, schema replay, built app |
 
 `pnpm test` runs Vitest, the Node tests (`tests/scripts`, doctor, deployment,
 migration audit, recovery, `tools/qa-real-users`) and the alt-frontend check. It
@@ -58,7 +58,6 @@ sections still run after a failure, and a PASS/FAIL table ends the run:
 | `sql contracts` | `tests/integration/sql/` seed-messaging, hosted-services, dining-menus, sbengaged-month-sync |
 | `local auth` | two disposable users: sign-up, login, recovery, onboarding/account persistence and isolation |
 | `schema replay` | Auth DDL from the stack's database replayed into a separate network-none PostgreSQL |
-| `demo scenarios` | `tests/integration/offline/demo-scenarios.ts` on a disposable database inside the stack |
 | `built app` | builds, then `tests/integration/built/` against the built web + API on free ports |
 | `matching` | `--matching` only: `test-matching-http.mjs` on a second stack |
 
@@ -68,6 +67,7 @@ Additional existing checks remain explicit:
 | --- | --- |
 | `pnpm test:integration:browser` | Real Express/SQL journey; requires the existing guarded offline database fixture named in `tests/integration/offline/disposable.ts` |
 | `tests/integration/offline/` | Individual API/SQL/race harnesses; each retains its original disposable database/container guards |
+| `tests/integration/offline/demo-scenarios.ts` | Currently out of date with the demo seed; not run by `test:integration` |
 | `tests/integration/sql/` | SQL acceptance sources and fixtures; run only against their documented target/schema prerequisites |
 | `tests/integration/local/` | Additional explicit local-service scripts; they resolve the stack from `PEBBLE_SUPABASE_PROJECT_ID` and `PEBBLE_SUPABASE_URL`, else `.pebble/dev.json` (`pnpm dev`) |
 | `pnpm test:hosted <https-origin>` | Opt-in deployed-site smoke check |

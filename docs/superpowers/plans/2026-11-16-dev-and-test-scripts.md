@@ -82,7 +82,7 @@
   - `stackEnv(stack: Stack): Record<string,string>` — `SUPABASE_PROJECT_ID`, `SUPABASE_API_PORT`, `SUPABASE_DB_PORT`, `SUPABASE_DB_SHADOW_PORT`, `SUPABASE_STUDIO_PORT`, `SUPABASE_LOCAL_SMTP_PORT`, `PEBBLE_SUPABASE_PROJECT_ID`, `PEBBLE_SUPABASE_URL`.
   - `devStack(root?): Promise<Stack>` — reads `.pebble/dev.json`; if the stack's db container is running, reuse its recorded ports; else reuse remembered ports that are all free, else `freePorts(5, [54321,54322,54320,54323,54324])`; writes `.pebble/dev.json` (mode 0600).
   - `testStack(runId: string): Promise<Stack>` — project `meet-people-test-<runId>`, `freePorts(5)`.
-  - `startStack(stack, { minimal?: boolean, workdir?: string, siteUrl?: string }): Promise<{ apiUrl, publishableKey, anonKey, serviceRoleKey }>` — runs `sh scripts/supabase.sh [--workdir] start [-x studio,mailpit,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta]` with `stackEnv` + `SUPABASE_AUTH_SITE_URL`; then parses `status --output json`. When `minimal`, labels the run owner by writing `/tmp/opencode/pebble-stacks/<projectId>.json` `{ pid: process.pid }` (falls back to `os.tmpdir()`).
+  - `startStack(stack, { minimal?: boolean, workdir?: string, siteUrl?: string }): Promise<{ apiUrl, publishableKey, anonKey, serviceRoleKey }>` — runs `sh scripts/supabase.sh [--workdir] start [-x studio,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta]` (mailpit stays: local auth signup needs SMTP; non-minimal is `-x logflare,vector`) with `stackEnv` + `SUPABASE_AUTH_SITE_URL`; then parses `status --output json`. When `minimal`, labels the run owner by writing `/tmp/opencode/pebble-stacks/<projectId>.json` `{ pid: process.pid }` (falls back to `os.tmpdir()`).
   - `removeStack(projectId): Promise<void>` — `rm -f` containers, `volume rm -f`, `network rm` by label; tolerates none.
   - `reapTestStacks(): Promise<string[]>` — for each distinct `com.supabase.cli.project` label starting `meet-people-test-` whose owner file's pid is not alive (or missing), `removeStack`; returns removed ids.
   - `currentStack(root?): Stack | null` — sync; from `PEBBLE_SUPABASE_PROJECT_ID`/`PEBBLE_SUPABASE_URL` env, else `.pebble/dev.json`, else null. Used by one-off scripts and guards.
@@ -186,9 +186,8 @@ Behaviour:
 3. `sql contracts`: `seed-messaging.sql`, `hosted-services.sql`, `dining-menus.sql`, `sbengaged-month-sync.sql` via `container(['exec','-i',db,'psql','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1'],{input})`.
 4. `local auth`: `node tests/integration/local/test-local-auth.mjs` with stack env.
 5. `schema replay`: `node tests/integration/local/test-product-schema.mjs` with stack env.
-6. `demo scenarios`: `tsx tests/integration/offline/demo-scenarios.ts`.
-7. `built app`: `pnpm build` then `runBuilt([], stackEnv)`.
-8. `--matching` only: second stack `meet-people-test-<runId>-m` via `scripts/start-matching-supabase.py` (edit: take workdir/project from env, start through `scripts/supabase.sh` with stack env) then `node tests/integration/local/test-matching-http.mjs`.
+6. `built app`: `pnpm build` then `runBuilt([], stackEnv)`.
+7. `--matching` only: second stack `meet-people-test-<runId>-m` via `scripts/start-matching-supabase.py` (edit: take workdir/project from env, start through `scripts/supabase.sh` with stack env) then `node tests/integration/local/test-matching-http.mjs`.
 
 **`test:hosted <url> [--account|--product|--messaging]`**: no flag → `tests/integration/hosted/test-hosted.mjs <url>`; flags map to the three existing scripts with their current env-file/Chromium settings.
 

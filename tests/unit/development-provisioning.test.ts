@@ -2,6 +2,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { provisionDevelopmentAccount } from '../../dev/provision-development-account'
 
+vi.mock('../../scripts/lib/stack.mjs', async importOriginal => (await import('./hermetic-stack')).hermeticStack(await importOriginal<typeof import('../../scripts/lib/stack.mjs')>()))
+
 const mocks = vi.hoisted(() => ({ mkdir: vi.fn(), writeFile: vi.fn(), createUser: vi.fn(), getUserById: vi.fn(), signInWithPassword: vi.fn(), rpc: vi.fn(), loadEnv: vi.fn() }))
 vi.mock('node:fs/promises', () => ({ mkdir: mocks.mkdir, writeFile: mocks.writeFile }))
 vi.mock('vite', () => ({ loadEnv: mocks.loadEnv }))

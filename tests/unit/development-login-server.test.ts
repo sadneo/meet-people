@@ -6,6 +6,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { developmentLoginEnabled, developmentLoginPlugin, developmentLoginHandler, authenticateDevelopmentAccount, parseDevelopmentCredentials, readDevelopmentCredentials } from '../../dev/development-login'
 
+vi.mock('../../scripts/lib/stack.mjs', async importOriginal => (await import('./hermetic-stack')).hermeticStack(await importOriginal<typeof import('../../scripts/lib/stack.mjs')>()))
+
 vi.mock('../../dev/private-development-file', () => ({ validatePrivateDevelopmentFile: async (_path: string, stat: { uid: number; mode: number }) => {
   if (stat.uid !== 1000 || (stat.mode & 0o7777) !== 0o600) throw new Error('Invalid credential file permissions')
 } }))

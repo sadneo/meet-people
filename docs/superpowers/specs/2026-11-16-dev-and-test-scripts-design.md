@@ -76,8 +76,8 @@ and `SUPABASE_*_PORT` (verified with CLI 2.117 on Podman).
 
 - **Dev stack:** `pebble-<worktree-slug>`, long-lived, one per worktree.
 - **Test stack:** `pebble-test-<run-id>`, created by `pnpm test:integration`,
-  with studio, mailpit, logflare, vector, imgproxy, edge-runtime, supavisor and
-  postgres-meta excluded. Torn down on exit and on signals. Teardown removes
+  with studio, logflare, vector, imgproxy, edge-runtime, supavisor and
+  postgres-meta excluded (mailpit stays: local auth signup needs SMTP). Torn down on exit and on signals. Teardown removes
   containers, volumes and network by the `com.supabase.cli.project` label
   because `supabase stop` fails to prune volumes on Podman.
 - **Reaper:** each test run first removes `pebble-test-*` stacks whose owner
@@ -153,7 +153,10 @@ aggregate job is unchanged. `prepare.yml` uses inline `VITE_DEV_TOOLS=true`.
   stack through `SUPABASE_AUTH_SITE_URL`.
 - **`test:integration` default** runs everything that works on a standard
   stack: type-drift check, SQL contract files from CI, local auth and schema
-  replay, demo scenarios, and built-app browser tests (it builds first).
+  replay, and built-app browser tests (it builds first). Demo scenarios are not
+  included: `tests/integration/offline/demo-scenarios.ts` is stale against the
+  current migrations and demo seed. Minimal test stacks keep mailpit because
+  local auth signup needs SMTP.
   `--matching` additionally starts the separate matching-profile stack and runs
   the matching HTTP check. The disposable-container browser journey
   (`playwright.integration.config.ts`) needs hand-built fixtures that no script

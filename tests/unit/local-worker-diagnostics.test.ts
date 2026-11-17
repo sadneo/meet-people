@@ -2,6 +2,8 @@ import { expect, it, vi } from 'vitest'
 import { localWorkerFailure, workerDiagnosticMessage, type LocalWorkerStage } from '../../scripts/local-worker-diagnostics'
 import type { WorkerDiagnostic } from '../../api/event-group-worker'
 
+vi.mock('../../scripts/lib/stack.mjs', async importOriginal => (await import('./hermetic-stack')).hermeticStack(await importOriginal<typeof import('../../scripts/lib/stack.mjs')>()))
+
 it.each<LocalWorkerStage>(['runtime', 'database', 'configuration', 'credentials', 'identity', 'provisioning', 'policySetup', 'workerSetup', 'policyCheck', 'authentication', 'transport', 'personalCycle', 'generalCycle'])('has actionable, redacted guidance for %s', stage => {
   const text = localWorkerFailure(stage)
   expect(text).toMatch(/stopped \[[a-z_]+\]/)
