@@ -119,9 +119,9 @@ export async function startStack(stack, { minimal = false, workdir, siteUrl } = 
   // Analytics would need one more allocated port per stack and only serves Studio's logs UI.
   const exclude = ['-x', minimal ? 'studio,mailpit,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta' : 'logflare,vector']
   await new Promise((done, fail) => {
-    const child = spawn('sh', [...base, 'start', ...exclude], { cwd: repoRoot, env, stdio: ['ignore', 2, 'pipe'] })
+    const child = spawn('sh', [...base, 'start', ...exclude], { cwd: repoRoot, env, stdio: ['ignore', 'pipe', 'pipe'] })
     let tail = ''
-    child.stderr.on('data', chunk => { process.stderr.write(chunk); tail = (tail + chunk).slice(-4000) })
+    for (const stream of [child.stdout, child.stderr]) stream.on('data', chunk => { process.stderr.write(chunk); tail = (tail + chunk).slice(-4000) })
     child.once('error', fail)
     child.once('close', code => code === 0 ? done() : fail(new Error(`supabase start failed (exit ${code}). ${tail}`)))
   })
