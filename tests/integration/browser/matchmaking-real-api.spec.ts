@@ -14,7 +14,7 @@ test('two users upload, find Friends, discover Dating, accept and message throug
   for(const [index,page] of pages.entries()){
    await page.route('**/*',async route=>{
     const url=new URL(route.request().url())
-    if(url.origin!=='http://127.0.0.1:3194'){external.push(url.origin);return route.abort()}
+    if(url.origin!==`http://127.0.0.1:${process.env.PEBBLE_BROWSER_PORT}`){external.push(url.origin);return route.abort()}
     if(!url.pathname.startsWith('/api/'))return route.continue()
     calls.push(`${index} ${route.request().method()} ${url.pathname}`)
     const response=await route.fetch({url:'http://127.0.0.1:3195'+url.pathname+url.search})

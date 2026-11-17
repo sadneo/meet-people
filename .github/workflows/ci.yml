@@ -84,7 +84,7 @@ jobs:
       - run: pnpm test:deployment
       - run: pnpm build:api
       - name: Browser tests against verified production-mode artifacts
-        run: sh scripts/test-built.sh --workers=4
+        run: node scripts/test-built.mjs --workers=4
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

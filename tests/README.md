@@ -8,7 +8,7 @@ filesystem, subprocess and port probes; no real credentials or services are used
 | Directory | Command | Boundary |
 | --- | --- | --- |
 | `tests/unit/` | `pnpm test:unit` | Vitest logic, React components/hooks, mocked transports and source-contract checks |
-| `tests/browser/` | `pnpm test:browser` | Playwright UI journeys against isolated Vite source on port 3194 |
+| `tests/browser/` | `pnpm test:browser` | Playwright UI journeys against isolated Vite source on a free port |
 | `tests/integration/` | `pnpm test:integration` | Real local Supabase Auth/account persistence and disposable PostgreSQL schema replay |
 
 `pnpm test` aliases `test:unit`. `pnpm verify` runs typecheck → lint → unit tests
