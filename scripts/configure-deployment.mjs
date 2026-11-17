@@ -52,7 +52,9 @@ export function deploymentConfiguration(env, base) {
   }))
   const domains = sandbox ? ['web.dev.pebble.garden', 'mobile.dev.pebble.garden'] : ['pebble.garden']
   const origins = [...domains.map(domain => `https://${domain}`), ...sites.map(site => `https://${site}.web.app`)]
-  const redirects = [...origins.flatMap(origin => [`${origin}/auth/callback**`, `${origin}/reset-password**`]), 'com.cse416.meetpeople://app/auth/callback**', 'com.cse416.meetpeople://app/reset-password**']
+  const nativeSchemes = sandbox ? ['com.cse416.meetpeople', 'com.cse416.meetpeople.dev'] : ['com.cse416.meetpeople']
+  const callbackOrigins = [...origins, ...nativeSchemes.map(scheme => `${scheme}://app`)]
+  const redirects = callbackOrigins.flatMap(origin => [`${origin}/auth/callback**`, `${origin}/reset-password**`])
   const auth = `project_id = "meet-people"\n\n[auth]\nsite_url = ${JSON.stringify(sandbox ? 'https://mobile.dev.pebble.garden' : origins[0])}\nadditional_redirect_urls = ${JSON.stringify(redirects)}\nenable_signup = true\nminimum_password_length = 8\n\n[auth.email]\nenable_confirmations = true\nsecure_password_change = true\n`
   return { firebase: { hosting }, auth }
 }

@@ -105,6 +105,8 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
   assert.ok(config.auth.includes('site_url = "https://mobile.dev.pebble.garden"'))
   assert.ok(config.auth.includes('com.cse416.meetpeople://app/auth/callback**'))
   assert.ok(config.auth.includes('com.cse416.meetpeople://app/reset-password**'))
+  assert.ok(config.auth.includes('com.cse416.meetpeople.dev://app/auth/callback**'))
+  assert.ok(config.auth.includes('com.cse416.meetpeople.dev://app/reset-password**'))
   for (const domain of ['web.dev.pebble.garden', 'mobile.dev.pebble.garden']) {
     assert.ok(config.auth.includes(`https://${domain}/auth/callback**`))
     assert.ok(config.auth.includes(`https://${domain}/reset-password**`))
@@ -139,6 +141,7 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
   assert.ok(production.auth.includes('site_url = "https://pebble.garden"'))
   assert.ok(production.auth.includes('https://pebble.garden/auth/callback**'))
   assert.ok(!production.auth.includes('.dev.pebble.garden'))
+  assert.ok(!production.auth.includes('com.cse416.meetpeople.dev://'))
 })
 
 test('frontend builds reject the wrong branch, project, missing key or unresolved commit', () => {
