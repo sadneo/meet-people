@@ -52,13 +52,14 @@ The Events list includes three `[DEMO]` events: campus coffee, board games, and 
 study-break walk. The command prints their direct URLs; they can also be found by
 their Demo categories. Contacts 010–060 are split across these event queues with
 the development account. Existing unrelated queue memberships are preserved.
-Run the local matching worker in a separate terminal:
+`pnpm dev` also runs the local matching worker; on first start it creates the worker's private
+credentials from the local stack, so no separate setup step is needed:
 
 ```sh
 pnpm dev
 ```
 
-It installs the local matching policy, enables its dedicated worker and processes
+The worker installs the local matching policy, enables its dedicated worker and processes
 eligible event queues until stopped. Matching ranks saved shared interests, then
 weekly availability overlap. It uses no Gemini, embeddings or external scoring.
 The development account's pending enrollments are processed first. Open an event

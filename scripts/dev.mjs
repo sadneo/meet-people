@@ -1,13 +1,12 @@
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { delimiter, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import concurrently from 'concurrently'
 import { engineReachable as reachable } from './lib/containers.mjs'
 import { freePorts } from './lib/ports.mjs'
-import { childEnv, credentialsDir, currentStack, devProjectId, startDevStack } from './lib/stack.mjs'
+import { childEnv, currentStack, startDevStack } from './lib/stack.mjs'
 import { waitForRun } from './lib/wait.mjs'
 import { main as doctor } from './doctor.mjs'
 import { ensureLocalEnv } from './write-local-env.mjs'
@@ -15,9 +14,8 @@ import { ensureLocalEnv } from './write-local-env.mjs'
 const root = resolve(fileURLToPath(import.meta.url), '../..')
 const attempts = 3
 
-export function parts({ root: base, projectId, home = homedir(), exists = existsSync, engine = false, ports } = {}) {
+export function parts({ root: base, exists = existsSync, engine = false, ports } = {}) {
   const installed = exists(join(base, 'node_modules'))
-  const worker = join(credentialsDir(projectId, home), 'event-group-worker.json')
   const app = (name, command, env) => ({ name, required: true, ready: installed, needs: 'pnpm install', command, env: ports && env })
   return [
     { name: 'supabase', required: true, ready: engine, needs: 'Docker or rootless Podman' },
@@ -26,7 +24,7 @@ export function parts({ root: base, projectId, home = homedir(), exists = exists
     app('mobile', 'vite --config vite.mobile.config.ts', { VITE_PORT: String(ports?.mobile) }),
     app('api', 'tsx watch --env-file-if-exists=.env.local api/server.ts', { PORT: String(ports?.api) }),
     { name: 'functions', required: false, ready: exists(join(base, 'supabase/.env')), needs: 'supabase/.env', command: 'sh scripts/supabase.sh functions serve --env-file supabase/.env' },
-    { name: 'worker', required: false, ready: exists(worker), needs: worker, command: 'tsx scripts/run-local-event-groups.ts --setup --watch' },
+    { name: 'worker', required: false, ready: engine, needs: 'Supabase running (its --setup creates the worker credentials)', command: 'tsx scripts/run-local-event-groups.ts --setup --watch' },
   ]
 }
 
@@ -94,13 +92,12 @@ async function remote() {
 }
 
 export async function main(args = process.argv.slice(2), { engineReachable = reachable, log = console.log, error = console.error } = {}) {
-  const projectId = devProjectId(root)
-  if (args.includes('--help')) { log(helpText(parts({ root, projectId }))); return 0 }
+  if (args.includes('--help')) { log(helpText(parts({ root }))); return 0 }
   if (args.includes('--check')) return doctor(args.filter(arg => arg !== '--check'), { stack: currentStack(root, {}) })
   if (args.includes('--remote')) return remote()
-  if (args.length) { error(helpText(parts({ root, projectId }))); return 1 }
+  if (args.length) { error(helpText(parts({ root }))); return 1 }
   if (!(await engineReachable())) { error('Start Docker, or rootless Podman: systemctl --user start podman.socket'); return 1 }
-  const context = { root, projectId, engine: true }
+  const context = { root, engine: true }
   const blocked = parts(context).find(part => part.required && !part.ready)
   if (blocked) { error(`${blocked.name} needs ${blocked.needs}`); return 1 }
   const interrupt = {}
@@ -122,10 +119,10 @@ export async function main(args = process.argv.slice(2), { engineReachable = rea
     }
     const { stack, keys } = started
     keys.publishableKey ??= keys.anonKey
-    ensureLocalEnv(keys)
+    ensureLocalEnv(keys, join(root, '.env.local'))
     let failure
     for (let attempt = 1; attempt <= attempts && !signal.aborted; attempt++) {
-      try { failure = await launch({ ...context, projectId: stack.projectId }, stack, keys, { log, interrupt, signal }); break } catch (cause) {
+      try { failure = await launch(context, stack, keys, { log, interrupt, signal }); break } catch (cause) {
         failure = cause
         if (attempt < attempts) log(`App start failed (${cause.message}); retrying with new ports (${attempt}/${attempts - 1}).`)
       }
