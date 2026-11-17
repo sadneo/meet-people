@@ -81,9 +81,10 @@ test('main pushes deploy production; sandbox is manual-only; manual sources belo
   } finally { rmSync(directory, { recursive: true, force: true }) }
 })
 
-test('tests run on PRs into dev; main accepts only dev; releases deploy without re-running tests', () => {
+test('dev and main PRs run CI, main accepts only dev, and releases reuse reviewed commits', () => {
   const workflow = name => readFileSync(`.github/workflows/${name}.yml`, 'utf8')
-  for (const name of ['checks', 'android-checks']) assert.match(workflow(name), /pull_request:\n {4}branches: \[dev\]\n/)
+  assert.match(workflow('checks'), /pull_request:\n {4}branches: \[dev, main\]\n/)
+  assert.match(workflow('android-checks'), /pull_request:\n {4}branches: \[dev\]\n/)
   assert.match(workflow('main-source'), /pull_request:\n {4}branches: \[main\]\n/)
   assert.ok(workflow('main-source').includes('[ "$HEAD_REF" != dev ] || [ "$HEAD_REPO" != "$REPO" ]'))
   const release = workflow('release')
