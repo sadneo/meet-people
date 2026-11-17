@@ -47,7 +47,7 @@ export function containerSync(args, { input, env } = {}) {
 }
 
 export function containerResult(args, { input, env, maxBuffer: limit = maxBuffer, encoding = 'utf8' } = {}) {
-  return spawnSync(cliSync(), args, { input, env: engineEnvSync({ ...process.env, ...env }), maxBuffer: limit, encoding })
+  return spawnSync(cliSync(), args, { input: typeof input === 'string' && encoding === 'buffer' ? Buffer.from(input) : input, env: engineEnvSync({ ...process.env, ...env }), maxBuffer: limit, encoding })
 }
 
 export async function engineReachable() {

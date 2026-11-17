@@ -118,7 +118,8 @@ export async function startStack(stack, { minimal = false, workdir, siteUrl, sig
   const env = { ...process.env, ...stackEnv(stack), ...(siteUrl && { SUPABASE_AUTH_SITE_URL: siteUrl }) }
   const base = ['scripts/supabase.sh', ...(workdir ? ['--workdir', workdir] : [])]
   // Analytics would need one more allocated port per stack and only serves Studio's logs UI.
-  const exclude = ['-x', minimal ? 'studio,mailpit,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta' : 'logflare,vector']
+  // Mailpit stays: Auth sends the sign-up confirmation mail and answers 500 without an SMTP server.
+  const exclude = ['-x', minimal ? 'studio,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta' : 'logflare,vector']
   await new Promise((done, fail) => {
     const child = run('sh', [...base, 'start', ...exclude], { cwd: repoRoot, env, stdio: ['ignore', 'pipe', 'pipe'] })
     let tail = ''

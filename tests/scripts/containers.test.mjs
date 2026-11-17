@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { container, engineCli, engineEnv, engineReachable } from '../../scripts/lib/containers.mjs'
+import { container, containerResult, engineCli, engineEnv, engineReachable } from '../../scripts/lib/containers.mjs'
 
 const socket = async () => ({ isSocket: () => true })
 const missing = async () => { throw new Error('ENOENT') }
@@ -36,4 +36,10 @@ test('container runs the CLI, trims stdout and throws on failure', async () => {
   assert.match(await container(['--version']), new RegExp(cli, 'i'))
   assert.equal(typeof await engineReachable(), 'boolean')
   await assert.rejects(container(['definitely-not-a-command']))
+})
+
+test('containerResult accepts string input with buffer output', () => {
+  const result = containerResult(['--version'], { input: 'select 1', encoding: 'buffer' })
+  assert.equal(result.status, 0)
+  assert.ok(Buffer.isBuffer(result.stdout))
 })
