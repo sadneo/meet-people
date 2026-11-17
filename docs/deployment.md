@@ -11,13 +11,14 @@ from `scripts/configure-deployment.mjs`. For local setup, use
 | URL | Firebase site | Product / artifact | Branch | Supabase | Developer toolbar |
 | --- | --- | --- | --- | --- | --- |
 | https://pebble.garden | `cse416-meet-people` | Web / `dist/web` | `main` | `pebble-production` | Off |
+| https://mobile.pebble.garden | `cse416-meet-people-mobile` | Mobile / `dist/mobile` | `main` | `pebble-production` | Off |
 | https://web.dev.pebble.garden | `cse416-meet-people-sandbox` | Web / `dist/web` | `dev` | `pebble-sandbox` | On |
 | https://mobile.dev.pebble.garden | `cse416-meet-people-dev` | Mobile / `dist/mobile` | `dev` | `pebble-sandbox` | On |
 
 Each site's `https://<site>.web.app` URL serves the same product as its custom domain.
 Web stays responsive on desktop and phone browsers. Mobile is the authenticated
 application and the source for Capacitor Android and future iOS builds.
-Both dev products share sandbox data; sessions/localStorage remain separate per origin.
+Both products in an environment share its data; sessions/localStorage remain separate per origin.
 
 | Environment | Supabase project | Reference | Region |
 | --- | --- | --- | --- |
@@ -59,7 +60,7 @@ sandbox builds use one resolved commit, one API deployment and one database.
    | Preflight | `release.yml` | settings validation, image check, production recovery policy, migration preview. Changes nothing. |
    | Backend | `deploy-stages.mjs backend` | Edge Functions, reviewed migrations (no development seeds), product schema, hosted config, event sync |
    | Services | `deploy-stages.mjs services` | API, push and event-group workers with their schedules, the 6 a.m. Supabase dining cron, then (production only) retiring the legacy Google dining schedule |
-   | Hosting | `release.yml` | web site, then sandbox's mobile site |
+   | Hosting | `release.yml` | web site, then mobile site |
    | Verify | `release.yml` | hosted smoke checks and summary |
 
 5. Every deployed URL runs hosted smoke checks, even if another URL fails. Any
@@ -156,7 +157,7 @@ environments:
 
 | Location | Values |
 | --- | --- |
-| GitHub environment variables | `GCP_PROJECT_ID`, `GCP_REGION`, `GAR_REPOSITORY`, `GCP_DEPLOY_SA_EMAIL`, `GCP_WIF_PROVIDER`, `API_SERVICE`, `API_RUNTIME_ACCOUNT`, `API_SECRET`, `WORKER_JOB`, `WORKER_RUNTIME_ACCOUNT`, `FIREBASE_WEB_SITE_ID`, sandbox `FIREBASE_MOBILE_SITE_ID`, `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
+| GitHub environment variables | `GCP_PROJECT_ID`, `GCP_REGION`, `GAR_REPOSITORY`, `GCP_DEPLOY_SA_EMAIL`, `GCP_WIF_PROVIDER`, `API_SERVICE`, `API_RUNTIME_ACCOUNT`, `API_SECRET`, `WORKER_JOB`, `WORKER_RUNTIME_ACCOUNT`, `FIREBASE_WEB_SITE_ID`, `FIREBASE_MOBILE_SITE_ID`, `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
 | GitHub environment secret | `SUPABASE_ACCESS_TOKEN`, with access to that environment's Supabase project |
 | GCP Secret Manager | `pebble-supabase-service-role` / `pebble-supabase-service-role-sandbox`, accessible to the matching API runtime identity |
 | Supabase Vault | `pebble_project_url`, `pebble_ingest_token`, `pebble_embed_secret` |
@@ -186,7 +187,7 @@ Sandbox and production run the same scripts with the same settings. Only resourc
 names, the database, domains and secret values differ (`-sandbox` suffix, or the
 environment name in secret names). Deliberate exceptions:
 
-- Sandbox also hosts the mobile product and builds with the developer toolbar.
+- Sandbox builds with the developer toolbar (and its Garden demo-funds shortcut).
 - Sandbox mirrors production's SB Engaged events instead of crawling the source.
 - Only production runs the backup-policy check before deploying.
 
@@ -227,10 +228,14 @@ Emergency disable: set `GOOGLE_MAPS_STORAGE_APPROVED=false` on Cloud Run and rou
 Hosting to that revision; **pause releases or change `deploy-api.sh` too**,
 otherwise the next release restores `true`.
 
-Site variables are `FIREBASE_WEB_SITE_ID=cse416-meet-people` in production;
+Site variables are `FIREBASE_WEB_SITE_ID=cse416-meet-people` and
+`FIREBASE_MOBILE_SITE_ID=cse416-meet-people-mobile` in production;
 `FIREBASE_WEB_SITE_ID=cse416-meet-people-sandbox` and
-`FIREBASE_MOBILE_SITE_ID=cse416-meet-people-dev` in sandbox. These variables were
-configured in GitHub on 2026-11-01. Legacy Hosting/Devtools variables remain for
+`FIREBASE_MOBILE_SITE_ID=cse416-meet-people-dev` in sandbox. The sandbox variables
+were configured in GitHub on 2026-11-01. Before the first production release with
+the mobile site, create the `cse416-meet-people-mobile` Hosting site, connect
+`mobile.pebble.garden`, set the production `FIREBASE_MOBILE_SITE_ID` variable, and
+allow the new origins in the production Maps browser key's website restrictions. Legacy Hosting/Devtools variables remain for
 older workflow revisions; the new workflow uses the explicit product names.
 
 The workflow uses `supabase link` and CLI-managed database credentials through the
@@ -242,8 +247,9 @@ signup with email confirmation and secure password changes. It allows callback
 and reset routes on the environment's custom domains and `web.app` origins, plus
 the existing `com.cse416.meetpeople://app/` native callback/reset routes. Sandbox
 also allows the `com.cse416.meetpeople.dev://app/` routes used by the side-by-side
-Pebble Dev APK. The default Auth URL is `https://mobile.dev.pebble.garden` in
-sandbox and `https://pebble.garden` in production. Mobile clients request their
+Pebble Dev APK (the Android `sandbox` flavour). The default Auth URL is each
+environment's web origin: `https://web.dev.pebble.garden` in sandbox and
+`https://pebble.garden` in production. Mobile clients request their
 explicit callback destination.
 Do not push local development `supabase/config.toml` to hosted projects.
 

@@ -117,7 +117,7 @@ test('dev and main PRs run CI, main accepts only dev, and releases reuse reviewe
   assert.ok(workflow('prepare').includes('cache-to: type=gha,scope=api,mode=max'), 'Release builds keep a cache readable from main and dev')
 })
 
-test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
+test('each environment hosts web and mobile sites on only its own backend and Auth callbacks', () => {
   const base = JSON.parse(readFileSync('firebase.json', 'utf8'))
   const env = {
     DEPLOY_ENVIRONMENT: 'sandbox', GCP_PROJECT_ID: 'example-project', GCP_REGION: 'us-east4', GAR_REPOSITORY: 'meet-people-sandbox',
@@ -127,7 +127,7 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
     SUPABASE_PROJECT_REF: 'wixdiotkntapwrbibaom', SUPABASE_URL: 'https://wixdiotkntapwrbibaom.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'test-public-key',
   }
   const config = deploymentConfiguration(env, base)
-  assert.ok(config.auth.includes('site_url = "https://mobile.dev.pebble.garden"'))
+  assert.ok(config.auth.includes('site_url = "https://web.dev.pebble.garden"'))
   assert.ok(config.auth.includes('com.cse416.meetpeople://app/auth/callback**'))
   assert.ok(config.auth.includes('com.cse416.meetpeople://app/reset-password**'))
   assert.ok(config.auth.includes('com.cse416.meetpeople.dev://app/auth/callback**'))
@@ -150,6 +150,7 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
   assert.throws(() => deploymentConfiguration({ ...env, SUPABASE_PROJECT_REF: 'abcdefghijklmnopqrst', SUPABASE_URL: 'https://abcdefghijklmnopqrst.supabase.co' }, base), /pebble-sandbox/)
   assert.throws(() => deploymentConfiguration({ ...env, FIREBASE_WEB_SITE_ID: 'cse416-meet-people' }, base), /production site/)
   assert.throws(() => deploymentConfiguration({ ...env, FIREBASE_MOBILE_SITE_ID: 'cse416-meet-people' }, base), /production site/)
+  assert.throws(() => deploymentConfiguration({ ...env, FIREBASE_MOBILE_SITE_ID: 'cse416-meet-people-mobile' }, base), /production site/)
   assert.throws(() => deploymentConfiguration({ ...env, FIREBASE_MOBILE_SITE_ID: env.FIREBASE_WEB_SITE_ID }, base), /distinct/)
   assert.throws(() => deploymentConfiguration({ ...env, FIREBASE_MOBILE_SITE_ID: undefined }, base))
   assert.throws(() => deploymentConfiguration({ ...env, API_SECRET: 'pebble-supabase-service-role' }, base))
@@ -157,14 +158,13 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
     ...env, DEPLOY_ENVIRONMENT: 'production', API_SERVICE: 'pebble-api', API_SECRET: 'pebble-supabase-service-role',
     API_RUNTIME_ACCOUNT: 'pebble-api@example-project.iam.gserviceaccount.com', WORKER_JOB: 'pebble-event-group-worker',
     WORKER_RUNTIME_ACCOUNT: 'pebble-event-group-worker@example-project.iam.gserviceaccount.com',
-    FIREBASE_WEB_SITE_ID: 'cse416-meet-people', SUPABASE_PROJECT_REF: 'wacgxhsdhrqigrmqaonc', SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co',
+    FIREBASE_WEB_SITE_ID: 'cse416-meet-people', FIREBASE_MOBILE_SITE_ID: 'cse416-meet-people-mobile', SUPABASE_PROJECT_REF: 'wacgxhsdhrqigrmqaonc', SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co',
   }, base)
-  assert.equal(production.firebase.hosting.length, 1)
-  assert.equal(production.firebase.hosting[0].site, 'cse416-meet-people')
-  assert.equal(production.firebase.hosting[0].public, 'dist/web')
-  assert.equal(production.firebase.hosting[0].rewrites[0].run.serviceId, 'pebble-api')
+  assert.deepEqual(production.firebase.hosting.map(site => [site.site, site.public, site.rewrites[0].run.serviceId]), [
+    ['cse416-meet-people', 'dist/web', 'pebble-api'], ['cse416-meet-people-mobile', 'dist/mobile', 'pebble-api'],
+  ])
   assert.ok(production.auth.includes('site_url = "https://pebble.garden"'))
-  assert.ok(production.auth.includes('https://pebble.garden/auth/callback**'))
+  for (const domain of ['pebble.garden', 'mobile.pebble.garden']) assert.ok(production.auth.includes(`https://${domain}/auth/callback**`))
   assert.ok(!production.auth.includes('.dev.pebble.garden'))
   assert.ok(!production.auth.includes('com.cse416.meetpeople.dev://'))
 })

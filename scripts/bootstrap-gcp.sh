@@ -90,9 +90,9 @@ gh variable set API_SECRET --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --bo
 gh variable set WORKER_JOB --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "pebble-event-group-worker$SUFFIX"
 gh variable set WORKER_RUNTIME_ACCOUNT --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "$WORKER"
 gh variable set FIREBASE_WEB_SITE_ID --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "$GCP_PROJECT_ID$SUFFIX"
-if [ "$ENVIRONMENT" = sandbox ]; then
-  gh variable set FIREBASE_MOBILE_SITE_ID --repo "$GITHUB_REPOSITORY" --env sandbox --body "$GCP_PROJECT_ID-dev"
-fi
+MOBILE_SITE="$GCP_PROJECT_ID-mobile"
+if [ "$ENVIRONMENT" = sandbox ]; then MOBILE_SITE="$GCP_PROJECT_ID-dev"; fi
+gh variable set FIREBASE_MOBILE_SITE_ID --repo "$GITHUB_REPOSITORY" --env "$ENVIRONMENT" --body "$MOBILE_SITE"
 
 if [ -z "$(gcloud monitoring uptime list-configs --project="$GCP_PROJECT_ID" --filter="displayName=pebble-api-health$SUFFIX" --format='value(name)')" ]; then
   gcloud monitoring uptime create "pebble-api-health$SUFFIX" --project="$GCP_PROJECT_ID" \
