@@ -1,19 +1,20 @@
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { freePorts } from './lib/ports.mjs'
 import { waitForRun } from './lib/wait.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 
-export async function runBuilt(args, env = {}) {
+export async function runBuilt(args, env = {}, { webDir = 'dist/web', apiDir = 'dist/api' } = {}) {
   const [apiPort, webPort] = await freePorts(2)
   const run = randomUUID()
   const base = { ...process.env, ...env, PEBBLE_RUN_ID: run }
   const start = (command, childEnv) => spawn(process.execPath, command, { cwd: root, stdio: 'inherit', env: { ...base, ...childEnv } })
   const servers = [
-    start(['--env-file-if-exists=.env.local', 'dist/api/api/server.js'], { PORT: String(apiPort) }),
-    start(['node_modules/vite/bin/vite.js', 'preview'], { VITE_PREVIEW_PORT: String(webPort), API_PORT: String(apiPort) }),
+    start(['--env-file-if-exists=.env.local', join(apiDir, 'api/server.js')], { PORT: String(apiPort) }),
+    start(['node_modules/vite/bin/vite.js', 'preview', '--outDir', webDir], { VITE_PREVIEW_PORT: String(webPort), API_PORT: String(apiPort) }),
   ]
   const abort = new AbortController()
   let tests
@@ -41,7 +42,7 @@ export async function runBuilt(args, env = {}) {
     tests = spawn(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', '--config', 'playwright.built.config.ts', ...args], {
       cwd: root,
       stdio: 'inherit',
-      env: { ...base, PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${webPort}` },
+      env: { ...base, PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${webPort}`, PEBBLE_TEST_OUTPUT: `test-results/built-${webPort}` },
     })
     return await new Promise(resolve => tests.on('exit', code => resolve(code ?? 1)))
   } catch (error) {

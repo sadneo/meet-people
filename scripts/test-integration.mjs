@@ -1,12 +1,12 @@
 import { spawn, execFile } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { readFileSync, rmSync, writeFileSync, mkdtempSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { container } from './lib/containers.mjs'
-import { childEnv, reapTestStacks, removeStack, startStack, testStack } from './lib/stack.mjs'
+import { childEnv, reapTestStacks, removeStack, startTestStack, testStack } from './lib/stack.mjs'
 import { runBuilt } from './test-built.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
@@ -55,24 +55,35 @@ async function sqlSection(stack) {
   return 0
 }
 
-async function builtApp(env) {
-  for (const args of [['typescript/bin/tsc', '--noEmit'], ['vite/bin/vite.js', 'build'], ['typescript/bin/tsc', '-p', 'tsconfig.api.json']]) {
-    const [script, ...rest] = args
-    const code = await run(node, [bin(script), ...rest], env)
-    if (code) return code
+// Per-run output keeps concurrent runs in one worktree from overwriting each other's dist/.
+async function builtApp(runId, env) {
+  const out = join(existsSync('/tmp/opencode') ? '/tmp/opencode' : tmpdir(), `pebble-built-${runId}`)
+  const webDir = join(out, 'web'), apiDir = join(out, 'api')
+  try {
+    // The built API resolves its dependencies from the directory above it.
+    mkdirSync(out, { recursive: true })
+    symlinkSync(join(root, 'node_modules'), join(out, 'node_modules'))
+    for (const args of [['typescript/bin/tsc', '--noEmit'], ['vite/bin/vite.js', 'build', '--outDir', webDir, '--emptyOutDir'], ['typescript/bin/tsc', '-p', 'tsconfig.api.json', '--outDir', apiDir]]) {
+      const [script, ...rest] = args
+      const code = await run(node, [bin(script), ...rest], env)
+      if (code) return code
+    }
+    return await runBuilt([], env, { webDir, apiDir })
+  } finally {
+    rmSync(out, { recursive: true, force: true })
   }
-  return runBuilt([], env)
 }
 
 async function matchingSection(runId, stacks) {
-  const stack = await testStack(`${runId}-m`)
+  let stack = await testStack(`${runId}-m`)
   stacks.push(stack.projectId)
   const workdir = join(root, 'worktree', `local-matchmaking-${runId}`)
   try {
     const prepared = await run('python', ['scripts/start-matching-supabase.py', '--prepare-only'], { ...process.env, PEBBLE_MATCHING_WORKDIR: workdir })
     if (prepared) return prepared
-    const keys = await startStack(stack, { minimal: true, workdir, signal: abort.signal })
-    return await run(node, ['tests/integration/local/test-matching-http.mjs'], childEnv(stack, keys))
+    const started = await startTestStack(stack, { options: { minimal: true, workdir }, signal: abort.signal })
+    stack = started.stack
+    return await run(node, ['tests/integration/local/test-matching-http.mjs'], childEnv(stack, started.keys))
   } finally {
     rmSync(workdir, { recursive: true, force: true })
   }
@@ -89,18 +100,19 @@ const finish = (name, code) => {
 try {
   for (const projectId of await reapTestStacks()) console.log(`Removed leftover test stack ${projectId}`)
   const runId = randomBytes(4).toString('hex')
-  const stack = await testStack(runId)
+  let stack = await testStack(runId)
   stacks.push(stack.projectId)
-  console.log(`== test stack ${stack.projectId} (api ${stack.apiUrl})`)
+  console.log(`== test stack ${stack.projectId}`)
   let keys
-  try { keys = await startStack(stack, { minimal: true, signal: abort.signal }) } catch (error) { console.error(error.message) }
+  try { ({ stack, keys } = await startTestStack(stack, { options: { minimal: true }, signal: abort.signal })) } catch (error) { console.error(error.message) }
+  if (keys) console.log(`   api ${stack.apiUrl}`)
   const env = keys && childEnv(stack, keys)
   const sections = [
     ['db types', () => dbTypes(env)],
     ['sql contracts', () => sqlSection(stack)],
     ['local auth', () => run(node, ['tests/integration/local/test-local-auth.mjs'], env)],
     ['schema replay', () => run(node, ['tests/integration/local/test-product-schema.mjs'], env)],
-    ['built app', () => builtApp(env)],
+    ['built app', () => builtApp(runId, env)],
     ...(matching ? [['matching', () => matchingSection(runId, stacks)]] : []),
   ]
   for (const [name, body] of sections) {
