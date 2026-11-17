@@ -109,7 +109,10 @@ export async function main(args = process.argv.slice(2), { engineReachable = rea
   const interrupt = {}
   const controller = new AbortController()
   const { signal } = controller
-  const onSignal = () => { controller.abort(); interrupt.stop?.() }
+  const onSignal = () => {
+    if (signal.aborted) process.exit(130)
+    controller.abort(); interrupt.stop?.()
+  }
   process.on('SIGINT', onSignal)
   process.on('SIGTERM', onSignal)
   try {
@@ -118,7 +121,7 @@ export async function main(args = process.argv.slice(2), { engineReachable = rea
     try { started = await startDevStack(root, { signal }) } catch (cause) {
       if (cause !== signal.reason) throw cause
       log('\nInterrupted during Supabase start.')
-      return 0
+      return 130
     }
     const { stack, keys } = started
     keys.publishableKey ??= keys.anonKey
