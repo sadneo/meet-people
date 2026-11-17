@@ -41,12 +41,13 @@ export async function sanitizeProfilePhoto(input:Buffer,waitForProcessing=false)
  finally{releaseProcessing()}
 }
 type Actor=ReturnType<UserContextTransport['actor']>
-function unwrap(result:{data:unknown;error:{code?:string}|null}){
+function unwrap(result:{data:unknown;error:{code?:string;message?:string}|null}){
  if(result.error){const code=result.error.code
   if(code==='28000')throw new PhotoFailure(401,'Sign in again to manage your photo.')
   if(code==='PH409')throw new PhotoFailure(409,'Your photo changed. Reload its current state before trying again.')
   if(code==='PH429')throw new PhotoFailure(429,'Photo change limit reached. Try again later.')
   if(code==='PT404'||code==='42501')throw new PhotoFailure(404,'Photo unavailable.')
+  if(code==='23514'&&result.error.message?.includes('profile_photo_gallery_size'))throw new PhotoFailure(409,'Update Pebble to remove a photo from a gallery with multiple photos.')
   if(code==='22023'||code==='23514')throw new PhotoFailure(400,'The photo request was rejected. Reload before retrying.')
   throw new PhotoFailure(503,'Photo storage could not be confirmed. Reload before retrying.')
  }return result.data

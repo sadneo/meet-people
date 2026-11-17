@@ -18,7 +18,7 @@ const cli = args => {
 }
 try {
   const file = join(directory, 'configure.sql')
-  writeFileSync(file, `do $$ begin if not exists(select 1 from vault.secrets where name='pebble_sbengaged_export_token') then raise exception 'Provision the shared export credential first';end if;end $$;\nselect hosting_private.configure_sbengaged_schedules('${target.mode}');\nselect jobname,schedule,active from cron.job where jobname in('pebble-ingest-sbengaged','pebble-enrich-sbengaged') order by jobname`, { mode: 0o600 })
+  writeFileSync(file, `do $$ begin if not exists(select 1 from vault.secrets where name='pebble_sbengaged_export_token') then raise exception 'Provision the shared export credential first';end if;end $$;\nselect hosting_private.configure_sbengaged_schedules('${target.mode}');\ndo $$ declare legacy record; begin select jobid,command into legacy from cron.job where jobname='ingest-sbengaged-hourly'; if found then if position('https://${target.ref}.supabase.co/functions/v1/ingest-sbengaged' in legacy.command)=0 then raise exception 'Unexpected legacy event target'; end if; perform cron.unschedule(legacy.jobid); end if; end $$;\nselect jobname,schedule,active from cron.job where jobname in('pebble-ingest-sbengaged','pebble-enrich-sbengaged') order by jobname`, { mode: 0o600 })
   const result = JSON.parse(cli(['db', 'query', '--linked', '--project-ref', target.ref, '--file', file, '--output', 'json']))
   const rows = Array.isArray(result) ? result : result.rows
   const schedules = target.mode === 'producer' ? { 'pebble-ingest-sbengaged': '17 * * * *', 'pebble-enrich-sbengaged': '*/5 * * * *' } : { 'pebble-ingest-sbengaged': '20 * * * *' }

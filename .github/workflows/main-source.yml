@@ -1,6 +1,6 @@
 name: Main source
 
-# Tests run only on PRs into dev, so main may only receive this repository's dev branch.
+# Production promotions must come from this repository's dev branch.
 on:
   pull_request:
     branches: [main]

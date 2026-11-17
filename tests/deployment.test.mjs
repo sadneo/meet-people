@@ -24,7 +24,7 @@ test('release stages run backend then services in dependency order for each envi
   assert.deepEqual(backend.slice(0, EDGE_FUNCTIONS.length), EDGE_FUNCTIONS.map(name => `pnpm exec supabase functions deploy ${name} --project-ref wixdiotkntapwrbibaom --use-api`))
   assert.deepEqual(backend.slice(EDGE_FUNCTIONS.length), ['node scripts/push-reviewed-migrations.mjs --yes', 'node scripts/deploy-product-schema.mjs', 'pnpm hosting:configure', 'node scripts/configure-sbengaged-sync.mjs'])
   assert.deepEqual(run('services', stageEnv), ['sh scripts/deploy-api.sh', 'sh scripts/deploy-worker.sh'])
-  assert.deepEqual(run('services', { DEPLOY_ENVIRONMENT: 'production' }), ['sh scripts/deploy-api.sh', 'node scripts/deploy-production-workers.mjs', 'node scripts/deploy-dining-schedules.mjs'])
+  assert.deepEqual(run('services', { DEPLOY_ENVIRONMENT: 'production' }), ['sh scripts/deploy-api.sh', 'node scripts/deploy-production-workers.mjs', 'node scripts/deploy-dining-schedules.mjs', 'node scripts/retire-google-dining-schedule.mjs'])
   const partial = []
   assert.throws(() => runStage('services', { DEPLOY_ENVIRONMENT: 'production' }, (command, args) => { partial.push(args[0]); if (partial.length === 2) throw new Error('worker failed') }), /worker failed/)
   assert.deepEqual(partial, ['scripts/deploy-api.sh', 'scripts/deploy-production-workers.mjs'], 'A failed step stops later steps')
@@ -109,9 +109,10 @@ test('main pushes deploy production; sandbox is manual-only; manual sources belo
   } finally { rmSync(directory, { recursive: true, force: true }) }
 })
 
-test('tests run on PRs into dev; main accepts only dev; releases deploy without re-running tests', () => {
+test('dev and main PRs run CI, main accepts only dev, and releases reuse reviewed commits', () => {
   const workflow = name => readFileSync(`.github/workflows/${name}.yml`, 'utf8')
-  for (const name of ['checks', 'android-checks']) assert.match(workflow(name), /pull_request:\n {4}branches: \[dev\]\n/)
+  assert.match(workflow('checks'), /pull_request:\n {4}branches: \[dev, main\]\n/)
+  assert.match(workflow('android-checks'), /pull_request:\n {4}branches: \[dev\]\n/)
   assert.match(workflow('main-source'), /pull_request:\n {4}branches: \[main\]\n/)
   assert.ok(workflow('main-source').includes('[ "$HEAD_REF" != dev ] || [ "$HEAD_REPO" != "$REPO" ]'))
   const release = workflow('release')
@@ -133,6 +134,8 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
   assert.ok(config.auth.includes('site_url = "https://mobile.dev.pebble.garden"'))
   assert.ok(config.auth.includes('com.cse416.meetpeople://app/auth/callback**'))
   assert.ok(config.auth.includes('com.cse416.meetpeople://app/reset-password**'))
+  assert.ok(config.auth.includes('com.cse416.meetpeople.dev://app/auth/callback**'))
+  assert.ok(config.auth.includes('com.cse416.meetpeople.dev://app/reset-password**'))
   for (const domain of ['web.dev.pebble.garden', 'mobile.dev.pebble.garden']) {
     assert.ok(config.auth.includes(`https://${domain}/auth/callback**`))
     assert.ok(config.auth.includes(`https://${domain}/reset-password**`))
@@ -167,6 +170,7 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
   assert.ok(production.auth.includes('site_url = "https://pebble.garden"'))
   assert.ok(production.auth.includes('https://pebble.garden/auth/callback**'))
   assert.ok(!production.auth.includes('.dev.pebble.garden'))
+  assert.ok(!production.auth.includes('com.cse416.meetpeople.dev://'))
 })
 
 test('frontend builds reject the wrong branch, project, missing key or unresolved commit', () => {
