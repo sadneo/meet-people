@@ -107,7 +107,8 @@ function alive(pid) {
   try { process.kill(pid, 0); return true } catch (error) { return error.code !== 'ESRCH' }
 }
 
-export async function startStack(stack, { minimal = false, workdir, siteUrl } = {}) {
+export async function startStack(stack, { minimal = false, workdir, siteUrl, signal, run = spawn } = {}) {
+  signal?.throwIfAborted()
   if (minimal || stack.projectId.startsWith(testPrefix)) {
     mkdirSync(ownerDir(), { recursive: true })
     const pending = `${ownerFile(stack.projectId)}.${process.pid}.tmp`
@@ -119,11 +120,18 @@ export async function startStack(stack, { minimal = false, workdir, siteUrl } = 
   // Analytics would need one more allocated port per stack and only serves Studio's logs UI.
   const exclude = ['-x', minimal ? 'studio,mailpit,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta' : 'logflare,vector']
   await new Promise((done, fail) => {
-    const child = spawn('sh', [...base, 'start', ...exclude], { cwd: repoRoot, env, stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = run('sh', [...base, 'start', ...exclude], { cwd: repoRoot, env, stdio: ['ignore', 'pipe', 'pipe'] })
     let tail = ''
+    // The data listeners keep both pipes drained until the child exits, so it never dies of SIGPIPE mid-cleanup.
     for (const stream of [child.stdout, child.stderr]) stream.on('data', chunk => { process.stderr.write(chunk); tail = (tail + chunk).slice(-4000) })
+    const abort = () => child.kill('SIGTERM')
+    signal?.addEventListener('abort', abort, { once: true })
     child.once('error', fail)
-    child.once('close', code => code === 0 ? done() : fail(new Error(`supabase start failed (exit ${code}). ${tail}`)))
+    child.once('close', code => {
+      signal?.removeEventListener('abort', abort)
+      if (code === 0) done()
+      else fail(signal?.aborted ? signal.reason : new Error(`supabase start failed (exit ${code}). ${tail}`))
+    })
   })
   const { stdout } = await promisify(execFile)('sh', [...base, 'status', '--output', 'json'], { cwd: repoRoot, env, maxBuffer: 8 * 1024 * 1024 })
   const status = JSON.parse(stdout)
@@ -133,13 +141,21 @@ export async function startStack(stack, { minimal = false, workdir, siteUrl } = 
 const conflict = /address already in use|port is already allocated/i
 
 // Two launchers can pick the same preferred ports before either binds them; on a bind conflict start over once with fresh ports.
-export async function startDevStack(root = repoRoot, { container, start = startStack, remove = id => removeStack(id), ports = freePorts, options } = {}) {
+export async function startDevStack(root = repoRoot, { container = engine, start = startStack, remove = id => removeStack(id), ports = freePorts, options, signal } = {}) {
+  const wasRunning = await container(['ps', '-q', '--filter', `name=^supabase_db_${devProjectId(root)}$`])
   const stack = await devStack(root, { container })
-  try { return { stack, keys: await start(stack, options) } } catch (error) {
-    if (!conflict.test(error.message)) throw error
+  // An interrupted start can leave a half-started stack; only remove one this launch was creating.
+  const attempt = async next => {
+    try { return { stack: next, keys: await start(next, { ...options, signal }) } } catch (error) {
+      if (!signal?.aborted) throw error
+      if (!wasRunning) await remove(next.projectId)
+      throw signal.reason
+    }
+  }
+  try { return await attempt(stack) } catch (error) {
+    if (signal?.aborted || !conflict.test(error.message)) throw error
     await remove(stack.projectId)
-    const next = saveDev(root, stack.projectId, toPorts(await ports(5)))
-    return { stack: next, keys: await start(next, options) }
+    return attempt(saveDev(root, stack.projectId, toPorts(await ports(5))))
   }
 }
 

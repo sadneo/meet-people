@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict'
+import { EventEmitter } from 'node:events'
 import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { PassThrough } from 'node:stream'
 import test from 'node:test'
-import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, reapTestStacks, removeStack, requireStack, startDevStack, stackEnv } from '../../scripts/lib/stack.mjs'
+import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, reapTestStacks, removeStack, requireStack, startDevStack, startStack, stackEnv } from '../../scripts/lib/stack.mjs'
 
 const stack = { projectId: 'meet-people-x', ports: { api: 1, db: 2, shadow: 3, studio: 4, mail: 5 }, apiUrl: 'http://127.0.0.1:1', dbContainer: 'supabase_db_meet-people-x' }
 const tmp = () => mkdtempSync(join(tmpdir(), 'stack-test-'))
@@ -187,4 +189,38 @@ test('other start failures are not retried', async () => {
   let starts = 0
   await assert.rejects(startDevStack(tmp(), { container: async () => '', start: async () => { starts++; throw new Error('boom') }, remove: async () => assert.fail('removed') }), /boom/)
   assert.equal(starts, 1)
+})
+
+const interrupted = async ({ running }) => {
+  const controller = new AbortController()
+  const calls = []
+  const start = (_stack, { signal }) => new Promise((_, fail) => {
+    signal.addEventListener('abort', () => { calls.push('killed'); fail(new Error('supabase start failed (exit null)')) })
+    setImmediate(() => controller.abort())
+  })
+  const pending = startDevStack(tmp(), { container: async () => running, start, remove: async id => { calls.push(['remove', id]) }, signal: controller.signal })
+  await assert.rejects(pending, error => error === controller.signal.reason)
+  return calls
+}
+
+test('an interrupt during start removes a stack that was not running before', async () => {
+  const calls = await interrupted({ running: '' })
+  assert.equal(calls[0], 'killed')
+  assert.equal(calls[1][0], 'remove')
+  assert.equal(calls.length, 2)
+})
+
+test('an interrupt during start leaves a stack that was already running', async () => {
+  assert.deepEqual(await interrupted({ running: 'abc123' }), ['killed'])
+})
+
+test('startStack kills the CLI on abort and keeps draining its output until it exits', async () => {
+  const child = Object.assign(new EventEmitter(), { stdout: new PassThrough(), stderr: new PassThrough(), kill: signal => { child.signal = signal; setImmediate(() => child.emit('close', null)) } })
+  const controller = new AbortController()
+  const started = startStack(stack, { signal: controller.signal, run: () => child })
+  controller.abort()
+  await assert.rejects(started, error => error === controller.signal.reason)
+  assert.equal(child.signal, 'SIGTERM')
+  assert.equal(child.stdout.listenerCount('data'), 1)
+  await assert.rejects(startStack(stack, { signal: controller.signal, run: () => assert.fail('spawned') }), error => error === controller.signal.reason)
 })

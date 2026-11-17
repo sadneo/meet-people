@@ -44,6 +44,19 @@ test('keeps polling while the id is empty, then times out', async () => {
   } finally { await server.close() }
 })
 
+test('an aborted wait rejects promptly', async () => {
+  const server = await serve((_request, response) => response.end(''))
+  const controller = new AbortController()
+  try {
+    const started = Date.now()
+    const wait = waitForRun(server.url, 'mine', { timeoutMs: 30000, signal: controller.signal })
+    setTimeout(() => controller.abort(), 300)
+    await assert.rejects(wait, { name: 'AbortError' })
+    assert.ok(Date.now() - started < 2000)
+    await assert.rejects(waitForRun(server.url, 'mine', { signal: controller.signal }), { name: 'AbortError' })
+  } finally { await server.close() }
+})
+
 test('keeps polling through a refused connection until the server appears', async () => {
   const probe = await serve((_request, response) => response.end(''))
   const port = new URL(probe.url).port

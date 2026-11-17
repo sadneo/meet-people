@@ -11,7 +11,7 @@ export function ensureLocalEnv({ apiUrl, publishableKey, serviceRoleKey }, file 
       `SUPABASE_PUBLISHABLE_KEY=${publishableKey}`,
       `SUPABASE_SERVICE_ROLE_KEY=${serviceRoleKey}`,
       '',
-    ].join('\n'), { flag: 'wx' })
+    ].join('\n'), { flag: 'wx', mode: 0o600 })
     return true
   } catch (error) {
     if (error.code === 'EEXIST') return false

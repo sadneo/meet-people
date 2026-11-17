@@ -46,8 +46,9 @@ async function appPorts(taken) {
   throw new Error('Could not find free ports for the app servers.')
 }
 
-async function launch(context, stack, keys, { log, interrupt }) {
+async function launch(context, stack, keys, { log, interrupt, signal }) {
   const ports = await appPorts(Object.values(stack.ports))
+  if (signal.aborted) return null
   const runId = randomUUID()
   const list = parts({ ...context, ports })
   const env = {
@@ -71,7 +72,7 @@ async function launch(context, stack, keys, { log, interrupt }) {
   const base = port => `http://127.0.0.1:${port}`
   try {
     await Promise.race([died, Promise.all([
-      waitForRun(`${base(ports.web)}/__pebble/run`, runId), waitForRun(`${base(ports.mobile)}/__pebble/run`, runId), waitForRun(`${base(ports.api)}/api/health`, runId),
+      waitForRun(`${base(ports.web)}/__pebble/run`, runId, { signal }), waitForRun(`${base(ports.mobile)}/__pebble/run`, runId, { signal }), waitForRun(`${base(ports.api)}/api/health`, runId, { signal }),
     ])])
   } catch (error) {
     stop()
@@ -105,25 +106,37 @@ export async function main(args = process.argv.slice(2), { engineReachable = rea
   const context = { root, projectId, engine: true }
   const blocked = parts(context).find(part => part.required && !part.ready)
   if (blocked) { error(`${blocked.name} needs ${blocked.needs}`); return 1 }
-  log('Starting Supabase for this worktree (reused when already running)...')
-  const { stack, keys } = await startDevStack(root)
-  keys.publishableKey ??= keys.anonKey
-  ensureLocalEnv(keys)
   const interrupt = {}
-  let interrupted = false
-  const onSignal = () => { interrupted = true; interrupt.stop?.() }
+  const controller = new AbortController()
+  const { signal } = controller
+  const onSignal = () => { controller.abort(); interrupt.stop?.() }
   process.on('SIGINT', onSignal)
   process.on('SIGTERM', onSignal)
-  let failure
-  for (let attempt = 1; attempt <= attempts && !interrupted; attempt++) {
-    try { failure = await launch({ ...context, projectId: stack.projectId }, stack, keys, { log, interrupt }); break } catch (cause) {
-      failure = cause
-      if (attempt < attempts) log(`App start failed (${cause.message}); retrying with new ports (${attempt}/${attempts - 1}).`)
+  try {
+    log('Starting Supabase for this worktree (reused when already running)...')
+    let started
+    try { started = await startDevStack(root, { signal }) } catch (cause) {
+      if (cause !== signal.reason) throw cause
+      log('\nInterrupted during Supabase start.')
+      return 0
     }
+    const { stack, keys } = started
+    keys.publishableKey ??= keys.anonKey
+    ensureLocalEnv(keys)
+    let failure
+    for (let attempt = 1; attempt <= attempts && !signal.aborted; attempt++) {
+      try { failure = await launch({ ...context, projectId: stack.projectId }, stack, keys, { log, interrupt, signal }); break } catch (cause) {
+        failure = cause
+        if (attempt < attempts) log(`App start failed (${cause.message}); retrying with new ports (${attempt}/${attempts - 1}).`)
+      }
+    }
+    if (failure && !signal.aborted) error(failure.message)
+    log('\nApp processes stopped. The Supabase dev stack is still running; stop it with: pnpm supabase stop')
+    return failure && !signal.aborted ? 1 : 0
+  } finally {
+    process.off('SIGINT', onSignal)
+    process.off('SIGTERM', onSignal)
   }
-  if (failure && !interrupted) error(failure.message)
-  log('\nApp processes stopped. The Supabase dev stack is still running; stop it with: pnpm supabase stop')
-  return failure && !interrupted ? 1 : 0
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) process.exitCode = await main()
