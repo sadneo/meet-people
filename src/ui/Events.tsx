@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { PullToRefresh } from './PullToRefresh';
 import { Link, useLocation, useParams, useSearchParams } from "react-router";
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EventsResponseSchema, EventSchema } from "../../shared/events";
@@ -69,18 +70,18 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
           <Icon name="Filter" />Filters
         </button>
       </div>
+      {!publicView && <PullToRefresh onRefresh={resource.reload} label="Refreshing events"/>}
       {publicView && <p className="mini muted">Explore events. Get Pebble to find a group to go with.</p>}
       {category && <p id="event-filter-summary" className="event-filter-summary">Category: {categoryLabel(category)}</p>}
-      {filtersOpen && <Modal title="Filter events" close={() => setFiltersOpen(false)}>
+      {filtersOpen && <Modal variant="sheet" title="Filter events" close={() => setFiltersOpen(false)}>
         <label htmlFor="event-category-filter">Category</label>
         <select id="event-category-filter" value={category} onChange={event => selectCategory(event.target.value)}>
           <option value="">All events</option>
           {categories.map(item => <option key={item} value={item}>{categoryLabel(item)}</option>)}
         </select>
-        <div className="row wrap">
+        <div className="event-filter-actions">
+          <ActionButton secondary disabled={!category} onClick={() => selectCategory('')}>Reset filters</ActionButton>
           <ActionButton onClick={() => setFiltersOpen(false)}>Done</ActionButton>
-          <ActionButton secondary onClick={() => selectCategory('')}>Reset filters</ActionButton>
-          <ActionButton secondary disabled={resource.loading} onClick={resource.reload}>Refresh events</ActionButton>
         </div>
       </Modal>}
       <ResourceState
@@ -94,10 +95,12 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
           <p>Try another category or check again later.</p>
         </Empty>
       )}
-      <div className="eventgrid event-directory">
+      <div className="eventgrid event-directory stagger-in">
         {resource.value?.events.map((event) => (
-            <Link className="event-card" key={event.id} to={`${publicView ? "/explore" : "/events"}/${event.id}?${searchParams}`} aria-label={`${event.title}: see event and people`}>
+            <Link className="event-card" key={event.id} viewTransition to={`${publicView ? "/explore" : "/events"}/${event.id}?${searchParams}`} aria-label={`${event.title}: see event and people`}>
+                <EventDateChip startsAt={event.starts_at}/>
                 <MediaImage
+                  style={{ viewTransitionName: eventImageTransition(event.id) }}
                   className="event-image"
                   loading="lazy"
                   src={safeImage(event.image_url)}
@@ -157,6 +160,19 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
     content
   );
 }
+// Shared image name lets the card picture grow into the detail cover.
+function eventImageTransition(id: string) {
+  return `event-image-${id.replace(/[^a-zA-Z0-9-]/g, '')}`;
+}
+function EventDateChip({ startsAt }: { startsAt: string | null | undefined }) {
+  const time = Date.parse(startsAt ?? '');
+  if (!Number.isFinite(time)) return null;
+  const date = new Date(time);
+  return <span className="event-date-chip" aria-hidden="true">
+    <small>{date.toLocaleDateString(undefined, { weekday: 'short' })}</small>
+    <b>{date.getDate()}</b>
+  </span>;
+}
 export function EventDetail({ publicView = false, renderGroup }: { publicView?: boolean; renderGroup?: (id: string, available: boolean) => ReactNode }) {
   const location = useLocation();
   const directory = `${publicView ? "/explore" : "/events"}${location.search}`;
@@ -198,6 +214,7 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
         <>
           <header className="event-detail-header"><h1>{event.title}</h1><Link className="round" aria-label="Close event" to={directory}>×</Link></header>
           <MediaImage
+            style={{ viewTransitionName: eventImageTransition(event.id) }}
             className="event-cover"
             src={safeImage(event.image_url)}
             alt=""
@@ -213,6 +230,7 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
               .join(" · ") || "Location to be announced"}
           </p>
           <p className="event-company"><Icon name="Friends"/>Find people looking for company</p>
+          <div className="event-detail-links">
           {groupAvailable && calendarLink(event) && (
             <a
               className="btn light"
@@ -233,6 +251,7 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
               View original listing
             </a>
           )}
+          </div>
           {publicView ? groupAvailable ? (
             <p>
               <a

@@ -12,6 +12,8 @@ import {
 } from "../auth/localDevelopment";
 import { useAction } from "./hooks";
 import { Brand, ErrorMessage } from "./common";
+import { useShakeOnError } from "./feedback";
+import { BusyLabel } from "./FeedbackUi";
 
 import { PasswordField } from "./PasswordField";
 
@@ -33,6 +35,8 @@ export function Auth({
     [stage, setStage] = useState<"email" | "password">("email"),
     [notice, setNotice] = useState("");
   useEffect(() => { emailDrafts.set(mode, email); }, [mode, email]);
+  const form = useRef<HTMLFormElement>(null);
+  useShakeOnError(form, action.error);
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -169,7 +173,7 @@ export function Auth({
                  : "Welcome to Pebble"}
         </h1>
         {mode === 'login' && <p className="auth-introduction">Sign in or create an account to find your people.</p>}
-        <form onSubmit={(event) => void submit(event)}>
+        <form ref={form} onSubmit={(event) => void submit(event)}>
           {!reset && (
             <>
               <label htmlFor="auth-email">Email</label>
@@ -251,7 +255,7 @@ export function Auth({
           </div>}
            <button className="auth-submit" disabled={action.busy || !supabase}>
             {action.busy
-              ? "Please wait…"
+              ? <BusyLabel busy>Please wait…</BusyLabel>
               : reset
                 ? "Update password"
                 : forgot
@@ -308,7 +312,7 @@ export function Auth({
           </>
         )}
         {(register || forgot) && <Link className="auth-home-link" to="/login">Back to sign in</Link>}
-        {mode !== "login" && <p className="account-note">
+        {mode !== "login" && <p className="account-note auth-consent">
           By continuing, you agree to our <Link to="/terms">Terms</Link> and{" "}
           <Link to="/privacy">Privacy Policy</Link>.
         </p>}
@@ -388,8 +392,10 @@ export function AuthCallback() {
           <ErrorMessage>
             This link could not be verified. Request a new link.
           </ErrorMessage>
-          <Link to="/auth/forgot-password">Request recovery link</Link>
-          <Link to="/login">Sign in</Link>
+          <div className="auth-recovery-options">
+            <Link to="/auth/forgot-password">Request recovery link</Link>
+            <Link to="/login">Sign in</Link>
+          </div>
         </>
       ) : (
         <p role="status">

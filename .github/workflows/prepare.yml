@@ -36,12 +36,12 @@ jobs:
       VITE_BUILD_SHA: ${{ inputs.source_sha }}
       VITE_BUILD_BRANCH: ${{ inputs.source_branch }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.source_sha }}
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -58,7 +58,7 @@ jobs:
           pnpm build:mobile:devtools
       - name: Record frontend product, source and backend
         run: node scripts/configure-deployment.mjs --write-build-info
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: frontend-${{ inputs.environment }}-${{ inputs.source_sha }}
           overwrite: true
@@ -82,16 +82,17 @@ jobs:
           REPOSITORY: ${{ vars.GAR_REPOSITORY }}
           SERVICE: ${{ vars.API_SERVICE }}
         run: echo "name=$REGION-docker.pkg.dev/$PROJECT/$REPOSITORY/$SERVICE" >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Build and upload API image without deploying
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
           tags: ${{ steps.tag.outputs.name }}:${{ inputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           cache-from: type=gha,scope=api
-          # CI owns the shared cache; avoid concurrent dev writers replacing it.
+          # PR CI caches are invisible to main/dev runs; branch caches are readable by PRs.
+          cache-to: type=gha,scope=api,mode=max
       - name: Record immutable image
         id: image
         env:

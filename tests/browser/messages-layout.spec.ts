@@ -19,9 +19,14 @@ for (const width of [320, 390, 630]) {
     await expect(page).toHaveURL(new RegExp(conversationId))
     await expect(page.locator('.live-inbox')).toBeHidden()
     await expect(page.getByLabel('Message', { exact: true })).toBeVisible()
+    // A conversation uses the full height; Back returns to the tabs.
+    await page.locator('main').evaluate(element => Promise.all(element.getAnimations().map(animation => animation.finished)))
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeHidden()
     const composer = (await page.locator('.live-composer').boundingBox())!
-    const nav = (await page.getByRole('navigation', { name: 'Main navigation' }).boundingBox())!
-    expect(composer.y + composer.height).toBeLessThanOrEqual(nav.y)
+    const chat = (await page.locator('.live-messages').boundingBox())!
+    expect(chat.x).toBe(0)
+    expect(chat.width).toBe(width)
+    expect(Math.abs(composer.y + composer.height - 844)).toBeLessThanOrEqual(1)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.getByRole('link', { name: 'Back to conversations' }).click()
     await expect(page.getByLabel('Search conversations')).toBeVisible()

@@ -15,7 +15,7 @@ export function SafetyActions({ id, name, iconOnly = false }: { id: string; name
         {iconOnly ? <Icon name="More" /> : 'Block or report'}
       </button>
       {open && (
-        <Modal title={`Safety · ${name}`} close={() => setOpen(false)}>
+        <Modal variant="sheet" title={`Safety · ${name}`} close={() => setOpen(false)}>
           <SafetyForm id={id} />
         </Modal>
       )}
@@ -49,23 +49,26 @@ function SafetyForm({ id }: { id: string }) {
         Blocking prevents new contact actions. Existing shared groups and
         history may remain visible.
       </p>
-      {state.value && (
-        <ActionButton
-          secondary
+      {state.value && !confirm && (
+        <button
+          type="button"
+          className={`btn light ${state.value.outgoingBlocked ? '' : 'danger-outline'}`}
           disabled={action.busy}
           onClick={() => setConfirm(true)}
         >
           {state.value.outgoingBlocked ? "Unblock account" : "Block account"}
-        </ActionButton>
+        </button>
       )}
       {confirm && (
-        <div className="notice">
+        <div className="notice safety-confirm">
           <p>
             {state.value?.outgoingBlocked
               ? "Allow future contact actions again?"
               : "Prevent new contact actions from this account?"}
           </p>
-          <ActionButton
+          <button
+            type="button"
+            className={`btn ${state.value?.outgoingBlocked ? '' : 'danger'}`}
             disabled={action.busy}
             onClick={() => {
               void action.run(async () => {
@@ -79,8 +82,8 @@ function SafetyForm({ id }: { id: string }) {
               });
             }}
           >
-            Confirm
-          </ActionButton>
+            {state.value?.outgoingBlocked ? "Unblock" : "Block"}
+          </button>
           <ActionButton
             secondary
             disabled={action.busy}
@@ -121,19 +124,21 @@ function SafetyForm({ id }: { id: string }) {
           }}
         >
           <fieldset disabled={action.busy || uncertain}>
-            <label>
-              Reason
-              <select
-                value={reason}
-                onChange={(event) =>
-                  setReason(event.target.value as SubmitSafetyReport["reason"])
-                }
-              >
-                {SafetyReportReasonSchema.options.map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </select>
-            </label>
+            <fieldset className="choice-list">
+              <legend>Reason</legend>
+              {SafetyReportReasonSchema.options.map((option) => (
+                <label key={option} className={reason === option ? "is-selected" : ""}>
+                  <input
+                    type="radio"
+                    name={`report-reason-${id}`}
+                    value={option}
+                    checked={reason === option}
+                    onChange={() => setReason(option)}
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+            </fieldset>
             <label>
               Details (optional)
               <textarea
@@ -200,6 +205,7 @@ export function Blocklist() {
       ))}
       {confirm && (
         <Modal
+          variant="sheet"
           title="Unblock this account?"
           close={() => {
             if (!action.busy) setConfirm(null);

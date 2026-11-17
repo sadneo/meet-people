@@ -1,6 +1,7 @@
 import { z } from 'zod'
-import { ProfilePhotoStateSchema } from '../../../shared/profile-photo'
+import { ProfileGalleryStateSchema, ProfilePhotoStateSchema, type ProfileGalleryChange } from '../../../shared/profile-photo'
 import { apiUrl } from '../../platform/native'
+import { PhotoCaptionsSchema, type SavePhotoCaption } from '../../../shared/profile-prompts'
 export class ProfilePhotoError extends Error{constructor(readonly status:number,message:string){super(message)}}
 export function profilePhotoClient(token:string){
  async function request(path:string,init:RequestInit={},signal?:AbortSignal,binary=false){
@@ -14,11 +15,26 @@ export function profilePhotoClient(token:string){
     if(response.headers.get('content-type')?.split(';')[0]!=='image/jpeg')throw new ProfilePhotoError(502,'Photo response could not be confirmed.')
     const blob=await response.blob();if(blob.size>262144)throw new ProfilePhotoError(502,'Photo response is too large.');return blob
    }
-   return ProfilePhotoStateSchema.parse(await response.json())
+   return await response.json() as unknown
   }catch(error){if(error instanceof ProfilePhotoError&&!controller.signal.aborted)throw error;throw new ProfilePhotoError(503,'Photo storage could not be confirmed. Reload before retrying.')}
   finally{clearTimeout(timer);signal?.removeEventListener('abort',abort)}
  }
  return{
+  gallery: async (owner: string, signal?: AbortSignal) =>
+    ProfileGalleryStateSchema.parse(await request(`/gallery/${encodeURIComponent(owner)}`, {}, signal)),
+  slot: async (owner: string, revision: number, position: number, signal?: AbortSignal) =>
+    await request(`/gallery/${encodeURIComponent(owner)}/${revision}/${position}`, {}, signal, true) as Blob,
+  append: async (file: File, expectedRevision: number, signal?: AbortSignal) =>
+    ProfileGalleryStateSchema.parse(await request(`/gallery?${new URLSearchParams({expectedRevision:String(expectedRevision),requestId:crypto.randomUUID()})}`,
+      {method:'PUT',body:file,headers:{'Content-Type':file.type}},signal)),
+  captions: async (owner: string, signal?: AbortSignal) =>
+    PhotoCaptionsSchema.parse(await request(`/gallery/${encodeURIComponent(owner)}/captions`, {}, signal)),
+  saveCaption: async (value: SavePhotoCaption, signal?: AbortSignal) =>
+    PhotoCaptionsSchema.parse(await request('/gallery/caption',
+      {method:'PUT',body:JSON.stringify(value),headers:{'Content-Type':'application/json'}},signal)),
+  editGallery: async (edit: ProfileGalleryChange, signal?: AbortSignal) =>
+    ProfileGalleryStateSchema.parse(await request('/gallery',
+      {method:'PATCH',body:JSON.stringify(edit),headers:{'Content-Type':'application/json'}},signal)),
   reference:async(owner:string,signal?:AbortSignal)=>ProfilePhotoStateSchema.parse(await request(`/reference/${encodeURIComponent(owner)}`,{},signal)),
   state:async(signal?:AbortSignal)=>ProfilePhotoStateSchema.parse(await request('',{},signal)),
   image:async(owner:string,revision:number,signal?:AbortSignal)=>await request(`/${encodeURIComponent(owner)}/${revision}`,{},signal,true) as Blob,

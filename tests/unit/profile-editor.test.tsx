@@ -8,9 +8,17 @@ import { accountFixture, requiredPreferences } from './complete-profile-fixture'
 const mocks = vi.hoisted(() => ({ current: {} as Record<string, unknown>, photo: {} as Record<string, unknown>, facts: {} as Record<string, unknown>, detailed: {} as Record<string, unknown> }));
 vi.mock('../../src/ui/current', () => ({ useCurrent: () => mocks.current }));
 vi.mock('../../src/features/account/useProfilePhoto', () => ({ photoChangedEvent: 'pebble:profile-photo-changed', useProfilePhoto: () => mocks.photo }));
+vi.mock('../../src/features/account/usePhotoGallery', () => ({ usePhotoGallery: () => ({ query: {} }) }));
 vi.mock('../../src/features/account/useProfileDetails', () => ({ useProfileDetails: () => mocks.facts }));
 vi.mock('../../src/features/account/useDetailedSettings', () => ({ useDetailedSettings: () => mocks.detailed }));
 vi.mock('../../src/ui/Preferences', () => ({ DatingPreferencesPanel: () => null }));
+// Customization has its own tests; these cover photo staging and saves.
+vi.mock('../../src/features/account/profile-customization-client', async () => {
+  const { defaultProfileCustomization } = await import('../../shared/profile-customization');
+  return { useProfileCustomization: () => ({ query: { data: { revision: 0, customization: defaultProfileCustomization } }, value: defaultProfileCustomization, save: vi.fn() }) };
+});
+vi.mock('../../src/ui/PhotoGallery', async importOriginal => ({ ...await importOriginal<typeof import('../../src/ui/PhotoGallery')>(), PhotoGalleryPanel: () => null }));
+vi.mock('../../src/ui/ProfileCustomization', () => ({ AudienceSelect: () => null, GardenShowcasePicker: () => null, InterestOrderEditor: () => null, OwnProfilePreview: () => null, ProfileFinishCard: () => null, PromptsEditor: () => null, PromptCards: () => null }));
 
 const upload = () => new File(['image'], 'photo.png', { type: 'image/png' });
 const choose = (file = upload()) => fireEvent.change(screen.getByLabelText('Choose a photo'), { target: { files: [file] } });
@@ -131,7 +139,7 @@ it('never retries a confirmed photo write when only its preview read fails', asy
 });
 
 it('keeps standalone photo upload immediate and separate from the profile draft', async () => {
-  render(<PhotoEditor/>); choose();
+  render(<PhotoEditor onSavingChange={vi.fn()}/>); choose();
   fireEvent.click(screen.getByRole('button', { name: 'Upload photo' }));
   await waitFor(() => expect(savePhoto).toHaveBeenCalledOnce());
 });
@@ -166,6 +174,6 @@ it('explains the location gate and preserves independent availability on setting
   render(<MemoryRouter><ProfileSettings section="discovery"/></MemoryRouter>);
   fireEvent.click(screen.getByRole('switch', { name: 'Allow device location for search areas' }));
   expect(screen.getByText(/this switch alone does not request coordinates/)).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  // The switch saves immediately.
   await waitFor(() => expect(saveAccount).toHaveBeenCalledWith(expect.objectContaining({ settings: expect.objectContaining({ availability: true, location: true }) })));
 });

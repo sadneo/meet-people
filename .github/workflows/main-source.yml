@@ -1,0 +1,27 @@
+name: Main source
+
+# Production promotions must come from this repository's dev branch.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  dev-only:
+    # Branch-protection context on main: Require dev
+    name: Require dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Reject PRs into main that do not come from dev
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REF" != dev ] || [ "$HEAD_REPO" != "$REPO" ]; then
+            echo "::error::PRs into main must come from $REPO:dev (got $HEAD_REPO:$HEAD_REF). Merge into dev first."
+            exit 1
+          fi

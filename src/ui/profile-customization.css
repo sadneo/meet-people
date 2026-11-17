@@ -1,0 +1,164 @@
+/* Profile customization: interest order, audiences, Garden showcase,
+   finish card, inline photos and the in-page preview. */
+.interest-order { display: grid; gap: 8px; margin-top: 18px; }
+.interest-order h3 { margin: 0; }
+.interest-order .account-note { margin: 0 0 4px; }
+.interest-order ol { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.interest-order li {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  min-height: 52px; padding: 4px 6px 4px 14px;
+  border: 1px solid #e7dfd5; border-radius: 14px; background: #fffdf9;
+  animation: rise-in 220ms var(--ease-out);
+}
+.interest-order li.is-top { border-color: #d8b2a3; background: #fbefea; }
+.interest-order-label { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.interest-top-badge {
+  display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px;
+  border-radius: 999px; background: #9d503d; color: #fffdf9; font-size: 12px; font-weight: 700;
+}
+.interest-top-badge .ui-icon { width: 12px; height: 12px; }
+.interest-order-actions { display: flex; gap: 4px; flex: none; }
+.interest-order-actions .round { width: 40px; height: 40px; min-height: 40px; display: grid; place-items: center; padding: 0; border: 1px solid #e7dfd5; background: #fffdf9; }
+.interest-order-actions .round:disabled { opacity: 0.35; }
+.interest-order-actions .ui-icon { width: 18px; height: 18px; }
+
+.audience-select { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 2px 0 14px 30px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.audience-select select { width: auto; min-width: 0; min-height: 40px; margin: 0; padding: 6px 36px 6px 12px; font-size: 13px; }
+
+.garden-showcase-picker { margin: 22px 0 6px; padding: 0; border: 0; min-width: 0; }
+.garden-showcase-picker legend { padding: 0; font-weight: 700; font-size: 14px; }
+.garden-showcase-picker .account-note { margin: 4px 0 10px; }
+.garden-showcase-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+.garden-showcase-options label {
+  position: relative; display: grid; justify-items: center; gap: 4px; margin: 0; padding: 10px 6px;
+  border: 1px solid #e7dfd5; border-radius: 14px; background: #fffdf9; text-align: center;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 140ms var(--ease-out);
+}
+.garden-showcase-options label:active { transform: scale(0.97); }
+.garden-showcase-options label.is-selected { border-color: #9d503d; background: #fbefea; }
+.garden-showcase-options input { position: absolute; opacity: 0; pointer-events: none; }
+.garden-showcase-options label:has(input:focus-visible) { outline: 3px solid #9d503d; outline-offset: 2px; }
+.garden-showcase-art { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: #eef2e8; }
+.garden-showcase-art canvas { image-rendering: pixelated; }
+.garden-showcase-none { color: var(--muted); font-size: 20px; }
+
+.profile-finish {
+  display: grid; gap: 8px; margin: 0 0 18px; padding: 16px;
+  border: 1px solid #ecd8cd; border-radius: 18px; background: #fbf1ea;
+  animation: rise-in 320ms var(--ease-out);
+}
+.profile-finish-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.profile-finish-head h3 { margin: 0; font-size: 16px; }
+.profile-finish-head span { color: #9d503d; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.profile-finish ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.profile-finish a, .profile-finish button {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 4px;
+  border: 0; background: none; color: #302b28; font: inherit; font-size: 14px; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer;
+}
+.profile-finish a .ui-icon, .profile-finish button .ui-icon { margin-left: auto; width: 18px; height: 18px; color: var(--muted); }
+.profile-finish-dot { width: 10px; height: 10px; flex: none; border: 2px solid #c79a86; border-radius: 50%; }
+
+.profile-photos-section { display: grid; gap: 10px; margin: 0 0 18px; scroll-margin-top: 20px; }
+.profile-photos-section > h3 { margin: 0; font-size: 16px; }
+
+.profile-view-switch {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 0 0 18px; padding: 4px;
+  border-radius: 14px; background: #efe5da;
+}
+.profile-view-switch button {
+  min-height: 44px; border: 0; border-radius: 11px; background: transparent; color: #6f5f52; font: inherit; font-weight: 700; cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease, transform 140ms var(--ease-out);
+}
+.profile-view-switch button[aria-pressed="true"] { background: #fffdf9; color: #302b28; box-shadow: 0 2px 8px #30251f14; }
+
+.own-preview { display: grid; gap: 12px; animation: rise-in 260ms var(--ease-out); }
+.own-preview-card { overflow: hidden; border-radius: 22px; background: #fffdf9; box-shadow: 0 6px 20px #4934210f; }
+.own-preview-photo { position: relative; height: clamp(320px, 62vw, 460px); }
+.own-preview-body { display: grid; gap: 16px; padding: 18px; }
+.own-preview-body h3 { margin: 0 0 8px; font-size: 16px; }
+.own-preview-body p { margin: 0; }
+
+/* Garden item on a profile card and the top interest chip. */
+.card-garden-item {
+  position: absolute; right: 14px; bottom: 14px; z-index: 2;
+  display: grid; place-items: center; width: 56px; height: 56px;
+  border: 3px solid #fffdf9; border-radius: 50%; background: #eef2e8;
+  box-shadow: 0 6px 16px #30251f33;
+  animation: pop-in 420ms var(--ease-out) both;
+}
+.card-garden-item canvas { image-rendering: pixelated; }
+.dating-interest.is-top { border-color: #9d503d; background: #fbefea; color: #8a3f2c; font-weight: 700; }
+.dating-interest .ui-icon { width: 14px; height: 14px; }
+.account-edit-fields .audience-select {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px;
+  margin: -4px 0 16px 30px; font-size: 13px; font-weight: 600; color: var(--muted);
+}
+.account-edit-fields .audience-select select { flex: 0 1 auto; width: auto; min-width: 0; max-width: 100%; min-height: 40px; margin: 0; font-size: 13px; }
+.account-edit-fields .garden-showcase-options label,
+.account-modal .garden-showcase-options label { margin: 0; }
+
+/* Prompts: editor cards and how answers read on a profile. */
+.prompts-editor { display: grid; gap: 10px; margin-top: 22px; }
+.prompts-editor h3 { margin: 0; }
+.prompts-editor h3 span { color: var(--muted); font-weight: 500; font-size: 13px; }
+.prompts-editor > .account-note { margin: 0 0 2px; }
+.prompt-edit-card {
+  display: grid; gap: 8px; padding: 14px; border: 1px solid #e7dfd5; border-radius: 16px; background: #fffdf9;
+  animation: rise-in 240ms var(--ease-out);
+}
+.prompt-edit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.prompt-edit-head b { font-size: 14px; }
+.prompt-dating-tag { flex: none; padding: 2px 8px; border-radius: 999px; background: #f6e4ea; color: #8a3550; font-size: 12px; font-weight: 700; }
+.prompt-edit-card textarea { min-height: 64px; margin: 0; resize: vertical; }
+.prompt-edit-meta { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; }
+.prompt-edit-meta .prompt-hint { color: #8a3f2c; }
+.prompt-edit-actions { display: flex; align-items: center; gap: 6px; }
+.prompt-edit-actions .round { width: 40px; height: 40px; min-height: 40px; display: grid; place-items: center; padding: 0; border: 1px solid #e7dfd5; background: #fffdf9; }
+.prompt-edit-actions .round:disabled { opacity: 0.35; }
+.prompt-edit-actions .account-edit-text { margin-left: auto; min-height: 40px; }
+.prompt-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.prompt-add select, .prompt-add .btn { margin: 0; min-width: 0; }
+.prompt-cards { display: grid; gap: 10px; }
+.prompt-card {
+  margin: 0; padding: 14px 16px; border-radius: 16px; background: #f6efe7;
+  animation: rise-in 300ms var(--ease-out) both;
+}
+.prompt-card + .prompt-card { animation-delay: 60ms; }
+.prompt-card figcaption { color: #8a6f5c; font-size: 13px; font-weight: 700; }
+.prompt-card blockquote { margin: 6px 0 0; color: #302b28; font-size: 17px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.prompt-add { grid-template-columns: 1fr; }
+.prompt-add .btn { justify-self: start; }
+.own-preview > .discover-modes { justify-self: start; }
+
+/* Prompts per mode. */
+.prompts-editor-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.prompt-counts { display: inline-flex; gap: 10px; color: var(--muted); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.prompt-edit-question { font-size: 14px; }
+.prompt-edit-actions { flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.prompt-modes { display: inline-flex; gap: 6px; }
+.prompt-modes button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px;
+  border: 1px solid #e7dfd5; border-radius: 999px; background: #fffdf9; color: #66594e;
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 140ms var(--ease-out);
+}
+.prompt-modes button:active:not(:disabled) { transform: scale(var(--press-scale)); }
+.prompt-modes .ui-icon { width: 16px; height: 16px; }
+.prompt-modes [data-mode="Friends"] .ui-icon { color: #a77c43; }
+.prompt-modes [data-mode="Dating"] .ui-icon { color: #b56e83; }
+.prompt-modes [data-mode="Friends"][aria-pressed="true"] { background: #524c3d; border-color: #524c3d; color: #fffdf9; }
+.prompt-modes [data-mode="Dating"][aria-pressed="true"] { background: #64444d; border-color: #64444d; color: #fffdf9; }
+.prompt-modes [data-mode="Friends"][aria-pressed="true"] .ui-icon { color: #f2cf91; }
+.prompt-modes [data-mode="Dating"][aria-pressed="true"] .ui-icon { color: #f4b9cb; }
+.prompt-modes button:disabled { cursor: default; }
+.prompt-modes button[aria-pressed="false"]:disabled { opacity: 0.45; }
+.prompt-edit-move { display: inline-flex; gap: 4px; margin-left: auto; }
+.prompt-edit-actions .prompt-remove { color: #9d3d2d; }
+.prompt-edit-card .prompt-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.prompt-edit-card .prompt-edit-move { margin-left: 0; flex: none; }
+.prompt-edit-card .prompt-edit-move .round { width: 36px; height: 36px; min-height: 36px; display: grid; place-items: center; padding: 0; border: 1px solid #e7dfd5; background: #fffdf9; }
+.prompt-edit-card .prompt-edit-move .round:disabled { opacity: 0.35; }
+.prompt-edit-card .prompt-edit-move .ui-icon { width: 16px; height: 16px; }
+/* A pressed mode stays clearly on even when it can't be turned off. */
+.prompt-modes button[aria-pressed="true"]:disabled { opacity: 1; }

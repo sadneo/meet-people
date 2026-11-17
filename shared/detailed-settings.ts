@@ -7,7 +7,7 @@ export type DetailedSettingsValues = z.infer<typeof DetailedSettingsValuesSchema
 export const DetailedSettingsMastersSchema = z.object({ notifications: z.boolean(), discoverable: z.boolean() }).strict()
 export type DetailedSettingsMasters = z.infer<typeof DetailedSettingsMastersSchema>
 export function emptyDetailedSettings(): DetailedSettingsValues {
-  return { messages: false, plans: false, matches: false, friendsDiscovery: true, datingDiscovery: false }
+  return { messages: false, plans: false, matches: false, friendsDiscovery: true, datingDiscovery: true }
 }
 export function sameDetailedSettings(a: DetailedSettingsValues, b: DetailedSettingsValues) {
   return a.messages === b.messages && a.plans === b.plans && a.matches === b.matches && a.friendsDiscovery === b.friendsDiscovery && a.datingDiscovery === b.datingDiscovery

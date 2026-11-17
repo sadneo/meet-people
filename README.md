@@ -37,6 +37,15 @@ Failures exit 1; warnings alone exit 0. Diagnostics target only the fixed local
 port 3001. Run `pnpm dev:mobile` alongside it for mobile on `http://127.0.0.1:3002`.
 Both frontends proxy `/api` to the same local API.
 
+To test this branch with remote Supabase from the root `.env`, run
+`pnpm run dev:remote` and open `http://127.0.0.1:3302/messages`. This keeps local
+`.env.local` settings out of the remote test and uses the branch's API on port
+3301. Install the realtime and typing migrations on that project first; see
+[messaging activation and manual testing](docs/messaging-realtime.md#test-against-remote-supabase).
+With the remote test app running and the Supabase CLI logged in,
+`pnpm run test:hosted:messaging` runs the production acceptance check with temporary
+accounts and automatic cleanup. It writes `test-results/remote-messaging-report.json`.
+
 Web (`src/web/App.tsx`) is the desktop-first public website: a demo-matched landing
 page, event browsing and legal pages. It has no Sign in link. Until an app listing exists, the
 Android badge opens Google Play's general store; the iOS badge is non-interactive.

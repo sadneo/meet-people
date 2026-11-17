@@ -236,8 +236,8 @@ legend {
   overflow: hidden;
   background: #ddc7b5;
 }
-.discovery-photo > .portrait,
-.discovery-photo > .initial-avatar {
+:is(.discovery-photo, .discovery-photo-viewer) > .portrait,
+:is(.discovery-photo, .discovery-photo-viewer) > .initial-avatar {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -246,7 +246,7 @@ legend {
   object-fit: cover;
   object-position: center 30%;
 }
-.discovery-photo > .initial-avatar {
+:is(.discovery-photo, .discovery-photo-viewer) > .initial-avatar {
   font-size: 100px;
 }
 .discovery-photo::after {
@@ -321,8 +321,8 @@ legend {
     z-index: 30;
   }
   .discovery-page .discovery-profile .dating-card .discovery-photo {
-    /* Reserve the header, thumb actions and navigation before sizing the photo. */
-    height: clamp(200px, calc(100dvh - 340px - env(safe-area-inset-bottom)), 650px);
+    /* Reserve the header, Food menus row, thumb actions and navigation. */
+    height: clamp(160px, calc(100dvh - 400px - env(safe-area-inset-bottom)), 650px);
   }
 }
 .development-navigator .devquick button {
@@ -345,7 +345,7 @@ legend {
   list-style: none;
 }
 .development-navigator summary::-webkit-details-marker { display: none; }
-.development-navigator summary b { color: var(--green); font-size: 11px; }
+.development-navigator summary b { color: var(--green); font-size: 12px; }
 .development-navigator summary:focus-visible { outline: 2px solid var(--green); outline-offset: -3px; }
 .development-navigator details[open] .devchevron { transform: rotate(180deg); }
 .development-navigator .devpanel {
@@ -539,8 +539,14 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
 .account-modal header {
   margin-bottom: 16px;
 }
-.account-modal h2 {
+.account-modal > header > h2 {
+  margin: 0;
   font-size: 24px;
+  overflow-wrap: anywhere;
+}
+.account-modal > header > .round {
+  flex: none;
+  margin: 0;
 }
 .account-modal form > .btn {
   margin-top: 20px;
@@ -665,6 +671,13 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
   flex-direction: column;
   gap: 16px;
 }
+.chat-typing { display: flex; align-items: center; gap: 9px; min-height: 30px; padding: 4px 20px; color: var(--muted); font-size: 12px; flex-shrink: 0; }
+.typing-dots { display: inline-flex; gap: 4px; padding: 8px 10px; border-radius: 16px; background: #eee8df; }
+.typing-dots > span { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: typing-dot 1.2s ease-in-out infinite; }
+.typing-dots > span:nth-child(2) { animation-delay: .15s; }
+.typing-dots > span:nth-child(3) { animation-delay: .3s; }
+@keyframes typing-dot { 0%, 60%, 100% { opacity: .4; } 30% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .typing-dots > span { animation: none; opacity: .8; } }
 .live-message {
   align-self: flex-start;
   max-width: 85%;
@@ -784,7 +797,7 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
   padding: 0;
   min-width: 18px;
   height: 18px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .messaging-page .live-chat { overflow: hidden; }
 .messaging-page .chat-header > .portrait,
@@ -848,17 +861,21 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
     background: transparent;
   }
   .messaging-page .contact-top b { font-size: 15px; }
-  .messaging-page .contact-top small { font-size: 11px; }
+  .messaging-page .contact-top small { font-size: 12px; }
   .messaging-page .contact-preview { font-size: 13px; }
-  .messaging-page .connection-kind { font-size: 10px; }
+  .messaging-page .connection-kind { font-size: 12px; }
+  .shell > main:has(> .messaging-page.chat-selected) { padding: 0; }
+  .messaging-page.chat-selected { max-width: none; margin: 0; }
   .messaging-page.chat-selected > .pagehead { display: none; }
   .messaging-page.chat-selected .live-messages {
-    height: calc(100dvh - 124px - env(safe-area-inset-bottom) - var(--development-toolbar-height, 0px));
-    min-height: 240px;
+    width: 100%;
+    height: calc(100dvh - 76px - env(safe-area-inset-bottom) - var(--development-toolbar-height, 0px));
+    min-height: 0;
+    margin: 0;
     overflow: hidden;
     background: #fffdf9;
-    border: 1px solid var(--line);
-    border-radius: 18px;
+    border: 0;
+    border-radius: 0;
   }
   .messaging-page .chat-back { width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
   .messaging-page .chat-header { padding: 12px; gap: 10px; flex-wrap: nowrap; }
@@ -872,7 +889,7 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
 }
 .live-message time {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 6px;
 }
@@ -915,7 +932,7 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
   position: absolute;
   left: 24px;
   bottom: 6px;
-  font-size: 11px;
+  font-size: 12px;
   margin: 0;
   color: var(--muted);
   pointer-events: none;
@@ -942,23 +959,53 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
   gap: 8px;
   padding: 8px 12px;
 }
-.legal-content {
+.legal-page > .legal-content {
   max-width: 800px;
   margin: auto;
+  padding-inline: 0;
 }
 .legal-content h2 {
   font-size: 24px;
   margin-top: 36px;
 }
-.public-page header {
-  padding: 12px 5%;
+.public-page {
+  --public-page-gutter: clamp(20px, 4vw, 56px);
+}
+.public-page > .welcome-header {
+  justify-content: space-between;
+  max-width: 1450px;
+  margin-inline: auto;
+  padding: 12px var(--public-page-gutter);
+}
+.public-page > main { padding-inline: var(--public-page-gutter); }
+.public-page > .welcome-header > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 .legal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 5%;
+  max-width: 800px;
+  padding-block: 20px;
   gap: 20px;
+}
+.legal-resource-links {
+  position: static;
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.legal-resource-links > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 .legal-content h1 {
   font-size: clamp(32px, 5vw, 48px);
@@ -1020,7 +1067,7 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
     min-height: 44px;
     gap: 4px;
     padding: 1px 2px;
-    font-size: 10px;
+    font-size: 12px;
   }
   .app-navigation > a > span:not(.activity-dot) {
     width: 100%;
@@ -1209,15 +1256,21 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
 .live-profile .account-edit-fields label > textarea,
 .live-profile .account-edit-fields label > select { margin-top: 9px; }
 .live-profile .account-edit-fields .account-check { margin: 9px 0 20px; }
-.live-profile .account-edit-fields .account-check > input { margin-top: 3px; }
+.live-profile .account-edit-fields .account-check > input { margin: 0; }
 .live-profile .profile-draft > fieldset,
 .live-profile .profile-draft fieldset:last-child { margin-bottom: 0; }
 .live-profile .profile-draft .interest-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; }
 .live-profile .profile-draft .interest-chips .chip { min-height: 44px; margin: 0; padding: 10px 15px; font-size: 13px; }
 .live-profile .profile-draft .interest-chips .chip.selected { background: #ebdaca; border-color: #be9576; }
-.live-profile .profile-draft .interest-chips + .row { align-items: flex-end; gap: 9px; }
-.live-profile .profile-draft .interest-chips + .row label { margin: 0; }
-.live-profile .profile-draft .interest-chips + .row .btn { min-height: 49px; margin: 0; }
+.custom-interest-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 9px;
+}
+:is(.account-modal, .account-edit-fields) .custom-interest-row > label { margin: 0; }
+.custom-interest-row > label > input { display: block; width: 100%; min-width: 0; margin-bottom: 0; }
+:is(.account-form, .profile-draft) .custom-interest-row > .btn { min-height: 49px; margin: 0; }
 .profile-availability > summary { list-style: none; cursor: pointer; }
 .profile-availability > summary::-webkit-details-marker { display: none; }
 .profile-availability[open] > summary .ui-icon { rotate: 90deg; }
@@ -1248,7 +1301,7 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
 .event-detail-header h1 { flex: 1; font-size: 26px; line-height: 1.2; letter-spacing: -1px; margin: 6px 0 0; }
 .event-detail-header .round { flex: none; display: grid; place-items: center; min-width: 44px; min-height: 44px; border: 1px solid #e7dfd5; border-radius: 15px; background: #fffdf9; text-decoration: none; }
 .event-detail .event-cover { width: 100%; height: 220px; object-fit: cover; border-radius: 16px; margin: 0; }
-.event-detail .event-detail-category { color: #637557; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; font-weight: 600; margin: 16px 0 26px; }
+.event-detail .event-detail-category { color: #637557; text-transform: uppercase; letter-spacing: 1px; font-size: 12px; font-weight: 600; margin: 16px 0 26px; }
 .event-detail .event-description { margin-bottom: 18px; font-size: 14px; line-height: 1.75; }
 .event-detail .event-detail-date { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
 .event-detail .event-detail-location { font-size: 14px; margin-top: 0; }
@@ -1284,3 +1337,18 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
 .welcome-install { max-width: 760px; margin: 0 auto; padding: 64px 24px; scroll-margin-top: 24px; }
 .welcome-install h2 { font-size: clamp(28px, 5vw, 42px); }
 .welcome-install p { line-height: 1.6; }
+
+.account-modal .event-filter-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 14px;
+}
+.account-modal .event-filter-actions > .btn { margin: 0; min-height: 48px; }
+.live-profile .profile-edit-photo > .profile-edit-photo-actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}

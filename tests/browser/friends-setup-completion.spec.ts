@@ -6,8 +6,7 @@ import { mockLocationPicker } from './location-picker-fixture';
 test('unchanged defaults cannot complete Friends setup without a saved area', async ({ page }) => {
   const fixture = await wiringFixture(page);
   await page.route('**/api/matchmaking/friends/status', route => route.fulfill({ json: { available: true, eligible: false, reason: 'preferences' } }));
-  await page.goto('/matchmaking');
-  await page.getByRole('link', { name: 'Set up Friends preferences', exact: true }).click();
+  await page.goto('/matchmaking?preferences=true');
   const dialog = page.getByRole('dialog', { name: 'Friends preferences' });
   await expect(dialog.getByRole('button', { name: 'Search area Choose an area' })).toBeVisible();
   await dialog.getByRole('button', { name: 'Done', exact: true }).click();
@@ -33,8 +32,7 @@ test('confirming an area completes setup and stays complete across navigation an
   await page.route('**/api/matchmaking/friends/status', route => route.fulfill({ json: {
     available: true, eligible: !!preferences?.searchArea.resolvedLocationRef, reason: preferences ? null : 'preferences',
   } }));
-  await page.goto('/matchmaking');
-  await page.getByRole('link', { name: 'Set up Friends preferences', exact: true }).click();
+  await page.goto('/matchmaking?preferences=true');
   const dialog = page.getByRole('dialog', { name: 'Friends preferences' });
   await dialog.getByRole('button', { name: 'Search area Choose an area' }).click();
   await page.getByRole('combobox', { name: 'Search city or neighborhood' }).fill('Brooklyn');

@@ -640,16 +640,19 @@ export type Database = {
         Row: {
           preferences: Json
           revision: number
+          setup_started: boolean
           user_id: string
         }
         Insert: {
           preferences: Json
           revision: number
+          setup_started?: boolean
           user_id: string
         }
         Update: {
           preferences?: Json
           revision?: number
+          setup_started?: boolean
           user_id?: string
         }
         Relationships: []
@@ -1025,6 +1028,27 @@ export type Database = {
           },
         ]
       }
+      profile_customization: {
+        Row: {
+          customization: Json
+          revision: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          customization: Json
+          revision?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          customization?: Json
+          revision?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profile_details: {
         Row: {
           facts: Json
@@ -1280,6 +1304,7 @@ export type Database = {
       }
       dating_targets: { Args: { p: Json }; Returns: Json }
       detailed_settings_masters: { Args: { value_in: Json }; Returns: Json }
+      edit_profile_photo_gallery: { Args: { edit_in: Json }; Returns: Json }
       effective_detailed_settings: {
         Args: { choices_in: Json; masters_in: Json }
         Returns: Json
@@ -1441,9 +1466,18 @@ export type Database = {
         Args: { request_id_in: string }
         Returns: Json
       }
+      get_profile_customization: { Args: never; Returns: Json }
       get_profile_details: { Args: never; Returns: Json }
+      get_profile_photo_captions: { Args: { owner_in: string }; Returns: Json }
+      get_profile_photo_gallery: { Args: { owner_in: string }; Returns: Json }
       get_profile_photo_reference: { Args: { owner_in: string }; Returns: Json }
       get_profile_photo_state: { Args: never; Returns: Json }
+      get_profile_prompts: {
+        Args: { mode_in: string; owner_in: string }
+        Returns: Json
+      }
+      get_profile_showcase: { Args: { owner_in: string }; Returns: Json }
+      get_progressive_matching_setup: { Args: never; Returns: Json }
       get_queue_match: {
         Args: never
         Returns: {
@@ -1621,8 +1655,14 @@ export type Database = {
         Args: { me: string; other: string }
         Returns: number
       }
+      profile_customization_default: { Args: never; Returns: Json }
       profile_embedding: { Args: { p_id: string }; Returns: number[] }
+      profile_garden_item_owned: {
+        Args: { item: string; person: string }
+        Returns: boolean
+      }
       profile_language_key: { Args: { value_in: string }; Returns: string }
+      profile_prompt_catalog: { Args: never; Returns: Json }
       profile_text: { Args: { p_id: string }; Returns: string }
       project_dating_candidate: { Args: { target_in: string }; Returns: Json }
       project_friends_candidates: { Args: { targets_in: Json }; Returns: Json }
@@ -1670,6 +1710,10 @@ export type Database = {
       }
       read_profile_photo: {
         Args: { owner_in: string; revision_in: number }
+        Returns: Json
+      }
+      read_profile_photo_slot: {
+        Args: { owner_in: string; position_in: number; revision_in: number }
         Returns: Json
       }
       reconcile_active_friends_job: { Args: { unit_in: string }; Returns: Json }
@@ -1745,6 +1789,10 @@ export type Database = {
         Returns: Json
       }
       save_matchmaking_profile: { Args: { profile_in: Json }; Returns: Json }
+      save_profile_customization: {
+        Args: { customization_in: Json }
+        Returns: Json
+      }
       save_profile_details: { Args: { details_in: Json }; Returns: Json }
       save_profile_photo: { Args: { photo_in: Json }; Returns: Json }
       sbengaged_begin_sync: { Args: { p_mode: string }; Returns: Json }
@@ -1799,6 +1847,7 @@ export type Database = {
         }[]
       }
       set_dating_enabled: { Args: { change_in: Json }; Returns: Json }
+      set_profile_photo_caption: { Args: { caption_in: Json }; Returns: Json }
       shared_interest_labels: {
         Args: { user1: string; user2: string }
         Returns: string[]
@@ -1823,6 +1872,7 @@ export type Database = {
         Args: { body_in: string; conversation_in: string; request_in: string }
         Returns: Json
       }
+      start_friends_discovery: { Args: never; Returns: Json }
       submit_safety_report: { Args: { report_in: Json }; Returns: Json }
       sweep_active_friends: { Args: never; Returns: Json }
       unblock_owner_target: { Args: { target_in: string }; Returns: Json }
@@ -1835,11 +1885,13 @@ export type Database = {
         Args: { prefs_in: Json }
         Returns: boolean
       }
+      valid_profile_customization: { Args: { value: Json }; Returns: boolean }
       valid_profile_facts: { Args: { facts_in: Json }; Returns: boolean }
       valid_profile_interests: {
         Args: { labels: Json; require_minimum: boolean }
         Returns: boolean
       }
+      valid_profile_prompts: { Args: { value: Json }; Returns: boolean }
       vec_similarity: { Args: { a: number[]; b: number[] }; Returns: number }
       withdraw_event_interest: {
         Args: { meetup_id_in: number }

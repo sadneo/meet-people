@@ -14,7 +14,10 @@ export function SessionQueryProvider({ children, scope }: { children: ReactNode;
       void client.invalidateQueries({ predicate: query => !['events', 'event', 'discovery-deck'].includes(String(query.queryKey[0])) })
     }
     const photo = (event: Event) => {
-      if (event instanceof CustomEvent) void client.invalidateQueries({ queryKey: ['profile-photo', event.detail] })
+      if (event instanceof CustomEvent) void client.invalidateQueries({
+        queryKey: ['profile-photo', event.detail],
+        predicate: query => query.queryKey[2] !== 'slot',
+      })
     }
     window.addEventListener('pebble:activity-changed', activity)
     window.addEventListener('pebble:matching-changed', matching)

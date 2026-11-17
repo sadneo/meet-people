@@ -2,17 +2,20 @@ import { createDatingLiveRouter } from './dating-live.js'
 import type { GardenCommand } from '../shared/garden.js'
 import type { DatingEnable } from '../shared/dating-live.js'
 import { createProfilePhotoRouter } from './profile-photo.js'
-import type { ProfilePhotoWrite } from '../shared/profile-photo.js'
+import type { ProfileGalleryEdit, ProfilePhotoWrite } from '../shared/profile-photo.js'
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { AccountSchema, SaveAccountSchema, completedAccountChapters, type Account } from '../shared/account.js'
+import { AccountSchema, SaveAccountSchema, accountOnboardingHeader, completedAccountChapters, legacyAccountChapters, type Account, type SaveAccount } from '../shared/account.js'
 import { isPublicSupabaseKey } from './env.js'
 import { JoinQueueSchema, MatchingProfileSchema, RawMatchSchema, RawQueueStatusSchema, type MatchingProfile } from '../shared/matchmaking.js'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, ListingIdSchema, ListingInterestRequestSchema, ListingMatchmakingStatusSchema, RawListingEventMatchesSchema } from '../shared/matchmaking.js'
 import { AccountProfileSchema, type AccountProfile } from '../shared/account-profile.js'
 import type { SaveProfileDetails } from '../shared/profile-details.js'
 import { createProfileDetailsRouter } from './profile-details.js'
+import { createProfileCustomizationRouter } from './profile-customization.js'
+import type { SaveProfileCustomization } from '../shared/profile-customization.js'
+import type { SavePhotoCaption } from '../shared/profile-prompts.js'
 import type { SaveFriendsSearchPreferences } from '../shared/friends-search-preferences.js'
 import { createFriendsSearchPreferencesRouter } from './friends-search-preferences.js'
 import type { SaveDetailedSettings } from '../shared/detailed-settings.js'
@@ -49,9 +52,15 @@ export interface UserContextTransport {
     accountProfile?(): PromiseLike<RpcResponse>
     saveAccountProfile?(profile: AccountProfile): PromiseLike<RpcResponse>
     account?(): PromiseLike<RpcResponse>
-    saveAccount?(account: Account): PromiseLike<RpcResponse>
+    saveAccount?(account: SaveAccount): PromiseLike<RpcResponse>
     profileDetails?(): PromiseLike<RpcResponse>
     saveProfileDetails?(details: SaveProfileDetails): PromiseLike<RpcResponse>
+    profileCustomization?(): PromiseLike<RpcResponse>
+    saveProfileCustomization?(value: SaveProfileCustomization): PromiseLike<RpcResponse>
+    profileShowcase?(owner: string): PromiseLike<RpcResponse>
+    profilePrompts?(owner: string, mode: 'friends' | 'dating'): PromiseLike<RpcResponse>
+    photoCaptions?(owner: string): PromiseLike<RpcResponse>
+    savePhotoCaption?(value: SavePhotoCaption): PromiseLike<RpcResponse>
     friendsRuntime?(): PromiseLike<RpcResponse>
     activeFriendsStatus?(): PromiseLike<RpcResponse>
     activeFriendsCommand?(command: ActiveCommand): PromiseLike<RpcResponse>
@@ -62,6 +71,8 @@ export interface UserContextTransport {
     activeFriendsRead?(group: string, seq: number): PromiseLike<RpcResponse>
     projectFriendsCandidates?(targets: string[]): PromiseLike<RpcResponse>
     friendsDiscoveryStatus?(): PromiseLike<RpcResponse>
+    progressiveMatchingSetup?(): PromiseLike<RpcResponse>
+    startFriendsDiscovery?(): PromiseLike<RpcResponse>
     friendsDiscoveryConnection?(target: string, action: 'request' | 'accept'): PromiseLike<RpcResponse>
     matchingScoringSettings?(): PromiseLike<RpcResponse>
     saveMatchingScoringSettings?(value: SaveMatchingScoringSettings): PromiseLike<RpcResponse>
@@ -79,6 +90,9 @@ export interface UserContextTransport {
     datingAggregate?(): PromiseLike<RpcResponse>
     saveDatingAggregate?(aggregate: SaveDatingAggregate): PromiseLike<RpcResponse>
     profilePhotoReference?(owner: string): PromiseLike<RpcResponse>
+    profilePhotoGallery?(owner: string): PromiseLike<RpcResponse>
+    editPhotoGallery?(value: ProfileGalleryEdit): PromiseLike<RpcResponse>
+    readPhotoSlot?(owner: string, revision: number, position: number): PromiseLike<RpcResponse>
     profilePhotoState?(): PromiseLike<RpcResponse>
     saveProfilePhoto?(value: ProfilePhotoWrite): PromiseLike<RpcResponse>
     readProfilePhoto?(owner: string, revision: number): PromiseLike<RpcResponse>
@@ -95,6 +109,7 @@ export interface UserContextTransport {
     socialHistory?(conversation: string, before: number | null, after: number | null): PromiseLike<RpcResponse>
     socialSend?(conversation: string, body: string, requestId: string): PromiseLike<RpcResponse>
     socialRead?(conversation: string, seq: number): PromiseLike<RpcResponse>
+    socialTyping?(conversation: string, isGroup: boolean, typing: boolean): PromiseLike<RpcResponse>
     socialActivity?(): PromiseLike<RpcResponse>
     ownerBlocklist?(): PromiseLike<RpcResponse>
     ownerBlockState?(target: string): PromiseLike<RpcResponse>
@@ -133,6 +148,12 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         saveAccount: account => client.rpc('save_account', { account_in: account }),
         profileDetails: () => client.rpc('get_profile_details'),
         saveProfileDetails: details => client.rpc('save_profile_details', { details_in: details }),
+        profileCustomization: () => client.rpc('get_profile_customization'),
+        saveProfileCustomization: value => client.rpc('save_profile_customization', { customization_in: value }),
+        profileShowcase: owner => client.rpc('get_profile_showcase', { owner_in: owner }),
+        profilePrompts: (owner, mode) => client.rpc('get_profile_prompts', { owner_in: owner, mode_in: mode }),
+        photoCaptions: owner => client.rpc('get_profile_photo_captions', { owner_in: owner }),
+        savePhotoCaption: value => client.rpc('set_profile_photo_caption', { caption_in: value }),
         friendsSearchPreferences: () => client.rpc('get_friends_search_preferences'),
         saveFriendsSearchPreferences: preferences => client.rpc('save_friends_search_preferences', { preferences_in: preferences }),
         detailedSettings: () => client.rpc('get_detailed_settings'),
@@ -152,6 +173,7 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         socialHistory: (conversation, before, after) => client.rpc('social_history', { conversation_in: conversation, before_in: before, after_in: after }),
         socialSend: (conversation, body, requestId) => client.rpc('social_send', { conversation_in: conversation, body_in: body, request_in: requestId }),
         socialRead: (conversation, seq) => client.rpc('social_read', { conversation_in: conversation, seq_in: seq }),
+        socialTyping: (conversation, isGroup, typing) => client.rpc('messaging_typing', { conversation_in: conversation, group_in: isGroup, typing_in: typing }),
         socialActivity: () => client.rpc('social_activity'),
         ownerBlocklist: () => client.rpc('get_owner_blocklist'),
         ownerBlockState: target => client.rpc('get_owner_block_state', { target_in: target }),
@@ -169,6 +191,8 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         activeFriendsRead: (group, seq) => client.rpc('active_friends_read', { group_in: group, seq_in: seq }),
         projectFriendsCandidates: targets => client.rpc('project_friends_candidates', { targets_in: targets }),
         friendsDiscoveryStatus: () => client.rpc('get_friends_discovery_status'),
+        progressiveMatchingSetup: () => client.rpc('get_progressive_matching_setup'),
+        startFriendsDiscovery: () => client.rpc('start_friends_discovery'),
         friendsDiscoveryConnection: (target, action) => client.rpc('friends_discovery_connection', { target_in: target, action_in: action }),
         matchingScoringSettings: () => client.rpc('get_matching_scoring_settings'),
         saveMatchingScoringSettings: value => client.rpc('save_matching_scoring_settings', { settings_in: value }),
@@ -177,6 +201,9 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         datingScoringSettings: () => client.rpc('get_dating_scoring_settings'),
         saveDatingScoringSettings: value => client.rpc('save_dating_scoring_settings', { settings_in: value }),
         profilePhotoReference: owner => client.rpc('get_profile_photo_reference', { owner_in: owner }),
+        profilePhotoGallery: owner => client.rpc('get_profile_photo_gallery', { owner_in: owner }),
+        editPhotoGallery: value => client.rpc('edit_profile_photo_gallery', { edit_in: value }),
+        readPhotoSlot: (owner, revision, position) => client.rpc('read_profile_photo_slot', { owner_in: owner, revision_in: revision, position_in: position }),
         profilePhotoState: () => client.rpc('get_profile_photo_state'), saveProfilePhoto: value => client.rpc('save_profile_photo', { photo_in: value }), readProfilePhoto: (owner, revision) => client.rpc('read_profile_photo', { owner_in: owner, revision_in: revision }),
         join: qtype => client.rpc('join_queue', { qtype }), leave: () => client.rpc('leave_queue'), status: () => client.rpc('get_queue_status'), result: () => client.rpc('get_queue_match'), profile: () => client.rpc('get_matchmaking_profile'), save: profile => client.rpc('save_matchmaking_profile', { profile_in: profile }),
         listingStatus: listingId => client.rpc('get_listing_matchmaking_status', { listing_id_in: listingId }),
@@ -200,7 +227,8 @@ function unwrap(result: RpcResponse): unknown {
   if (result.error) {
     if (['PGRST301', 'PGRST302', 'PGRST303', '28000'].includes(result.error.code ?? '')) throw new MatchingFailure(401, 'auth', 'Your session has expired. Sign in again.')
     if (['PGRST202', '42883'].includes(result.error.code ?? '')) throw new MatchingFailure(503, 'unavailable', 'Matching RPC is not available yet.')
-    if (['22023', '23505', '23514'].includes(result.error.code ?? '')) throw new MatchingFailure(400, 'invalid', 'Check your profile fields and onboarding steps. No changes were saved.')
+    if (result.error.code === '23505') throw new MatchingFailure(400, 'invalid', 'That username is already taken. Choose another.')
+    if (['22023', '23514'].includes(result.error.code ?? '')) throw new MatchingFailure(400, 'invalid', 'Check your profile fields and try again.')
     if (result.error.code === 'AQ409') throw new MatchingFailure(409, 'unavailable', 'Save Friends filters and choose a current search location before joining or checking.')
     if (result.error.code === 'AQ503') throw new MatchingFailure(503, 'unavailable', 'Downtime results are not available yet. Active Friends matching remains separate.')
     if (result.error.code === 'PF409') throw new MatchingFailure(409, 'unavailable', 'Complete your profile and enable discovery in Settings before joining.')
@@ -232,6 +260,7 @@ export function createMatchmakingRouter(transport: UserContextTransport | null, 
   })
   const actor = (response: Response): ReturnType<UserContextTransport['actor']> => response.locals.actor
   router.use('/profile-details', createProfileDetailsRouter())
+  router.use('/profile-customization', createProfileCustomizationRouter())
   router.use('/friends-search-preferences', createFriendsSearchPreferencesRouter())
   router.use('/detailed-settings', createDetailedSettingsRouter())
   router.use('/dating-preferences', createDatingRouter())
@@ -247,7 +276,7 @@ export function createMatchmakingRouter(transport: UserContextTransport | null, 
     if (!read) throw new MatchingFailure(503, 'unavailable', 'Unified account RPC is not available yet.')
     return validate(AccountSchema, unwrap(await read()))
   }
-  const writeAccount = async (response: Response, next: Account, previous: Account) => {
+  const writeAccount = async (response: Response, next: SaveAccount, previous: Account) => {
     const save = actor(response).saveAccount
     if (!save) throw new MatchingFailure(503, 'unavailable', 'Unified account RPC is not available yet.')
     const before = completedAccountChapters(previous).length
@@ -299,13 +328,16 @@ export function createMatchmakingRouter(transport: UserContextTransport | null, 
     const saved = await writeAccount(response, { ...previous, profile: { ...(previous.profile ?? { birthdate: null, location_city: null, interests: [], availability: [] }), ...parsed.data }, completed: previous.completed.length ? previous.completed : [0] }, previous)
     response.json({ profile: AccountProfileSchema.parse({ username: saved.profile!.username, display_name: saved.profile!.display_name, bio: saved.profile!.bio, avatar_url: saved.profile!.avatar_url }) })
   })
-  router.get('/account', async (_request, response) => {
-    response.json(await readAccount(response))
+  const accountForClient = (request: Request, account: Account) =>
+    request.headers[accountOnboardingHeader.toLowerCase()] === 'progressive'
+      ? account : { ...account, completed: legacyAccountChapters(account) }
+  router.get('/account', async (request, response) => {
+    response.json(accountForClient(request, await readAccount(response)))
   })
   router.put('/account', async (request, response) => {
     const parsed = SaveAccountSchema.safeParse(request.body)
     if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid account data. No changes were saved.')
-    response.json(await writeAccount(response, parsed.data, await readAccount(response)))
+    response.json(accountForClient(request, await writeAccount(response, parsed.data, await readAccount(response))))
   })
   router.put('/profile', async (request, response) => {
     const parsed = MatchingProfileSchema.safeParse(request.body)

@@ -2,8 +2,10 @@ import { gardenFixture } from "./garden-fixture";
 import type { Page } from "@playwright/test";
 import { browserAccount, mockMatchingSession } from "./matchmaking-fixture";
 import { effectiveDetailedSettings } from "../../shared/detailed-settings";
-import { emptyAccount } from "../../shared/account";
-import { emptyDatingProfile } from "../../shared/dating";
+import { completedAccountChapters, emptyAccount } from "../../shared/account";
+import { completeDatingProfile, emptyDatingProfile, type DatingAggregate } from "../../shared/dating";
+
+import type { FriendsPreferences } from '../../shared/friends-search-preferences';
 
 export const user = "a0000000-0000-4000-8000-000000000001";
 export const peer = "a0000000-0000-4000-8000-000000000002";
@@ -19,6 +21,7 @@ export async function wiringFixture(
     incomplete?: boolean;
     queue?: "downtime";
     lostMessage?: boolean;
+    progressive?: boolean;
     conversationMode?: 'friends' | 'dating' | null;
   } = {},
 ) {
@@ -38,12 +41,19 @@ export async function wiringFixture(
       completed: [0],
     };
   if (options.fresh) account = structuredClone(emptyAccount);
+  const progressive = options.progressive || options.fresh || options.incomplete;
+  let friendsStarted = !progressive;
   let photoRevision = 0,
     hasPhoto = false;
   let connection = "none",
     blocked = false,
     friendRevision = 0,
-    friends: unknown = null;
+    friends: FriendsPreferences | null = null;
+  const captions: (string | null)[] = [null, null, null, null];
+  let customization = {
+    revision: 0,
+    customization: { interestOrder: [] as string[], audiences: { education: 'both', occupation: 'both', languages: 'both' }, gardenItem: null as string | null },
+  };
   let facts = {
     revision: 0,
     facts: {
@@ -63,7 +73,7 @@ export async function wiringFixture(
       datingDiscovery: true,
     },
   };
-  let dating = {
+  let dating: DatingAggregate = {
     profileRevision: 1,
     searchRevision: 1,
     profile: {
@@ -83,6 +93,13 @@ export async function wiringFixture(
     eligibility: { asOf: "2026-10-27", adult: true, locationResolved: true },
     effectiveEnabled: false,
   };
+  if (progressive) dating = {
+    ...dating, profileRevision: 0, searchRevision: 0, profile: emptyDatingProfile(),
+    search: null, eligibility: { ...dating.eligibility, locationResolved: false },
+  };
+  let schedule = { revision: progressive ? 0 : 1, timeZone: progressive ? null as string | null : 'America/New_York', showAvailability: false };
+  const profileReady = () => !progressive || (hasPhoto && !!account.profile?.interests.length);
+  const areaReady = () => !progressive || !!friends?.searchArea.resolvedLocationRef;
   const messages = [
     {
       id: crypto.randomUUID(),
@@ -116,7 +133,12 @@ export async function wiringFixture(
       route.fulfill({ json, status });
     if (path === "/api/auth/email") return reply({ exists: true });
     if (path.endsWith("/account")) {
-      if (method === "PUT") account = body;
+      if (method === "PUT") {
+        const { initialTimeZone, ...next } = body;
+        if (initialTimeZone && schedule.revision === 0 && account.completed.length < 4 && completedAccountChapters(next).length === 4)
+          schedule = { revision: 1, timeZone: initialTimeZone, showAvailability: false };
+        account = { ...next, completed: completedAccountChapters(next) };
+      }
       return reply(account);
     }
     if (path.endsWith("/account-profile"))
@@ -129,6 +151,18 @@ export async function wiringFixture(
         },
       });
     if (path.endsWith("/profile")) return reply({ profile: account.profile });
+    if (path.endsWith("/profile-customization")) {
+      if (method === "PUT") customization = { revision: customization.revision + 1, customization: body.customization };
+      return reply(customization);
+    }
+    const promptsRoute = /\/profile-customization\/([^/]+)\/prompts\/(friends|dating)$/.exec(path)
+    if (promptsRoute) {
+      const prompts = (customization.customization as { prompts?: { id: string; answer: string }[] }).prompts ?? []
+      const shows = (item: { id: string; audience?: string }) => ['looking-for', 'first-date', 'green-flag'].includes(item.id) ? 'dating' : item.audience ?? 'both'
+      return reply({ prompts: prompts.filter(item => shows(item) === 'both' || shows(item) === promptsRoute[2]) })
+    }
+    if (path.includes("/profile-customization/"))
+      return reply({ interestOrder: customization.customization.interestOrder, gardenItem: customization.customization.gardenItem });
     if (path.endsWith("/profile-details")) {
       if (method === "PUT")
         facts = { revision: facts.revision + 1, facts: body.facts };
@@ -145,6 +179,14 @@ export async function wiringFixture(
         updatedAt: photoRevision ? now : null,
       });
     }
+    if (path.endsWith("/profile-photo/gallery/caption") && method === "PUT") {
+      captions[body.position - 1] = body.caption.trim() || null;
+      return reply({ revision: photoRevision, captions: captions.slice(0, hasPhoto ? 1 : 0) });
+    }
+    if (/\/profile-photo\/gallery\/[^/]+\/captions$/.test(path))
+      return reply({ revision: photoRevision, captions: captions.slice(0, hasPhoto ? 1 : 0) });
+    if (/\/profile-photo\/gallery\/[^/]+$/.test(path))
+      return reply({ revision: photoRevision, count: hasPhoto ? 1 : 0 });
     if (path.includes("/profile-photo/reference/"))
       return reply({ revision: 0, hasPhoto: false, updatedAt: null });
     if (path.includes("/profile-photo/"))
@@ -174,14 +216,26 @@ export async function wiringFixture(
         policy: "nearby-first-v1",
         canJoin: true,
       });
+    if (path.endsWith('/friends/setup')) {
+      const groupScheduleReady = !!schedule.timeZone && !!account.profile?.availability.some(window =>
+        Date.parse(`2000-01-01T${window.end_time}Z`) - Date.parse(`2000-01-01T${window.start_time}Z`) >= 3600000);
+      return reply({ profileReady: profileReady(), friendsAreaReady: areaReady(), groupScheduleReady });
+    }
+    if (path.endsWith('/friends/start')) {
+      if (!profileReady() || !areaReady() || !detailed.settings.friendsDiscovery) return reply({ error: 'Complete setup' }, 409);
+      friendsStarted = true;
+      return reply({ available: true, eligible: true, reason: null });
+    }
     if (path.endsWith('/friends/status')) {
       const enabled = account.settings.discoverable && detailed.settings.friendsDiscovery;
-      return reply({ available: true, eligible: enabled, reason: enabled ? null : 'discovery_off' });
+      const reason = !enabled ? 'discovery_off' : !profileReady() ? 'profile' : !areaReady() || !friendsStarted ? 'preferences' : null;
+      return reply({ available: true, eligible: reason === null, reason });
     }
     if (path.endsWith("/friends-search-preferences")) {
       if (method === "PUT") {
         friendRevision++;
         friends = body.preferences;
+        if (!body.deferDiscovery && friends?.searchArea.resolvedLocationRef) friendsStarted = true;
       }
       return reply({ revision: friendRevision, preferences: friends });
     }
@@ -220,6 +274,7 @@ export async function wiringFixture(
           searchRevision: dating.searchRevision + 1,
           profile: body.profile,
           search: body.search,
+          eligibility: { ...dating.eligibility, locationResolved: !!body.search?.searchArea.resolvedLocationRef },
         };
       return reply(dating);
     }
@@ -235,12 +290,15 @@ export async function wiringFixture(
       return reply({
         available: true,
         aggregate: dating,
-        canStart: true,
-        globalDiscovery: true,
-        datingDiscovery: true,
+        canStart: profileReady() && completeDatingProfile(dating.profile) && dating.eligibility.locationResolved,
+        globalDiscovery: account.settings.discoverable,
+        datingDiscovery: detailed.settings.datingDiscovery,
       });
     }
-    if (path.endsWith('/schedule')) return reply({revision:1,timeZone:'America/New_York',showAvailability:false});
+    if (path.endsWith('/schedule')) {
+      if (method === 'PUT') schedule = { revision: schedule.revision + 1, timeZone: body.timeZone, showAvailability: body.showAvailability };
+      return reply(schedule);
+    }
     if (path.endsWith('/active-friends/groups')) return reply({groups:[]});
     if (path.endsWith('/active-friends/status')) return reply({enabled:true,state:'idle',entryId:null,queuedAt:null,proposal:null,groupId:null});
     if (path.endsWith('/friends/recommendations') || path.endsWith('/dating/recommendations')) {
@@ -421,5 +479,5 @@ export async function wiringFixture(
   });
   await mockMatchingSession(page, !options.guest);
   const garden=await gardenFixture(page);
-  return { calls, sent, garden, getAccount: () => account };
+  return { calls, sent, garden, getAccount: () => account, getCustomization: () => customization };
 }

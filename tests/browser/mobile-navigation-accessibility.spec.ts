@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { conversationId, wiringFixture } from './wiring-fixture';
+import { wiringFixture } from './wiring-fixture';
 
 // Approximate Android's 200% text setting without scaling the viewport or icons.
 async function enlargeText(page: Page) {
@@ -38,7 +38,7 @@ async function expectAccessibleTabs(page: Page, enlarged: boolean) {
   for (const [index, tab] of tabs.entries()) {
     expect(tab.target.width).toBeGreaterThanOrEqual(44);
     expect(tab.target.height).toBeGreaterThanOrEqual(44);
-    expect(tab.font).toBe(enlarged ? 20 : 10);
+    expect(tab.font).toBe(enlarged ? 22 : 11);
     expect(tab.overflow).toBe('visible');
     expect(tab.textOverflow).not.toBe('ellipsis');
     expect(tab.glyphs.length).toBeGreaterThan(0);
@@ -63,8 +63,9 @@ for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 844 });
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await wiringFixture(page);
-      await page.goto(`/messages/chat?conversation=${conversationId}`);
-      const composer = page.getByRole('textbox', { name: 'Message', exact: true });
+      // Conversations hide the tabs, so check them from the inbox.
+      await page.goto('/messages');
+      const composer = page.getByLabel('Search conversations');
       await expect(composer).toBeVisible();
       await page.evaluate(() => document.fonts.ready);
       if (enlarged) await enlargeText(page);

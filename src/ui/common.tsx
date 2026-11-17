@@ -3,6 +3,8 @@ import { ModalLayerContext } from './modal-layer';
 import { Link } from "react-router";
 import { useProfilePhoto } from "../features/account/useProfilePhoto";
 import { MediaImage } from './loading/MediaImage';
+import './loading/skeletons.css';
+import { prefersReducedMotion } from './feedback';
 
 export function Brand() {
   return (
@@ -24,8 +26,15 @@ export function ErrorMessage({ children }: { children?: ReactNode }) {
     </p>
   ) : null;
 }
+// Generic placeholder for panels and dialogs without a page-specific skeleton.
 export function Loading() {
-  return <p role="status">Loading…</p>;
+  return (
+    <div className="inline-skeleton" role="status" aria-label="Loading">
+      <span className="skeleton-shape skeleton-line" aria-hidden="true" />
+      <span className="skeleton-shape skeleton-line" aria-hidden="true" />
+      <span className="skeleton-shape skeleton-line short" aria-hidden="true" />
+    </div>
+  );
 }
 export function Empty({
   title,
@@ -38,6 +47,17 @@ export function Empty({
     <div className="card blank">
       <h3>{title}</h3>
       {children}
+    </div>
+  );
+}
+// A friendly empty screen: gently animated icon, short title, optional next step.
+export function EmptyState({ icon, title, text, action }: { icon: string; title: string; text?: string; action?: ReactNode }) {
+  return (
+    <div className="empty-state">
+      <span className="empty-state-icon" aria-hidden="true"><Icon name={icon} /></span>
+      <p className="empty-state-title">{title}</p>
+      {text && <p className="empty-state-text">{text}</p>}
+      {action}
     </div>
   );
 }
@@ -65,6 +85,11 @@ export function ActionButton({
 }
 export function Icon({ name }: { name: string }) {
   const paths: Record<string, ReactNode> = {
+    Star: <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z" />,
+    ChevronUp: <path d="m6 15 6-6 6 6" />,
+    ChevronDown: <path d="m6 9 6 6 6-6" />,
+    Edit: <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4" />,
+    Food: <><path d="M3 11h18a9 9 0 0 1-18 0ZM8 21h8M8 3v4m4-5v5m4-4v4" /></>,
     External: <path d="M7 17 17 7M7 7h10v10" />,
     Back: <path d="m15 18-6-6 6-6" />,
     ChevronRight: <path d="m9 6 6 6-6 6" />,
@@ -188,13 +213,22 @@ export function Modal({
   children,
   close,
   className = '',
+  variant = 'full',
 }: {
   title: string;
   children: ReactNode;
   close: () => void;
   className?: string;
+  // Short tasks open as content-sized bottom sheets on phones.
+  variant?: 'full' | 'sheet';
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const latestClose = useRef(close);
+  useLayoutEffect(() => { latestClose.current = close; });
+  // Owners decide whether to close (a busy form may refuse). The exit motion
+  // plays on an inert copy after the real dialog unmounts.
+  const requestClose = useCallback(() => latestClose.current(), []);
+  const drag = useRef<{ id: number; y: number; offset: number } | null>(null);
   const [host, setHost] = useState<HTMLDivElement | null>(null);
   const [layerBack, setLayerBack] = useState<(() => void) | null>(null);
   const layerOpener = useRef<HTMLElement | null>(null);
@@ -206,13 +240,27 @@ export function Modal({
   useLayoutEffect(() => {
     if (!layerBack && layerOpener.current) { layerOpener.current.focus(); layerOpener.current = null; }
   }, [layerBack]);
-  const goBack = layerBack ?? close;
+  const goBack = layerBack ?? requestClose;
   const titleId = useId();
   useEffect(() => {
     const element = dialog.current!,
       opener = document.activeElement as HTMLElement | null;
     element.showModal();
     return () => {
+      // StrictMode's simulated unmount keeps the node connected; only a real
+      // removal leaves a copy behind to animate out.
+      if (!element.isConnected && !prefersReducedMotion()) {
+        const ghost = element.cloneNode(true) as HTMLDialogElement;
+        const backdrop = document.createElement('div');
+        ghost.removeAttribute('aria-labelledby');
+        ghost.setAttribute('aria-hidden', 'true');
+        ghost.inert = true;
+        ghost.setAttribute('open', '');
+        ghost.classList.add('modal-ghost', 'is-closing');
+        backdrop.className = 'modal-ghost-backdrop';
+        document.body.append(backdrop, ghost);
+        window.setTimeout(() => { ghost.remove(); backdrop.remove(); }, 220);
+      }
       element.close();
       opener?.focus();
     };
@@ -220,10 +268,10 @@ export function Modal({
   return (
     <dialog
       ref={dialog}
-      className={`account-modal ${className} ${layerBack ? 'has-modal-layer' : ''}`}
+      className={`account-modal ${variant === 'sheet' ? 'is-sheet' : ''} ${className} ${layerBack ? 'has-modal-layer' : ''}`}
       aria-labelledby={titleId}
       onKeyDown={(event) => {
-        if (event.key !== 'Tab') return;
+        if (event.key !== 'Tab' || (event.target as Element).closest('dialog') !== event.currentTarget) return;
         const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])'))
           .filter(element => !element.matches(':disabled') && element.getClientRects().length > 0 && element.tabIndex >= 0);
         const first = focusable[0], last = focusable.at(-1);
@@ -235,6 +283,7 @@ export function Modal({
         }
       }}
       onCancel={(event) => {
+        if (event.target !== event.currentTarget) return;
         event.preventDefault();
         goBack();
       }}
@@ -242,9 +291,32 @@ export function Modal({
         if (event.target === dialog.current) goBack();
       }}
     >
+      {variant === 'sheet' && !layerBack && <div
+        className="sheet-handle"
+        aria-hidden="true"
+        onPointerDown={(event) => {
+          if (event.pointerType === 'mouse') return;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          drag.current = { id: event.pointerId, y: event.clientY, offset: 0 };
+        }}
+        onPointerMove={(event) => {
+          const state = drag.current;
+          if (!state || state.id !== event.pointerId || !dialog.current) return;
+          state.offset = Math.max(0, event.clientY - state.y);
+          dialog.current.style.transform = `translateY(${state.offset}px)`;
+        }}
+        onPointerUp={(event) => {
+          const state = drag.current;
+          drag.current = null;
+          if (!state || state.id !== event.pointerId || !dialog.current) return;
+          dialog.current.style.transform = '';
+          if (state.offset > 90) requestClose();
+        }}
+        onPointerCancel={() => { drag.current = null; if (dialog.current) dialog.current.style.transform = ''; }}
+      ><span/></div>}
       <header className="row between" hidden={!!layerBack}>
         <h2 id={titleId}>{title}</h2>
-        <button className="round" onClick={close} aria-label="Close">
+        <button className="round" onClick={requestClose} aria-label="Close">
           ×
         </button>
       </header>

@@ -2,7 +2,7 @@ import { CurrentContext } from "./current";
 import { useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { Navigate, Outlet, useLocation } from "react-router";
-import { completedAccountChapters } from "../../shared/account";
+import { hasBasicProfile } from "../../shared/account";
 import { AccountContext } from "../auth/account-context";
 import { useUnifiedAccount } from "../auth/useUnifiedAccount";
 import { safeReturnTo } from "../auth/returnTo";
@@ -20,7 +20,7 @@ function AdultAdmission() {
     <a href="mailto:pebblesupport.help@gmail.com">Contact support</a>
     <ActionButton secondary onClick={() => setDeleting(true)}>Delete account</ActionButton>
     <ActionButton secondary onClick={() => { void supabase?.auth.signOut({ scope: 'local' }); }}>Sign out</ActionButton>
-    {deleting && <Modal title="Delete account" close={() => setDeleting(false)}><DeleteAccountPanel close={() => setDeleting(false)} /></Modal>}
+    {deleting && <Modal variant="sheet" title="Delete account" close={() => setDeleting(false)}><DeleteAccountPanel close={() => setDeleting(false)} /></Modal>}
   </main>;
 }
 
@@ -70,7 +70,7 @@ function AccountLoader({
     );
    if (account.account.profile?.birthdate && !meetsMinimumAge(account.account.profile.birthdate)) return <AdultAdmission />;
    if (
-    completedAccountChapters(account.account).length < 4 &&
+    !hasBasicProfile(account.account.profile) &&
     location.pathname !== "/onboarding"
   )
     return (
