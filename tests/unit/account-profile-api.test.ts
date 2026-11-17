@@ -2,21 +2,34 @@ import type { Request, Response } from 'express'
 import { expect, it, vi } from 'vitest'
 import { createMatchmakingRouter, type UserContextTransport } from '../../api/matchmaking'
 import { accountFixture, requiredPreferences } from './complete-profile-fixture'
+import { accountOnboardingHeader, emptyAccount, type Account } from '../../shared/account'
 
 const identity = { username: 'sam', display_name: 'Sam', bio: null, avatar_url: null }
-function request(method: string, body?: unknown, options: { missing?: boolean; invalid?: boolean; token?: string; malformed?: boolean } = {}) {
-  const save = vi.fn(async (value: unknown) => ({ data: options.malformed ? {} : value, error: options.missing ? { code: 'PGRST202' } : null }))
-  const accountProfile = vi.fn(async () => ({ data: options.malformed ? {} : accountFixture({ ...identity, ...requiredPreferences }), error: options.missing ? { code: 'PGRST202' } : null }))
+function request(method: string, body?: unknown, options: { missing?: boolean; invalid?: boolean; token?: string; malformed?: boolean; account?: Account; saved?: Account; path?: string; progressive?: boolean } = {}) {
+  const save = vi.fn(async (value: unknown) => ({ data: options.malformed ? {} : options.saved ?? value, error: options.missing ? { code: 'PGRST202' } : null }))
+  const accountProfile = vi.fn(async () => ({ data: options.malformed ? {} : options.account ?? accountFixture({ ...identity, ...requiredPreferences }), error: options.missing ? { code: 'PGRST202' } : null }))
   // Compatibility routes may call ONLY the unified document read/write methods.
   const transport = { verify: vi.fn(async () => options.invalid ? null : { id: 'a0000000-0000-4000-8000-000000000001' }), actor: () => ({ account: accountProfile, saveAccount: save }) } as unknown as UserContextTransport
   const result = new Promise<{ status: number; data: unknown }>((resolve, reject) => {
     let status = 200
-    const req = { method, url: '/account-profile', headers: { authorization: `Bearer ${options.token ?? 'test-jwt'}` }, body } as Request
+    const req = { method, url: options.path ?? '/account-profile', headers: { authorization: `Bearer ${options.token ?? 'test-jwt'}`,
+      ...(options.progressive && { [accountOnboardingHeader.toLowerCase()]: 'progressive' }) }, body } as Request
     const res = { locals: {}, set: vi.fn(), status(code: number) { status = code; return this }, json(data: unknown) { resolve({ status, data }); return this } } as unknown as Response
     createMatchmakingRouter(transport)(req, res, reject)
   })
   return { result, save, accountProfile }
 }
+it('keeps installed clients on the original completion sequence while progressive clients finish with a basic profile', async () => {
+  const saved = accountFixture({ ...identity, ...requiredPreferences, interests: [], availability: [] })
+  saved.preferences = emptyAccount.preferences
+  const options = { path: '/account', account: saved }
+  expect((await request('GET', undefined, options).result).data).toEqual({ ...saved, completed: [0] })
+  expect((await request('GET', undefined, { ...options, progressive: true }).result).data).toEqual(saved)
+  const payload = { ...saved, completed: [0, 1], profile: { ...saved.profile!, interests: ['Coffee'] } }
+  const stored = { ...saved, profile: payload.profile }
+  expect(await request('PUT', payload, { ...options, saved: stored }).result).toEqual({ status: 200, data: payload })
+  expect(await request('PUT', payload, { ...options, saved: stored, progressive: true }).result).toEqual({ status: 200, data: stored })
+})
 it('account API reads and atomically saves only validated account identity', async () => {
   expect(await request('GET').result).toEqual({ status: 200, data: { profile: identity } })
   const write = request('PUT', identity)
