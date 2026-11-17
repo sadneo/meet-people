@@ -1,54 +1,51 @@
 // @vitest-environment node
-import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { expect, it } from 'vitest'
 
-it('reconciles production schedules without exposing tokens and refuses unknown cloud failures', () => {
+it('verifies native cron before retiring only the known Google job, without logging credentials', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-dining-deployment-test-'))
   const statePath = join(directory, 'state.json')
   try {
-    writeFileSync(join(directory, 'pnpm'), '#!/usr/bin/env node\nconsole.log(JSON.stringify({rows:[{decrypted_secret:"private-test-token"}]}))\n', { mode: 0o700 })
+    writeFileSync(join(directory, 'pnpm'), `#!/usr/bin/env node
+const fs=require('node:fs'),args=process.argv.slice(2),file=args[args.indexOf('--file')+1];
+if (!args.includes('wacgxhsdhrqigrmqaonc') || (fs.statSync(file).mode & 0o777)!==0o600) process.exit(2);
+const sql=fs.readFileSync(file,'utf8');
+if (!sql.includes('hosting_private.configure_dining_schedule()') || sql.includes('decrypted_secret')) process.exit(3);
+if (process.env.DINING_TEST_DB_FAILURE) { console.error('private-test-token');process.exit(1); }
+console.log(JSON.stringify({rows:[{jobname:'pebble-ingest-dining',schedule:'0 10,11 * * *',command:'select hosting_private.ingest_dining()',active:!process.env.DINING_TEST_INACTIVE}]}));
+`, { mode: 0o700 })
     writeFileSync(join(directory, 'gcloud'), `#!/usr/bin/env node
-const fs = require('node:fs'), args = process.argv.slice(2), path = process.env.DINING_TEST_STATE;
-const state = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path, 'utf8')) : {};
-const name = args[2] === 'describe' ? args[3] : args[4];
-if (process.env.DINING_TEST_FAILURE) { console.error('PERMISSION_DENIED'); process.exit(1); }
-if (args[2] === 'describe') {
-  if (!state[name]) { console.error('NOT_FOUND'); process.exit(1); }
-  console.log(JSON.stringify(state[name]));
-} else {
-  const file = args.find(arg => arg.startsWith('--flags-file=')).slice('--flags-file='.length);
-  if ((fs.statSync(file).mode & 0o777) !== 0o600) process.exit(2);
-  const flags = JSON.parse(fs.readFileSync(file, 'utf8'));
-  if (flags['--attempt-deadline'] !== '180s' || flags['--max-retry-attempts'] !== 0) process.exit(3);
-  state[name] = {schedule:flags['--schedule'],timeZone:flags['--time-zone'],state:'ENABLED',
-    httpTarget:{uri:flags['--uri'],httpMethod:flags['--http-method'],
-      body:Buffer.from(flags['--message-body']).toString('base64'),headers:flags['--headers'] || flags['--update-headers']}};
-  fs.writeFileSync(path, JSON.stringify(state));
-  console.log(JSON.stringify(state[name]));
-}
+const fs=require('node:fs'),args=process.argv.slice(2),path=process.env.DINING_TEST_STATE;
+if (args[3]!=='pebble-ingest-dining-schedule' || !args.includes('--project=cse416-meet-people') || !args.includes('--location=us-east4')) process.exit(2);
+if (process.env.DINING_TEST_FAILURE) { console.error('PERMISSION_DENIED private-test-token');process.exit(1); }
+if (args[2]==='describe') {
+  if (fs.existsSync(path)) {console.error('NOT_FOUND');process.exit(1);}
+  console.log(JSON.stringify({httpTarget:{uri:process.env.DINING_TEST_WRONG_TARGET?'https://example.test':'https://wacgxhsdhrqigrmqaonc.supabase.co/functions/v1/ingest-dining',headers:{'x-ingest-token':'private-test-token'}}}));
+} else if (args[2]==='delete') {fs.writeFileSync(path,'retired');}
+else process.exit(3);
 `, { mode: 0o700 })
     const env = { ...process.env, PATH: `${directory}:${process.env.PATH}`, DINING_TEST_STATE: statePath,
-      DEPLOY_ENVIRONMENT: 'production', GCP_PROJECT_ID: 'cse416-meet-people', SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co' }
-    const run = (overrides = {}) => spawnSync('node', ['scripts/deploy-dining-schedules.mjs'], { env: { ...env, ...overrides }, encoding: 'utf8' })
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const result = run()
-      expect(result.status, result.stderr).toBe(0)
-      expect(result.stdout + result.stderr).not.toContain('private-test-token')
-      const jobs = JSON.parse(readFileSync(statePath, 'utf8'))
-      expect(Object.keys(jobs)).toEqual(['pebble-ingest-dining-schedule'])
-      for (const job of Object.values(jobs) as { schedule: string; timeZone: string; httpTarget: { uri: string; body: string } }[]) {
-        expect(job.schedule).toBe('0 6 * * *')
-        expect(job.timeZone).toBe('America/New_York')
-        expect(job.httpTarget.uri).toBe('https://wacgxhsdhrqigrmqaonc.supabase.co/functions/v1/ingest-dining')
-        expect(JSON.parse(Buffer.from(job.httpTarget.body, 'base64').toString())).toEqual({ mode: 'full', dryRun: false })
-      }
+      DEPLOY_ENVIRONMENT: 'production', GCP_PROJECT_ID: 'cse416-meet-people', SUPABASE_PROJECT_REF: 'wacgxhsdhrqigrmqaonc',
+      SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co' }
+    const run = (script: string, overrides = {}) => spawnSync('node', [`scripts/${script}.mjs`], { env: { ...env, ...overrides }, encoding: 'utf8' })
+    for (const overrides of [{DEPLOY_ENVIRONMENT:'sandbox'}, {SUPABASE_PROJECT_REF:'wixdiotkntapwrbibaom'},
+      {DINING_TEST_DB_FAILURE:'true'}, {DINING_TEST_INACTIVE:'true'}, {DINING_TEST_WRONG_TARGET:'true'}, {DINING_TEST_FAILURE:'true'}]) {
+      const result=run('retire-google-dining-schedule',overrides)
+      expect(result.status).not.toBe(0)
+      expect(result.stdout+result.stderr).not.toContain('private-test-token')
+      expect(existsSync(statePath)).toBe(false)
     }
-    const before = readFileSync(statePath, 'utf8')
-    expect(run({ DEPLOY_ENVIRONMENT: 'sandbox' }).status).not.toBe(0)
-    expect(run({ DINING_TEST_FAILURE: 'true' }).status).not.toBe(0)
-    expect(readFileSync(statePath, 'utf8')).toBe(before)
+    // Native reconciliation needs no working Google login.
+    expect(run('deploy-dining-schedules',{DINING_TEST_FAILURE:'true'}).status).toBe(0)
+    expect(existsSync(statePath)).toBe(false)
+    for (let attempt=0;attempt<2;attempt++) {
+      const result=run('retire-google-dining-schedule')
+      expect(result.status,result.stderr).toBe(0)
+      expect(result.stdout+result.stderr).not.toContain('private-test-token')
+      expect(readFileSync(statePath,'utf8')).toBe('retired')
+    }
   } finally { rmSync(directory, { recursive: true, force: true }) }
 })
