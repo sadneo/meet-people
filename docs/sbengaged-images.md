@@ -100,3 +100,7 @@ queue enrollments, or call an embedding provider.
 
 An event without a public poster retains the neutral image placeholder. The three
 fictional demo events also have no real SBU poster to import.
+
+Event scraping uses Supabase cron in both environments. Release reconciliation
+removes the obsolete duplicate `ingest-sbengaged-hourly` job after verifying its
+project target. Google Cloud event-group and push schedules are separate workers.

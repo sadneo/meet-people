@@ -152,9 +152,12 @@ jobs:
       - name: Deploy approved production workers and schedules
         if: env.DEPLOY_ENVIRONMENT == 'production'
         run: node scripts/deploy-production-workers.mjs
-      - name: Configure production dining imports at 6 a.m. New York time
+      - name: Configure Supabase dining cron at 6 a.m. New York time
         if: env.DEPLOY_ENVIRONMENT == 'production'
         run: node scripts/deploy-dining-schedules.mjs
+      - name: Retire the verified legacy Google dining schedule
+        if: env.DEPLOY_ENVIRONMENT == 'production'
+        run: node scripts/retire-google-dining-schedule.mjs
       # Each site's pinTag updates the shared Run service; publish sequentially.
       - name: Deploy web site and pin API revision
         run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only "hosting:$FIREBASE_WEB_SITE_ID" --project "$GCP_PROJECT_ID" --non-interactive
