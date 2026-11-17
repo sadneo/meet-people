@@ -63,6 +63,7 @@ async function builtApp(runId, env) {
     // The built API resolves its dependencies from the directory above it.
     mkdirSync(out, { recursive: true })
     symlinkSync(join(root, 'node_modules'), join(out, 'node_modules'))
+    writeFileSync(join(out, 'package.json'), '{"type":"module"}\n')
     for (const args of [['typescript/bin/tsc', '--noEmit'], ['vite/bin/vite.js', 'build', '--outDir', webDir, '--emptyOutDir'], ['typescript/bin/tsc', '-p', 'tsconfig.api.json', '--outDir', apiDir]]) {
       const [script, ...rest] = args
       const code = await run(node, [bin(script), ...rest], env)

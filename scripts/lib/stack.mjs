@@ -34,7 +34,15 @@ export function devProjectId(root = repoRoot, home = homedir()) {
   if (claimed === path) return 'meet-people'
   if (claimed && existsSync(claimed)) return `meet-people-co-${suffix}`
   mkdirSync(dataDir(home), { recursive: true })
-  writeFileSync(file, path, { mode: 0o600 })
+  if (claimed) {
+    writeFileSync(`${file}.${process.pid}.tmp`, path, { mode: 0o600 })
+    renameSync(`${file}.${process.pid}.tmp`, file)
+  } else {
+    try { writeFileSync(file, path, { flag: 'wx', mode: 0o600 }) } catch (error) {
+      if (error.code !== 'EEXIST') throw error
+      return readFileSync(file, 'utf8').trim() === path ? 'meet-people' : `meet-people-co-${suffix}`
+    }
+  }
   return 'meet-people'
 }
 
@@ -146,7 +154,7 @@ export function assertLocalStack(url, stack) {
 }
 
 // A fixed per-user location: every agent and shell sees the same owner files whatever its temp dir.
-const ownerFile = projectId => join(process.env.XDG_STATE_HOME ?? join(homedir(), '.local/state'), 'pebble/stacks', `${projectId}.json`)
+const ownerFile = projectId => join(process.env.XDG_STATE_HOME || join(homedir(), '.local/state'), 'pebble/stacks', `${projectId}.json`)
 
 function readOwner(projectId) {
   try { return JSON.parse(readFileSync(ownerFile(projectId), 'utf8')) } catch { return undefined }
@@ -259,6 +267,7 @@ async function projectsWithResources(container, now) {
 const minutes = 60_000
 
 // Owned on this host: the pid decides. Owned elsewhere: only a long-dead looking owner is reaped. Unowned: only once nothing has been created for a while.
+// shortcut: an agent in its own pid namespace on the same host looks dead here; add a heartbeat if agents run that way.
 function orphaned(owner, newest, { now, host, isAlive }) {
   if (!owner) return now - newest > 30 * minutes
   if (owner.host === host) return !isAlive(owner.pid)

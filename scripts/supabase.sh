@@ -13,9 +13,10 @@ if [ -z "${DOCKER_HOST:-}" ] && [ -S "$podman_socket" ]; then
   export DOCKER_HOST="unix://$podman_socket"
 fi
 
-engine_socket="$podman_socket"
 case "${DOCKER_HOST:-}" in
   unix://*) engine_socket="${DOCKER_HOST#unix://}" ;;
+  '') engine_socket="$podman_socket" ;;
+  *) engine_socket= ;;
 esac
 
 # Podman's stdin-tar `cp` (how the Supabase CLI copies the db key file) breaks while another stack's db
