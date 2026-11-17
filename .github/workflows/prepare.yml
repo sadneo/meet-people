@@ -54,8 +54,8 @@ jobs:
       - name: Build development web and mobile
         if: inputs.environment == 'sandbox'
         run: |
-          pnpm build:web:devtools
-          pnpm build:mobile:devtools
+          VITE_DEV_TOOLS=true pnpm build:web
+          VITE_DEV_TOOLS=true pnpm build:mobile
       - name: Record frontend product, source and backend
         run: node scripts/configure-deployment.mjs --write-build-info
       - uses: actions/upload-artifact@v7

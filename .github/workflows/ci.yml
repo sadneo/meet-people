@@ -19,11 +19,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - run: pnpm lint
-      - run: pnpm test:unit
-      - run: pnpm test:doctor
-      - run: node --test tools/qa-real-users/*.test.mjs
+      - run: pnpm verify
       - uses: docker/setup-buildx-action@v4
       - name: Validate API image
         uses: docker/build-push-action@v7
@@ -67,24 +63,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm supabase:start
-      - run: pnpm supabase:check
-      - name: Verify seeded messaging
-        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/seed-messaging.sql
-      - name: Verify SQL security contracts
-        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/hosted-services.sql
-      - name: Verify dining menu snapshots and permissions
-        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/dining-menus.sql
-      - name: Verify month-ahead event sync and paced photo queue
-        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/sbengaged-month-sync.sql
-      - run: pnpm env:local
-      - run: pnpm test:integration
       - run: pnpm exec playwright install --with-deps chromium
-      # Deployment checks validate dev web/mobile and leave production-mode web in dist/web.
-      - run: pnpm test:deployment
-      - run: pnpm build:api
-      - name: Browser tests against verified production-mode artifacts
-        run: node scripts/test-built.mjs --workers=4
+      - run: pnpm test:integration
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
