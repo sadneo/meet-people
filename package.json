@@ -40,7 +40,7 @@
     "test:integration:auth": "node tests/integration/local/test-local-auth.mjs",
     "test:integration:schema": "node tests/integration/local/test-product-schema.mjs",
     "test:integration:matching": "node tests/integration/local/test-matching-http.mjs",
-    "test:integration:browser": "playwright test --config playwright.integration.config.ts",
+    "test:integration:browser": "node scripts/test-browser.mjs --config playwright.integration.config.ts",
     "test:hosted": "node tests/integration/hosted/test-hosted.mjs",
     "test:hosted:messaging": "node tests/integration/hosted/test-hosted-messaging.mjs",
     "test:hosted:account": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=\"$(command -v chromium || true)\" node --env-file-if-exists=.env.hosting.local tests/integration/hosted/test-hosted-account.mjs",

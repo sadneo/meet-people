@@ -65,7 +65,7 @@ Additional existing checks remain explicit:
 
 | Location / command | Prerequisites |
 | --- | --- |
-| `pnpm test:browser:built` | Builds web/API, starts local servers on 3100/3101, runs only `tests/integration/built/`, then stops servers |
+| `pnpm test:browser:built` | Builds web/API, starts local servers on free ports, runs only `tests/integration/built/`, then stops servers |
 | `pnpm test:integration:browser` | Real Express/SQL journey; requires the existing guarded offline database fixture named in `tests/integration/offline/disposable.ts` |
 | `tests/integration/offline/` | Individual API/SQL/race harnesses; each retains its original disposable database/container guards |
 | `tests/integration/sql/` | SQL acceptance sources and fixtures; run only against their documented target/schema prerequisites |

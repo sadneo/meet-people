@@ -16,10 +16,18 @@ export async function runBuilt(args, env = {}) {
     start(['node_modules/vite/bin/vite.js', 'preview'], { VITE_PREVIEW_PORT: String(webPort), API_PORT: String(apiPort) }),
   ]
   const abort = new AbortController()
-  const kill = () => servers.forEach(server => server.kill())
-  const onSignal = () => { abort.abort(); kill() }
-  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, onSignal)
-  process.once('exit', kill)
+  let tests
+  const kill = () => [...servers, tests].forEach(child => child?.kill())
+  let interrupted = false
+  const onSignal = () => {
+    kill()
+    if (interrupted) process.exit(130)
+    interrupted = true
+    abort.abort()
+  }
+  const signals = ['SIGINT', 'SIGTERM']
+  for (const signal of signals) process.on(signal, onSignal)
+  process.on('exit', kill)
   const exited = new Promise((_, reject) => servers.forEach(server => server.once('exit', code => reject(new Error(`Server exited early (${code}).`)))))
   exited.catch(() => {})
   try {
@@ -30,7 +38,7 @@ export async function runBuilt(args, env = {}) {
       ]),
       exited,
     ])
-    const tests = spawn(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', '--config', 'playwright.built.config.ts', ...args], {
+    tests = spawn(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', '--config', 'playwright.built.config.ts', ...args], {
       cwd: root,
       stdio: 'inherit',
       env: { ...base, PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${webPort}` },
@@ -42,6 +50,7 @@ export async function runBuilt(args, env = {}) {
   } finally {
     servers.forEach(server => server.removeAllListeners('exit'))
     kill()
+    for (const signal of signals) process.removeListener(signal, onSignal)
     process.removeListener('exit', kill)
   }
 }
