@@ -2,9 +2,9 @@
 Keeps historical migration files unchanged. Never resets a database.
 """
 from pathlib import Path
-import re,shutil,subprocess,runpy
+import os,re,shutil,subprocess,sys,runpy
 root=Path(__file__).resolve().parents[1]
-target=root/'worktree/local-matchmaking'
+target=Path(os.environ.get('PEBBLE_MATCHING_WORKDIR') or root/'worktree/local-matchmaking')
 (target/'supabase/migrations').mkdir(parents=True,exist_ok=True)
 # The canonical product SQL intentionally retains the original bigint messaging
 # model. These two later service-backed replacements are a different schema track.
@@ -25,5 +25,6 @@ config=re.sub(r'(\[db.seed\][^[]*?)enabled = true',r'\1enabled = false',config)
 (target/'supabase/config.toml').write_text(config)
 functions=target/'supabase/functions'
 if not functions.exists():functions.symlink_to(root/'supabase/functions',target_is_directory=True)
+if '--prepare-only' in sys.argv:raise SystemExit(0)
 print('Starting canonical local matchmaking profile (no reset; no legacy seed).',flush=True)
-raise SystemExit(subprocess.call(['pnpm','exec','supabase','--workdir',str(target),'start'],cwd=root))
+raise SystemExit(subprocess.call(['sh','scripts/supabase.sh','--workdir',str(target),'start'],cwd=root))
