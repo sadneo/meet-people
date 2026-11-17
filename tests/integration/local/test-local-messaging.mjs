@@ -8,7 +8,7 @@ import { URL } from 'node:url'
 const { fetch } = globalThis
 
 const url = process.env.SUPABASE_URL
-const api = 'http://127.0.0.1:3001'
+const api = process.env.PEBBLE_API_URL ?? 'http://127.0.0.1:3001'
 assert.equal(new URL(url).hostname, '127.0.0.1', 'Local Supabase only.')
 const options = { auth: { persistSession: false, autoRefreshToken: false } }
 const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY, options)

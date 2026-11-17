@@ -22,6 +22,7 @@ function fixture(overrides = {}) {
       return { isFile: () => true, uid: 1000, mode: 0o100600, size: 256 }
     },
     probe: async () => false,
+    which: async () => true,
     run: async (file, args, options) => {
       calls.push({ file, args, options })
       if (file === 'pnpm') return { stdout: args[0] === '--version' ? '11.25.0' : '2.117.0' }
@@ -85,6 +86,15 @@ test('a foreign project label is rejected even when the default meet-people proj
   options.run = async (file, args, config) => file === 'docker' && args[0] === 'inspect' ? { stdout: '{"running":true,"project":"meet-people"}' } : original(file, args, config)
   assert.equal(check(await diagnose(options), 'supabase-db').status, 'fail')
   assert.ok(!calls.some(call => call.file === 'docker' && call.args[0] === 'exec'))
+})
+
+test('a .env.local pointing at another stack is a warning', async () => {
+  const { options } = fixture()
+  const original = options.read
+  options.read = async path => path.endsWith('.env.local') ? (await original(path)).replace(stack.apiUrl, 'http://127.0.0.1:54321') : original(path)
+  const report = await diagnose(options)
+  assert.equal(check(report, 'env-stack').status, 'warn')
+  assert.equal(check(await diagnose(fixture().options), 'env-stack'), undefined)
 })
 
 test('no local stack fails supabase-db without touching the database', async () => {

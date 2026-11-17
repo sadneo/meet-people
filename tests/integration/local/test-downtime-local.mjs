@@ -24,7 +24,7 @@ try {
  browser=await chromium.launch();
  const page=await browser.newPage({viewport:{width:390,height:844}});
  const errors=[];page.on('pageerror',()=>errors.push('browser-error'));
- await page.goto('http://127.0.0.1:3000/downtime-matchmaking');
+ await page.goto(`${process.env.PEBBLE_WEB_URL??'http://127.0.0.1:3000'}/downtime-matchmaking`);
  await expect(page.getByRole('heading',{name:'Sign in to match'})).toBeVisible();
  await page.evaluate(async ({access_token,refresh_token})=>{
   const {supabase}=await import('/src/supabase.ts');
@@ -50,7 +50,7 @@ try {
  await expect(page.getByRole('heading',{name:'No candidate yet'})).toBeVisible();
  await page.getByRole('link',{name:'Active matchmaking',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('downtime queue');
- await page.goto('http://127.0.0.1:3000/downtime-matchmaking');
+ await page.goto(`${process.env.PEBBLE_WEB_URL??'http://127.0.0.1:3000'}/downtime-matchmaking`);
  await expect(page.getByRole('button',{name:'Pause downtime matching',exact:true})).toBeEnabled();
  await page.getByRole('button',{name:'Pause downtime matching',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('Ready when you are');

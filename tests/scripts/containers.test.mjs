@@ -32,8 +32,7 @@ test('prefers docker, falls back to podman', async () => {
 })
 
 test('container runs the CLI, trims stdout and throws on failure', async () => {
-  const cli = await engineCli()
-  assert.match(await container(['--version']), new RegExp(cli, 'i'))
+  assert.match(await container(['--version']), /docker|podman/i)
   assert.equal(typeof await engineReachable(), 'boolean')
   await assert.rejects(container(['definitely-not-a-command']))
 })

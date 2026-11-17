@@ -5,6 +5,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseEnv, promisify } from 'node:util'
+import { engineCli, engineEnv } from './lib/containers.mjs'
 import { credentialsDir, currentStack } from './lib/stack.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
@@ -37,7 +38,7 @@ async function occupied(port) {
 // All external operations are injected so tests need no Docker, ports or credentials.
 export async function diagnose({ directory = root, env = process.env, node = process.versions.node,
   home = homedir(), uid = process.getuid?.(), run = execute, read = readFile,
-  stat = lstat, probe = occupied, stack = currentStack(directory, env) } = {}) {
+  stat = lstat, probe = occupied, which, stack = currentStack(directory, env) } = {}) {
   const checks = []
   const add = (id, status, message) => checks.push({ id, status, message })
   const command = async (file, args, extra = {}) => {
@@ -66,6 +67,11 @@ export async function diagnose({ directory = root, env = process.env, node = pro
   for (const [name, config] of [['SUPABASE_URL', server], ['VITE_SUPABASE_URL', browser]]) {
     add(name, !config[name] ? 'fail' : localUrl(config[name]) ? 'pass' : 'warn', !config[name] ? `${name} is missing. For local Supabase, run pnpm dev (writes .env.local when missing).` : localUrl(config[name]) ? `${name} targets loopback.` : `${name} is not a plain local HTTP origin. Doctor will not contact it.`)
   }
+  if (stack && files['.env.local']?.SUPABASE_URL) {
+    let same = false
+    try { same = new URL(files['.env.local'].SUPABASE_URL).origin === new URL(stack.apiUrl).origin } catch { /* Invalid configuration is reported above. */ }
+    if (!same) add('env-stack', 'warn', `.env.local points SUPABASE_URL away from this worktree's stack (${stack.apiUrl}). It is written once; delete it and rerun pnpm dev to regenerate.`)
+  }
   if (server.SUPABASE_URL && browser.VITE_SUPABASE_URL) {
     let same = false
     try { same = new URL(server.SUPABASE_URL).origin === new URL(browser.VITE_SUPABASE_URL).origin } catch { /* Invalid configuration is reported above. */ }
@@ -91,16 +97,10 @@ export async function diagnose({ directory = root, env = process.env, node = pro
   if (env.VITE_PORT !== undefined) add('frontend-ports', 'warn', 'VITE_PORT overrides both web and mobile ports. pnpm dev sets it per process; unset it in your shell.')
   if (String(env.API_PORT ?? 3001) !== String(server.PORT ?? 3001)) add('api-proxy', 'warn', 'API_PORT (Vite proxy) and PORT (API listener) differ. pnpm dev sets both; unset them in your shell.')
 
-  // Match scripts/supabase.sh's rootless Podman socket fallback without changing global configuration.
-  const dockerEnv = { ...env }
-  if (!dockerEnv.DOCKER_HOST) {
-    try {
-      const socket = join(env.XDG_RUNTIME_DIR ?? `/run/user/${uid}`, 'podman/podman.sock')
-      if ((await stat(socket)).isSocket()) dockerEnv.DOCKER_HOST = `unix://${socket}`
-    } catch { /* Docker's default socket remains authoritative. */ }
-  }
-  const docker = (args) => command('docker', args, { env: dockerEnv })
-  const engine = await docker(['info', '--format', '{{json .ServerVersion}}'])
+  const cli = await engineCli({ which })
+  const dockerEnv = await engineEnv(env, { stat, uid })
+  const docker = (args) => command(cli, args, { env: dockerEnv })
+  const engine = await docker(['info'])
   add('docker', engine ? 'pass' : 'fail', engine ? 'Docker-compatible engine is reachable.' : 'Docker-compatible engine is unavailable. Start it or review DOCKER_HOST/socket permissions.')
   if (engine && !stack) add('supabase-db', 'fail', 'No local stack for this worktree. Run pnpm dev first.')
   else if (engine) {

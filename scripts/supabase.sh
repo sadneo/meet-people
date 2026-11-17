@@ -19,10 +19,11 @@ case "${DOCKER_HOST:-}" in
 esac
 
 # Podman's stdin-tar `cp` (how the Supabase CLI copies the db key file) breaks while another stack's db
-# runs, so the CLI's docker calls go through a shim. Real Docker is untouched.
+# runs, so the CLI's docker calls go through a shim whenever they reach a Podman socket. Real Docker is untouched.
 docker_bin="$(command -v docker 2>/dev/null || true)"
+case "$engine_socket" in *podman*) podman_engine=1 ;; *) podman_engine= ;; esac
 if [ -S "$engine_socket" ] && command -v podman >/dev/null 2>&1 &&
-  { [ -z "$docker_bin" ] || readlink -f "$docker_bin" | grep -qi podman || docker --version 2>&1 | grep -qi podman; }; then
+  { [ -n "$podman_engine" ] || [ -z "$docker_bin" ] || readlink -f "$docker_bin" | grep -qi podman || docker --version 2>&1 | grep -qi podman; }; then
   export CONTAINER_HOST="unix://$engine_socket"
   PATH="$(cd "$(dirname "$0")" && pwd)/lib/podman-remote:$PATH"
   export PATH

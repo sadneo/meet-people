@@ -248,7 +248,7 @@ are removed. Any applied-environment rollback remains a separate approval gate.
 
 ## Real local downtime browser validation
 
-Run from this worktree while UI3000/API3001 and local Supabase54321 are active:
+Run from this worktree while `pnpm dev` is running; set `PEBBLE_WEB_URL` to the web URL it printed (default `http://127.0.0.1:3000`):
 
 ```sh
 PEBBLE_LOCAL_DOWNTIME_TEST=1 node tests/integration/local/test-downtime-local.mjs

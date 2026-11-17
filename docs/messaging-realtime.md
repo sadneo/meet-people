@@ -122,7 +122,7 @@ pnpm dev
 Then run the real API acceptance check:
 
 ```sh
-pnpm exec node --env-file-if-exists=.env.local tests/integration/local/test-local-messaging.mjs
+PEBBLE_API_URL=http://127.0.0.1:<api port printed by pnpm dev> pnpm exec node --env-file-if-exists=.env.local tests/integration/local/test-local-messaging.mjs
 ```
 
 It prepares the local test accounts `a@example.com` and `b@example.com` (password
