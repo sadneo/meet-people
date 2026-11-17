@@ -8,13 +8,41 @@ import { test } from 'node:test'
 import { resolveDeployment } from '../scripts/resolve-deployment.mjs'
 import { deploymentConfiguration, validateFrontendConfiguration } from '../scripts/configure-deployment.mjs'
 import { reviewedMigrationFlags } from '../scripts/push-reviewed-migrations.mjs'
+import { EDGE_FUNCTIONS, UNDEPLOYED_FUNCTIONS, runStage, stageSteps } from '../scripts/deploy-stages.mjs'
+
+const stageEnv = { DEPLOY_ENVIRONMENT: 'sandbox', SUPABASE_PROJECT_REF: 'wixdiotkntapwrbibaom' }
+
+test('every Edge Function is either deployed or deliberately excluded', () => {
+  const functions = readdirSync('supabase/functions', { withFileTypes: true }).filter(entry => entry.isDirectory() && !entry.name.startsWith('_')).map(entry => entry.name).sort()
+  assert.deepEqual([...EDGE_FUNCTIONS, ...UNDEPLOYED_FUNCTIONS].sort(), functions)
+  assert.ok(!EDGE_FUNCTIONS.includes('ingest-ticketmaster'), 'Ticketmaster ingestion is not deployed')
+})
+
+test('release stages run backend then services in dependency order for each environment', () => {
+  const run = (stage, env) => { const calls = []; runStage(stage, env, (command, args) => calls.push([command, ...args].join(' '))); return calls }
+  const backend = run('backend', stageEnv)
+  assert.deepEqual(backend.slice(0, EDGE_FUNCTIONS.length), EDGE_FUNCTIONS.map(name => `pnpm exec supabase functions deploy ${name} --project-ref wixdiotkntapwrbibaom --use-api`))
+  assert.deepEqual(backend.slice(EDGE_FUNCTIONS.length), ['node scripts/push-reviewed-migrations.mjs --yes', 'node scripts/deploy-product-schema.mjs', 'pnpm hosting:configure', 'node scripts/configure-sbengaged-sync.mjs'])
+  assert.deepEqual(run('services', stageEnv), ['sh scripts/deploy-api.sh', 'sh scripts/deploy-worker.sh'])
+  assert.deepEqual(run('services', { DEPLOY_ENVIRONMENT: 'production' }), ['sh scripts/deploy-api.sh', 'node scripts/deploy-production-workers.mjs', 'node scripts/deploy-dining-schedules.mjs', 'node scripts/retire-google-dining-schedule.mjs'])
+  const partial = []
+  assert.throws(() => runStage('services', { DEPLOY_ENVIRONMENT: 'production' }, (command, args) => { partial.push(args[0]); if (partial.length === 2) throw new Error('worker failed') }), /worker failed/)
+  assert.deepEqual(partial, ['scripts/deploy-api.sh', 'scripts/deploy-production-workers.mjs'], 'A failed step stops later steps')
+  for (const env of [{}, { DEPLOY_ENVIRONMENT: 'staging' }]) assert.throws(() => stageSteps('services', env), /production or sandbox/)
+  assert.throws(() => stageSteps('backend', { DEPLOY_ENVIRONMENT: 'sandbox' }), /SUPABASE_PROJECT_REF/)
+  assert.throws(() => stageSteps('hosting', stageEnv), /backend or services/)
+  const release = readFileSync('.github/workflows/release.yml', 'utf8')
+  assert.ok(!release.includes('functions deploy'), 'Edge Functions are listed only in deploy-stages.mjs')
+  const order = ['push-reviewed-migrations.mjs --dry-run', 'deploy-stages.mjs backend', 'deploy-stages.mjs services', 'hosting:$FIREBASE_WEB_SITE_ID', 'pnpm test:hosted'].map(step => release.indexOf(step))
+  assert.ok(order.every((index, i) => index > 0 && (i === 0 || index > order[i - 1])), 'preview, backend, services, hosting, smoke')
+})
 
 test('preview and apply use the same reviewed migration ordering guard', () => {
   const workflow = readFileSync('.github/workflows/release.yml', 'utf8')
   const commands = workflow.split('\n').filter(line => line.includes('node scripts/push-reviewed-migrations.mjs'))
-  assert.equal(commands.length, 2)
-  assert.ok(commands.some(line => line.includes('--dry-run')))
-  assert.ok(commands.some(line => line.includes('--yes')))
+  assert.deepEqual(commands.map(line => line.trim()), ['node scripts/push-reviewed-migrations.mjs --dry-run'])
+  const apply = stageSteps('backend', stageEnv).map(([, , args]) => args.join(' ')).filter(args => args.startsWith('scripts/push-reviewed-migrations.mjs'))
+  assert.deepEqual(apply, ['scripts/push-reviewed-migrations.mjs --yes'])
   const head = '20261114010000 | 20261114010000 | time'
   assert.deepEqual(reviewedMigrationFlags(`${head}\n20261113010000 | | time`, 'wacgxhsdhrqigrmqaonc'), ['--include-all'])
   assert.deepEqual(reviewedMigrationFlags(`${head}\n20261115010000 | | time`, 'wacgxhsdhrqigrmqaonc'), [])
@@ -301,6 +329,6 @@ test('pending Android push migrations follow the existing hosted migration head 
   assert.ok(readFileSync(`supabase/migrations/${pending[1]}`, 'utf8').includes('alter table public.push_outbox'))
   const release = readFileSync('.github/workflows/release.yml', 'utf8')
   assert.ok(release.includes('node scripts/push-reviewed-migrations.mjs --dry-run'))
-  assert.ok(release.includes('node scripts/push-reviewed-migrations.mjs --yes'))
-  assert.ok(!release.includes('--include-all'), 'Do not bypass migration-order review for all future releases')
+  assert.ok(stageSteps('backend', stageEnv).some(([, , args]) => args.join(' ') === 'scripts/push-reviewed-migrations.mjs --yes'))
+  assert.ok(!release.includes('--include-all') && !readFileSync('scripts/deploy-stages.mjs', 'utf8').includes('--include-all'), 'Do not bypass migration-order review for all future releases')
 })
