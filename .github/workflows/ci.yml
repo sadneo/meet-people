@@ -75,6 +75,8 @@ jobs:
         run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/hosted-services.sql
       - name: Verify dining menu snapshots and permissions
         run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/dining-menus.sql
+      - name: Verify dining cron security, DST and daily deduplication
+        run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/dining-cron.sql
       - name: Verify month-ahead event sync and paced photo queue
         run: docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/sbengaged-month-sync.sql
       - run: pnpm env:local
