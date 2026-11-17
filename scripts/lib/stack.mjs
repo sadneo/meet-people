@@ -112,7 +112,8 @@ export async function startStack(stack, { minimal = false, workdir, siteUrl } = 
   }
   const env = { ...process.env, ...stackEnv(stack), ...(siteUrl && { SUPABASE_AUTH_SITE_URL: siteUrl }) }
   const base = ['scripts/supabase.sh', ...(workdir ? ['--workdir', workdir] : [])]
-  const exclude = minimal ? ['-x', 'studio,mailpit,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta'] : []
+  // vector's secret-file copy fails on rootless Podman (broken pipe), and only the logs UI needs it.
+  const exclude = ['-x', minimal ? 'studio,mailpit,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta' : 'logflare,vector']
   await new Promise((done, fail) => {
     spawn('sh', [...base, 'start', ...exclude], { cwd: repoRoot, env, stdio: ['ignore', 2, 2] })
       .once('error', fail)

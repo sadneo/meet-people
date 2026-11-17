@@ -64,7 +64,7 @@ export async function diagnose({ directory = root, env = process.env, node = pro
   const server = { ...files['.env.local'], ...env }
   const browser = { ...files['.env'], ...files['.env.local'], ...files['.env.development'], ...files['.env.development.local'], ...env }
   for (const [name, config] of [['SUPABASE_URL', server], ['VITE_SUPABASE_URL', browser]]) {
-    add(name, !config[name] ? 'fail' : localUrl(config[name]) ? 'pass' : 'warn', !config[name] ? `${name} is missing. For local Supabase, review pnpm env:local (writes .env.local).` : localUrl(config[name]) ? `${name} targets loopback.` : `${name} is not a plain local HTTP origin. Doctor will not contact it.`)
+    add(name, !config[name] ? 'fail' : localUrl(config[name]) ? 'pass' : 'warn', !config[name] ? `${name} is missing. For local Supabase, run pnpm dev (writes .env.local when missing).` : localUrl(config[name]) ? `${name} targets loopback.` : `${name} is not a plain local HTTP origin. Doctor will not contact it.`)
   }
   if (server.SUPABASE_URL && browser.VITE_SUPABASE_URL) {
     let same = false
@@ -80,14 +80,16 @@ export async function diagnose({ directory = root, env = process.env, node = pro
   const maps = browser.VITE_GOOGLE_MAPS_API_KEY && server.GOOGLE_MAPS_SERVER_API_KEY && /^[a-f0-9]{64}$/i.test(server.SEARCH_LOCATION_SIGNING_KEY ?? '') && server.GOOGLE_MAPS_STORAGE_APPROVED === 'true'
   add('maps', maps ? 'pass' : 'warn', maps ? 'Maps configuration is present; provider restrictions and DB signing key are not verified.' : 'Optional Maps setup is incomplete. See docs/google-search-locations.md; no provider requests were made.')
 
-  for (const [name, raw] of [['web', env.VITE_PORT ?? 3000], ['mobile', env.VITE_PORT ?? 3002], ['api', env.PORT ?? files['.env.local']?.PORT ?? 3001]]) {
+  // pnpm dev picks free ports each run, so only explicitly configured ports are probed.
+  for (const [name, raw] of [['web', env.VITE_PORT], ['mobile', env.VITE_PORT], ['api', env.PORT ?? files['.env.local']?.PORT]]) {
+    if (raw === undefined) continue
     const port = Number(raw)
     if (!Number.isInteger(port) || port < 1 || port > 65535) { add(`port:${name}`, 'fail', `Invalid ${name} port configuration.`); continue }
     const busy = await probe(port)
     add(`port:${name}`, busy === false ? 'pass' : 'warn', busy === false ? `${name} port ${port} is available.` : busy ? `${name} port ${port} is occupied; this may be your running app. Ownership was not verified.` : `${name} port ${port} could not be checked.`)
   }
-  if (env.VITE_PORT !== undefined) add('frontend-ports', 'warn', 'VITE_PORT overrides both web and mobile ports. Unset it when running both with their distinct default ports, or set it per command.')
-  if (String(env.API_PORT ?? 3001) !== String(server.PORT ?? 3001)) add('api-proxy', 'warn', 'API_PORT (Vite proxy) and PORT (API listener) differ. Align them before pnpm dev.')
+  if (env.VITE_PORT !== undefined) add('frontend-ports', 'warn', 'VITE_PORT overrides both web and mobile ports. pnpm dev sets it per process; unset it in your shell.')
+  if (String(env.API_PORT ?? 3001) !== String(server.PORT ?? 3001)) add('api-proxy', 'warn', 'API_PORT (Vite proxy) and PORT (API listener) differ. pnpm dev sets both; unset them in your shell.')
 
   // Match scripts/supabase.sh's rootless Podman socket fallback without changing global configuration.
   const dockerEnv = { ...env }
@@ -105,7 +107,7 @@ export async function diagnose({ directory = root, env = process.env, node = pro
     const metadata = await docker(['inspect', '--format', '{"running":{{json .State.Running}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}}}', stack.dbContainer])
     let owned = false
     try { const container = JSON.parse(metadata); owned = container.running === true && container.project === stack.projectId } catch { /* Fail closed. */ }
-    add('supabase-db', owned ? 'pass' : 'fail', owned ? 'Expected local Supabase database container is running.' : 'Expected local database is absent, stopped, or has unexpected ownership. Review pnpm supabase:start; doctor starts nothing.')
+    add('supabase-db', owned ? 'pass' : 'fail', owned ? 'Expected local Supabase database container is running.' : 'Expected local database is absent, stopped, or has unexpected ownership. Run pnpm dev; doctor starts nothing.')
     if (owned) {
       // No application RPCs are invoked. The session itself is read-only and bounded.
       const result = await docker(['exec', '-e', 'PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=3000', stack.dbContainer, 'psql', '-X', '-qAt', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', schemaQuery])
@@ -113,7 +115,7 @@ export async function diagnose({ directory = root, env = process.env, node = pro
         const schema = JSON.parse(result)
         if (!Array.isArray(schema.missing) || schema.missing.some(name => !signatures.includes(name)) || typeof schema.worker !== 'boolean') throw new Error('Unexpected schema response')
         add('schema', schema.missing.length ? 'fail' : 'pass', schema.missing.length ? `Missing local RPCs: ${schema.missing.join(', ')}. Review docs/demo-matchmaking-readiness.md; do not reset existing data.` : 'Core account, Events, allowance and Friends status RPC signatures exist (permissions/behavior not verified).')
-        add('worker-schema', schema.worker ? 'pass' : 'warn', schema.worker ? 'Optional local group-worker claim RPC exists. This does not prove a worker is running.' : 'Optional local group-worker claim RPC is absent. See pnpm dev:groups and docs/demo-data.md; setup changes require an explicit action.')
+        add('worker-schema', schema.worker ? 'pass' : 'warn', schema.worker ? 'Optional local group-worker claim RPC exists. This does not prove a worker is running.' : 'Optional local group-worker claim RPC is absent. See pnpm dev and docs/demo-data.md; setup changes require an explicit action.')
       } catch { add('schema', 'fail', 'Read-only local schema inspection failed. Check database readiness; no migrations were applied.') }
     }
   }
@@ -125,11 +127,11 @@ export async function diagnose({ directory = root, env = process.env, node = pro
   return { checks, summary: Object.fromEntries(['pass', 'warn', 'fail'].map(status => [status, checks.filter(check => check.status === status).length])) }
 }
 
-export async function main(args = process.argv.slice(2)) {
-  if (args.includes('--help')) { console.log('Usage: pnpm run doctor [--json] (alias: pnpm dev:doctor)\nRead-only local diagnostics. Warnings exit 0; failed prerequisites exit 1. No installs, login, resets or provider requests.'); return 0 }
-  if (args.some(arg => arg !== '--json')) { console.error('Usage: pnpm run doctor [--json]'); return 1 }
+export async function main(args = process.argv.slice(2), options = {}) {
+  if (args.includes('--help')) { console.log('Usage: pnpm dev --check [--json]\nRead-only local diagnostics. Warnings exit 0; failed prerequisites exit 1. No installs, login, resets or provider requests.'); return 0 }
+  if (args.some(arg => arg !== '--json')) { console.error('Usage: pnpm dev --check [--json]'); return 1 }
   try {
-    const report = await diagnose()
+    const report = await diagnose(options)
     if (args.includes('--json')) console.log(JSON.stringify(report, null, 2))
     else {
       console.log('Pebble doctor — read-only local diagnostics\n')

@@ -119,7 +119,7 @@ test('environment precedence, public keys and secret variable names are checked 
   const { options, secret } = fixture({ env: {
     SUPABASE_URL: 'https://remote.example.test', VITE_SUPABASE_URL: 'https://remote.example.test',
     VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_secret_PRIVATE_SENTINEL_MUST_NEVER_APPEAR',
-    VITE_PRIVATE_KEY: 'PRIVATE_SENTINEL_MUST_NEVER_APPEAR', PORT: '4001',
+    VITE_PRIVATE_KEY: 'PRIVATE_SENTINEL_MUST_NEVER_APPEAR', PORT: '4001', VITE_PORT: '4000',
   } })
   const ports = []
   options.probe = async port => { ports.push(port); return true }
@@ -128,12 +128,12 @@ test('environment precedence, public keys and secret variable names are checked 
   assert.equal(check(report, 'VITE_SUPABASE_PUBLISHABLE_KEY').status, 'fail')
   assert.equal(check(report, 'browser-secrets').status, 'fail')
   assert.equal(check(report, 'api-proxy').status, 'warn')
-  assert.deepEqual(ports, [3000, 3002, 4001])
+  assert.deepEqual(ports, [4000, 4000, 4001])
   assert.ok(!JSON.stringify(report).includes(secret))
 })
 
 test('optional capabilities, occupied ports and newer Node versions are warnings rather than failures', async () => {
-  const { options } = fixture({ node: '26.0.0', probe: async () => true })
+  const { options } = fixture({ node: '26.0.0', probe: async () => true, env: { VITE_PORT: '4000', PORT: '4001', API_PORT: '4001' } })
   const report = await diagnose(options)
   for (const id of ['node', 'maps', 'port:web', 'port:mobile', 'port:api']) assert.equal(check(report, id).status, 'warn')
   assert.equal(report.summary.fail, 0)
@@ -153,6 +153,12 @@ test('rootless Podman socket fallback is scoped to diagnostic subprocesses', asy
   await diagnose(options)
   assert.ok(calls.filter(call => call.file === 'docker').every(call => call.options.env.DOCKER_HOST === 'unix:///run/user/1000/podman/podman.sock'))
   assert.equal(options.env.DOCKER_HOST, undefined)
+})
+
+test('ports nobody configured are not probed', async () => {
+  const { options } = fixture({ probe: async () => assert.fail('No port is configured') })
+  const report = await diagnose(options)
+  assert.equal(report.checks.some(item => item.id.startsWith('port:')), false)
 })
 
 test('missing environment values and invalid ports fail without probing invalid endpoints', async () => {
