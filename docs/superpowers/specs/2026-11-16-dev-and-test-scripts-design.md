@@ -53,7 +53,7 @@ fresh set (3 attempts).
 
 Every server the launcher or a test starts is verified before use: the API's
 `/api/health` echoes `PEBBLE_RUN_ID` from its environment and Vite serves the
-same id at `/__pebble/run-id` in dev and in the isolated test config. A
+same id at `/__pebble/run` in dev and in the isolated test config. A
 mismatching answer is treated as a failed start.
 
 `pnpm dev` first tries the familiar ports (web 3000, API 3001, mobile 3002,
@@ -74,14 +74,17 @@ through it. No hardcoded container names: the database container is
 The project id and ports are passed to the Supabase CLI via `SUPABASE_PROJECT_ID`
 and `SUPABASE_*_PORT` (verified with CLI 2.117 on Podman).
 
-- **Dev stack:** `pebble-<worktree-slug>`, long-lived, one per worktree.
-- **Test stack:** `pebble-test-<run-id>`, created by `pnpm test:integration`,
+- **Dev stack:** `meet-people-wt-<slug>-<hash>` (linked worktree), long-lived, one per worktree. Dev stacks are never
+  volume-deleted by tooling; only test stacks are.
+- **Test stack:** `meet-people-test-<run-id>`, created by `pnpm test:integration`,
   with studio, logflare, vector, imgproxy, edge-runtime, supavisor and
   postgres-meta excluded (mailpit stays: local auth signup needs SMTP). Torn down on exit and on signals. Teardown removes
   containers, volumes and network by the `com.supabase.cli.project` label
   because `supabase stop` fails to prune volumes on Podman.
-- **Reaper:** each test run first removes `pebble-test-*` stacks whose owner
-  pid (recorded in a container label / state file) is no longer alive.
+- **Reaper:** each test run first removes `meet-people-test-*` stacks that are orphaned. Owner files live in
+  `${XDG_STATE_HOME:-~/.local/state}/pebble/stacks/<project_id>.json` as `{ pid, host, started }`. A stack is reaped
+  when its owner is on this host and the pid is dead; or the owner is on another host, the pid looks dead and it
+  started over 6 h ago; or there is no owner file and its newest container is over 30 minutes old.
 
 A shared helper `scripts/lib/stack.mjs` exposes the current stack
 (`{ projectId, apiUrl, dbContainer, keys }`) from environment set by the
@@ -106,7 +109,7 @@ Starts, in order, with labelled output (`concurrently`):
 | `.env.local` (written only when missing; Supabase values are passed by env, so stale values never matter) | yes | Supabase running |
 | Web, mobile, API | yes | `pnpm install` |
 | Edge functions (all) | optional | `supabase/.env` |
-| Event-group worker (watch) | optional | worker credentials for this stack |
+| Event-group worker (watch) | optional | running Supabase (its `--setup` creates the credentials) |
 
 Required parts missing → stop with the requirement named. Optional parts
 missing → one "skipped X: needs Y" line. Ctrl-C stops app processes; the
@@ -144,10 +147,12 @@ aggregate job is unchanged. `prepare.yml` uses inline `VITE_DEV_TOOLS=true`.
 
 ## Calls made after the builder check
 
-- **Existing data is kept.** The main checkout (where `.git` is a directory)
-  keeps project id `meet-people` and the credential files directly in
-  `~/.local/share/pebble/`. Linked worktrees use `meet-people-wt-<slug>` and
-  `~/.local/share/pebble/<project_id>/`. Test stacks are `meet-people-test-<run-id>`.
+- **Existing data is kept.** Only the full checkout recorded in
+  `~/.local/share/pebble/main-checkout` (claimed by the first full checkout to run;
+  re-claimed if the recorded path no longer exists) keeps project id `meet-people` and the
+  credential files directly in `~/.local/share/pebble/`. Other full checkouts use
+  `meet-people-co-<slug>-<hash>`; linked worktrees use `meet-people-wt-<slug>-<hash>`
+  (hash = first 6 hex of sha1 of the absolute path) and `~/.local/share/pebble/<project_id>/`. Test stacks are `meet-people-test-<run-id>`.
 - **Auth redirects on any port.** `config.toml` allows
   `http://127.0.0.1:*/**` and `http://localhost:*/**`; `site_url` is set per
   stack through `SUPABASE_AUTH_SITE_URL`.

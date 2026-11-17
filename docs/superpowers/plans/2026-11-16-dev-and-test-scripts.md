@@ -14,7 +14,7 @@
 
 - pnpm only; never npm/npx (`pnpm dlx` / `pnpm exec`).
 - No new dependencies.
-- Main checkout keeps project id `meet-people` and credentials directly in `~/.local/share/pebble/`; linked worktrees use `meet-people-wt-<slug>` and `~/.local/share/pebble/<project_id>/`; test stacks are `meet-people-test-<run-id>`.
+- Only the full checkout recorded in `~/.local/share/pebble/main-checkout` keeps project id `meet-people` and credentials directly in `~/.local/share/pebble/`; other full checkouts use `meet-people-co-<slug>-<hash>`; linked worktrees use `meet-people-wt-<slug>-<hash>` and `~/.local/share/pebble/<project_id>/`; test stacks are `meet-people-test-<run-id>`.
 - Every local-only guard stays: loopback `http:` origin, no userinfo/path/query, container label `com.supabase.cli.project` equal to the expected project id. Only the literal port/name becomes the current stack's.
 - Credential file checks unchanged: regular non-symlink, owner uid, mode `0600`, ≤ 8192 bytes, strict keys.
 - Teardown removes containers, volumes and networks by label `com.supabase.cli.project=<id>`; `supabase stop` is not trusted (it fails to prune volumes on Podman).
@@ -76,21 +76,21 @@
 **Interfaces:**
 - Consumes: Task 1 `freePorts`, `isFree`; Task 2 `container`, `engineEnv`.
 - Produces:
-  - `devProjectId(root = repoRoot): string` — `'meet-people'` when `<root>/.git` is a directory, else `'meet-people-' + slug(basename(root))` (slug: lowercase `[a-z0-9-]`, max 40).
+  - `devProjectId(root = repoRoot): string` — `'meet-people'` for the recorded main checkout (see above), `meet-people-co-<slug>-<hash>` for other full checkouts, else `meet-people-wt-<slug>-<hash>` (slug: lowercase `[a-z0-9-]`, max 40; hash: 6 hex of sha1 of the absolute path).
   - `credentialsDir(projectId: string, home = os.homedir()): string` — `~/.local/share/pebble` for `meet-people`, else `~/.local/share/pebble/<projectId>`.
   - `type Stack = { projectId: string, ports: { api, db, shadow, studio, mail }, apiUrl: string, dbContainer: string }`.
   - `stackEnv(stack: Stack): Record<string,string>` — `SUPABASE_PROJECT_ID`, `SUPABASE_API_PORT`, `SUPABASE_DB_PORT`, `SUPABASE_DB_SHADOW_PORT`, `SUPABASE_STUDIO_PORT`, `SUPABASE_LOCAL_SMTP_PORT`, `PEBBLE_SUPABASE_PROJECT_ID`, `PEBBLE_SUPABASE_URL`.
   - `devStack(root?): Promise<Stack>` — reads `.pebble/dev.json`; if the stack's db container is running, reuse its recorded ports; else reuse remembered ports that are all free, else `freePorts(5, [54321,54322,54320,54323,54324])`; writes `.pebble/dev.json` (mode 0600).
   - `testStack(runId: string): Promise<Stack>` — project `meet-people-test-<runId>`, `freePorts(5)`.
-  - `startStack(stack, { minimal?: boolean, workdir?: string, siteUrl?: string }): Promise<{ apiUrl, publishableKey, anonKey, serviceRoleKey }>` — runs `sh scripts/supabase.sh [--workdir] start [-x studio,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta]` (mailpit stays: local auth signup needs SMTP; non-minimal is `-x logflare,vector`) with `stackEnv` + `SUPABASE_AUTH_SITE_URL`; then parses `status --output json`. When `minimal`, labels the run owner by writing `/tmp/opencode/pebble-stacks/<projectId>.json` `{ pid: process.pid }` (falls back to `os.tmpdir()`).
+  - `startStack(stack, { minimal?: boolean, workdir?: string, siteUrl?: string }): Promise<{ apiUrl, publishableKey, anonKey, serviceRoleKey }>` — runs `sh scripts/supabase.sh [--workdir] start [-x studio,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta]` (mailpit stays: local auth signup needs SMTP; non-minimal is `-x logflare,vector`) with `stackEnv` + `SUPABASE_AUTH_SITE_URL`; then parses `status --output json`. When `minimal`, labels the run owner by writing `${XDG_STATE_HOME:-~/.local/state}/pebble/stacks/<projectId>.json` `{ pid, host, started }`.
   - `removeStack(projectId): Promise<void>` — `rm -f` containers, `volume rm -f`, `network rm` by label; tolerates none.
-  - `reapTestStacks(): Promise<string[]>` — for each distinct `com.supabase.cli.project` label starting `meet-people-test-` whose owner file's pid is not alive (or missing), `removeStack`; returns removed ids.
+  - `reapTestStacks(): Promise<string[]>` — for each distinct `com.supabase.cli.project` label starting `meet-people-test-` that is orphaned (owner on this host with a dead pid; other host, dead-looking pid and started > 6 h ago; no owner file and newest container > 30 min old), `removeStack`; returns removed ids.
   - `currentStack(root?): Stack | null` — sync; from `PEBBLE_SUPABASE_PROJECT_ID`/`PEBBLE_SUPABASE_URL` env, else `.pebble/dev.json`, else null. Used by one-off scripts and guards.
   - `assertLocalStack(url: string, stack: Stack): void` — throws unless `new URL(url).origin === stack.apiUrl` and URL has no userinfo/path/query/hash.
   - `stack.d.mts` declares the above for TS importers (`tsconfig` has `allowJs: false`).
 
 - [ ] **Step 1: Failing tests** (pure parts, injected fs/`container`):
-  - `main checkout keeps meet-people`, `worktree gets slugged id` (`/x/Pebble Friend_UI` → `meet-people-pebble-friend-ui`).
+  - `main checkout keeps meet-people`, `worktree gets slugged id` (`/x/Pebble Friend_UI` → `meet-people-wt-pebble-friend-ui-<hash>`).
   - `credentialsDir` both cases.
   - `stackEnv` exact keys/values for a fixed Stack.
   - `reallocates remembered ports that are busy`: dev.json with a busy port → new ports written.
@@ -147,14 +147,14 @@
 
 **Interfaces:**
 - Consumes: Tasks 1–5.
-- Produces: `parts(context): Part[]` (pure, testable) where `Part = { name, required: boolean, ready: boolean, needs: string, command?: string, env?: object }` for: `supabase`, `env`, `web`, `mobile`, `api`, `functions` (needs `supabase/.env`), `worker` (needs `<credentialsDir>/event-group-worker.json`).
+- Produces: `parts(context): Part[]` (pure, testable) where `Part = { name, required: boolean, ready: boolean, needs: string, command?: string, env?: object }` for: `supabase`, `env`, `web`, `mobile`, `api`, `functions` (needs `supabase/.env`), `worker` (needs only the running stack; its `--setup` creates the credentials).
 - Produces: `helpText(parts): string` — table of part / required / requires.
 
 Behaviour:
 - `--help`: print `helpText` and exit 0. `--check`: run doctor against the dev stack, exit with its code. `--remote`: run `scripts/run-remote-messaging.mjs` with `PORT`/`API_PORT`/`VITE_PORT` from `freePorts(2)` (edit that script to read them from env, defaulting to free ports, not 3301).
 - Default: `engineReachable()` false → print `Start Docker, or rootless Podman: systemctl --user start podman.socket` and exit 1. Then `devStack()` → start if not running → `ensureLocalEnv` → `freePorts(3,[3000,3001,3002])` (retry ≤3 on bind failure) → `concurrently` with names `web,mobile,api[,functions][,worker]`, env `{ ...stackEnv, SUPABASE_URL, VITE_SUPABASE_URL, keys, VITE_PORT, API_PORT, PORT, PEBBLE_RUN_ID }` per process → `waitForRun` on web/mobile/api → print the three URLs and one `skipped <part>: needs <requirement>` line per optional part not ready. Ctrl-C stops app processes only.
 
-- [ ] **Step 1: Failing tests:** `parts` with no `supabase/.env` → `functions.ready === false` and `needs` mentions `supabase/.env`; with worker credentials present → `worker.ready`; `helpText` contains every part name; `main(['--help'])` exits 0 without touching the engine (inject); `main([])` with `engineReachable: () => false` exits 1 and prints `podman.socket`.
+- [ ] **Step 1: Failing tests:** `parts` with no `supabase/.env` → `functions.ready === false` and `needs` mentions `supabase/.env`; with the engine up → `worker.ready`; `helpText` contains every part name; `main(['--help'])` exits 0 without touching the engine (inject); `main([])` with `engineReachable: () => false` exits 1 and prints `podman.socket`.
 - [ ] **Step 2–4:** FAIL → implement → PASS (`node --test tests/scripts/dev.test.mjs tests/doctor.test.mjs`).
 - [ ] **Step 5: Real check:** `pnpm dev` in this worktree starts all parts; `curl` the printed web URL and `/api/health` → 200 with this run id. In a second shell in `/home/aidan/Projects/pebble-friend-ui`… do not touch that worktree; instead create a scratch worktree `git worktree add /tmp/opencode/pebble-dev-2 HEAD`, `pnpm install --frozen-lockfile --offline`, `pnpm dev` there → different ports, different project id, both up. Stop both; remove the scratch worktree's stack with `removeStack` and the worktree.
 - [ ] **Step 6:** Commit `feat: pnpm dev starts the whole local stack`.

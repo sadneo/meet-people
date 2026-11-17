@@ -1,25 +1,46 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
-import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import test from 'node:test'
-import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, reapTestStacks, removeStack, requireStack, startDevStack, startStack, stackEnv } from '../../scripts/lib/stack.mjs'
+import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, reapTestStacks, removeStack, requireStack, startDevStack, startStack, startTestStack, stackEnv } from '../../scripts/lib/stack.mjs'
 
 const stack = { projectId: 'meet-people-x', ports: { api: 1, db: 2, shadow: 3, studio: 4, mail: 5 }, apiUrl: 'http://127.0.0.1:1', dbContainer: 'supabase_db_meet-people-x' }
 const tmp = () => mkdtempSync(join(tmpdir(), 'stack-test-'))
 
-test('main checkout keeps meet-people', () => {
+const checkout = () => {
   const root = tmp()
   mkdirSync(join(root, '.git'))
-  assert.equal(devProjectId(root), 'meet-people')
+  return root
+}
+
+test('the first full checkout claims meet-people and keeps it', () => {
+  const home = tmp(), first = checkout(), second = checkout()
+  assert.equal(devProjectId(first, home), 'meet-people')
+  assert.equal(readFileSync(join(home, '.local/share/pebble/main-checkout'), 'utf8'), first)
+  assert.equal(statSync(join(home, '.local/share/pebble/main-checkout')).mode & 0o777, 0o600)
+  assert.equal(devProjectId(first, home), 'meet-people')
+  assert.match(devProjectId(second, home), /^meet-people-co-[a-z0-9-]+-[0-9a-f]{6}$/)
+  assert.notEqual(devProjectId(second, home), devProjectId(first, home))
 })
 
-test('worktree gets slugged id', () => {
-  assert.equal(devProjectId('/x/Pebble Friend_UI'), 'meet-people-wt-pebble-friend-ui')
-  assert.equal(devProjectId(`/x/${'a'.repeat(60)}`), `meet-people-wt-${'a'.repeat(40)}`)
+test('a full checkout claims meet-people when the recorded one is gone', () => {
+  const home = tmp(), gone = checkout(), next = checkout()
+  assert.equal(devProjectId(gone, home), 'meet-people')
+  rmSync(gone, { recursive: true })
+  assert.equal(devProjectId(next, home), 'meet-people')
+  assert.equal(readFileSync(join(home, '.local/share/pebble/main-checkout'), 'utf8'), next)
+})
+
+test('worktrees get a slugged id with a path hash', () => {
+  const home = tmp()
+  assert.match(devProjectId('/x/Pebble Friend_UI', home), /^meet-people-wt-pebble-friend-ui-[0-9a-f]{6}$/)
+  assert.match(devProjectId(`/x/${'a'.repeat(60)}`, home), new RegExp(`^meet-people-wt-${'a'.repeat(40)}-[0-9a-f]{6}$`))
+  assert.notEqual(devProjectId('/x/app', home), devProjectId('/y/app', home))
+  assert.equal(devProjectId('/x/app', home), devProjectId('/x/app', home))
 })
 
 test('credentialsDir for main and worktree', () => {
@@ -71,46 +92,84 @@ test('reuses recorded ports when the db container is running', async () => {
   } finally { busy.close() }
 })
 
-test('reaps stacks whose owner pid is gone', async () => {
-  const calls = []
-  const labels = { c1: 'meet-people-test-a', c2: 'meet-people-test-b', c3: 'meet-people' }
-  const owners = { 'meet-people-test-a': process.pid, 'meet-people-test-b': 999999 }
+test('adopts the published ports of a running stack that has no dev.json', async () => {
+  const root = tmp()
+  const projectId = devProjectId(root)
+  const published = { kong: 55001, db: 55002, studio: 55003, inbucket: 55004 }
   const container = async args => {
-    calls.push(args)
-    if (args[0] === 'ps') return 'c1\nc2\nc3'
-    if (args[0] === 'inspect') return labels[args.at(-1)]
+    if (args[0] === 'ps') return 'abc123'
+    const service = /^supabase_(\w+)_/.exec(args[1])[1]
+    if (service === 'studio') throw new Error('no such container')
+    return `0.0.0.0:${published[service]}\n[::]:${published[service]}`
+  }
+  const next = await devStack(root, { container })
+  assert.equal(next.projectId, projectId)
+  assert.deepEqual({ ...next.ports, shadow: 0, studio: 0 }, { api: 55001, db: 55002, shadow: 0, studio: 0, mail: 55004 })
+  assert.ok(next.ports.shadow > 0 && next.ports.studio > 0)
+  assert.deepEqual(JSON.parse(readFileSync(join(root, '.pebble/dev.json'), 'utf8')).ports, next.ports)
+  assert.equal(next.apiUrl, 'http://127.0.0.1:55001')
+})
+
+test('published ports win over stale recorded ones', async () => {
+  const root = tmp()
+  mkdirSync(join(root, '.pebble'))
+  writeFileSync(join(root, '.pebble/dev.json'), JSON.stringify({ projectId: devProjectId(root), ports: { api: 1, db: 2, shadow: 3, studio: 4, mail: 5 } }))
+  const next = await devStack(root, { container: async args => args[0] === 'ps' ? 'abc' : `0.0.0.0:${{ 8000: 61, 5432: 62, 3000: 64, 8025: 65 }[args[2]]}` })
+  assert.deepEqual(next.ports, { api: 61, db: 62, shadow: 3, studio: 64, mail: 65 })
+})
+
+const owner = (pid, host = 'here', started = new Date(Date.now() - 1000).toISOString()) => ({ pid, host, started })
+const created = ago => JSON.stringify(new Date(Date.now() - ago).toISOString())
+const hours = n => n * 3_600_000
+// One container per project, labelled and created `ago` ms ago.
+const reap = async (projects, owners, extra = {}) => {
+  const ids = Object.keys(projects)
+  const container = async args => {
+    if (args[0] === 'ps') return ids.join('\n')
+    if (args[0] === 'inspect') return `${args.at(-1)}\t${created(projects[args.at(-1)])}`
     return ''
   }
-  const removed = await reapTestStacks({ container, owner: id => owners[id], remove: async id => { calls.push(['remove', id]) } })
-  assert.deepEqual(removed, ['meet-people-test-b'])
-  assert.deepEqual(calls.filter(call => call[0] === 'remove'), [['remove', 'meet-people-test-b']])
+  const removed = []
+  const result = await reapTestStacks({ container, owner: id => owners[id], remove: async id => { removed.push(id) }, host: 'here', isAlive: pid => pid === 1, ...extra })
+  assert.deepEqual(result, removed)
+  return removed
+}
+
+test('same-host owner: reaped only when its pid is dead', async () => {
+  assert.deepEqual(await reap({ 'meet-people-test-a': hours(9), 'meet-people-test-b': 0 }, { 'meet-people-test-a': owner(1), 'meet-people-test-b': owner(999999) }), ['meet-people-test-b'])
 })
 
-test('reaps test stacks with no owner file but never other stacks', async () => {
-  const container = async args => args[0] === 'ps' ? 'c1\nc2' : args[0] === 'inspect' ? { c1: 'meet-people-test-z', c2: 'comfy-room' }[args.at(-1)] : ''
-  const gone = []
-  assert.deepEqual(await reapTestStacks({ container, owner: () => undefined, remove: async id => { gone.push(id) } }), ['meet-people-test-z'])
-  assert.deepEqual(gone, ['meet-people-test-z'])
+test('other-host owner: reaped only if the pid looks dead and it started over 6 h ago', async () => {
+  const old = owner(999999, 'elsewhere', new Date(Date.now() - hours(7)).toISOString())
+  const recent = owner(999999, 'elsewhere', new Date(Date.now() - hours(5)).toISOString())
+  const live = owner(1, 'elsewhere', new Date(Date.now() - hours(7)).toISOString())
+  assert.deepEqual(await reap({ 'meet-people-test-old': 0, 'meet-people-test-recent': 0, 'meet-people-test-live': 0 }, { 'meet-people-test-old': old, 'meet-people-test-recent': recent, 'meet-people-test-live': live }), ['meet-people-test-old'])
 })
 
-test('a worktree named test-auth is a dev stack the reaper ignores', async () => {
-  const projectId = devProjectId('/x/test-auth')
-  assert.equal(projectId, 'meet-people-wt-test-auth')
-  const container = async args => args[0] === 'ps' ? 'c1' : args[0] === 'inspect' ? projectId : ''
-  assert.deepEqual(await reapTestStacks({ container, owner: () => undefined, remove: async () => { assert.fail('reaped a dev stack') } }), [])
+test('no owner file: reaped only when the newest container is over 30 minutes old', async () => {
+  assert.deepEqual(await reap({ 'meet-people-test-old': 31 * 60_000, 'meet-people-test-new': 5 * 60_000 }, {}), ['meet-people-test-old'])
+})
+
+test('unparseable timestamps and owners are never reaped on a guess', async () => {
+  const container = async args => args[0] === 'ps' ? 'c1' : args[0] === 'inspect' ? 'meet-people-test-z\t"not a date"' : ''
+  assert.deepEqual(await reapTestStacks({ container, owner: () => undefined, remove: async () => assert.fail('reaped') }), [])
+  assert.deepEqual(await reap({ 'meet-people-test-q': 0 }, { 'meet-people-test-q': { pid: 999999, host: 'elsewhere' } }), [])
+})
+
+test('only test stacks are ever reaped', async () => {
+  assert.deepEqual(await reap({ 'meet-people': hours(99), 'comfy-room': hours(99), 'meet-people-wt-test-auth-abc123': hours(99), 'meet-people-test-z': hours(99) }, {}), ['meet-people-test-z'])
 })
 
 test('reap tolerates objects removed between listing and inspect', async () => {
-  const labels = { c1: 'meet-people-test-a', c3: 'meet-people-test-c' }
   const container = async args => {
     if (args[0] === 'ps') return 'c1\nc2\nc3'
     if (args[0] !== 'inspect') return ''
     const id = args.at(-1)
-    if (!labels[id]) throw new Error('no such object')
-    return labels[id]
+    if (id === 'c2') throw new Error('no such object')
+    return `meet-people-test-${id}\t${created(hours(1))}`
   }
   const removed = []
-  assert.deepEqual(await reapTestStacks({ container, owner: () => undefined, remove: async id => { removed.push(id) } }), ['meet-people-test-a', 'meet-people-test-c'])
+  assert.deepEqual(await reapTestStacks({ container, owner: () => undefined, remove: async id => { removed.push(id) } }), ['meet-people-test-c1', 'meet-people-test-c3'])
 })
 
 const fakeEngine = ({ rmFails = {}, stuck = [] } = {}) => {
@@ -129,19 +188,47 @@ const fakeEngine = ({ rmFails = {}, stuck = [] } = {}) => {
   return { container, calls }
 }
 
+test('removeStack deletes volumes only for test stacks', async () => {
+  const test = fakeEngine()
+  await removeStack('meet-people-test-a', { container: test.container, home: tmp() })
+  assert.ok(test.calls.some(call => call[0] === 'volume' && call[1] === 'rm'))
+  for (const id of ['meet-people', 'meet-people-wt-x-abc123', 'meet-people-co-y-abc123']) {
+    const dev = fakeEngine()
+    await removeStack(id, { container: dev.container, home: tmp() })
+    assert.ok(!dev.calls.some(call => call[0] === 'volume'), id)
+    assert.ok(dev.calls.some(call => call[0] === 'rm'), 'containers are still removed')
+  }
+})
+
+test('removeStack refuses volumes: true on anything but a test stack', async () => {
+  const { container, calls } = fakeEngine()
+  await assert.rejects(removeStack('meet-people', { container, volumes: true }), /Refusing to delete volumes of meet-people/)
+  assert.equal(calls.length, 0)
+})
+
+test('removing a test stack also deletes its credentials, never the shared directory', async () => {
+  const home = tmp()
+  const own = credentialsDir('meet-people-test-a', home), shared = credentialsDir('meet-people', home)
+  mkdirSync(own, { recursive: true })
+  writeFileSync(join(own, 'x'), '1')
+  await removeStack('meet-people-test-a', { container: fakeEngine().container, home })
+  assert.ok(!existsSync(own))
+  assert.ok(existsSync(shared))
+})
+
 test('removeStack tolerates objects another reaper already removed', async () => {
   const { container } = fakeEngine({ rmFails: { network: 'Error: no such network: n1' } })
-  await removeStack('meet-people-test-a', { container })
+  await removeStack('meet-people-test-a', { container, home: tmp() })
 })
 
 test('removeStack still throws when something with the label remains', async () => {
   const { container } = fakeEngine({ rmFails: { network: 'Error: no such network: n1' }, stuck: ['network'] })
-  await assert.rejects(removeStack('meet-people-test-a', { container }), /Could not remove n1/)
+  await assert.rejects(removeStack('meet-people-test-a', { container, home: tmp() }), /Could not remove n1/)
 })
 
 test('removeStack rethrows unrelated errors', async () => {
   const { container } = fakeEngine({ rmFails: { volume: 'volume is in use' } })
-  await assert.rejects(removeStack('meet-people-test-a', { container }), /in use/)
+  await assert.rejects(removeStack('meet-people-test-a', { container, home: tmp() }), /in use/)
 })
 
 test('assertLocalStack accepts only the stack origin', () => {
@@ -223,4 +310,51 @@ test('startStack kills the CLI on abort and keeps draining its output until it e
   assert.equal(child.signal, 'SIGTERM')
   assert.equal(child.stdout.listenerCount('data'), 1)
   await assert.rejects(startStack(stack, { signal: controller.signal, run: () => assert.fail('spawned') }), error => error === controller.signal.reason)
+})
+
+const recordingEngine = () => {
+  const calls = []
+  const container = async args => { calls.push(args); return '' }
+  return { container, calls }
+}
+const noVolumeRemoval = calls => assert.ok(!calls.some(call => call[0] === 'volume' && call.includes('rm')), 'a volume was removed')
+
+test('dev stack cleanup after a port conflict never touches volumes', async () => {
+  const { container, calls } = recordingEngine()
+  let starts = 0
+  await startDevStack(tmp(), { container, ports: async () => [11, 12, 13, 14, 15], start: async stack => {
+    if (!starts++) throw new Error('bind: address already in use')
+    return { apiUrl: stack.apiUrl }
+  } })
+  assert.equal(starts, 2)
+  noVolumeRemoval(calls)
+})
+
+test('dev stack cleanup after an interrupt never touches volumes', async () => {
+  const controller = new AbortController()
+  const { container, calls } = recordingEngine()
+  const pending = startDevStack(tmp(), { container, signal: controller.signal, start: () => new Promise((_, fail) => { setImmediate(() => { controller.abort(); fail(new Error('killed')) }) }) })
+  await assert.rejects(pending, error => error === controller.signal.reason)
+  noVolumeRemoval(calls)
+})
+
+test('a test stack retries once with fresh ports after a bind conflict, removing it first', async () => {
+  const calls = []
+  const first = { ...stack, projectId: 'meet-people-test-r', dbContainer: 'supabase_db_meet-people-test-r' }
+  const start = async next => {
+    calls.push(['start', next.ports.api])
+    if (calls.length === 1) throw new Error('supabase start failed. port is already allocated')
+    return { apiUrl: next.apiUrl }
+  }
+  const { stack: next } = await startTestStack(first, { start, remove: async id => { calls.push(['remove', id]) }, ports: async () => [21, 22, 23, 24, 25] })
+  assert.deepEqual(calls, [['start', 1], ['remove', 'meet-people-test-r'], ['start', 21]])
+  assert.equal(next.projectId, 'meet-people-test-r')
+  assert.equal(next.apiUrl, 'http://127.0.0.1:21')
+})
+
+test('a test stack does not retry other failures, twice-failing conflicts or interrupts', async () => {
+  let starts = 0
+  await assert.rejects(startTestStack(stack, { start: async () => { starts++; throw new Error('boom') }, remove: async () => assert.fail('removed') }), /boom/)
+  await assert.rejects(startTestStack(stack, { start: async () => { starts++; throw new Error('address already in use') }, remove: async () => {}, ports: async () => [1, 2, 3, 4, 5] }), /already in use/)
+  assert.equal(starts, 3)
 })

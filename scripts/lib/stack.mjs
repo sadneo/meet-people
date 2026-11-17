@@ -1,7 +1,8 @@
 import { spawn, execFile, execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { homedir, tmpdir } from 'node:os'
-import { basename, join, resolve } from 'node:path'
+import { homedir, hostname } from 'node:os'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { container as engine } from './containers.mjs'
@@ -17,14 +18,28 @@ const makeStack = (projectId, ports) => ({ projectId, ports, apiUrl: `http://127
 const toPorts = list => Object.fromEntries(names.map((name, index) => [name, list[index]]))
 const devFile = root => join(root, '.pebble/dev.json')
 
-export function devProjectId(root = repoRoot) {
-  try { if (statSync(join(root, '.git')).isDirectory()) return 'meet-people' } catch { /* no .git: treat as a worktree */ }
-  const slug = basename(root).toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 40).replace(/^-+|-+$/g, '')
-  return `meet-people-wt-${slug || 'worktree'}`
+const dataDir = home => join(home, '.local/share/pebble')
+
+// Only the checkout recorded in main-checkout keeps the legacy `meet-people` id and its data; the first full checkout to run claims it.
+export function devProjectId(root = repoRoot, home = homedir()) {
+  const path = resolve(root)
+  const slug = basename(path).toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 40).replace(/^-+|-+$/g, '') || 'checkout'
+  const suffix = `${slug}-${createHash('sha1').update(path).digest('hex').slice(0, 6)}`
+  let full = false
+  try { full = statSync(join(path, '.git')).isDirectory() } catch { /* no .git directory: a linked worktree */ }
+  if (!full) return `meet-people-wt-${suffix}`
+  const file = join(dataDir(home), 'main-checkout')
+  let claimed = ''
+  try { claimed = readFileSync(file, 'utf8').trim() } catch { /* nobody has claimed it yet */ }
+  if (claimed === path) return 'meet-people'
+  if (claimed && existsSync(claimed)) return `meet-people-co-${suffix}`
+  mkdirSync(dataDir(home), { recursive: true })
+  writeFileSync(file, path, { mode: 0o600 })
+  return 'meet-people'
 }
 
 export function credentialsDir(projectId, home = homedir()) {
-  const base = join(home, '.local/share/pebble')
+  const base = dataDir(home)
   return projectId === 'meet-people' ? base : join(base, projectId)
 }
 
@@ -45,16 +60,35 @@ function readDev(root) {
   try { return JSON.parse(readFileSync(devFile(root), 'utf8')) } catch { return null }
 }
 
-export async function devStack(root = repoRoot, { container = engine } = {}) {
-  const projectId = devProjectId(root)
+const published = { api: ['kong', 8000], db: ['db', 5432], studio: ['studio', 3000], mail: ['inbucket', 8025] }
+
+async function publishedPorts(projectId, container) {
+  const found = {}
+  for (const [name, [service, inner]] of Object.entries(published)) {
+    try {
+      const port = /:(\d+)\s*$/m.exec(await container(['port', `supabase_${service}_${projectId}`, String(inner)]))
+      if (port) found[name] = Number(port[1])
+    } catch { /* not published, e.g. Studio in a minimal stack */ }
+  }
+  return found
+}
+
+async function withFreePorts(known) {
+  const missing = names.filter(name => !known[name])
+  if (!missing.length) return known
+  const fresh = await freePorts(missing.length)
+  return Object.fromEntries(names.map(name => [name, known[name] ?? fresh[missing.indexOf(name)]]))
+}
+
+export async function devStack(root = repoRoot, { container = engine, home } = {}) {
+  const projectId = devProjectId(root, home)
   const dev = readDev(root)
   const saved = dev?.projectId === projectId ? dev.ports : null
-  let ports = saved
-  if (!saved || !(await container(['ps', '-q', '--filter', `name=^supabase_db_${projectId}$`]))) {
-    const free = saved && (await Promise.all(Object.values(saved).map(isFree))).every(Boolean)
-    if (!free) ports = toPorts(await freePorts(5, preferred))
+  if (await container(['ps', '-q', '--filter', `name=^supabase_db_${projectId}$`])) {
+    return saveDev(root, projectId, await withFreePorts({ ...saved, ...await publishedPorts(projectId, container) }))
   }
-  return saveDev(root, projectId, ports)
+  const free = saved && (await Promise.all(Object.values(saved).map(isFree))).every(Boolean)
+  return saveDev(root, projectId, free ? saved : toPorts(await freePorts(5, preferred)))
 }
 
 function saveDev(root, projectId, ports) {
@@ -111,11 +145,11 @@ export function assertLocalStack(url, stack) {
   if (new URL(url).href !== `${stack.apiUrl}/`) throw new Error(`Refusing ${url}: not the local stack ${stack.apiUrl}.`)
 }
 
-const ownerDir = () => join(existsSync('/tmp/opencode') ? '/tmp/opencode' : tmpdir(), 'pebble-stacks')
-const ownerFile = projectId => join(ownerDir(), `${projectId}.json`)
+// A fixed per-user location: every agent and shell sees the same owner files whatever its temp dir.
+const ownerFile = projectId => join(process.env.XDG_STATE_HOME ?? join(homedir(), '.local/state'), 'pebble/stacks', `${projectId}.json`)
 
-function ownerPid(projectId) {
-  try { return JSON.parse(readFileSync(ownerFile(projectId), 'utf8')).pid } catch { return undefined }
+function readOwner(projectId) {
+  try { return JSON.parse(readFileSync(ownerFile(projectId), 'utf8')) } catch { return undefined }
 }
 
 function alive(pid) {
@@ -126,9 +160,9 @@ function alive(pid) {
 export async function startStack(stack, { minimal = false, workdir, siteUrl, signal, run = spawn } = {}) {
   signal?.throwIfAborted()
   if (minimal || stack.projectId.startsWith(testPrefix)) {
-    mkdirSync(ownerDir(), { recursive: true })
+    mkdirSync(dirname(ownerFile(stack.projectId)), { recursive: true })
     const pending = `${ownerFile(stack.projectId)}.${process.pid}.tmp`
-    writeFileSync(pending, JSON.stringify({ pid: process.pid }))
+    writeFileSync(pending, JSON.stringify({ pid: process.pid, host: hostname(), started: new Date().toISOString() }))
     renameSync(pending, ownerFile(stack.projectId))
   }
   const env = { ...process.env, ...stackEnv(stack), ...(siteUrl && { SUPABASE_AUTH_SITE_URL: siteUrl }) }
@@ -158,9 +192,9 @@ export async function startStack(stack, { minimal = false, workdir, siteUrl, sig
 const conflict = /address already in use|port is already allocated/i
 
 // Two launchers can pick the same preferred ports before either binds them; on a bind conflict start over once with fresh ports.
-export async function startDevStack(root = repoRoot, { container = engine, start = startStack, remove = id => removeStack(id), ports = freePorts, options, signal } = {}) {
-  const wasRunning = await container(['ps', '-q', '--filter', `name=^supabase_db_${devProjectId(root)}$`])
-  const stack = await devStack(root, { container })
+export async function startDevStack(root = repoRoot, { container = engine, start = startStack, remove = id => removeStack(id, { container }), ports = freePorts, options, signal, home } = {}) {
+  const wasRunning = await container(['ps', '-q', '--filter', `name=^supabase_db_${devProjectId(root, home)}$`])
+  const stack = await devStack(root, { container, home })
   // An interrupted start can leave a half-started stack; only remove one this launch was creating.
   const attempt = async next => {
     try { return { stack: next, keys: await start(next, { ...options, signal }) } } catch (error) {
@@ -176,38 +210,65 @@ export async function startDevStack(root = repoRoot, { container = engine, start
   }
 }
 
+// Test stacks use fresh ports every run, so a bind conflict just means someone took one between allocation and bind.
+export async function startTestStack(stack, { start = startStack, remove = id => removeStack(id), ports = freePorts, options, signal } = {}) {
+  try { return { stack, keys: await start(stack, { ...options, signal }) } } catch (error) {
+    if (signal?.aborted || !conflict.test(error.message)) throw error
+    await remove(stack.projectId)
+    const next = makeStack(stack.projectId, toPorts(await ports(5)))
+    return { stack: next, keys: await start(next, { ...options, signal }) }
+  }
+}
+
 const vanished = /no such|not found|no (container|volume|network) with/i
 
-export async function removeStack(projectId, { container = engine } = {}) {
+export async function removeStack(projectId, { container = engine, volumes = projectId.startsWith(testPrefix), home = homedir() } = {}) {
+  if (volumes && !projectId.startsWith(testPrefix)) throw new Error(`Refusing to delete volumes of ${projectId}: only test stacks are disposable.`)
   const filter = ['--filter', `label=${label}=${projectId}`]
   const ids = async args => lines(await container([...args, '-q', ...filter]))
   const remove = async (args, id) => {
     try { await container([...args, id]) } catch (error) { if (!vanished.test(error.message)) throw error }
   }
-  for (const [list, rm] of [[['ps', '-a'], ['rm', '-f']], [['volume', 'ls'], ['volume', 'rm', '-f']], [['network', 'ls'], ['network', 'rm']]]) {
+  const kinds = [[['ps', '-a'], ['rm', '-f']], ...(volumes ? [[['volume', 'ls'], ['volume', 'rm', '-f']]] : []), [['network', 'ls'], ['network', 'rm']]]
+  for (const [list, rm] of kinds) {
     for (const id of await ids(list)) await remove(rm, id)
     const left = await ids(list)
     if (left.length) throw new Error(`Could not remove ${left.join(', ')} for ${projectId}.`)
   }
+  if (volumes) rmSync(credentialsDir(projectId, home), { recursive: true, force: true })
   rmSync(ownerFile(projectId), { force: true })
 }
 
-async function projectsWithResources(container) {
-  const kinds = [[['ps', '-aq'], ['inspect'], 'Config.Labels'], [['volume', 'ls', '-q'], ['volume', 'inspect'], 'Labels'], [['network', 'ls', '-q'], ['network', 'inspect'], 'Labels']]
-  const found = new Set()
-  for (const [list, inspect, path] of kinds) {
-    const ids = lines(await container([...list, '--filter', `label=${label}`]))
-    for (const id of ids) {
-      try { found.add(await container([...inspect, '--format', `{{index .${path} "${label}"}}`, id])) } catch { /* removed since the listing */ }
+// Newest container/network creation time per project; unreadable timestamps count as now so nothing live is reaped on a guess.
+async function projectsWithResources(container, now) {
+  const created = '{{json .Created}}'
+  const kinds = [[['ps', '-aq'], ['inspect'], 'Config.Labels', created], [['volume', 'ls', '-q'], ['volume', 'inspect'], 'Labels'], [['network', 'ls', '-q'], ['network', 'inspect'], 'Labels', created]]
+  const found = new Map()
+  for (const [list, inspect, path, time] of kinds) {
+    for (const id of lines(await container([...list, '--filter', `label=${label}`]))) {
+      try {
+        const [project, stamp] = (await container([...inspect, '--format', `{{index .${path} "${label}"}}${time ? `\t${time}` : ''}`, id])).split('\t')
+        const at = stamp ? Date.parse(JSON.parse(stamp)) : -Infinity
+        found.set(project, Math.max(found.get(project) ?? -Infinity, Number.isNaN(at) ? now : at))
+      } catch { /* removed since the listing */ }
     }
   }
-  return [...found]
+  return found
 }
 
-export async function reapTestStacks({ container = engine, owner = ownerPid, remove = id => removeStack(id, { container }) } = {}) {
+const minutes = 60_000
+
+// Owned on this host: the pid decides. Owned elsewhere: only a long-dead looking owner is reaped. Unowned: only once nothing has been created for a while.
+function orphaned(owner, newest, { now, host, isAlive }) {
+  if (!owner) return now - newest > 30 * minutes
+  if (owner.host === host) return !isAlive(owner.pid)
+  return !isAlive(owner.pid) && now - Date.parse(owner.started) > 360 * minutes
+}
+
+export async function reapTestStacks({ container = engine, owner = readOwner, remove = id => removeStack(id, { container }), now = Date.now(), host = hostname(), isAlive = alive } = {}) {
   const removed = []
-  for (const projectId of await projectsWithResources(container)) {
-    if (!projectId.startsWith(testPrefix) || alive(owner(projectId))) continue
+  for (const [projectId, newest] of await projectsWithResources(container, now)) {
+    if (!projectId.startsWith(testPrefix) || !orphaned(owner(projectId), newest, { now, host, isAlive })) continue
     await remove(projectId)
     removed.push(projectId)
   }
