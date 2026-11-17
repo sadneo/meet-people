@@ -23,7 +23,7 @@ test('release stages run backend then services in dependency order for each envi
   const backend = run('backend', stageEnv)
   assert.deepEqual(backend.slice(0, EDGE_FUNCTIONS.length), EDGE_FUNCTIONS.map(name => `pnpm exec supabase functions deploy ${name} --project-ref wixdiotkntapwrbibaom --use-api`))
   assert.deepEqual(backend.slice(EDGE_FUNCTIONS.length), ['node scripts/push-reviewed-migrations.mjs --yes', 'node scripts/deploy-product-schema.mjs', 'pnpm hosting:configure', 'node scripts/configure-sbengaged-sync.mjs'])
-  assert.deepEqual(run('services', stageEnv), ['sh scripts/deploy-api.sh', 'node scripts/deploy-workers.mjs'])
+  assert.deepEqual(run('services', stageEnv), ['sh scripts/deploy-api.sh', 'node scripts/deploy-workers.mjs', 'node scripts/deploy-dining-schedules.mjs'])
   assert.deepEqual(run('services', { DEPLOY_ENVIRONMENT: 'production' }), ['sh scripts/deploy-api.sh', 'node scripts/deploy-workers.mjs', 'node scripts/deploy-dining-schedules.mjs', 'node scripts/retire-google-dining-schedule.mjs'])
   const partial = []
   assert.throws(() => runStage('services', { DEPLOY_ENVIRONMENT: 'production' }, (command, args) => { partial.push(args[0]); if (partial.length === 2) throw new Error('worker failed') }), /worker failed/)

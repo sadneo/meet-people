@@ -11,7 +11,7 @@ it('verifies native cron before retiring only the known Google job, without logg
   try {
     writeFileSync(join(directory, 'pnpm'), `#!/usr/bin/env node
 const fs=require('node:fs'),args=process.argv.slice(2),file=args[args.indexOf('--file')+1];
-if (!args.includes('wacgxhsdhrqigrmqaonc') || (fs.statSync(file).mode & 0o777)!==0o600) process.exit(2);
+if (!args.includes(process.env.SUPABASE_PROJECT_REF) || (fs.statSync(file).mode & 0o777)!==0o600) process.exit(2);
 const sql=fs.readFileSync(file,'utf8');
 if (!sql.includes('hosting_private.configure_dining_schedule()') || sql.includes('decrypted_secret')) process.exit(3);
 if (process.env.DINING_TEST_DB_FAILURE) { console.error('private-test-token');process.exit(1); }
@@ -41,6 +41,9 @@ else process.exit(3);
     // Native reconciliation needs no working Google login.
     expect(run('deploy-dining-schedules',{DINING_TEST_FAILURE:'true'}).status).toBe(0)
     expect(existsSync(statePath)).toBe(false)
+    const sandbox = { DEPLOY_ENVIRONMENT:'sandbox', SUPABASE_PROJECT_REF:'wixdiotkntapwrbibaom', SUPABASE_URL:'https://wixdiotkntapwrbibaom.supabase.co' }
+    expect(run('deploy-dining-schedules',sandbox).status).toBe(0)
+    expect(run('deploy-dining-schedules',{...sandbox,SUPABASE_PROJECT_REF:'wacgxhsdhrqigrmqaonc'}).status).not.toBe(0)
     for (let attempt=0;attempt<2;attempt++) {
       const result=run('retire-google-dining-schedule')
       expect(result.status,result.stderr).toBe(0)

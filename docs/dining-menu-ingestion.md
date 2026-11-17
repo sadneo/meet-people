@@ -112,9 +112,9 @@ Menus are separate from `listings`, which represents events, restaurants, and
 parks. The new table uses RLS and service-role-only access, matching ingestion
 storage conventions. Release CI deploys both functions.
 
-## Production schedule
+## Schedule
 
-Supabase cron in production (`wacgxhsdhrqigrmqaonc`) runs both imports daily
+Supabase cron in each environment runs both imports daily against its own project
 at **6:00 a.m. America/New_York**, including daylight saving changes. The single
 job `pebble-ingest-dining` invokes the private `hosting_private.ingest_dining()`
 wrapper, which calls the combined `ingest-dining` Edge Function through `pg_net`.
@@ -132,9 +132,10 @@ refreshes the next seven days of available menus. Missing or unpublished days ca
 produce partial imports; inspect those records and the `pg_net` response rather
 than relying on HTTP 200 alone. There are no automatic retries.
 
-`scripts/deploy-dining-schedules.mjs` reconciles the native job during production
-releases, after functions, migrations and Vault are ready. Sandbox releases do not
-install a recurring food import. `scripts/retire-google-dining-schedule.mjs`
+`scripts/deploy-dining-schedules.mjs` reconciles the native job during every sandbox
+and production release, after functions, migrations and Vault are ready. The
+wrapper only accepts a `https://<ref>.supabase.co` URL from Vault.
+`scripts/retire-google-dining-schedule.mjs` (production only)
 verifies the native job and removes only the known legacy Google dining job;
 subsequent releases treat its absence as success. Event scraping also uses
 Supabase cron; Google event-group matching and push workers are separate jobs.
@@ -150,7 +151,7 @@ node scripts/deploy-dining-schedules.mjs
 An authorized database operator can run once outside the scheduled hour with
 `select hosting_private.ingest_dining(true);`. This returns a `pg_net` request ID;
 check `net._http_response` and both ingestion run records for completion. A forced
-run counts for that local date; it never enables a sandbox schedule.
+run counts for that local date.
 
 ## Browse menus in Pebble
 

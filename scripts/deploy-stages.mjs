@@ -25,8 +25,9 @@ export function stageSteps(stage, env) {
   if (stage === 'services') return [
     ['Deploy API', 'sh', ['scripts/deploy-api.sh']],
     ['Deploy workers and schedules', 'node', ['scripts/deploy-workers.mjs']],
+    ['Configure Supabase dining cron at 6 a.m. New York time', 'node', ['scripts/deploy-dining-schedules.mjs']],
+    // shortcut: one-way cleanup of a job that only ever existed in production; delete once a release has run it.
     ...(env.DEPLOY_ENVIRONMENT === 'production' ? [
-      ['Configure Supabase dining cron at 6 a.m. New York time', 'node', ['scripts/deploy-dining-schedules.mjs']],
       ['Retire the verified legacy Google dining schedule', 'node', ['scripts/retire-google-dining-schedule.mjs']],
     ] : []),
   ]

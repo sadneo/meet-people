@@ -38,17 +38,26 @@ begin
   assert hosting_private.ingest_dining(true,'2027-11-07 18:00Z') is not null, 'Owner can force a run';
 end $$;
 
--- Sandbox/unknown targets cannot enable food cron or send even forced imports.
+-- Sandbox schedules and imports against its own project.
 delete from vault.secrets where name='pebble_project_url';
 select vault.create_secret('https://wixdiotkntapwrbibaom.supabase.co','pebble_project_url');
+do $$ declare request bigint; begin
+  perform hosting_private.configure_dining_schedule();
+  request:=hosting_private.ingest_dining(true);
+  assert (select url='https://wixdiotkntapwrbibaom.supabase.co/functions/v1/ingest-dining' from net.http_request_queue where id=request);
+end $$;
+
+-- Unknown targets cannot enable food cron or send even forced imports.
+delete from vault.secrets where name='pebble_project_url';
+select vault.create_secret('https://attacker.example/x.supabase.co','pebble_project_url');
 do $$ begin
   begin
     perform hosting_private.configure_dining_schedule();
-    raise exception 'Sandbox schedule accepted';
-  exception when raise_exception then assert sqlerrm='Production dining Vault configuration required'; end;
+    raise exception 'Unknown schedule accepted';
+  exception when raise_exception then assert sqlerrm='Dining Vault configuration required'; end;
   begin
     perform hosting_private.ingest_dining(true);
-    raise exception 'Sandbox import accepted';
-  exception when raise_exception then assert sqlerrm='Production dining Vault configuration required'; end;
+    raise exception 'Unknown import accepted';
+  exception when raise_exception then assert sqlerrm='Dining Vault configuration required'; end;
 end $$;
 rollback;
