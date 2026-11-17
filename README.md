@@ -80,7 +80,7 @@ Its guide explains source ordering, generated migrations, and deployment hashes.
 ## Verify and build
 
 ```sh
-pnpm verify             # typecheck, lint, test, build
+pnpm verify             # lint, test, build (build typechecks first)
 pnpm test               # unit, script, deployment and alt checks; needs nothing running
 pnpm test:browser       # mocked-API browser tests on free ports
 pnpm test:integration   # real local Supabase on a temporary stack, torn down afterwards

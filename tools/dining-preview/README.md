@@ -15,4 +15,4 @@ for ingredients, serving size, and nutrition when the source supplies them.
 only and serves just this viewer and its public menu data.
 
 To remove the test website later: delete `tools/dining-preview/` and remove the
-`dining:preview` script from `package.json`. The scrapers remain independent.
+`dining-preview` action from `scripts/demo.mjs`. The scrapers remain independent.

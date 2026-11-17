@@ -14,7 +14,7 @@ import { readDevelopmentCredentials } from '../dev/development-login.js'
 import { AccountSchema } from '../shared/account.js'
 const options=parseArgs({options:{count:{type:'string'},scenarios:{type:'boolean'},'for-development-account':{type:'boolean'},'refresh-events':{type:'boolean'},'dry-run':{type:'boolean'},'reset-profiles':{type:'boolean'},'password-stdin':{type:'boolean'},'no-photos':{type:'boolean'},'reset-passwords':{type:'boolean'},'refresh-location':{type:'boolean'}},args:process.argv.slice(2).filter(value=>value!=='--')}).values
 const forDevelopment=!!options['for-development-account']
-if(forDevelopment&&(!options.scenarios||options['reset-passwords']||options['password-stdin']))throw new Error('Development-account mode requires --scenarios and preserves fixture passwords; use demo:seed separately to choose fixture passwords')
+if(forDevelopment&&(!options.scenarios||options['reset-passwords']||options['password-stdin']))throw new Error('Development-account mode requires --scenarios and preserves fixture passwords; use pnpm demo seed separately to choose fixture passwords')
 const plan=(forDevelopment?developmentDemoPlan:demoPlan)(Number(options.count??(forDevelopment?'60':options.scenarios?'12':'50')))
 let scenarios=options.scenarios?scenarioPlan(plan.length,forDevelopment?{id:'d0000000-0000-4000-8000-000000000000',email:'development@example.test',username:'development'}:undefined):null
 if(options['no-photos']&&scenarios)throw new Error('Matching scenarios require profile photos; omit --no-photos')

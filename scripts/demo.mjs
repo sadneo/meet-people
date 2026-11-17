@@ -25,13 +25,13 @@ if (!Object.hasOwn(actions, action ?? '')) {
   process.exit(1)
 }
 // A caller that already chose a stack (the integration run) passes it in the environment.
-let env = process.env
-if (!env.PEBBLE_SUPABASE_PROJECT_ID) {
+let env = process.env // the dining tools use no credentials, so they skip the stack
+if (!env.PEBBLE_SUPABASE_PROJECT_ID && !action.startsWith('dining-')) {
   try {
     const stack = requireStack(root, {})
     env = childEnv(stack, stackKeys(stack))
   } catch (error) {
-    console.error(error.message.startsWith('No local stack') ? error.message : 'This worktree\'s Supabase is not running. Run pnpm dev first.')
+    console.error(error.message.startsWith('No local stack') ? error.message : 'Local Supabase for this worktree is not running. Run pnpm dev first.')
     process.exit(1)
   }
 }

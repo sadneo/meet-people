@@ -5,7 +5,13 @@ const args = process.argv.slice(2)
 const dev = args.includes('--dev')
 const shell = process.platform === 'win32' // pnpm is a .cmd shim on Windows
 const stack = args.includes('--user') && currentStack()
-const env = stack ? childEnv(stack, stackKeys(stack)) : process.env
+let env = process.env
+if (stack) {
+  try { env = childEnv(stack, stackKeys(stack)) } catch {
+    console.error('Local Supabase for this worktree is not running. Run pnpm dev first.')
+    process.exit(1)
+  }
+}
 const steps = args.includes('--user')
   ? [['node', '--env-file-if-exists=.env.local', 'scripts/create-android-dev-user.mjs']]
   : dev

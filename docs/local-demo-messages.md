@@ -40,6 +40,6 @@ notification or proof of delivery to a device. Mobile Back returns to the inbox.
 Unsent text is retained separately per conversation while the Messages screen
 remains mounted; it is not persisted to browser storage or the database.
 
-For cleanup, the existing guarded `demo:remove` tool can remove selected marked
+For cleanup, the existing guarded `pnpm demo remove` tool can remove selected marked
 demo accounts and their cascading local data. It is destructive and must be run
 explicitly; starting/stopping the app does not remove conversations or reset data.

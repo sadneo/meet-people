@@ -17,7 +17,7 @@
     "test:browser": "node scripts/test-browser.mjs",
     "test:integration": "node scripts/test-integration.mjs",
     "test:hosted": "node scripts/test-hosted.mjs",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "verify": "pnpm lint && pnpm test && pnpm build",
     "supabase": "node scripts/supabase.mjs",
     "db:types": "node scripts/db-types.mjs",
     "demo": "node scripts/demo.mjs",

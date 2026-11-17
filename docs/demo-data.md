@@ -182,7 +182,7 @@ Logins are `pebble-demo-001@example.test` through `pebble-demo-050@example.test`
 
 Each fixture goes through all four canonical onboarding save chapters and authoritative readback. It has a labelled fictional name/bio, age 20–34, shared global interests, weekly availability, education, occupation, languages, visibility controls, friendship goals, independent Friends/Dating age and distance filters, and Dating identity/intent/style/height. Preferences vary in compatible pairs across straight, gay, lesbian and clarified nonbinary examples. The first pair uses an inclusive 18–99 preferred age range to simplify a demo; other pairs demonstrate narrower filters. Illustrated initials avatars are generated locally and labelled DEMO, not photos of real people. They are stored through the existing private photo contract and used by Dating.
 
-New profiles are **not queued** by `demo:seed`. Existing queue memberships survive reruns. Dating discovery is enabled and the profiles opted in, so they can appear to eligible signed-in Dating users without a Friends queue command. The seed verifies a real Dating candidate lookup; it does not send or accept requests. Downtime is off, notifications are off, no messages/rewards/purchases are fabricated. All fixtures share the reviewed campus anchor; this demonstrates campus-area proximity, not GPS measurements for individual fictional people.
+New profiles are **not queued** by `pnpm demo seed`. Existing queue memberships survive reruns. Dating discovery is enabled and the profiles opted in, so they can appear to eligible signed-in Dating users without a Friends queue command. The seed verifies a real Dating candidate lookup; it does not send or accept requests. Downtime is off, notifications are off, no messages/rewards/purchases are fabricated. All fixtures share the reviewed campus anchor; this demonstrates campus-area proximity, not GPS measurements for individual fictional people.
 
 ## Options and reruns
 
@@ -214,7 +214,7 @@ pnpm exec tsx tests/integration/offline/demo-seed-real.ts
 
 No production population, deployment, provider integration, or full 50-account load run is implied by the two-account integration check.
 
-`test:demo-populate` uses a new empty schema-only disposable database and offline
+`tests/integration/offline/demo-scenarios.ts` uses a new empty schema-only disposable database and offline
 interest enrichment. It verifies the actual profile
 and scenario SQL, Friends/Dating candidate reads, a connected chat and three
 messages, a pending request, three events and ten enrollments, idempotent reruns,

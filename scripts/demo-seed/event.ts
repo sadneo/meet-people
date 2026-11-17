@@ -26,7 +26,7 @@ create temporary table pebble_event_demo_selected on commit drop as
  and event_group_private.profile_valid(u.id) and public.safety_pair_allowed('${primary.id}',u.id)
  and not exists(select 1 from public.connections c where (c.user_a=u.id and c.user_b='${primary.id}') or (c.user_b=u.id and c.user_a='${primary.id}'))
  order by u.email limit ${count};
-do $guard$ begin if (select count(*) from pebble_event_demo_selected)<>${count} then raise exception 'Not enough eligible owned fixtures; run demo:populate or use a smaller --count';end if;end $guard$;
+do $guard$ begin if (select count(*) from pebble_event_demo_selected)<>${count} then raise exception 'Not enough eligible owned fixtures; run pnpm demo populate or use a smaller --count';end if;end $guard$;
 grant select on pebble_event_demo_selected to authenticated;
 set local role authenticated;
 do $queue$ declare person record;snapshot jsonb;begin

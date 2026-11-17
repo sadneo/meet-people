@@ -7,14 +7,11 @@ Firebase Cloud Messaging -> the phone shows an alert; tapping it opens Messages.
 Alerts are generic ("New message" / "New connection request"). Names and message text are never sent,
 so nothing sensitive reaches the lock screen or Google's servers.
 
-## 1. Install dependencies and add the script
+## 1. Install dependencies
 ```
 pnpm add @capacitor/push-notifications google-auth-library
 ```
-Add this line to `"scripts"` in `package.json`:
-```
-"start:push": "node dist/api/api/push-dispatcher-main.js",
-```
+After `pnpm build:api`, run the dispatcher with `node dist/api/api/push-dispatcher-main.js`.
 Commit the updated `pnpm-lock.yaml` (the Dockerfile installs with `--frozen-lockfile`).
 
 ## 2. Firebase

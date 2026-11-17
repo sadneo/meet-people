@@ -121,8 +121,8 @@ accounts and their cascading data, in one guarded transaction. A changed/missing
 marker rejects the whole selection. Do not use removal to simulate ordinary
 unmatching or leaving a group.
 
-`demo:queue` is the **legacy** queue tool retained for old-flow debugging; use
-`demo:active` for the new Messages flow.
+`pnpm demo queue` is the **legacy** queue tool retained for old-flow debugging; use
+`pnpm demo active` for the new Messages flow.
 
 ## Verification
 
