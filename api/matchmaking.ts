@@ -6,7 +6,7 @@ import type { ProfileGalleryEdit, ProfilePhotoWrite } from '../shared/profile-ph
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { AccountSchema, SaveAccountSchema, completedAccountChapters, type Account, type SaveAccount } from '../shared/account.js'
+import { AccountSchema, SaveAccountSchema, accountOnboardingHeader, completedAccountChapters, legacyAccountChapters, type Account, type SaveAccount } from '../shared/account.js'
 import { isPublicSupabaseKey } from './env.js'
 import { JoinQueueSchema, MatchingProfileSchema, RawMatchSchema, RawQueueStatusSchema, type MatchingProfile } from '../shared/matchmaking.js'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, ListingIdSchema, ListingInterestRequestSchema, ListingMatchmakingStatusSchema, RawListingEventMatchesSchema } from '../shared/matchmaking.js'
@@ -328,13 +328,16 @@ export function createMatchmakingRouter(transport: UserContextTransport | null, 
     const saved = await writeAccount(response, { ...previous, profile: { ...(previous.profile ?? { birthdate: null, location_city: null, interests: [], availability: [] }), ...parsed.data }, completed: previous.completed.length ? previous.completed : [0] }, previous)
     response.json({ profile: AccountProfileSchema.parse({ username: saved.profile!.username, display_name: saved.profile!.display_name, bio: saved.profile!.bio, avatar_url: saved.profile!.avatar_url }) })
   })
-  router.get('/account', async (_request, response) => {
-    response.json(await readAccount(response))
+  const accountForClient = (request: Request, account: Account) =>
+    request.headers[accountOnboardingHeader.toLowerCase()] === 'progressive'
+      ? account : { ...account, completed: legacyAccountChapters(account) }
+  router.get('/account', async (request, response) => {
+    response.json(accountForClient(request, await readAccount(response)))
   })
   router.put('/account', async (request, response) => {
     const parsed = SaveAccountSchema.safeParse(request.body)
     if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid account data. No changes were saved.')
-    response.json(await writeAccount(response, parsed.data, await readAccount(response)))
+    response.json(accountForClient(request, await writeAccount(response, parsed.data, await readAccount(response))))
   })
   router.put('/profile', async (request, response) => {
     const parsed = MatchingProfileSchema.safeParse(request.body)
