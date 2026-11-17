@@ -35,7 +35,7 @@ export function stackEnv({ projectId, ports, apiUrl }) {
     SUPABASE_DB_PORT: String(ports.db),
     SUPABASE_DB_SHADOW_PORT: String(ports.shadow),
     SUPABASE_STUDIO_PORT: String(ports.studio),
-    SUPABASE_INBUCKET_PORT: String(ports.mail),
+    SUPABASE_LOCAL_SMTP_PORT: String(ports.mail),
     PEBBLE_SUPABASE_PROJECT_ID: projectId,
     PEBBLE_SUPABASE_URL: apiUrl,
   }
@@ -54,6 +54,10 @@ export async function devStack(root = repoRoot, { container = engine } = {}) {
     const free = saved && (await Promise.all(Object.values(saved).map(isFree))).every(Boolean)
     if (!free) ports = toPorts(await freePorts(5, preferred))
   }
+  return saveDev(root, projectId, ports)
+}
+
+function saveDev(root, projectId, ports) {
   mkdirSync(join(root, '.pebble'), { recursive: true })
   writeFileSync(devFile(root), JSON.stringify({ projectId, ports }, null, 2), { mode: 0o600 })
   chmodSync(devFile(root), 0o600)
@@ -78,7 +82,7 @@ export function requireStack(root, env) {
   return stack
 }
 
-const portVars = { api: 'SUPABASE_API_PORT', db: 'SUPABASE_DB_PORT', shadow: 'SUPABASE_DB_SHADOW_PORT', studio: 'SUPABASE_STUDIO_PORT', mail: 'SUPABASE_INBUCKET_PORT' }
+const portVars = { api: 'SUPABASE_API_PORT', db: 'SUPABASE_DB_PORT', shadow: 'SUPABASE_DB_SHADOW_PORT', studio: 'SUPABASE_STUDIO_PORT', mail: 'SUPABASE_LOCAL_SMTP_PORT' }
 
 // status derives API_URL from config.toml unless the port env is set, so pass this stack's.
 export function supabaseStatus(stack) {
@@ -112,16 +116,31 @@ export async function startStack(stack, { minimal = false, workdir, siteUrl } = 
   }
   const env = { ...process.env, ...stackEnv(stack), ...(siteUrl && { SUPABASE_AUTH_SITE_URL: siteUrl }) }
   const base = ['scripts/supabase.sh', ...(workdir ? ['--workdir', workdir] : [])]
-  // vector's secret-file copy fails on rootless Podman (broken pipe), and only the logs UI needs it.
+  // Analytics would need one more allocated port per stack and only serves Studio's logs UI.
   const exclude = ['-x', minimal ? 'studio,mailpit,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta' : 'logflare,vector']
   await new Promise((done, fail) => {
-    spawn('sh', [...base, 'start', ...exclude], { cwd: repoRoot, env, stdio: ['ignore', 2, 2] })
-      .once('error', fail)
-      .once('close', code => code === 0 ? done() : fail(new Error(`supabase start failed (exit ${code}).`)))
+    const child = spawn('sh', [...base, 'start', ...exclude], { cwd: repoRoot, env, stdio: ['ignore', 2, 'pipe'] })
+    let tail = ''
+    child.stderr.on('data', chunk => { process.stderr.write(chunk); tail = (tail + chunk).slice(-4000) })
+    child.once('error', fail)
+    child.once('close', code => code === 0 ? done() : fail(new Error(`supabase start failed (exit ${code}). ${tail}`)))
   })
   const { stdout } = await promisify(execFile)('sh', [...base, 'status', '--output', 'json'], { cwd: repoRoot, env, maxBuffer: 8 * 1024 * 1024 })
   const status = JSON.parse(stdout)
   return { apiUrl: stack.apiUrl, publishableKey: status.PUBLISHABLE_KEY, anonKey: status.ANON_KEY, serviceRoleKey: status.SERVICE_ROLE_KEY }
+}
+
+const conflict = /address already in use|port is already allocated/i
+
+// Two launchers can pick the same preferred ports before either binds them; on a bind conflict start over once with fresh ports.
+export async function startDevStack(root = repoRoot, { container, start = startStack, remove = id => removeStack(id), ports = freePorts, options } = {}) {
+  const stack = await devStack(root, { container })
+  try { return { stack, keys: await start(stack, options) } } catch (error) {
+    if (!conflict.test(error.message)) throw error
+    await remove(stack.projectId)
+    const next = saveDev(root, stack.projectId, toPorts(await ports(5)))
+    return { stack: next, keys: await start(next, options) }
+  }
 }
 
 const vanished = /no such|not found|no (container|volume|network) with/i

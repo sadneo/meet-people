@@ -4,7 +4,7 @@ import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, reapTestStacks, removeStack, requireStack, stackEnv } from '../../scripts/lib/stack.mjs'
+import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, reapTestStacks, removeStack, requireStack, startDevStack, stackEnv } from '../../scripts/lib/stack.mjs'
 
 const stack = { projectId: 'meet-people-x', ports: { api: 1, db: 2, shadow: 3, studio: 4, mail: 5 }, apiUrl: 'http://127.0.0.1:1', dbContainer: 'supabase_db_meet-people-x' }
 const tmp = () => mkdtempSync(join(tmpdir(), 'stack-test-'))
@@ -32,7 +32,7 @@ test('stackEnv exposes ports and identity', () => {
     SUPABASE_DB_PORT: '2',
     SUPABASE_DB_SHADOW_PORT: '3',
     SUPABASE_STUDIO_PORT: '4',
-    SUPABASE_INBUCKET_PORT: '5',
+    SUPABASE_LOCAL_SMTP_PORT: '5',
     PEBBLE_SUPABASE_PROJECT_ID: 'meet-people-x',
     PEBBLE_SUPABASE_URL: 'http://127.0.0.1:1',
   })
@@ -164,4 +164,27 @@ test('currentStack prefers env, then dev.json, then null', () => {
 test('requireStack throws the standard message without a stack', () => {
   assert.throws(() => requireStack(tmp(), {}), /^Error: No local stack for this worktree\. Run pnpm dev first\.$/)
   assert.equal(requireStack(tmp(), { PEBBLE_SUPABASE_PROJECT_ID: 'meet-people-test-q', PEBBLE_SUPABASE_URL: 'http://127.0.0.1:9' }).apiUrl, 'http://127.0.0.1:9')
+})
+
+test('a port conflict removes the half-started stack and retries once with fresh ports', async () => {
+  const root = tmp()
+  const calls = []
+  const start = async stack => {
+    calls.push(['start', stack.ports.api])
+    if (calls.length === 1) throw new Error('supabase start failed (exit 1). rootlessport listen tcp 0.0.0.0:54322: bind: address already in use')
+    return { apiUrl: stack.apiUrl }
+  }
+  const { stack: next } = await startDevStack(root, {
+    container: async () => '', start, remove: async id => { calls.push(['remove', id]) }, ports: async count => { calls.push(['ports', count]); return [11, 12, 13, 14, 15] },
+  })
+  assert.deepEqual(calls.map(call => call[0]), ['start', 'remove', 'ports', 'start'])
+  assert.deepEqual(calls[2], ['ports', 5])
+  assert.deepEqual(next.ports, { api: 11, db: 12, shadow: 13, studio: 14, mail: 15 })
+  assert.deepEqual(JSON.parse(readFileSync(join(root, '.pebble/dev.json'), 'utf8')).ports, next.ports)
+})
+
+test('other start failures are not retried', async () => {
+  let starts = 0
+  await assert.rejects(startDevStack(tmp(), { container: async () => '', start: async () => { starts++; throw new Error('boom') }, remove: async () => assert.fail('removed') }), /boom/)
+  assert.equal(starts, 1)
 })

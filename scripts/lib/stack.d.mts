@@ -16,6 +16,13 @@ export function startStack(
   stack: Stack,
   options?: { minimal?: boolean; workdir?: string; siteUrl?: string },
 ): Promise<{ apiUrl: string; publishableKey: string; anonKey: string; serviceRoleKey: string }>
+export function startDevStack(root?: string, deps?: {
+  container?: Engine
+  start?: typeof startStack
+  remove?: (projectId: string) => Promise<void>
+  ports?: (count: number) => Promise<number[]>
+  options?: { minimal?: boolean; workdir?: string; siteUrl?: string }
+}): Promise<{ stack: Stack; keys: Awaited<ReturnType<typeof startStack>> }>
 export function removeStack(projectId: string, deps?: { container?: Engine }): Promise<void>
 export function reapTestStacks(deps?: {
   container?: Engine

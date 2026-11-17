@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import concurrently from 'concurrently'
 import { engineReachable as reachable } from './lib/containers.mjs'
 import { freePorts } from './lib/ports.mjs'
-import { credentialsDir, currentStack, devProjectId, devStack, startStack, stackEnv } from './lib/stack.mjs'
+import { credentialsDir, currentStack, devProjectId, startDevStack, stackEnv } from './lib/stack.mjs'
 import { waitForRun } from './lib/wait.mjs'
 import { main as doctor } from './doctor.mjs'
 import { ensureLocalEnv } from './write-local-env.mjs'
@@ -105,9 +105,8 @@ export async function main(args = process.argv.slice(2), { engineReachable = rea
   const context = { root, projectId, engine: true }
   const blocked = parts(context).find(part => part.required && !part.ready)
   if (blocked) { error(`${blocked.name} needs ${blocked.needs}`); return 1 }
-  const stack = await devStack(root)
-  log(`Starting Supabase for ${stack.projectId} (reused when already running)...`)
-  const keys = await startStack(stack)
+  log('Starting Supabase for this worktree (reused when already running)...')
+  const { stack, keys } = await startDevStack(root)
   keys.publishableKey ??= keys.anonKey
   ensureLocalEnv(keys)
   const interrupt = {}
