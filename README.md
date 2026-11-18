@@ -109,9 +109,9 @@ recorded in [the integration notes](docs/FRONTEND-WIRING.md).
 
 The website builds to `dist/web`, mobile to `dist/mobile`, and the server to `dist/api`
 (`pnpm build`, or `build:web`, `build:mobile`, `build:api`). Production runs the compiled
-output with `node dist/api/api/server.js`. `pnpm android` builds mobile using the
-existing Android environment mode and syncs it to Capacitor (`--dev` builds the
-skip-login variant). Prefix `VITE_DEV_TOOLS=true` to `build:web` or `build:mobile` for the devtools variants.
+output with `node dist/api/api/server.js`. `pnpm android --target sandbox|production`
+builds mobile against that hosted project from `shared/targets.json` and syncs it to
+Capacitor (`pnpm android --dev` builds the skip-login variant for `pnpm dev:mobile`). Prefix `VITE_DEV_TOOLS=true` to `build:web` or `build:mobile` for the devtools variants.
 Releases from `dev` publish web to `web.dev.pebble.garden` and mobile to
 `mobile.dev.pebble.garden`, both using `pebble-sandbox`. Releases from `main`
 publish web to `pebble.garden` using `pebble-production`.

@@ -12,8 +12,9 @@ to a GitHub release, issue, repository, APK directory or chat. Losing the signin
 key can prevent updating existing direct-download installations. No off-device
 backup is created by this build process.
 
-Prerequisites: `.env.prod` verified public settings, `.android-build/` JDK/SDK,
-and the private signing files. Run from the project root:
+Prerequisites: the `production` entry of `shared/targets.json` (the script refuses
+while its `androidMapsKey` is null), `.android-build/` JDK/SDK, and the private
+signing files. Run from the project root:
 
 ```sh
 PEBBLE_VERSION_CODE=1 PEBBLE_VERSION_NAME=1.0.0 node scripts/build-android-release.mjs
@@ -23,7 +24,7 @@ Increment versionCode for every published update; never overwrite a delivered
 release. The script outputs a signed APK and AAB plus checksums/source metadata in
 ignored `Pebble-APKs/`. The AAB is not uploaded anywhere. Only public frontend
 settings reach Vite; signing passwords enter only the Gradle child environment.
-Checks reject private env/key files, supplied backend credentials, a sandbox URL,
+Checks reject private env/key files, any `.env` secret found in the APK, a sandbox URL,
 missing production settings and debuggable APKs. Test installation and all real
 service flows before publishing; these checks alone do not certify release readiness.
 

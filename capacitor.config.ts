@@ -1,17 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli'
-import { existsSync, readFileSync } from 'node:fs'
 
-// `cap sync` runs right after the matching `vite build`, so the env file for that build is the
-// single source of truth for where the app talks: .env.android for normal builds, and
-// .env.android-dev when scripts/build-android-dev.mjs sets CAP_ANDROID_MODE=android-dev.
-// Cleartext HTTP (and mixed content) is only switched on when that file points at a plain
-// http:// address such as the emulator's 10.0.2.2 host. A hosted https:// backend gets a locked-down WebView.
-function usesCleartextBackend() {
-  const file = process.env.CAP_ANDROID_MODE === 'android-dev' ? '.env.android-dev' : '.env.android'
-  if (!existsSync(file)) return false
-  return /^\s*VITE_(API_BASE|SUPABASE)_URL\s*=\s*["']?http:\/\//im.test(readFileSync(file, 'utf8'))
-}
-const cleartext = usesCleartextBackend()
+// Cleartext HTTP (and mixed content) is only for the dev APK, whose backend is the emulator's plain-http
+// 10.0.2.2 host; scripts/build-android-dev.mjs sets CAP_CLEARTEXT=1 for its `cap sync`. Hosted builds get a locked-down WebView.
+const cleartext = process.env.CAP_CLEARTEXT === '1'
 
 const config: CapacitorConfig = {
   // Must be globally unique on Google Play and can never change after publishing.
