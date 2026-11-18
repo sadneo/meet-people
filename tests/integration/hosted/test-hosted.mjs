@@ -31,7 +31,7 @@ for (const path of ['/', '/events', '/login', '/auth/callback', '/reset-password
       assert.equal(info.supabaseUrl, process.env.VITE_SUPABASE_URL, 'Wrong backend configuration')
       const javascript = await script.text()
       assert.ok(javascript.includes(info.supabaseUrl), 'JavaScript must use the declared Supabase project')
-      assert.equal(javascript.includes('Continue with email'), info.product === 'mobile', 'Wrong frontend entry point')
+      assert.equal(javascript.includes('auth-password'), info.product === 'mobile', 'Wrong frontend entry point')
       if (info.product === 'mobile') {
         assert.ok(process.env.VITE_GOOGLE_MAPS_API_KEY?.trim(), 'Expected Maps browser key missing from smoke configuration')
         assert.ok(javascript.includes(process.env.VITE_GOOGLE_MAPS_API_KEY), 'Mobile JavaScript must include the configured Maps browser key')

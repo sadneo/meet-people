@@ -195,10 +195,10 @@ test('dev web and mobile include their own screens and toolbar; production web e
     execFileSync('pnpm', ['build:web', '--outDir', `${dist}/web`, '--emptyOutDir'], { stdio: 'inherit', env: { ...env, VITE_DEV_TOOLS: 'true' } })
     assert.ok(bundle().includes('Development navigation'))
     assert.ok(!bundle().includes('/__dev/login'))
-    assert.ok(!bundle().includes('Continue with email'))
+    assert.ok(!bundle().includes('auth-password'))
     execFileSync('pnpm', ['build:mobile', '--outDir', `${dist}/mobile`, '--emptyOutDir'], { stdio: 'inherit', env: { ...env, VITE_DEV_TOOLS: 'true' } })
     assert.ok(bundle('mobile').includes('Development navigation'))
-    assert.ok(bundle('mobile').includes('Continue with email'))
+    assert.ok(bundle('mobile').includes('auth-password'))
     assert.ok(!bundle('mobile').includes('/__dev/login'))
     assert.ok(bundle('mobile').includes(env.VITE_GOOGLE_MAPS_API_KEY), 'Public Maps key is compiled into mobile')
     execFileSync('node', ['scripts/configure-deployment.mjs', '--write-build-info'], { stdio: 'inherit', env: { ...env, PEBBLE_DIST: dist } })
@@ -219,7 +219,7 @@ test('dev web and mobile include their own screens and toolbar; production web e
 
 test('hosted smoke checks reject incorrect product, branch, commit, backend and frontend bundles', () => {
   const info = { branch: 'dev', sha: 'a'.repeat(40), supabaseUrl: 'https://wixdiotkntapwrbibaom.supabase.co', product: 'mobile' }
-  function smoke(overrides = {}, javascript = `${info.supabaseUrl} Continue with email test-browser-key`) {
+  function smoke(overrides = {}, javascript = `${info.supabaseUrl} auth-password test-browser-key`) {
     const mock = `globalThis.fetch = async input => {
       const path = new URL(input).pathname;
       const body = path === '/build-info.json' ? ${JSON.stringify({ ...info, ...overrides })}
@@ -243,9 +243,9 @@ test('hosted smoke checks reject incorrect product, branch, commit, backend and 
   for (const overrides of [{product:'web'}, {branch:'main'}, {sha:'b'.repeat(40)}, {supabaseUrl:'https://wacgxhsdhrqigrmqaonc.supabase.co'}]) {
     assert.throws(() => smoke(overrides))
   }
-  assert.throws(() => smoke({}, 'https://wacgxhsdhrqigrmqaonc.supabase.co Continue with email'))
+  assert.throws(() => smoke({}, 'https://wacgxhsdhrqigrmqaonc.supabase.co auth-password'))
   assert.throws(() => smoke({}, info.supabaseUrl))
-  assert.throws(() => smoke({}, `${info.supabaseUrl} Continue with email`), /Command failed/, 'Missing Maps key must fail the mobile hosted smoke')
+  assert.throws(() => smoke({}, `${info.supabaseUrl} auth-password`), /Command failed/, 'Missing Maps key must fail the mobile hosted smoke')
 })
 
 test('both environments deploy the API identically, each with only its own resources', () => {
