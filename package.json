@@ -6,6 +6,7 @@
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "dev:mobile": "node scripts/dev.mjs --android",
     "build": "pnpm typecheck && pnpm build:web && pnpm build:mobile && pnpm build:api",
     "build:web": "vite build",
     "build:mobile": "vite build --config vite.mobile.config.ts",
@@ -21,7 +22,7 @@
     "supabase": "node scripts/supabase.mjs",
     "db:types": "node scripts/db-types.mjs",
     "demo": "node scripts/demo.mjs",
-    "hosting:configure": "node --env-file-if-exists=.env.hosting.local scripts/configure-hosted.mjs"
+    "hosting:configure": "node scripts/configure-hosted.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

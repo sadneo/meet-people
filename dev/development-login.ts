@@ -29,7 +29,7 @@ const Credentials = z.object({ accountId: z.uuid(), email: z.email().max(254), p
 const StoredCredentials = Credentials.extend({ url: z.string().refine(loopbackUrl) })
 export const parseDevelopmentCredentials = (value: unknown) => Credentials.parse(value)
 type Credentials = z.infer<typeof Credentials>
-const unavailable = 'Development account provisioning is unavailable. Check that local Supabase is running and .env.local contains its local connection settings.'
+const unavailable = 'Development account provisioning is unavailable. Start the app with pnpm dev, which runs this worktree\'s Supabase and passes its connection settings.'
 
 // Runtime-only path inside the current stack's credentials directory. Never imported by the browser; no environment/browser path override.
 export async function readDevelopmentCredentials() {

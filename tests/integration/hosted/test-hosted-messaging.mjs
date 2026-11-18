@@ -1,7 +1,6 @@
-// Opt-in production messaging acceptance using the root .env and generated fixtures.
+// Opt-in production messaging acceptance; run through pnpm test:hosted <url> --messaging --target production.
 // Requires the remote test app and logged-in Supabase CLI for scoped SQL cleanup.
-import { readFileSync, writeFileSync } from 'node:fs'
-import { parseEnv } from 'node:util'
+import { writeFileSync } from 'node:fs'
 import process from 'node:process'
 import console from 'node:console'
 import { URL } from 'node:url'
@@ -14,7 +13,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const { fetch, AbortSignal } = globalThis
 
-const env = parseEnv(readFileSync('.env', 'utf8'))
+const env = process.env
 const target = new URL(env.SUPABASE_URL)
 const origin = new URL(env.VITE_API_BASE_URL)
 if (target.origin !== 'https://wacgxhsdhrqigrmqaonc.supabase.co' || origin.origin !== 'https://pebble.garden') throw new Error('Unexpected configured target')

@@ -39,8 +39,10 @@ If your newest existing migration has a later timestamp, rename this file with a
 ## 4. Run the dispatcher
 It needs `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_JSON`
 and `PUSH_DISPATCH_ENABLED=true`.
-- **Locally:** put those in `.env.local`, add `PUSH_DISPATCH_INTERVAL_MS=5000`, then
-  `pnpm exec tsx --env-file=.env.local api/push-dispatcher-main.ts`.
+- **Locally:** put the Firebase values and `PUSH_DISPATCH_ENABLED=true` in `.env`, add `PUSH_DISPATCH_INTERVAL_MS=5000`.
+  `pnpm dev` does not start the dispatcher, and local Supabase values are not in any file: with `pnpm dev`
+  running, copy the API URL and service-role key from `pnpm supabase status`, then
+  `SUPABASE_URL=<API URL> SUPABASE_SERVICE_ROLE_KEY=<key> pnpm exec tsx --env-file=.env api/push-dispatcher-main.ts`.
 - **Hosted:** deploy it as a Cloud Run **Job** from the same image (command
   `node dist/api/api/push-dispatcher-main.js`), the way `scripts/deploy-worker.sh` deploys the event-group
   worker, and trigger it every minute with Cloud Scheduler. Alerts arrive within about a minute. For faster
@@ -49,7 +51,7 @@ and `PUSH_DISPATCH_ENABLED=true`.
 ## 5. Build and test
 ```
 pnpm install
-pnpm android
+pnpm android --target sandbox|production   # or, for the emulator with pnpm dev:mobile running: pnpm android --dev
 ```
 Use a real phone, or an emulator image that includes **Google Play** (plain AOSP images cannot receive pushes).
 1. Sign in on the phone -> Settings -> turn on **Notifications on this phone** and allow the prompt.

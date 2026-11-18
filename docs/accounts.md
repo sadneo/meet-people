@@ -13,10 +13,9 @@ not a second AuthScreen or automatic grant exchange.
 ### Google sign-in
 
 Local Google authentication is enabled in `supabase/config.toml`. Put
-`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in ignored `supabase/.env`
-(see `supabase/.env.example`). Supabase CLI loads this file; Vite/API use
-`.env.local`, which `pnpm dev` regenerates. Never expose the secret through
-a `VITE_` variable.
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in the ignored root `.env`
+(see `.env.example`). `pnpm dev` and `pnpm supabase` load it before starting
+Supabase. Never expose the secret through a `VITE_` variable.
 
 Register a Google OAuth **Web application** client with authorized JavaScript
 origin `http://127.0.0.1:3000` and authorized redirect URI

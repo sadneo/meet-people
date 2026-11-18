@@ -1,37 +1,56 @@
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
-import { delimiter, join, resolve } from 'node:path'
+import { constants, copyFileSync, existsSync } from 'node:fs'
+import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import concurrently from 'concurrently'
 import { engineReachable as reachable } from './lib/containers.mjs'
-import { freePorts } from './lib/ports.mjs'
+import { freePorts, isFree } from './lib/ports.mjs'
 import { childEnv, currentStack, startDevStack } from './lib/stack.mjs'
 import { waitForRun } from './lib/wait.mjs'
 import { main as doctor } from './doctor.mjs'
-import { ensureLocalEnv } from './write-local-env.mjs'
 
 const root = resolve(fileURLToPath(import.meta.url), '../..')
 const attempts = 3
+// The Android dev APK bakes in http://10.0.2.2:<this port>, so it cannot move between runs.
+export const androidApiPort = 3100
 
-export function parts({ root: base, exists = existsSync, engine = false, ports } = {}) {
+export function parts({ root: base, exists = existsSync, engine = false, ports, android = false } = {}) {
   const installed = exists(join(base, 'node_modules'))
   const app = (name, command, env) => ({ name, required: true, ready: installed, needs: 'pnpm install', command, env: ports && env })
   return [
     { name: 'supabase', required: true, ready: engine, needs: 'Docker or rootless Podman' },
-    { name: 'env', required: true, ready: engine, needs: 'Supabase running (.env.local is written only when missing)' },
-    app('web', 'vite', { VITE_PORT: String(ports?.web) }),
-    app('mobile', 'vite --config vite.mobile.config.ts', { VITE_PORT: String(ports?.mobile) }),
-    app('api', 'tsx watch --env-file-if-exists=.env.local api/server.ts', { PORT: String(ports?.api) }),
-    { name: 'functions', required: false, ready: exists(join(base, 'supabase/.env')), needs: 'supabase/.env', command: 'sh scripts/supabase.sh functions serve --env-file supabase/.env' },
+    ...(android ? [] : [
+      app('web', 'vite', { VITE_PORT: String(ports?.web) }),
+      app('mobile', 'vite --config vite.mobile.config.ts', { VITE_PORT: String(ports?.mobile) }),
+    ]),
+    app('api', 'tsx watch api/server.ts', { PORT: String(ports?.api) }),
+    { name: 'functions', required: false, ready: exists(join(base, '.env')), needs: '.env (also needed for Google sign-in; see .env.example)', command: 'sh scripts/supabase.sh functions serve --env-file .env' },
     { name: 'worker', required: false, ready: engine, needs: 'Supabase running (its --setup creates the worker credentials)', command: 'tsx scripts/run-local-event-groups.ts --setup --watch' },
   ]
 }
 
+// Gitignored secrets live only in the checkout they were made in; a new worktree borrows the main checkout's.
+export function copySecrets(base, main, files = ['.env']) {
+  if (!main || resolve(main) === resolve(base)) return []
+  return files.filter(file => {
+    if (!existsSync(join(main, file))) return false
+    try { copyFileSync(join(main, file), join(base, file), constants.COPYFILE_EXCL); return true } catch (error) {
+      if (error.code === 'EEXIST') return false
+      throw error
+    }
+  })
+}
+
+function mainCheckout(base) {
+  try { return dirname(execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd: base, encoding: 'utf8' }).trim()) } catch { return null }
+}
+
 export function helpText(list) {
-  return ['Usage: pnpm dev [--check [--json] | --remote | --help]', '',
-    'pnpm dev starts the local stack for this worktree on its own Supabase and free ports.',
-    '--check runs read-only diagnostics; --remote runs web + API against the hosted project in .env.', '',
+  return ['Usage: pnpm dev [--check [--json] | --remote --target sandbox|production | --help]', '',
+    'pnpm dev starts the local stack for this worktree on its own Supabase and free ports. Secrets come from .env.',
+    '--check runs read-only diagnostics; --remote runs web + API against a hosted project.',
+    `pnpm dev:mobile is for the Android emulator only: the stack and the API on port ${androidApiPort}, no web servers. Not for browsers.`, '',
     `${'part'.padEnd(10)}${'required'.padEnd(10)}requires`,
     ...list.map(part => `${part.name.padEnd(10)}${(part.required ? 'yes' : 'no').padEnd(10)}${part.needs}`)].join('\n')
 }
@@ -45,7 +64,7 @@ async function appPorts(taken) {
 }
 
 async function launch(context, stack, keys, { log, interrupt, signal }) {
-  const ports = await appPorts(Object.values(stack.ports))
+  const ports = context.android ? { api: androidApiPort } : await appPorts(Object.values(stack.ports))
   if (signal.aborted) return null
   const runId = randomUUID()
   const list = parts({ ...context, ports })
@@ -65,16 +84,16 @@ async function launch(context, stack, keys, { log, interrupt, signal }) {
   const stop = () => { for (const command of commands) command.kill() }
   interrupt.stop = stop
   const base = port => `http://127.0.0.1:${port}`
+  const servers = ['web', 'mobile', 'api'].filter(name => ports[name])
   try {
-    await Promise.race([died, Promise.all([
-      waitForRun(`${base(ports.web)}/__pebble/run`, runId, { signal }), waitForRun(`${base(ports.mobile)}/__pebble/run`, runId, { signal }), waitForRun(`${base(ports.api)}/api/health`, runId, { signal }),
-    ])])
+    await Promise.race([died, Promise.all(servers.map(name => waitForRun(`${base(ports[name])}${name === 'api' ? '/api/health' : '/__pebble/run'}`, runId, { signal })))])
   } catch (error) {
     stop()
     await result.catch(() => {})
     throw error
   }
-  log(`\nweb     ${base(ports.web)}\nmobile  ${base(ports.mobile)}\napi     ${base(ports.api)}`)
+  log(`\n${servers.map(name => `${name.padEnd(8)}${base(ports[name])}`).join('\n')}`)
+  if (context.android) log(`Android emulator only: the dev APK (pnpm android --dev) reaches this API at http://10.0.2.2:${androidApiPort}. Not for browsers.`)
   log(`supabase  ${keys.apiUrl}  (studio ${base(stack.ports.studio)})`)
   for (const part of list) if (!part.required && !part.ready) log(`skipped ${part.name}: needs ${part.needs}`)
   const failed = await Promise.race([result.then(() => null, () => null), died.then(() => null, error => error)])
@@ -83,21 +102,24 @@ async function launch(context, stack, keys, { log, interrupt, signal }) {
   return failed
 }
 
-async function remote() {
+async function remote(args) {
   const [api, web] = await freePorts(2)
   process.on('SIGINT', () => {})
-  return new Promise(done => spawn(process.execPath, ['scripts/run-remote-messaging.mjs'], {
+  return new Promise(done => spawn(process.execPath, ['scripts/run-remote-messaging.mjs', ...args], {
     cwd: root, stdio: 'inherit', env: { ...process.env, PORT: String(api), API_PORT: String(api), VITE_PORT: String(web) },
   }).once('error', () => done(1)).once('exit', code => done(code ?? 1)))
 }
 
-export async function main(args = process.argv.slice(2), { engineReachable = reachable, log = console.log, error = console.error } = {}) {
+export async function main(args = process.argv.slice(2), { engineReachable = reachable, portFree = isFree, log = console.log, error = console.error } = {}) {
   if (args.includes('--help')) { log(helpText(parts({ root }))); return 0 }
   if (args.includes('--check')) return doctor(args.filter(arg => arg !== '--check'), { stack: currentStack(root, {}) })
-  if (args.includes('--remote')) return remote()
-  if (args.length) { error(helpText(parts({ root }))); return 1 }
+  const copy = () => { for (const file of copySecrets(root, mainCheckout(root))) log(`Copied ${file} from the main checkout.`) }
+  if (args.includes('--remote')) { copy(); return remote(args.filter(arg => arg !== '--remote')) }
+  const android = args.includes('--android')
+  if (args.some(arg => arg !== '--android')) { error(helpText(parts({ root }))); return 1 }
   if (!(await engineReachable())) { error('Start Docker, or rootless Podman: systemctl --user start podman.socket'); return 1 }
-  const context = { root, engine: true }
+  if (android && !(await portFree(androidApiPort))) { error(`Port ${androidApiPort} is taken; pnpm dev:mobile needs it for the Android dev API. Stop the other pnpm dev:mobile first.`); return 1 }
+  const context = { root, engine: true, android }
   const blocked = parts(context).find(part => part.required && !part.ready)
   if (blocked) { error(`${blocked.name} needs ${blocked.needs}`); return 1 }
   const interrupt = {}
@@ -110,6 +132,8 @@ export async function main(args = process.argv.slice(2), { engineReachable = rea
   process.on('SIGINT', onSignal)
   process.on('SIGTERM', onSignal)
   try {
+    copy()
+    if (existsSync(join(root, '.env'))) process.loadEnvFile(join(root, '.env'))
     log('Starting Supabase for this worktree (reused when already running)...')
     let started
     try { started = await startDevStack(root, { signal }) } catch (cause) {
@@ -119,12 +143,12 @@ export async function main(args = process.argv.slice(2), { engineReachable = rea
     }
     const { stack, keys } = started
     keys.publishableKey ??= keys.anonKey
-    ensureLocalEnv(keys, join(root, '.env.local'))
     let failure
-    for (let attempt = 1; attempt <= attempts && !signal.aborted; attempt++) {
+    const tries = android ? 1 : attempts // the Android API port is fixed, so new ports would not help
+    for (let attempt = 1; attempt <= tries && !signal.aborted; attempt++) {
       try { failure = await launch(context, stack, keys, { log, interrupt, signal }); break } catch (cause) {
         failure = cause
-        if (attempt < attempts) log(`App start failed (${cause.message}); retrying with new ports (${attempt}/${attempts - 1}).`)
+        if (attempt < tries) log(`App start failed (${cause.message}); retrying with new ports (${attempt}/${attempts - 1}).`)
       }
     }
     if (failure && !signal.aborted) error(failure.message)

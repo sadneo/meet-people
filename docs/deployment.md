@@ -246,12 +246,14 @@ missing infrastructure, IAM and environment-scoped GitHub variables. It does not
 create billing accounts, Hosting sites, Supabase projects or SMTP services.
 Populate each runtime secret from stdin before deploying its API.
 
-After migrations and Edge deployment, `pnpm hosting:configure` preserves generated
-shared tokens, synchronizes Vault/Edge secrets and pushes hosted Auth settings.
-Set `SUPABASE_PROJECT_REF` to the intended environment and `HOSTED_CONFIG_WORKDIR`
-to `hosting/deployment` for generated settings; its default `hosting` directory
-contains the production fallback. Optional provider secrets can be supplied through
-ignored `.env.hosting.local`. Unsupplied Edge secrets are preserved.
+After migrations and Edge deployment, the Release workflow runs `pnpm hosting:configure`,
+which preserves generated shared tokens, synchronizes Vault/Edge secrets and pushes
+hosted Auth settings. It runs only in CI and refuses to run locally. It uses
+`SUPABASE_PROJECT_REF` for the intended environment and `HOSTED_CONFIG_WORKDIR`
+(`hosting/deployment` for generated settings; its default `hosting` directory
+contains the production fallback). Optional provider secrets come from the workflow
+environment; unsupplied Edge secrets are preserved. To change one hosted function
+secret by hand, run `pnpm exec supabase secrets set --project-ref <ref> NAME=value`.
 
 ### Database sources
 
@@ -368,5 +370,6 @@ pnpm test:hosted https://mobile.dev.pebble.garden
 
 The smoke check covers SPA routes/assets, API health, database-backed reads and
 anonymous private-account denial. Hosted account/product checks additionally
-create disposable users and require explicit administrative credentials; see
+create disposable users and require `--target sandbox|production` plus that
+target's `*_SUPABASE_SERVICE_ROLE_KEY` in `.env`; see
 [test prerequisites](../tests/README.md#integration-tests).

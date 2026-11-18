@@ -4,14 +4,18 @@ import { createClient } from '@supabase/supabase-js'
 import process from 'node:process'
 import console from 'node:console'
 import { URL } from 'node:url'
+import { requireStack, stackKeys } from '../../../scripts/lib/stack.mjs'
 
 const { fetch } = globalThis
 
-const url = process.env.SUPABASE_URL
+const keys = process.env.SUPABASE_URL
+  ? { apiUrl: process.env.SUPABASE_URL, publishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY, serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY }
+  : stackKeys(requireStack())
+const url = keys.apiUrl
 const api = process.env.PEBBLE_API_URL ?? 'http://127.0.0.1:3001'
 assert.equal(new URL(url).hostname, '127.0.0.1', 'Local Supabase only.')
 const options = { auth: { persistSession: false, autoRefreshToken: false } }
-const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY, options)
+const admin = createClient(url, keys.serviceRoleKey, options)
 async function rpc(client, name, args) {
   const { data, error } = await client.rpc(name, args)
   assert.ifError(error)
@@ -20,7 +24,7 @@ async function rpc(client, name, args) {
 async function actor(letter) {
   const email = `${letter}@example.com`
   // Sign in first so rerunning preserves existing actors and their history.
-  const client = createClient(url, process.env.VITE_SUPABASE_PUBLISHABLE_KEY, options)
+  const client = createClient(url, keys.publishableKey, options)
   let login = await client.auth.signInWithPassword({ email, password: 'password' })
   if (login.error) {
     const created = await admin.auth.admin.createUser({ email, password: 'password', email_confirm: true })
@@ -85,7 +89,7 @@ assert.equal((await request(b, '?page=1')).conversations.find(row => row.id === 
 const outsider = await admin.auth.admin.createUser({ email: `messaging-outsider-${randomUUID()}@example.test`, password: 'password', email_confirm: true })
 assert.ifError(outsider.error)
 try {
-  const client = createClient(url, process.env.VITE_SUPABASE_PUBLISHABLE_KEY, options)
+  const client = createClient(url, keys.publishableKey, options)
   const login = await client.auth.signInWithPassword({ email: outsider.data.user.email, password: 'password' })
   assert.ifError(login.error)
   for (const method of ['GET', 'POST']) {

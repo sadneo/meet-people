@@ -333,7 +333,7 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
-# Local Google credentials are loaded from ignored supabase/.env.
+# Local Google credentials come from the root .env, which pnpm dev and pnpm supabase load.
 [auth.external.google]
 enabled = true
 client_id = "env(GOOGLE_CLIENT_ID)"

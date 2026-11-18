@@ -71,13 +71,14 @@ Additional existing checks remain explicit:
 | `tests/integration/sql/` | SQL acceptance sources and fixtures; run only against their documented target/schema prerequisites |
 | `tests/integration/local/` | Additional explicit local-service scripts; they resolve the stack from `PEBBLE_SUPABASE_PROJECT_ID` and `PEBBLE_SUPABASE_URL`, else `.pebble/dev.json` (`pnpm dev`) |
 | `pnpm test:hosted <https-origin>` | Opt-in deployed-site smoke check |
-| `pnpm test:hosted <https-origin> --account` | Opt-in hosted account/browser check; retains legacy onboarding expectations |
-| `pnpm test:hosted <https-origin> --product` | Opt-in hosted product/API check; optional real browser login when Chromium is on PATH |
-| `pnpm test:hosted <https-origin> --messaging` | Opt-in hosted messaging check |
+| `pnpm test:hosted <https-origin> --account --target sandbox\|production` | Opt-in hosted account/browser check; retains legacy onboarding expectations |
+| `pnpm test:hosted <https-origin> --product --target sandbox\|production` | Opt-in hosted product/API check; optional real browser login when Chromium is on PATH |
+| `pnpm test:hosted <https-origin> --messaging --target production` | Opt-in hosted messaging check (production only) |
 
-The hosted account/product scripts use administrative credentials and create
-disposable users. Supply the target and credentials explicitly in the process
-environment or ignored `.env.hosting.local`; ordinary suites never run them.
+The hosted account/product/messaging scripts use administrative credentials and create
+disposable users. `--target` is required: public values come from `shared/targets.json` and the
+service-role key from `SANDBOX_SUPABASE_SERVICE_ROLE_KEY` / `PRODUCTION_SUPABASE_SERVICE_ROLE_KEY`
+in `.env`. Ordinary suites never run them.
 
 For an already-running local production build:
 

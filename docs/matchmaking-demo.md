@@ -57,15 +57,15 @@ canonical backend yet; production schema reconciliation remains separate.
 For an existing canonical stack, apply the reviewed
 product migrations, then all four `20261028` matching migrations in order. Existing
 schema reconciliation instructions still apply; **do not reset a populated database**
-just to enable matching. In `.env.local`, configure the existing Supabase URL,
-public key and service-role key. Friends/Dating recommendations and the active
-worker are enabled by default when those credentials are configured; there are
+just to enable matching. `pnpm dev` supplies the local Supabase URL, public key and
+service-role key; there is nothing to configure. Friends/Dating recommendations and the active
+worker are enabled by default when those credentials are present; there are
 no matchmaking environment feature switches. Keep service-role credentials server-only.
 Restart `pnpm dev`. Active matching also requires the DB policy gate; the explicit
 local-only `--enable-active` option below enables it.
 
-The scripts require Docker and the running local `supabase_db_meet-people`
-container with the expected Supabase project label. They refuse remote targets.
+The scripts require Docker and this worktree's running local Supabase database
+container (`supabase_db_<project>`) with the expected Supabase project label. They refuse remote targets.
 They never accept an arbitrary account ID. Dry runs do not access Docker, the
 network or credentials. Local test fixtures may be created and removed by the integration check; no
 hosted database is targeted.

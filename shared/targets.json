@@ -1,0 +1,16 @@
+{
+  "sandbox": {
+    "supabaseUrl": "https://wixdiotkntapwrbibaom.supabase.co",
+    "supabasePublishableKey": "sb_publishable_kaK_4TJxKDDta7iD1IvegA_gW5EM5hZ",
+    "supabaseProjectRef": "wixdiotkntapwrbibaom",
+    "apiBaseUrl": "https://mobile.dev.pebble.garden",
+    "androidMapsKey": "AIzaSyAqYGUSZD12OhU5Kb-mPKemWIsb5Bn8SR8"
+  },
+  "production": {
+    "supabaseUrl": "https://wacgxhsdhrqigrmqaonc.supabase.co",
+    "supabasePublishableKey": "sb_publishable_u_illrXo8YYD5b-XC0xxrQ_wBapChw6",
+    "supabaseProjectRef": "wacgxhsdhrqigrmqaonc",
+    "apiBaseUrl": "https://pebble.garden",
+    "androidMapsKey": null
+  }
+}

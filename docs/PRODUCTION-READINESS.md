@@ -179,6 +179,8 @@ data, auth configuration, deployment or backup settings were deliberately change
 - GitHub production variables identify this same project, URL and public key.
   The local ignored `.env.prod` now uses those confirmed public values. Backend
   secrets and Maps keys remain blank; no production secrets were fetched.
+  (Later retired: `.env.prod` and the `.env.android*` files are no longer read.
+  Public values now live in `shared/targets.json`; secrets in the single `.env`.)
 
 ### Launch gates
 

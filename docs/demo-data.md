@@ -4,7 +4,7 @@ For the current passive Discover and active Messages flows, use
 [matchmaking-demo.md](matchmaking-demo.md). The legacy queue instructions below
 describe the earlier manual discovery flow.
 
-These commands target **only** the running `supabase_db_meet-people` local project on loopback port 54321. They refuse remote targets and identities without the seeder's admin-owned marker. They require the already reviewed/activated Friends, Dating, photo and trusted-location schema. They are operator tools, not public endpoints.
+These commands target **only** this worktree's running local Supabase stack (started by `pnpm dev`), which `pnpm demo` finds itself. They refuse remote targets and identities without the seeder's admin-owned marker. They require the already reviewed/activated Friends, Dating, photo and trusted-location schema. They are operator tools, not public endpoints.
 
 ## Populate the main testing scenarios
 

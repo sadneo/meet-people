@@ -39,7 +39,7 @@ exclusive end and remain correct across daylight saving changes.
 Apply `supabase/migrations/20261115010000_dining_menu_ingestion.sql` to the target
 database. Set `INGEST_TOKEN`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` in the
 Edge Function environment, as for SB Engaged. Dry-runs only need `INGEST_TOKEN`.
-For local serving, put function secrets in the existing ignored `supabase/.env`; `pnpm dev` then serves every Edge Function.
+For local serving, put function secrets in the ignored root `.env`; `pnpm dev` then serves every Edge Function.
 
 Request a preview (use the corresponding function name for the hospital):
 
@@ -63,12 +63,12 @@ existing data, then serve both functions in one terminal:
 
 ```sh
 pnpm supabase start
-pnpm exec supabase migration up --local
-pnpm exec supabase functions serve --env-file supabase/.env
+pnpm supabase migration up --local
+pnpm supabase functions serve --env-file .env
 ```
 
 In another terminal, export `INGEST_TOKEN` with the same value configured in
-`supabase/.env`, then import both sources into the database:
+`.env`, then import both sources into the database:
 
 ```sh
 for function in ingest-nutrislice ingest-sbu-hospital; do

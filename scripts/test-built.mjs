@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { freePorts } from './lib/ports.mjs'
+import { childEnv, requireStack, stackKeys } from './lib/stack.mjs'
 import { waitForRun } from './lib/wait.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
@@ -13,7 +14,7 @@ export async function runBuilt(args, env = {}, { webDir = 'dist/web', apiDir = '
   const base = { ...process.env, ...env, PEBBLE_RUN_ID: run }
   const start = (command, childEnv) => spawn(process.execPath, command, { cwd: root, stdio: 'inherit', env: { ...base, ...childEnv } })
   const servers = [
-    start(['--env-file-if-exists=.env.local', join(apiDir, 'api/server.js')], { PORT: String(apiPort) }),
+    start([join(apiDir, 'api/server.js')], { PORT: String(apiPort) }),
     start(['node_modules/vite/bin/vite.js', 'preview', '--outDir', webDir], { VITE_PREVIEW_PORT: String(webPort), API_PORT: String(apiPort) }),
   ]
   const abort = new AbortController()
@@ -56,4 +57,7 @@ export async function runBuilt(args, env = {}, { webDir = 'dist/web', apiDir = '
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) process.exit(await runBuilt(process.argv.slice(2)))
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const stack = requireStack(root, {})
+  process.exit(await runBuilt(process.argv.slice(2), childEnv(stack, stackKeys(stack))))
+}

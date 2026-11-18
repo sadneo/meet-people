@@ -14,7 +14,7 @@ const actions = {
   active: ['scripts/active-local-demo.ts'],
   remove: ['scripts/active-local-demo.ts', '--action', 'remove'],
   images: ['scripts/backfill-local-event-images.ts'],
-  'matchmaking-once': ['--env-file-if-exists=.env.local', 'api/active-friends-worker-main.ts'],
+  'matchmaking-once': ['api/active-friends-worker-main.ts'],
   'dining-scrape': ['scripts/scrape-dining-menus.ts'],
   'dining-preview': ['tools/dining-preview/server.ts'],
 }
