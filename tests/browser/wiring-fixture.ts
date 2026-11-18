@@ -49,6 +49,7 @@ export async function wiringFixture(
     blocked = false,
     friendRevision = 0,
     friends: FriendsPreferences | null = null;
+  const captions: (string | null)[] = [null, null, null, null];
   let customization = {
     revision: 0,
     customization: { interestOrder: [] as string[], audiences: { education: 'both', occupation: 'both', languages: 'both' }, gardenItem: null as string | null },
@@ -154,6 +155,12 @@ export async function wiringFixture(
       if (method === "PUT") customization = { revision: customization.revision + 1, customization: body.customization };
       return reply(customization);
     }
+    const promptsRoute = /\/profile-customization\/([^/]+)\/prompts\/(friends|dating)$/.exec(path)
+    if (promptsRoute) {
+      const prompts = (customization.customization as { prompts?: { id: string; answer: string }[] }).prompts ?? []
+      const shows = (item: { id: string; audience?: string }) => ['looking-for', 'first-date', 'green-flag'].includes(item.id) ? 'dating' : item.audience ?? 'both'
+      return reply({ prompts: prompts.filter(item => shows(item) === 'both' || shows(item) === promptsRoute[2]) })
+    }
     if (path.includes("/profile-customization/"))
       return reply({ interestOrder: customization.customization.interestOrder, gardenItem: customization.customization.gardenItem });
     if (path.endsWith("/profile-details")) {
@@ -172,6 +179,12 @@ export async function wiringFixture(
         updatedAt: photoRevision ? now : null,
       });
     }
+    if (path.endsWith("/profile-photo/gallery/caption") && method === "PUT") {
+      captions[body.position - 1] = body.caption.trim() || null;
+      return reply({ revision: photoRevision, captions: captions.slice(0, hasPhoto ? 1 : 0) });
+    }
+    if (/\/profile-photo\/gallery\/[^/]+\/captions$/.test(path))
+      return reply({ revision: photoRevision, captions: captions.slice(0, hasPhoto ? 1 : 0) });
     if (/\/profile-photo\/gallery\/[^/]+$/.test(path))
       return reply({ revision: photoRevision, count: hasPhoto ? 1 : 0 });
     if (path.includes("/profile-photo/reference/"))

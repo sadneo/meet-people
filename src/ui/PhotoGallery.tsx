@@ -1,11 +1,14 @@
-import { useEffect, useId, useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type PointerEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { profilePhotoLimit, type ProfileGalleryState } from '../../shared/profile-photo'
-import { usePhotoGallery, usePhotoSlot } from '../features/account/usePhotoGallery'
+import { usePhotoCaptions, usePhotoGallery, usePhotoSlot } from '../features/account/usePhotoGallery'
+import { contactDetailsHint, photoCaptionLimit } from '../../shared/profile-prompts'
+import { toast } from './feedback'
 import { photoChangedEvent } from '../features/account/useProfilePhoto'
 import { useCurrent } from './current'
-import { ActionButton, ErrorMessage, Icon, Modal, PersonPhoto, ResourceState } from './common'
+import { ActionButton, ErrorMessage, Modal, PersonPhoto, ResourceState } from './common'
 import { MediaImage } from './loading/MediaImage'
+import { haptic } from './feedback'
 import './photo-gallery.css'
 
 export function DiscoverPhotos({ id, name, revision, fallback, active }: {
@@ -27,6 +30,8 @@ function DiscoverPhotoViewer({ owner, name, token, gallery, revision, fallback, 
   const [position, setPosition] = useState(1)
   const count = gallery?.count ?? 1
   const slot = usePhotoSlot(token, owner, gallery?.revision ?? 0, position, active && position > 1)
+  const captions = usePhotoCaptions(owner, gallery?.revision ?? revision, active)
+  const caption = captions.data?.captions[position - 1] ?? null
   const swipe = useRef<{ id: number; x: number; y: number } | null>(null)
   const instructions = useId()
   function step(delta: number) {
@@ -60,6 +65,7 @@ function DiscoverPhotoViewer({ owner, name, token, gallery, revision, fallback, 
       : slot.data?.url && !slot.isError
         ? <MediaImage src={slot.data.url} className="portrait large-avatar" alt={`${name}, photo ${position}`}/>
         : <div className="discovery-photo-status" role="status">{slot.isError ? 'Photo unavailable' : 'Loading photo…'}</div>}
+    {caption && <p className={`photo-caption ${count > 1 ? 'below-progress' : ''}`} key={`${position}:${caption}`}>{caption}</p>}
     {count > 1 && <>
       <div className="discover-photo-progress" aria-label={`Photo ${position} of ${count}`} aria-live="polite">
         <span className="sr-only">{`Photo ${position} of ${count}`}</span>
@@ -72,18 +78,21 @@ function DiscoverPhotoViewer({ owner, name, token, gallery, revision, fallback, 
 
 type PhotoDrag = {
   id: number; position: number; revision: number; x: number; y: number; image?: string;
-  moved: boolean; target: number | null;
+  active: boolean; target: number | null;
 }
 
-function GalleryThumbnail({ token, owner, revision, position }: {
-  token: string; owner: string; revision: number; position: number
+function GalleryPhoto({ token, owner, revision, position, thumbnail }: {
+  token: string; owner: string; revision: number; position: number; thumbnail?: ButtonHTMLAttributes<HTMLButtonElement>
 }) {
   const slot = usePhotoSlot(token, owner, revision, position)
-  return <div className="gallery-thumbnail">
-    {slot.data?.url && !slot.isError
-      ? <MediaImage src={slot.data.url} alt={`Photo ${position}`}/>
-      : <span role="status">{slot.isError ? 'Photo unavailable' : 'Loading…'}</span>}
+  if (!slot.data?.url || slot.isError) return <div className={thumbnail ? 'gallery-thumbnail' : 'gallery-full-photo'}>
+    <span role="status">{slot.isError ? 'Photo unavailable' : 'Loading…'}</span>
   </div>
+  const image = <MediaImage src={slot.data.url} alt={`Photo ${position}`} draggable={false}/>
+  return thumbnail
+    ? <button type="button" className="gallery-thumbnail" aria-label={`Preview photo ${position}`}
+        aria-haspopup="dialog" {...thumbnail}>{image}{position === 1 && <span className="gallery-main-badge" aria-hidden="true">Main</span>}</button>
+    : <div className="gallery-full-photo">{image}</div>
 }
 
 export function PhotoGalleryEditor({ close }: { close: () => void }) {
@@ -100,13 +109,17 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
   const { query, client } = usePhotoGallery(owner)
   const cache = useQueryClient()
   const [selection, setSelection] = useState<{ file: File; url: string } | null>(null)
-  const [removing, setRemoving] = useState<number | null>(null)
+  const [preview, setPreview] = useState<{ position: number; revision: number } | null>(null)
+  const [removing, setRemoving] = useState(false)
   const [busy, setBusy] = useState(false)
   const [reconcile, setReconcile] = useState(false)
   const [error, setError] = useState('')
   const [dragPreview, setDragPreview] = useState<PhotoDrag | null>(null)
   const drag = useRef<PhotoDrag | null>(null)
   const grid = useRef<HTMLOListElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const suppressTap = useRef(false)
   const [announcement, setAnnouncement] = useState('')
   const dragInstructions = useId()
   const input = useRef<HTMLInputElement>(null)
@@ -140,8 +153,12 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
       cache.setQueryData(['profile-photo', owner, 'gallery'], next)
       window.dispatchEvent(new CustomEvent(photoChangedEvent, {detail:owner}))
       if (change.action === 'append') setSelection(null)
-      if (change.action === 'move') setAnnouncement(`Photo moved to position ${change.toPosition}.`)
-      setRemoving(null)
+      if (change.action === 'move') {
+        setAnnouncement(`Photo moved to position ${change.toPosition}.`)
+        setPreview(null)
+      }
+      if (change.action === 'remove') setPreview(null)
+      setRemoving(false)
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Photo change could not be confirmed.')
       setReconcile(true)
@@ -156,57 +173,86 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
     return tile && grid.current?.contains(tile) ? Number(tile.dataset.galleryPosition) : null
   }
 
-  function startDrag(event: PointerEvent<HTMLButtonElement>, position: number) {
-    if (disabled || !state || !event.isPrimary || event.button !== 0) return
-    event.preventDefault()
+  function startHold(event: PointerEvent<HTMLButtonElement>, position: number) {
+    if (!event.isPrimary || event.button !== 0) return
+    suppressTap.current = false
+    if (disabled || !state || state.count < 2) return
     event.currentTarget.setPointerCapture(event.pointerId)
-    const image = event.currentTarget.closest('li')?.querySelector('img')?.src
     drag.current = {
       id:event.pointerId, position, revision:state.revision, x:event.clientX, y:event.clientY,
-      image, moved:false, target:position,
+      image:event.currentTarget.querySelector('img')?.src, active:false, target:position,
     }
-  }
-
-  function moveDrag(event: PointerEvent<HTMLButtonElement>) {
-    const start = drag.current
-    if (!start || start.id !== event.pointerId) return
-    if (!start.moved && Math.hypot(event.clientX - start.x, event.clientY - start.y) < 6) return
-    const current = { ...start, moved:true, x:event.clientX, y:event.clientY, target: dropTarget(event.clientX,event.clientY) }
-    drag.current = current
-    setDragPreview(current)
+    holdTimer.current = setTimeout(() => {
+      const pressed = drag.current
+      if (!pressed) return
+      suppressTap.current = true
+      const active = { ...pressed, active:true }
+      drag.current = active
+      setDragPreview(active)
+      haptic('light')
+    }, 600)
   }
 
   function cancelDrag() {
+    clearTimeout(holdTimer.current)
     drag.current = null
     setDragPreview(null)
   }
 
-  function finishDrag(event: PointerEvent<HTMLButtonElement>) {
-    const started = drag.current
-    if (!started || started.id !== event.pointerId) return
-    const toPosition = dropTarget(event.clientX,event.clientY)
-    cancelDrag()
-    if (started.moved && started.revision === state?.revision && toPosition && toPosition !== started.position)
-      void edit({ action:'move', position:started.position, toPosition })
+  function moveDrag(event: PointerEvent<HTMLButtonElement>) {
+    const pressed = drag.current
+    if (!pressed || pressed.id !== event.pointerId) return
+    if (!pressed.active) {
+      if (Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > 8) {
+        suppressTap.current = true
+        cancelDrag()
+      }
+      return
+    }
+    const current = { ...pressed, x:event.clientX, y:event.clientY, target: dropTarget(event.clientX,event.clientY) }
+    drag.current = current
+    setDragPreview(current)
   }
 
-  // Touch dragging owns the gesture on the handle. Scroll the sheet at its
-  // edges so the bottom row can still be reached on shorter phones.
+  function finishDrag(event: PointerEvent<HTMLButtonElement>) {
+    const pressed = drag.current
+    if (!pressed || pressed.id !== event.pointerId) return
+    const toPosition = dropTarget(event.clientX,event.clientY)
+    cancelDrag()
+    if (pressed.active && pressed.revision === state?.revision && toPosition && toPosition !== pressed.position)
+      void edit({ action:'move', position:pressed.position, toPosition })
+  }
+
+  // Let a normal touch scroll. Only a held tile takes over the gesture.
+  useEffect(() => {
+    const element = panel.current
+    function keepDragOnPhoto(event: TouchEvent) {
+      if (drag.current?.active && event.cancelable) event.preventDefault()
+    }
+    element?.addEventListener('touchmove', keepDragOnPhoto, { passive:false })
+    return () => {
+      element?.removeEventListener('touchmove', keepDragOnPhoto)
+      clearTimeout(holdTimer.current)
+    }
+  }, [])
+
+  // Scroll at the edges so the offscreen row is reachable while holding a photo.
   const isDragging = dragPreview !== null
   useEffect(() => {
     if (!isDragging) return
     let frame: number
     const sheet = grid.current?.closest('dialog')
+    const scroller = sheet ?? document.scrollingElement
     function scroll() {
       const pointer = drag.current
-      if (!pointer || !sheet) return
-      const { top, bottom } = sheet.getBoundingClientRect()
+      if (!pointer || !scroller) return
+      const { top, bottom } = sheet?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight - 76 }
       const y = pointer.y
       const direction = y >= top && y < top + 56 ? -1 : y <= bottom && y > bottom - 56 ? 1 : 0
       if (direction) {
-        const before = sheet.scrollTop
-        sheet.scrollTop += direction * 8
-        if (before !== sheet.scrollTop) setDragPreview({ ...pointer, target: dropTarget(pointer.x, pointer.y) })
+        const before = scroller.scrollTop
+        scroller.scrollBy({top: direction * 8, behavior: 'instant'})
+        if (before !== scroller.scrollTop) setDragPreview({ ...pointer, target: dropTarget(pointer.x, pointer.y) })
       }
       frame = requestAnimationFrame(scroll)
     }
@@ -219,55 +265,60 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
     if (result.isSuccess) {
       setReconcile(false)
       setError('')
-      setRemoving(null)
+      setPreview(null)
+      setRemoving(false)
       setSelection(null)
     }
   }
 
   useEffect(() => { if (busyRef) busyRef.current = busy })
-  return <div className={`photo-gallery-panel ${inline ? 'photo-gallery-inline' : ''}`}>
+  const addPhoto = !selection && !removing && state && state.count < profilePhotoLimit
+    ? <ActionButton secondary={inline} disabled={disabled} onClick={() => input.current?.click()}>Add photo</ActionButton>
+    : null
+  return <div ref={panel} className={`photo-gallery-panel ${inline ? 'photo-gallery-inline' : ''}`}>
     {!inline && <p className="photo-gallery-note">Add up to four photos. The first is your profile photo and appears first in Friends and Dating.</p>}
     <span className="sr-only" role="status">{announcement}</span>
     <ResourceState loading={query.isPending} error={query.isError ? 'Your photos couldn’t be loaded.' : ''} reload={() => void reload()}/>
     {state && <>
-      <div className="photo-gallery-count" role="status">{state.count} of {profilePhotoLimit} photos</div>
-      {state.count > 1 && <p className="photo-gallery-reorder-note">
-        Drag a handle to reorder your photos.
-        <span id={dragInstructions} className="sr-only"> Use the arrow keys on a handle to move its photo.</span>
+      <div className="photo-gallery-toolbar">
+        <div className="photo-gallery-count" role="status">{state.count} of {profilePhotoLimit} photos</div>
+        {inline && addPhoto}
+      </div>
+      {state.count > 0 && <p className="photo-gallery-reorder-note">
+        Tap a photo to preview.{state.count > 1 && ' Hold and drag to reorder.'}
+        {state.count > 1 && <span id={dragInstructions} className="sr-only"> Use the arrow keys on a photo to move it.</span>}
       </p>}
-      <ol ref={grid} className="photo-gallery-grid">
+      {state.count > 0 && <ol ref={grid} className="photo-gallery-grid">
         {Array.from({ length: state.count }, (_, index) => {
           const position = index+1
           return <li key={position} data-gallery-position={position}
             className={dragPreview?.position === position ? 'drag-source' : dragPreview?.target === position ? 'drop-target' : undefined}>
-            <GalleryThumbnail token={token} owner={owner} revision={state.revision} position={position}/>
-            <div className="photo-gallery-position">{position === 1 ? 'Profile photo' : `Photo ${position}`}</div>
-            <div className="photo-gallery-controls">
-              {state.count > 1 && <button type="button" className="btn light photo-drag-handle" disabled={disabled}
-                aria-label={`Reorder photo ${position}`} aria-describedby={dragInstructions}
-                onPointerDown={event => startDrag(event,position)} onPointerMove={moveDrag} onPointerUp={finishDrag}
-                onLostPointerCapture={cancelDrag}
-                onKeyDown={event => {
-                  if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return
-                  event.preventDefault()
-                  const delta = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1
-                  const toPosition = position + delta
-                  if (toPosition >= 1 && toPosition <= state.count) void edit({ action:'move', position, toPosition })
-                }}>
-                <Icon name="DragHandle"/>
-              </button>}
-              <button type="button" aria-label={`Remove photo ${position}`} title="Remove photo" className="btn light" disabled={disabled} onClick={() => { setRemoving(position); setSelection(null) }}><Icon name="Skip"/></button>
-            </div>
+            <GalleryPhoto token={token} owner={owner} revision={state.revision} position={position} thumbnail={{
+              'aria-describedby':state.count > 1 ? dragInstructions : undefined,
+              onClick: event => {
+                if (event.detail !== 0 && suppressTap.current) return
+                setRemoving(false)
+                setPreview({ position, revision:state.revision })
+              },
+              onPointerDown: event => startHold(event,position),
+              onPointerMove: moveDrag,
+              onPointerUp: finishDrag,
+              onPointerCancel: cancelDrag,
+              onLostPointerCapture: cancelDrag,
+              onContextMenu: event => event.preventDefault(),
+              onKeyDown: event => {
+                if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return
+                event.preventDefault()
+                const delta = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1
+                const toPosition = position + delta
+                if (toPosition >= 1 && toPosition <= state.count) void edit({ action:'move', position, toPosition })
+              },
+            }}/>
           </li>
         })}
-      </ol>
+      </ol>}
       {dragPreview?.image && <img src={dragPreview.image} alt="" className="photo-gallery-drag-preview"
         style={{ left:dragPreview.x, top:dragPreview.y }} draggable={false}/>}
-      {removing !== null && <div className="photo-gallery-confirm">
-        <p>Remove {removing === 1 ? 'your current profile photo' : `photo ${removing}`}?</p>
-        <ActionButton secondary disabled={busy} onClick={() => setRemoving(null)}>Cancel</ActionButton>
-        <ActionButton disabled={disabled} onClick={() => void edit({action:'remove',position:removing})}>Remove photo</ActionButton>
-      </div>}
       {selection && <div className="photo-gallery-selection">
         <img src={selection.url} alt="New photo preview"/>
         <div>
@@ -275,14 +326,82 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
           <ActionButton secondary disabled={busy} onClick={() => setSelection(null)}>Cancel</ActionButton>
         </div>
       </div>}
-      {!selection && removing === null && state.count < profilePhotoLimit && <ActionButton disabled={disabled} onClick={() => input.current?.click()}>Add photo</ActionButton>}
+      {!inline && addPhoto}
       <input hidden aria-label="Choose a gallery photo" ref={input} type="file" accept="image/jpeg,image/png,image/webp" onChange={event => {
         const file = event.currentTarget.files?.[0]
         event.currentTarget.value = ''
         if (file) select(file)
       }}/>
     </>}
+    {!preview && <ErrorMessage>{error}</ErrorMessage>}
+    {reconcile && !preview && <ActionButton secondary disabled={query.isFetching} onClick={() => void reload()}>Reload photos</ActionButton>}
+    {preview && <Modal variant="sheet" className="photo-preview-modal"
+      title={preview.position === 1 ? 'Profile photo' : `Photo ${preview.position}`}
+      close={() => { if (!lock.current) { setPreview(null); setRemoving(false) } }}>
+      {state?.revision === preview.revision
+        ? <GalleryPhoto token={token} owner={owner} revision={preview.revision} position={preview.position}/>
+        : <p role="status">Your photos changed. Reload to see the current order.</p>}
+      {state?.revision === preview.revision && <div className="photo-preview-actions">
+        {removing ? <>
+          <p role="status">{preview.position === 1 ? 'Remove your current profile photo?' : `Remove photo ${preview.position}?`}</p>
+          <ActionButton disabled={disabled} onClick={() => void edit({ action:'remove', position:preview.position })}>
+            {busy ? 'Removing…' : 'Confirm removal'}
+          </ActionButton>
+          <ActionButton secondary disabled={busy} onClick={() => setRemoving(false)}>Cancel</ActionButton>
+        </> : <>
+          {preview.position !== 1 &&
+            <ActionButton disabled={disabled} onClick={() => void edit({ action:'move', position:preview.position, toPosition:1 })}>
+              {busy ? 'Saving…' : 'Make profile photo'}
+            </ActionButton>}
+          <ActionButton secondary disabled={disabled} onClick={() => setRemoving(true)}>Remove photo</ActionButton>
+        </>}
+      </div>}
+      {state?.revision === preview.revision && !removing &&
+        <PhotoCaptionEditor key={`${preview.revision}:${preview.position}`} owner={owner} revision={preview.revision} position={preview.position} disabled={disabled}/>}
+      <ErrorMessage>{error}</ErrorMessage>
+      {(reconcile || query.isError || state?.revision !== preview.revision) &&
+        <ActionButton secondary disabled={query.isFetching || busy} onClick={() => void reload()}>Reload photos</ActionButton>}
+    </Modal>}
+  </div>
+}
+
+// Optional caption for one photo. It stays with the photo when photos move.
+function PhotoCaptionEditor({ owner, revision, position, disabled }: { owner: string; revision: number; position: number; disabled: boolean }) {
+  const { client } = usePhotoGallery(owner, false)
+  const cache = useQueryClient()
+  const captions = usePhotoCaptions(owner, revision)
+  const saved = captions.data?.captions[position - 1] ?? ''
+  const [draft, setDraft] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const value = draft ?? saved
+  const hint = contactDetailsHint(value)
+  const changed = draft !== null && draft.trim() !== saved
+  const canSave = !disabled && !saving && !captions.isPending && !captions.isError && changed
+  async function save() {
+    if (!client || !canSave) return
+    setSaving(true)
+    setError('')
+    try {
+      const next = await client.saveCaption({ expectedRevision: revision, position, caption: value.trim() })
+      cache.setQueryData(['profile-photo', owner, 'captions', revision], next)
+      setDraft(null)
+      haptic('success')
+      toast(value.trim() ? 'Caption saved' : 'Caption removed')
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Caption could not be saved.')
+    } finally { setSaving(false) }
+  }
+  return <div className="photo-caption-editor">
+    <label htmlFor={`photo-caption-${position}`}>Caption <span>(optional)</span></label>
+    <div className="photo-caption-row">
+      <input id={`photo-caption-${position}`} maxLength={photoCaptionLimit} placeholder="Add a short caption" value={value}
+        disabled={disabled || saving || captions.isPending || captions.isError} onChange={event => setDraft(event.target.value)}
+        onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void save() } }}/>
+      <ActionButton disabled={!canSave} onClick={() => void save()}>{saving ? 'Saving…' : 'Save'}</ActionButton>
+    </div>
+    <div className="photo-caption-meta"><span>{hint}</span><span>{value.length}/{photoCaptionLimit}</span></div>
+    {captions.isError && <p className="account-note">Captions couldn’t be loaded.</p>}
     <ErrorMessage>{error}</ErrorMessage>
-    {reconcile && <ActionButton secondary disabled={query.isFetching} onClick={() => void reload()}>Reload photos</ActionButton>}
   </div>
 }

@@ -13,7 +13,7 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 const node = process.execPath
 const bin = path => join(root, 'node_modules', path)
 const matching = process.argv.includes('--matching')
-const sqlContracts = ['seed-messaging', 'hosted-services', 'dining-menus', 'sbengaged-month-sync']
+const sqlContracts = ['seed-messaging', 'hosted-services', 'dining-menus', 'dining-cron', 'sbengaged-month-sync']
 
 const abort = new AbortController()
 let current

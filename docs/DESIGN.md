@@ -112,12 +112,19 @@ Profile opens on your profile, with a Your profile / Preview switch; Preview
 shows the saved card as Friends or Dating would see it, without a dialog. A
 "Finish your profile" card lists only what is missing, each linking to that
 field. Photos are managed inline on Profile with the same controls as the photo
-manager. People can order their interests; the first is their top interest and
+manager. Tapping a photo opens a full-image preview with an action to make it
+the profile photo. People can order their interests; the first is their top interest and
 leads their card. Ordering is presentation only: matching treats interests as
 an unordered set. Education, occupation and languages can each be shown to
 Friends and Dating, Friends only or Dating only. One owned Garden item (or the
 Pebble) can appear on the card. Another person's order and Garden item use the
 same audience as profile photos, and stale choices are dropped, never shown.
+
+Photo previews also let people save an optional caption that follows the photo
+when they reorder it. Friends and Dating display the caption for the current
+photo. Profiles can have up to three optional prompts per mode. People can choose
+which mode shows each answer and write an optional Dating bio. These choices
+are available after onboarding.
 
 ## Onboarding and matching setup
 
@@ -133,7 +140,7 @@ and a confirmed search area. Friends and Dating have separate areas. Event and
 group matching use the Friends search area. Weekly availability is optional
 until group matching, which needs a continuous hour and a confirmed timezone.
 Profile and matching setup offer a photo manager with up to four ordered photos.
-Drag a handle to reorder photos. The first is the profile photo. Friends and
+Press and hold a photo to reorder it. The first is the profile photo. Friends and
 Dating cards support swiping when a person has more than one photo, with
 keyboard navigation on the photo viewer.
 

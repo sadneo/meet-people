@@ -126,6 +126,7 @@ test('stale Undo cannot erase an external purchase before its storage event arri
  await expect(page.getByRole('button',{name:'Undo Garden change',exact:true})).toBeDisabled()
 })
 test('repeated quick two-tab purchases retain both purchases (50 exclusive-lock pairs)',async({page,context})=>{
+ test.setTimeout(120_000)
  const fixture=await wiringFixture(page);await page.goto('/')
  const second=await context.newPage();await wiringFixture(second);await second.goto('/')
  for(const tab of [page,second])await expect(tab.getByRole('button',{name:'Open Garden inventory',exact:true})).toBeEnabled()

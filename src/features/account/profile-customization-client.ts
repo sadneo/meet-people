@@ -6,6 +6,7 @@ import {
   type ProfileCustomization, type ProfileCustomizationValue, type ProfileShowcase,
 } from '../../../shared/profile-customization'
 import { apiUrl } from '../../platform/native'
+import { ProfilePromptsSchema, type ProfilePrompt } from '../../../shared/profile-prompts'
 import { useAccount } from '../../auth/account-context'
 
 export class ProfileCustomizationError extends Error {
@@ -45,6 +46,8 @@ export function profileCustomizationClient(token: string) {
     save: (expectedRevision: number, customization: ProfileCustomizationValue) =>
       request('', ProfileCustomizationSchema, { method: 'PUT', body: JSON.stringify({ expectedRevision, customization }) }),
     showcase: (owner: string, signal?: AbortSignal) => request(`/${encodeURIComponent(owner)}`, ProfileShowcaseSchema, {}, signal),
+    prompts: (owner: string, mode: 'friends' | 'dating', signal?: AbortSignal) =>
+      request(`/${encodeURIComponent(owner)}/prompts/${mode}`, z.object({ prompts: ProfilePromptsSchema }).strict(), {}, signal).then(value => value.prompts),
   }
 }
 
@@ -69,6 +72,7 @@ export function useProfileCustomization() {
     const saved = await client.save(query.data.revision, customization)
     cache.setQueryData(ownKey(owner), saved)
     void cache.invalidateQueries({ queryKey: ['profile-showcase', owner] })
+    void cache.invalidateQueries({ queryKey: ['profile-prompts', owner] })
     return saved
   }
   return { query, value: query.data?.customization ?? defaultProfileCustomization, save }
@@ -84,5 +88,19 @@ export function useProfileShowcase(owner: string | undefined, enabled = true) {
     staleTime: 60_000,
     retry: false,
     queryFn: ({ signal }) => profileCustomizationClient(token!).showcase(owner!, signal),
+  })
+}
+
+// Another person's prompt answers for one mode; Dating-only prompts are
+// returned only when the server allows them for this pair.
+export function useProfilePrompts(owner: string | undefined, mode: 'friends' | 'dating', enabled = true) {
+  const account = useAccount()
+  const token = account?.loaded ? account.session?.access_token : undefined
+  return useQuery<ProfilePrompt[]>({
+    queryKey: ['profile-prompts', owner, mode],
+    enabled: !!token && !!owner && enabled,
+    staleTime: 60_000,
+    retry: false,
+    queryFn: ({ signal }) => profileCustomizationClient(token!).prompts(owner!, mode, signal),
   })
 }

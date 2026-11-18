@@ -130,31 +130,11 @@ jobs:
         run: |
           pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
           node scripts/push-reviewed-migrations.mjs --dry-run
-      - name: Deploy authenticated Edge Functions
-        run: |
-          pnpm exec supabase functions deploy embed-interest --project-ref "$SUPABASE_PROJECT_REF" --use-api
-          pnpm exec supabase functions deploy ingest-sbengaged --project-ref "$SUPABASE_PROJECT_REF" --use-api
-          pnpm exec supabase functions deploy enrich-sbengaged --project-ref "$SUPABASE_PROJECT_REF" --use-api
-          pnpm exec supabase functions deploy export-sbengaged --project-ref "$SUPABASE_PROJECT_REF" --use-api
-          pnpm exec supabase functions deploy ingest-nutrislice --project-ref "$SUPABASE_PROJECT_REF" --use-api
-          pnpm exec supabase functions deploy ingest-sbu-hospital --project-ref "$SUPABASE_PROJECT_REF" --use-api
-          pnpm exec supabase functions deploy ingest-dining --project-ref "$SUPABASE_PROJECT_REF" --use-api
-      - run: node scripts/push-reviewed-migrations.mjs --yes
-      - name: Install canonical product backend
-        run: node scripts/deploy-product-schema.mjs
-      - run: pnpm hosting:configure
-      - name: Configure shared month-ahead event sync and paced photo queue
-        run: node scripts/configure-sbengaged-sync.mjs
-      - run: sh scripts/deploy-api.sh
-      - name: Deploy disabled event worker (no execution or schedule)
-        if: env.DEPLOY_ENVIRONMENT == 'sandbox'
-        run: sh scripts/deploy-worker.sh
-      - name: Deploy approved production workers and schedules
-        if: env.DEPLOY_ENVIRONMENT == 'production'
-        run: node scripts/deploy-production-workers.mjs
-      - name: Configure production dining imports at 6 a.m. New York time
-        if: env.DEPLOY_ENVIRONMENT == 'production'
-        run: node scripts/deploy-dining-schedules.mjs
+      # Steps for each stage live in scripts/deploy-stages.mjs; add backend features there.
+      - name: Deploy backend (Edge Functions, migrations, schema, hosted config, event sync)
+        run: node scripts/deploy-stages.mjs backend
+      - name: Deploy services (API, workers, schedules)
+        run: node scripts/deploy-stages.mjs services
       # Each site's pinTag updates the shared Run service; publish sequentially.
       - name: Deploy web site and pin API revision
         run: pnpm dlx firebase-tools@15.28.2 deploy --config firebase.deploy.json --only "hosting:$FIREBASE_WEB_SITE_ID" --project "$GCP_PROJECT_ID" --non-interactive

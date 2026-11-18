@@ -3,6 +3,7 @@ import sharp from 'sharp'
 import { z } from 'zod'
 import { ProfileGalleryAppendSchema, ProfileGalleryChangeSchema, ProfileGalleryStateSchema, ProfilePhotoStateSchema, ProfilePhotoWriteSchema, profilePhotoLimit, type ProfileGalleryEdit } from '../shared/profile-photo.js'
 import type { UserContextTransport } from './matchmaking.js'
+import { PhotoCaptionsSchema, SavePhotoCaptionSchema } from '../shared/profile-prompts.js'
 class PhotoFailure extends Error{constructor(readonly status:number,message:string){super(message)}}
 let processing=0,uploads=0
 const waitingReads: {resolve:()=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}[]=[]
@@ -40,12 +41,13 @@ export async function sanitizeProfilePhoto(input:Buffer,waitForProcessing=false)
  finally{releaseProcessing()}
 }
 type Actor=ReturnType<UserContextTransport['actor']>
-function unwrap(result:{data:unknown;error:{code?:string}|null}){
+function unwrap(result:{data:unknown;error:{code?:string;message?:string}|null}){
  if(result.error){const code=result.error.code
   if(code==='28000')throw new PhotoFailure(401,'Sign in again to manage your photo.')
   if(code==='PH409')throw new PhotoFailure(409,'Your photo changed. Reload its current state before trying again.')
   if(code==='PH429')throw new PhotoFailure(429,'Photo change limit reached. Try again later.')
   if(code==='PT404'||code==='42501')throw new PhotoFailure(404,'Photo unavailable.')
+  if(code==='23514'&&result.error.message?.includes('profile_photo_gallery_size'))throw new PhotoFailure(409,'Update Pebble to remove a photo from a gallery with multiple photos.')
   if(code==='22023'||code==='23514')throw new PhotoFailure(400,'The photo request was rejected. Reload before retrying.')
   throw new PhotoFailure(503,'Photo storage could not be confirmed. Reload before retrying.')
  }return result.data
@@ -116,6 +118,27 @@ export function createProfilePhotoRouter(){
   const parsed = ProfileGalleryChangeSchema.safeParse(req.body)
   if (!parsed.success || Object.keys(req.query).length) throw new PhotoFailure(400,'Invalid gallery edit.')
   await saveGallery(res, parsed.data)
+ })
+ router.put('/gallery/caption',async(req,res)=>{
+  const parsed = SavePhotoCaptionSchema.safeParse(req.body)
+  if (!parsed.success || Object.keys(req.query).length) throw new PhotoFailure(400,'Check the caption and try again.')
+  const save = actor(res).savePhotoCaption
+  if (!save) throw new PhotoFailure(503,'Photo captions are not available yet.')
+  const caption = parsed.data.caption.trim()
+  const saved = PhotoCaptionsSchema.safeParse(unwrap(await save({ ...parsed.data, caption })))
+  const expected = caption || null
+  if (!saved.success || saved.data.revision !== parsed.data.expectedRevision || saved.data.captions[parsed.data.position-1] !== expected)
+   throw new PhotoFailure(502,'Caption could not be confirmed. Reload before retrying.')
+  res.json(saved.data)
+ })
+ router.get('/gallery/:owner/captions',async(req,res)=>{
+  const owner = z.uuid().safeParse(req.params.owner)
+  if (!owner.success || Object.keys(req.query).length) throw new PhotoFailure(400,'Invalid photo reference.')
+  const read = actor(res).photoCaptions
+  if (!read) throw new PhotoFailure(503,'Photo captions are not available yet.')
+  const result = PhotoCaptionsSchema.safeParse(unwrap(await read(owner.data)))
+  if (!result.success) throw new PhotoFailure(502,'Captions could not be confirmed.')
+  res.json(result.data)
  })
  router.get('/gallery/:owner',async(req,res)=>{
   const owner = z.uuid().safeParse(req.params.owner)

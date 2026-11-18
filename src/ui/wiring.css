@@ -1346,7 +1346,7 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
   margin-top: 14px;
 }
 .account-modal .event-filter-actions > .btn { margin: 0; min-height: 48px; }
-.live-profile .profile-edit-photo > .profile-photo-actions {
+.live-profile .profile-edit-photo > .profile-edit-photo-actions {
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;

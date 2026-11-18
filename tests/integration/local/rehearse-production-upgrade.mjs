@@ -26,6 +26,7 @@ assert.deepEqual(pending, [
   '20261116030000_progressive_onboarding.sql',
   '20261116030100_profile_photo_gallery.sql',
   '20261116040000_profile_customization.sql',
+  '20261116050000_photo_captions_prompts.sql',
 ], 'Production baseline changed; review the rehearsal before executing.')
 const container = `pebble-production-rehearsal-${process.pid}`
 const docker = args => containerSync(args)
@@ -85,6 +86,7 @@ try {
   sql(source('tests/integration/sql/progressive-onboarding.sql'))
   sql(source('tests/integration/sql/profile-photo-gallery.sql'))
   sql(source('tests/integration/sql/profile-customization.sql'))
+  sql(source('tests/integration/sql/photo-captions-prompts.sql'))
   sql(source('tests/integration/sql/public-live-events.sql'))
   sql(source('tests/integration/sql/adult-release.sql'))
   assert.equal(sql(`select has_table_privilege('anon','public.push_devices','SELECT') or has_table_privilege('authenticated','public.push_devices','SELECT') or has_table_privilege('authenticated','garden_private.wallets','SELECT')`), 'f')

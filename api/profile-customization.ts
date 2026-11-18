@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod'
-import { ProfileCustomizationSchema, ProfileShowcaseSchema, SaveProfileCustomizationSchema, sameCustomization } from '../shared/profile-customization.js'
+import { ProfileCustomizationSchema, ProfileShowcaseSchema, PublicProfilePromptsSchema, SaveProfileCustomizationSchema, sameCustomization } from '../shared/profile-customization.js'
 import type { UserContextTransport } from './matchmaking.js'
 
 class CustomizationFailure extends Error {
@@ -43,10 +43,25 @@ export function createProfileCustomizationRouter() {
     if (!actor.saveProfileCustomization) throw new CustomizationFailure(503, 'unavailable', 'Profile choices are not available yet.')
     const saved = ProfileCustomizationSchema.safeParse(unwrap(await actor.saveProfileCustomization(parsed.data)))
     // A well-shaped but unrelated or stale snapshot is not a confirmed save.
-    if (!saved.success || saved.data.revision !== parsed.data.expectedRevision + 1 || !sameCustomization(saved.data.customization, parsed.data.customization)) {
+    // A save that omits prompts or the Dating bio keeps what's stored; compare only what was sent.
+    const sent = saved.success ? {
+      ...parsed.data.customization,
+      prompts: parsed.data.customization.prompts ?? saved.data.customization.prompts,
+      datingBio: parsed.data.customization.datingBio === undefined ? saved.data.customization.datingBio : parsed.data.customization.datingBio,
+    } : parsed.data.customization
+    if (!saved.success || saved.data.revision !== parsed.data.expectedRevision + 1 || !sameCustomization(saved.data.customization, sent)) {
       throw new CustomizationFailure(502, 'malformed', 'Profile choices could not be confirmed. Reload before retrying.')
     }
     response.json(saved.data)
+  })
+  router.get('/:owner/prompts/:mode', async (request, response) => {
+    const params = z.object({ owner: z.uuid(), mode: z.enum(['friends', 'dating']) }).safeParse(request.params)
+    if (!params.success) throw new CustomizationFailure(400, 'invalid', 'Invalid profile reference.')
+    const actor = response.locals.actor as Actor
+    if (!actor.profilePrompts) throw new CustomizationFailure(503, 'unavailable', 'Profile prompts are not available yet.')
+    const parsed = PublicProfilePromptsSchema.safeParse(unwrap(await actor.profilePrompts(params.data.owner, params.data.mode)))
+    if (!parsed.success) throw new CustomizationFailure(502, 'malformed', 'Profile prompts could not be confirmed.')
+    response.json({ prompts: parsed.data })
   })
   router.get('/:owner', async (request, response) => {
     const owner = z.uuid().safeParse(request.params.owner)

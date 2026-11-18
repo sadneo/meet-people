@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { ProfileGalleryStateSchema, ProfilePhotoStateSchema, type ProfileGalleryChange } from '../../../shared/profile-photo'
 import { apiUrl } from '../../platform/native'
+import { PhotoCaptionsSchema, type SavePhotoCaption } from '../../../shared/profile-prompts'
 export class ProfilePhotoError extends Error{constructor(readonly status:number,message:string){super(message)}}
 export function profilePhotoClient(token:string){
  async function request(path:string,init:RequestInit={},signal?:AbortSignal,binary=false){
@@ -26,6 +27,11 @@ export function profilePhotoClient(token:string){
   append: async (file: File, expectedRevision: number, signal?: AbortSignal) =>
     ProfileGalleryStateSchema.parse(await request(`/gallery?${new URLSearchParams({expectedRevision:String(expectedRevision),requestId:crypto.randomUUID()})}`,
       {method:'PUT',body:file,headers:{'Content-Type':file.type}},signal)),
+  captions: async (owner: string, signal?: AbortSignal) =>
+    PhotoCaptionsSchema.parse(await request(`/gallery/${encodeURIComponent(owner)}/captions`, {}, signal)),
+  saveCaption: async (value: SavePhotoCaption, signal?: AbortSignal) =>
+    PhotoCaptionsSchema.parse(await request('/gallery/caption',
+      {method:'PUT',body:JSON.stringify(value),headers:{'Content-Type':'application/json'}},signal)),
   editGallery: async (edit: ProfileGalleryChange, signal?: AbortSignal) =>
     ProfileGalleryStateSchema.parse(await request('/gallery',
       {method:'PATCH',body:JSON.stringify(edit),headers:{'Content-Type':'application/json'}},signal)),

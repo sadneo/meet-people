@@ -108,33 +108,43 @@ storage conventions. Release CI deploys both functions.
 
 ## Production schedule
 
-Google Cloud Scheduler in `cse416-meet-people`, region `us-east4`, runs both
-production imports daily at **6:00 a.m. America/New_York**, including daylight
-saving changes (`0 6 * * *`) through one job:
-`pebble-ingest-dining-schedule` calls the `ingest-dining` Edge Function.
+Supabase cron in production (`wacgxhsdhrqigrmqaonc`) runs both imports daily
+at **6:00 a.m. America/New_York**, including daylight saving changes. The single
+job `pebble-ingest-dining` invokes the private `hosting_private.ingest_dining()`
+wrapper, which calls the combined `ingest-dining` Edge Function through `pg_net`.
 
-It sends authenticated POST requests to production Supabase
-(`wacgxhsdhrqigrmqaonc`) with `{"mode":"full","dryRun":false}`. The function
-runs both existing ingestion handlers concurrently, each with its own run record.
-Both are attempted even if one fails; the combined response reports each result
-and returns a failure HTTP status if either fails. Each refreshes
-the next seven days of available menus, with a three-minute request deadline and
-no automatic retries. Missing or unpublished source days can produce partial
-imports; inspect `ingestion_runs`, since HTTP 200 alone does not mean full coverage.
+The database scheduler stays on UTC. Its cron expression is `0 10,11 * * *`;
+the wrapper skips the candidate that is not 6 a.m. in New York. A locked private
+state row allows only one scheduled request per local date, including concurrent
+retries. Other cron jobs keep their existing clock and cadence.
 
-`scripts/deploy-dining-schedules.mjs` creates or updates this schedule during
-production releases, after Edge Functions, migrations, and hosted secrets are
-configured. It reads the existing ingestion token from production Vault and
-passes it through private temporary files without logging it. This also refreshes
-the Scheduler headers after token rotation. Sandbox releases do not install these
-schedule. The two previous source-specific schedules were removed after verifying
-the combined job. To reconcile manually with an existing Supabase and gcloud login:
+The wrapper reads the current URL and ingestion token directly from Vault on every
+run. Neither the cron command nor deployment output contains credentials. Requests
+use `{"mode":"full","dryRun":false}` and a two-minute HTTP timeout. Both source
+handlers run concurrently and create separate `ingestion_runs` records. Each
+refreshes the next seven days of available menus. Missing or unpublished days can
+produce partial imports; inspect those records and the `pg_net` response rather
+than relying on HTTP 200 alone. There are no automatic retries.
+
+`scripts/deploy-dining-schedules.mjs` reconciles the native job during production
+releases, after functions, migrations and Vault are ready. Sandbox releases do not
+install a recurring food import. `scripts/retire-google-dining-schedule.mjs`
+verifies the native job and removes only the known legacy Google dining job;
+subsequent releases treat its absence as success. Event scraping also uses
+Supabase cron; Google event-group matching and push workers are separate jobs.
+
+To reconcile with an existing Supabase login (Google credentials are unnecessary):
 
 ```sh
-DEPLOY_ENVIRONMENT=production GCP_PROJECT_ID=cse416-meet-people \
+DEPLOY_ENVIRONMENT=production SUPABASE_PROJECT_REF=wacgxhsdhrqigrmqaonc \
 SUPABASE_URL=https://wacgxhsdhrqigrmqaonc.supabase.co \
 node scripts/deploy-dining-schedules.mjs
 ```
+
+An authorized database operator can run once outside the scheduled hour with
+`select hosting_private.ingest_dining(true);`. This returns a `pg_net` request ID;
+check `net._http_response` and both ingestion run records for completion. A forced
+run counts for that local date; it never enables a sandbox schedule.
 
 ## Browse menus in Pebble
 

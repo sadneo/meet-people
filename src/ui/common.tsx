@@ -89,7 +89,6 @@ export function Icon({ name }: { name: string }) {
     ChevronUp: <path d="m6 15 6-6 6 6" />,
     ChevronDown: <path d="m6 9 6 6 6-6" />,
     Edit: <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4" />,
-    DragHandle: <path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" strokeWidth="3"/>,
     Food: <><path d="M3 11h18a9 9 0 0 1-18 0ZM8 21h8M8 3v4m4-5v5m4-4v4" /></>,
     External: <path d="M7 17 17 7M7 7h10v10" />,
     Back: <path d="m15 18-6-6 6-6" />,
@@ -272,7 +271,7 @@ export function Modal({
       className={`account-modal ${variant === 'sheet' ? 'is-sheet' : ''} ${className} ${layerBack ? 'has-modal-layer' : ''}`}
       aria-labelledby={titleId}
       onKeyDown={(event) => {
-        if (event.key !== 'Tab') return;
+        if (event.key !== 'Tab' || (event.target as Element).closest('dialog') !== event.currentTarget) return;
         const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])'))
           .filter(element => !element.matches(':disabled') && element.getClientRects().length > 0 && element.tabIndex >= 0);
         const first = focusable[0], last = focusable.at(-1);
@@ -284,6 +283,7 @@ export function Modal({
         }
       }}
       onCancel={(event) => {
+        if (event.target !== event.currentTarget) return;
         event.preventDefault();
         goBack();
       }}

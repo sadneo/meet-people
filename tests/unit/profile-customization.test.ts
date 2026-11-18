@@ -24,6 +24,11 @@ const transport = {
       stored = { revision: stored.revision + 1, customization: structuredClone(write.customization) }
       return { data: echo ?? stored, error: null }
     },
+    profilePrompts: async (owner: string, mode: string) => {
+      showcases(`${owner}:${mode}`)
+      if (rpcError) return { data: null, error: rpcError }
+      return { data: [{ id: 'study-spot', answer: 'Library' }], error: null }
+    },
     profileShowcase: async (owner: string) => {
       showcases(owner)
       if (rpcError) return { data: null, error: rpcError }
@@ -84,4 +89,13 @@ it('serves another person’s showcase only through the audience-checked RPC', a
   expect(await request('GET', undefined, `/profile-customization/${other}`)).toMatchObject({ status: 404, data: { code: 'not_found' } })
   expect((await request('GET', undefined, '/profile-customization/not-a-uuid')).status).toBe(400)
   expect((await request('GET', undefined, `/profile-customization?owner=${other}`)).status).toBe(400)
+})
+
+it('serves prompts per mode and keeps stored prompts when a save omits them', async () => {
+  expect(await request('GET', undefined, `/profile-customization/${other}/prompts/dating`)).toMatchObject({ status: 200, data: { prompts: [{ id: 'study-spot', answer: 'Library' }] } })
+  expect(showcases).toHaveBeenCalledWith(`${other}:dating`)
+  expect((await request('GET', undefined, `/profile-customization/${other}/prompts/everyone`)).status).toBe(400)
+  stored = { revision: 0, customization: { ...defaultProfileCustomization, prompts: [{ id: 'study-spot', answer: 'Library' }] } }
+  echo = { revision: 1, customization: { ...chosen, prompts: [{ id: 'study-spot', answer: 'Library' }] } }
+  expect((await request('PUT', { expectedRevision: 0, customization: chosen })).status).toBe(200)
 })

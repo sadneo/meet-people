@@ -9,6 +9,7 @@ import { createAccountRouter } from './account.js'
 import { createPushRouter } from './push.js'
 import { createMatchmakingRouter, createUserContextTransport } from './matchmaking.js'
 import { HealthResponseSchema, HelloRequestSchema, HelloResponseSchema } from '../shared/schemas.js'
+import { accountOnboardingHeader } from '../shared/account.js'
 import cors from 'cors'
 import rateLimit from 'express-rate-limit'
 import { createSocialRouter } from './social.js'
@@ -29,7 +30,7 @@ app.use('/api', (_request, response, next) => {
 const allowedOrigins = new Set(['https://localhost', 'capacitor://localhost', ...(process.env.CORS_ORIGINS?.split(',') ?? [])])
 app.use(cors({
   origin: (origin, callback) => callback(null, !origin || allowedOrigins.has(origin)),
-  allowedHeaders: ['Authorization', 'Content-Type'],
+  allowedHeaders: ['Authorization', 'Content-Type', accountOnboardingHeader],
   maxAge: 600,
 }))
 

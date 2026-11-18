@@ -6,7 +6,7 @@ import type { ProfileGalleryEdit, ProfilePhotoWrite } from '../shared/profile-ph
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { AccountSchema, SaveAccountSchema, completedAccountChapters, type Account, type SaveAccount } from '../shared/account.js'
+import { AccountSchema, SaveAccountSchema, accountOnboardingHeader, completedAccountChapters, legacyAccountChapters, type Account, type SaveAccount } from '../shared/account.js'
 import { isPublicSupabaseKey } from './env.js'
 import { JoinQueueSchema, MatchingProfileSchema, RawMatchSchema, RawQueueStatusSchema, type MatchingProfile } from '../shared/matchmaking.js'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, ListingIdSchema, ListingInterestRequestSchema, ListingMatchmakingStatusSchema, RawListingEventMatchesSchema } from '../shared/matchmaking.js'
@@ -15,6 +15,7 @@ import type { SaveProfileDetails } from '../shared/profile-details.js'
 import { createProfileDetailsRouter } from './profile-details.js'
 import { createProfileCustomizationRouter } from './profile-customization.js'
 import type { SaveProfileCustomization } from '../shared/profile-customization.js'
+import type { SavePhotoCaption } from '../shared/profile-prompts.js'
 import type { SaveFriendsSearchPreferences } from '../shared/friends-search-preferences.js'
 import { createFriendsSearchPreferencesRouter } from './friends-search-preferences.js'
 import type { SaveDetailedSettings } from '../shared/detailed-settings.js'
@@ -57,6 +58,9 @@ export interface UserContextTransport {
     profileCustomization?(): PromiseLike<RpcResponse>
     saveProfileCustomization?(value: SaveProfileCustomization): PromiseLike<RpcResponse>
     profileShowcase?(owner: string): PromiseLike<RpcResponse>
+    profilePrompts?(owner: string, mode: 'friends' | 'dating'): PromiseLike<RpcResponse>
+    photoCaptions?(owner: string): PromiseLike<RpcResponse>
+    savePhotoCaption?(value: SavePhotoCaption): PromiseLike<RpcResponse>
     friendsRuntime?(): PromiseLike<RpcResponse>
     activeFriendsStatus?(): PromiseLike<RpcResponse>
     activeFriendsCommand?(command: ActiveCommand): PromiseLike<RpcResponse>
@@ -147,6 +151,9 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         profileCustomization: () => client.rpc('get_profile_customization'),
         saveProfileCustomization: value => client.rpc('save_profile_customization', { customization_in: value }),
         profileShowcase: owner => client.rpc('get_profile_showcase', { owner_in: owner }),
+        profilePrompts: (owner, mode) => client.rpc('get_profile_prompts', { owner_in: owner, mode_in: mode }),
+        photoCaptions: owner => client.rpc('get_profile_photo_captions', { owner_in: owner }),
+        savePhotoCaption: value => client.rpc('set_profile_photo_caption', { caption_in: value }),
         friendsSearchPreferences: () => client.rpc('get_friends_search_preferences'),
         saveFriendsSearchPreferences: preferences => client.rpc('save_friends_search_preferences', { preferences_in: preferences }),
         detailedSettings: () => client.rpc('get_detailed_settings'),
@@ -321,13 +328,16 @@ export function createMatchmakingRouter(transport: UserContextTransport | null, 
     const saved = await writeAccount(response, { ...previous, profile: { ...(previous.profile ?? { birthdate: null, location_city: null, interests: [], availability: [] }), ...parsed.data }, completed: previous.completed.length ? previous.completed : [0] }, previous)
     response.json({ profile: AccountProfileSchema.parse({ username: saved.profile!.username, display_name: saved.profile!.display_name, bio: saved.profile!.bio, avatar_url: saved.profile!.avatar_url }) })
   })
-  router.get('/account', async (_request, response) => {
-    response.json(await readAccount(response))
+  const accountForClient = (request: Request, account: Account) =>
+    request.headers[accountOnboardingHeader.toLowerCase()] === 'progressive'
+      ? account : { ...account, completed: legacyAccountChapters(account) }
+  router.get('/account', async (request, response) => {
+    response.json(accountForClient(request, await readAccount(response)))
   })
   router.put('/account', async (request, response) => {
     const parsed = SaveAccountSchema.safeParse(request.body)
     if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid account data. No changes were saved.')
-    response.json(await writeAccount(response, parsed.data, await readAccount(response)))
+    response.json(accountForClient(request, await writeAccount(response, parsed.data, await readAccount(response))))
   })
   router.put('/profile', async (request, response) => {
     const parsed = MatchingProfileSchema.safeParse(request.body)

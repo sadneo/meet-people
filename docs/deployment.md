@@ -42,18 +42,37 @@ Pushes to **main deploy production**. **Sandbox deploys only when run manually**
 (see below). The environments use separate GitHub settings and backends. Both
 sandbox builds use one resolved commit, one API deployment and one database.
 
-1. Open a PR into `dev`; `Pull request checks` runs full CI and Android checks.
-   This is the only place tests run.
+1. Open a PR into `dev`. GitHub runs full CI and Android compilation.
 2. Open a PR from `dev` into `main`. `Main source` (required check `Require dev`)
    rejects PRs into `main` from any other branch or fork, so hotfixes go through
-   `dev` first. Use merge commits, not squash, so `dev` and `main` stay in step.
+   `dev` first. Full CI also verifies the proposed production merge and supplies
+   the required `Checks / CI` result on the PR. Use a merge commit to preserve ancestry.
 3. Merging into `main` runs `Deploy`, which resolves one commit SHA and prepares
    production frontend and API image builds without re-running tests.
 4. Deployment downloads frontend artifacts from the same workflow run and uses the
-   prepared API image by digest. It does not rebuild them. It deploys Edge Functions,
-   applies migrations without development seeds, configures services and deploys Hosting.
+   prepared API image by digest. It does not rebuild them. It then runs five stages:
+
+   | Stage | Where | What |
+   |---|---|---|
+   | Preflight | `release.yml` | settings validation, image check, production recovery policy, migration preview. Changes nothing. |
+   | Backend | `deploy-stages.mjs backend` | Edge Functions, reviewed migrations (no development seeds), product schema, hosted config, event sync |
+   | Services | `deploy-stages.mjs services` | API; sandbox's disabled event worker, or production's workers and schedules, the 6 a.m. Supabase dining cron, then retiring the legacy Google dining schedule |
+   | Hosting | `release.yml` | web site, then sandbox's mobile site |
+   | Verify | `release.yml` | hosted smoke checks and summary |
+
 5. Every deployed URL runs hosted smoke checks, even if another URL fails. Any
    failed smoke check fails the run; it does not automatically roll back changes.
+
+**Adding to a release:** add Edge Functions to `EDGE_FUNCTIONS` and new backend
+or service steps to `scripts/deploy-stages.mjs`, not to `release.yml`. A test
+fails if a directory in `supabase/functions/` is in neither `EDGE_FUNCTIONS` nor
+`UNDEPLOYED_FUNCTIONS` (currently `ingest-ticketmaster`, deliberately not deployed).
+
+**After a partial failure:** every step is safe to repeat (function and Cloud Run
+deploys overwrite, applied migrations are skipped, schedules are reconciled), so
+fix the cause and re-run Deploy. Each step's log is a collapsible group, and the
+failing step is reported as an error naming it. To roll production back, use a
+manual production redeploy of the previous main SHA. Migrations are never reverted.
 
 Version tags are release labels only. Production pipelines queue as complete runs
 (`queue: max`, up to 100 pending), preventing faster builds from overtaking an
@@ -226,9 +245,11 @@ discovered pooler. The old `SUPABASE_DB_URL` secret is not consumed.
 `hosting/deployment/supabase/config.toml`. The generated Auth configuration enables
 signup with email confirmation and secure password changes. It allows callback
 and reset routes on the environment's custom domains and `web.app` origins, plus
-the existing `com.cse416.meetpeople://app/` native callback/reset routes. Sandbox's
-default Auth URL is `https://mobile.dev.pebble.garden`; production's remains
-`https://pebble.garden`. Mobile clients request their explicit callback destination.
+the existing `com.cse416.meetpeople://app/` native callback/reset routes. Sandbox
+also allows the `com.cse416.meetpeople.dev://app/` routes used by the side-by-side
+Pebble Dev APK. The default Auth URL is `https://mobile.dev.pebble.garden` in
+sandbox and `https://pebble.garden` in production. Mobile clients request their
+explicit callback destination.
 Do not push local development `supabase/config.toml` to hosted projects.
 
 ### Recreate infrastructure
