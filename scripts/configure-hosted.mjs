@@ -8,6 +8,9 @@ import console from 'node:console'
 
 const ref = process.env.SUPABASE_PROJECT_REF
 if (!/^[a-z]{20}$/.test(ref ?? '')) throw new Error('Set SUPABASE_PROJECT_REF to the intended hosted project.')
+// Auth settings are generated per environment by configure-deployment.mjs; there is no fallback.
+const workdir = process.env.HOSTED_CONFIG_WORKDIR
+if (!workdir) throw new Error('Set HOSTED_CONFIG_WORKDIR to the generated settings (hosting/deployment).')
 const quote = value => `'${value.replaceAll("'", "''")}'`
 const directory = mkdtempSync(join(tmpdir(), 'pebble-hosting-'))
 function cli(args) {
@@ -41,7 +44,7 @@ try {
   const file = join(directory, 'functions.env')
   writeFileSync(file, Object.entries(secrets).map(([name, value]) => `${name}=${JSON.stringify(value)}`).join('\n'), { mode: 0o600 })
   cli(['secrets', 'set', '--project-ref', ref, '--env-file', file])
-  cli(['config', 'push', '--project-ref', ref, '--workdir', process.env.HOSTED_CONFIG_WORKDIR || 'hosting', '--yes'])
+  cli(['config', 'push', '--project-ref', ref, '--workdir', workdir, '--yes'])
   console.info('Hosted Vault and Edge Function secrets configured; existing generated tokens preserved.')
 } finally {
   rmSync(directory, { recursive: true, force: true })

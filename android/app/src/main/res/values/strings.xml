@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Pebble</string>
-    <string name="title_activity_main">Pebble</string>
+    <!-- app_name, title_activity_main and custom_url_scheme come from the product flavour in app/build.gradle. -->
     <string name="package_name">garden.pebble.android</string>
-    <string name="custom_url_scheme">com.cse416.meetpeople</string>
 </resources>

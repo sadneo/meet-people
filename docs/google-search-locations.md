@@ -66,14 +66,8 @@ listener handles cannot throw through React unmount and blank the app.
 
    Do not paste secrets into committed SQL, shell history, reports or chat. Key
    rotation invalidates outstanding previews but not already issued selections.
-6. Arrange a DB-owner purge job at least every 15 minutes:
-
-   ```sql
-   -- With pg_cron enabled; run as the owner, never grant the helper to clients.
-   select cron.schedule('pebble-map-cache-purge', '*/15 * * * *',
-     'select location_private.purge_map_locations();');
-   ```
-
+6. Migration `20261117030000_map_cache_purge_cron.sql` schedules the owner-only
+   `pebble-map-cache-purge` job every 15 minutes in every environment with pg_cron.
    A deployment without pg_cron needs an equivalent protected owner job. Expired
    locations stop being usable immediately, independently of purge timing. Monitor
    the job and alert on failure; the usable TTL leaves a day of cleanup headroom.

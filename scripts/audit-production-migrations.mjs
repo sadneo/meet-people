@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
+import { supabaseRefs } from './configure-deployment.mjs'
 
 export function compareInventory(files, rows, functions) {
   const applied = new Set(rows.map(row => row.version))
@@ -26,7 +27,8 @@ export function compareInventory(files, rows, functions) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const cwd = fileURLToPath(new URL('../', import.meta.url))
-  const projectRef = 'wacgxhsdhrqigrmqaonc'
+  const projectRef = supabaseRefs[process.env.DEPLOY_ENVIRONMENT ?? 'production']
+  if (!projectRef) throw new Error('Choose DEPLOY_ENVIRONMENT=production or sandbox.')
   const query = `BEGIN READ ONLY;
 SELECT jsonb_build_object(
  'migrations',(SELECT coalesce(jsonb_agg(jsonb_build_object('version',version)),'[]') FROM supabase_migrations.schema_migrations),

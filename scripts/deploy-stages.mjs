@@ -24,13 +24,8 @@ export function stageSteps(stage, env) {
   }
   if (stage === 'services') return [
     ['Deploy API', 'sh', ['scripts/deploy-api.sh']],
-    ...(env.DEPLOY_ENVIRONMENT === 'production' ? [
-      ['Deploy approved production workers and schedules', 'node', ['scripts/deploy-production-workers.mjs']],
-      ['Configure Supabase dining cron at 6 a.m. New York time', 'node', ['scripts/deploy-dining-schedules.mjs']],
-      ['Retire the verified legacy Google dining schedule', 'node', ['scripts/retire-google-dining-schedule.mjs']],
-    ] : [
-      ['Deploy disabled event worker (no execution or schedule)', 'sh', ['scripts/deploy-worker.sh']],
-    ]),
+    ['Deploy workers and schedules', 'node', ['scripts/deploy-workers.mjs']],
+    ['Configure Supabase dining cron at 6 a.m. New York time', 'node', ['scripts/deploy-dining-schedules.mjs']],
   ]
   throw new Error('Choose the backend or services stage')
 }

@@ -1,11 +1,15 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import process from 'node:process'
 import console from 'node:console'
+import { supabaseRefs } from './configure-deployment.mjs'
 
-const project = 'cse416-meet-people', region = 'us-east4'
-if (process.env.DEPLOY_ENVIRONMENT !== 'production' || process.env.GCP_PROJECT_ID !== project || process.env.SUPABASE_URL !== 'https://wacgxhsdhrqigrmqaonc.supabase.co') throw new Error('Explicit isolated production configuration required.')
+const environment = process.env.DEPLOY_ENVIRONMENT, project = 'cse416-meet-people', region = 'us-east4'
+if (!Object.hasOwn(supabaseRefs, environment) || process.env.GCP_PROJECT_ID !== project || process.env.SUPABASE_URL !== `https://${supabaseRefs[environment]}.supabase.co`) throw new Error('Explicit matching production or sandbox configuration required.')
 const image = process.env.API_IMAGE
-if (!image?.includes('@sha256:') || !process.env.SUPABASE_PUBLISHABLE_KEY) throw new Error('Immutable API image and production public key required.')
+if (!image?.includes('@sha256:') || !process.env.SUPABASE_PUBLISHABLE_KEY) throw new Error('Immutable API image and public key required.')
+const suffix = environment === 'sandbox' ? '-sandbox' : ''
+const groupJob = process.env.WORKER_JOB, groupIdentity = process.env.WORKER_RUNTIME_ACCOUNT
+if (groupJob !== `pebble-event-group-worker${suffix}` || !groupIdentity?.endsWith(`@${project}.iam.gserviceaccount.com`)) throw new Error('Configure WORKER_JOB and WORKER_RUNTIME_ACCOUNT for this environment.')
 const run = args => execFileSync('gcloud', [...args, '--project='+project, '--quiet'], { stdio: 'inherit' })
 const ensureIdentity = name => {
   const email = `${name}@${project}.iam.gserviceaccount.com`
@@ -13,12 +17,12 @@ const ensureIdentity = name => {
   if (result.status !== 0) throw new Error(`Provision runtime identity ${name} before deploying workers.`)
   return email
 }
-const pushIdentity = ensureIdentity('pebble-push-dispatcher')
-const scheduler = ensureIdentity('pebble-worker-scheduler')
-const groupIdentity = 'pebble-event-group-worker@'+project+'.iam.gserviceaccount.com'
+const pushIdentity = ensureIdentity('pebble-push-dispatcher'+suffix)
+// Account IDs are at most 30 characters, so sandbox shortens the scheduler name.
+const scheduler = ensureIdentity(environment === 'sandbox' ? 'pebble-scheduler-sandbox' : 'pebble-worker-scheduler')
 for (const worker of [
-  { name:'pebble-push-dispatcher', identity:pushIdentity, main:'push-dispatcher-main', env:'FIREBASE_PROJECT_ID='+project+',PUSH_DISPATCH_ENABLED=true', secret:'SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role:latest', schedule:'* * * * *' },
-  { name:'pebble-event-group-worker', identity:groupIdentity, main:'event-group-worker-main', env:'EVENT_GROUP_WORKER_ENABLED=true,MATCHMAKING_SCORING_ENABLED=true,EVENT_GROUP_WORKER_ID=production-worker', secret:'EVENT_GROUP_WORKER_CREDENTIALS_JSON=pebble-event-group-worker-credentials-production:1', schedule:'*/2 * * * *' },
+  { name:'pebble-push-dispatcher'+suffix, identity:pushIdentity, main:'push-dispatcher-main', env:'FIREBASE_PROJECT_ID='+project+',PUSH_DISPATCH_ENABLED=true', secret:`SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role${suffix}:latest`, schedule:'* * * * *' },
+  { name:groupJob, identity:groupIdentity, main:'event-group-worker-main', env:`EVENT_GROUP_WORKER_ENABLED=true,MATCHMAKING_SCORING_ENABLED=true,EVENT_GROUP_WORKER_ID=${environment}-worker`, secret:`EVENT_GROUP_WORKER_CREDENTIALS_JSON=pebble-event-group-worker-credentials-${environment}:1`, schedule:'*/2 * * * *' },
 ]) {
   run(['run','jobs','deploy',worker.name,'--region='+region,'--image='+image,'--service-account='+worker.identity,
     '--command=node','--args=dist/api/api/'+worker.main+'.js','--tasks=1','--parallelism=1','--max-retries=0','--task-timeout=120s','--cpu=1','--memory=512Mi',
@@ -31,4 +35,4 @@ for (const worker of [
     '--uri=https://run.googleapis.com/v2/projects/'+project+'/locations/'+region+'/jobs/'+worker.name+':run','--http-method=POST','--message-body={}',
     '--oauth-service-account-email='+scheduler,'--oauth-token-scope=https://www.googleapis.com/auth/cloud-platform','--attempt-deadline=30s','--max-retry-attempts=0'])
 }
-console.info('Production worker schedules configured. No downloaded Google service-account private keys used. Inspect executions and actual push delivery before release.')
+console.info(`${environment} worker schedules configured. No downloaded Google service-account private keys used. Inspect executions and actual push delivery.`)

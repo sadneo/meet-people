@@ -41,8 +41,7 @@ A deleted one-shot job using the production image, network and attached runtime
 identity successfully called Geocoding v4 reverse lookup and Places autocomplete
 with ADC OAuth (HTTP 200 for both). No downloaded service-account key, stored token
 or additional IAM grant was needed. The backend now supports renewable ADC with
-`GOOGLE_MAPS_OAUTH_PROJECT`; production selects it while sandbox retains API-key
-authentication. OAuth failures are sanitized and never fall back to the key.
+`GOOGLE_MAPS_OAUTH_PROJECT`; both environments select it. OAuth failures are sanitized and never fall back to the key.
 Reverse geocoding requests only place ID/address components and preserves the
 user-selected center. Existing signatures, expiry, owner/mode checks and retention
 policy are unchanged. The Geocoding v4 reverse daily provider quota was set and

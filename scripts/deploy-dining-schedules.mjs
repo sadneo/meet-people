@@ -2,10 +2,11 @@ import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { supabaseRefs } from './configure-deployment.mjs'
 
-const ref = 'wacgxhsdhrqigrmqaonc'
-if (process.env.DEPLOY_ENVIRONMENT !== 'production' || process.env.SUPABASE_PROJECT_REF !== ref || process.env.SUPABASE_URL !== `https://${ref}.supabase.co`) {
-  throw new Error('Explicit isolated production configuration required.')
+const ref = supabaseRefs[process.env.DEPLOY_ENVIRONMENT]
+if (!Object.hasOwn(supabaseRefs, process.env.DEPLOY_ENVIRONMENT) || process.env.SUPABASE_PROJECT_REF !== ref || process.env.SUPABASE_URL !== `https://${ref}.supabase.co`) {
+  throw new Error('Explicit matching production or sandbox configuration required.')
 }
 const directory = mkdtempSync(join(tmpdir(), 'pebble-dining-schedules-'))
 try {
@@ -21,5 +22,5 @@ select jobname,schedule,command,active from cron.job where jobname='pebble-inges
     || rows[0].command !== 'select hosting_private.ingest_dining()' || rows[0].active !== true) {
     throw new Error('Supabase dining schedule readback failed.')
   }
-  console.info('pebble-ingest-dining: Supabase cron enabled; one daily production import at 6 a.m. America/New_York (DST aware).')
+  console.info('pebble-ingest-dining: Supabase cron enabled; one daily import at 6 a.m. America/New_York (DST aware).')
 } finally { rmSync(directory, { recursive: true, force: true }) }
