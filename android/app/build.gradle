@@ -88,10 +88,6 @@ try {
     def servicesJSON = file('google-services.json')
     if (servicesJSON.text) {
         apply plugin: 'com.google.gms.google-services'
-        // shortcut: sandbox has no Firebase client yet, so it builds without push; add garden.pebble.android.dev to google-services.json to enable it.
-        if (!servicesJSON.text.contains('"garden.pebble.android.dev"')) {
-            tasks.configureEach { if (it.name ==~ /processSandbox\w*GoogleServices/) it.enabled = false }
-        }
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")

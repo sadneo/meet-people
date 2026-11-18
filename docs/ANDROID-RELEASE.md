@@ -41,9 +41,8 @@ Outputs are named `Pebble-<environment>-<version>-<code>`. The script sets `VITE
 to match the flavour and rejects a bundle containing the other environment's Supabase URL.
 Android Studio Run and `pnpm build:android` default to `productionDebug`; pick `sandboxDebug`
 in Build Variants for Pebble Dev (set `VITE_APP_SCHEME=com.cse416.meetpeople.dev` in the
-env file you build with so auth links open it). Sandbox push needs a Firebase Android app
-for `garden.pebble.android.dev` in `android/app/google-services.json`; until then the
-sandbox flavour builds without Firebase config and push registration will not work.
+env file you build with so auth links open it). `android/app/google-services.json` holds
+Firebase clients for both packages.
 
 Increment versionCode for every published update; never overwrite a delivered
 release. The script outputs a signed APK and AAB plus checksums/source metadata in
