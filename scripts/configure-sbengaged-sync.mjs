@@ -6,7 +6,7 @@ import { supabaseRefs } from './configure-deployment.mjs'
 
 const targets = {
   production: { ref: supabaseRefs.production, mode: 'producer' },
-  sandbox: { ref: supabaseRefs.sandbox, mode: 'mirror' },
+  sandbox: { ref: supabaseRefs.sandbox, mode: 'producer' },
 }
 const target = targets[process.env.DEPLOY_ENVIRONMENT]
 if (!target || process.env.SUPABASE_PROJECT_REF !== target.ref || process.env.SUPABASE_URL !== `https://${target.ref}.supabase.co`) {

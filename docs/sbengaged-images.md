@@ -37,12 +37,12 @@ with a dedicated read-only export token. It serves the last completed metadata
 snapshot with the latest cached poster fields; no profile, queue, user, or source
 listing UUID is exported. Snapshots older than three hours are unavailable.
 
-Sandbox's importer runs in mirror mode and copies that snapshot into its own
-listings, preserving sandbox UUIDs. It validates completeness, age, event IDs,
-source URLs and image URLs before writing. It never falls back to upstream
-scraping or starts a second photo worker. Sandbox refreshes hourly, three minutes
-after production's metadata schedule; its images can lag production by up to an
-hour while the initial queue drains.
+Both environments run as producers: each scrapes SB Engaged and runs its own photo
+worker, so scraper changes are exercised in sandbox before production. Mirror
+mode remains available as a fallback (`configure_sbengaged_schedules('mirror')`
+in sandbox): it copies production's snapshot into sandbox listings, preserving
+sandbox UUIDs, after validating completeness, age, event IDs, source URLs and
+image URLs. It never falls back to upstream scraping or starts a photo worker.
 
 Both environments prune imported events ending more than two days ago, using
 the start only when an end is absent. Ongoing events are retained. The public

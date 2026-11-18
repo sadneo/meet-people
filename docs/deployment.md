@@ -188,12 +188,12 @@ names, the database, domains and secret values differ (`-sandbox` suffix, or the
 environment name in secret names). Deliberate exceptions:
 
 - Sandbox builds with the developer toolbar (and its Garden demo-funds shortcut).
-- Sandbox mirrors production's SB Engaged events instead of crawling the source.
 - Only production runs the backup-policy check before deploying.
 
 The Supabase project refs live only in `supabaseRefs` in
 `scripts/configure-deployment.mjs`; other scripts import them. The exception is
-the SB Engaged Edge Function, which hard-codes the production export URL.
+the SB Engaged Edge Function's unused mirror mode, which hard-codes the production
+export URL.
 
 ### Maps deployment
 
