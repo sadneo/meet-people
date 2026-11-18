@@ -16,7 +16,8 @@ Commit the updated `pnpm-lock.yaml` (the Dockerfile installs with `--frozen-lock
 
 ## 2. Firebase
 1. Open the Firebase project you already use for hosting -> Project settings -> **Add app** -> Android.
-   Package name: `com.cse416.meetpeople`.
+   Package names: `garden.pebble.android` (production) and `garden.pebble.android.dev`
+   (the sandbox "Pebble Dev" flavour); register both and download one file containing both.
 2. Download `google-services.json` into `android/app/google-services.json`. The Gradle files already apply
    the Google services plugin when that file exists.
 3. Project settings -> **Service accounts** -> *Generate new private key*. This JSON lets the server send
@@ -44,8 +45,8 @@ and `PUSH_DISPATCH_ENABLED=true`.
   running, copy the API URL and service-role key from `pnpm supabase status`, then
   `SUPABASE_URL=<API URL> SUPABASE_SERVICE_ROLE_KEY=<key> pnpm exec tsx --env-file=.env api/push-dispatcher-main.ts`.
 - **Hosted:** deploy it as a Cloud Run **Job** from the same image (command
-  `node dist/api/api/push-dispatcher-main.js`), the way `scripts/deploy-worker.sh` deploys the event-group
-  worker, and trigger it every minute with Cloud Scheduler. Alerts arrive within about a minute. For faster
+  `node dist/api/api/push-dispatcher-main.js`), as `scripts/deploy-workers.mjs` does in both
+  environments, and trigger it every minute with Cloud Scheduler. Alerts arrive within about a minute. For faster
   delivery, run it as an always-on process with `PUSH_DISPATCH_INTERVAL_MS=5000`.
 
 ## 5. Build and test

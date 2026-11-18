@@ -26,7 +26,7 @@ export const privateValues = secrets => Object.fromEntries(Object.entries(secret
 export function hostedBuildEnv(target, base = process.env) {
   const env = Object.fromEntries(Object.entries(base).filter(([name]) => !/^(VITE_|CAP_)/.test(name)))
   return { ...env, VITE_API_BASE_URL: target.apiBaseUrl, VITE_SUPABASE_URL: target.supabaseUrl, VITE_SUPABASE_PUBLISHABLE_KEY: target.supabasePublishableKey,
-    ...(target.androidMapsKey && { VITE_GOOGLE_MAPS_API_KEY: target.androidMapsKey }) }
+    VITE_APP_SCHEME: target.appScheme, ...(target.androidMapsKey && { VITE_GOOGLE_MAPS_API_KEY: target.androidMapsKey }) }
 }
 
 export function withoutTarget(args) {

@@ -37,6 +37,6 @@ jobs:
           VITE_DEV_TOOLS: 'false'
         run: pnpm build:mobile
       - run: pnpm exec cap sync android
-      - name: Compile Android debug variant (not a distributable release)
+      - name: Compile Android debug variants of both flavours (not distributable releases)
         working-directory: android
-        run: sh gradlew --no-daemon --console=plain assembleDebug
+        run: sh gradlew --no-daemon --console=plain assembleProductionDebug assembleSandboxDebug

@@ -3,10 +3,11 @@ import { randomBytes } from 'node:crypto'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { supabaseRefs } from './configure-deployment.mjs'
 
 // Operator setup for this app's two fixed projects. Normal releases preserve
 // these secrets and use configure-sbengaged-sync.mjs to reconcile the schedules.
-const producer = 'wacgxhsdhrqigrmqaonc', mirror = 'wixdiotkntapwrbibaom'
+const producer = supabaseRefs.production, mirror = supabaseRefs.sandbox
 const directory = mkdtempSync(join(tmpdir(), 'pebble-event-sharing-'))
 let activeCredential = ''
 const quote = value => `'${value.replaceAll("'", "''")}'`

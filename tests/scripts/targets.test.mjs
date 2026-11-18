@@ -14,8 +14,10 @@ test('only secret-named .env values count as private, so public IDs never fail a
 
 test('a hosted APK build gets only the target values, never shell VITE_* or cleartext', () => {
   const env = hostedBuildEnv(hostedTarget(['--target', 'sandbox'], {}), { PATH: '/bin', VITE_DEV_LOGIN_PASSWORD: 'local', VITE_SUPABASE_URL: 'http://127.0.0.1:54321', CAP_CLEARTEXT: '1' })
-  assert.deepEqual(env, { PATH: '/bin', VITE_API_BASE_URL: 'https://mobile.dev.pebble.garden', VITE_SUPABASE_URL: 'https://wixdiotkntapwrbibaom.supabase.co',
-    VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_kaK_4TJxKDDta7iD1IvegA_gW5EM5hZ', VITE_GOOGLE_MAPS_API_KEY: 'AIzaSyAqYGUSZD12OhU5Kb-mPKemWIsb5Bn8SR8' })
+  assert.deepEqual(env, { PATH: '/bin', VITE_API_BASE_URL: 'https://web.dev.pebble.garden', VITE_SUPABASE_URL: 'https://wixdiotkntapwrbibaom.supabase.co',
+    VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_kaK_4TJxKDDta7iD1IvegA_gW5EM5hZ', VITE_APP_SCHEME: 'com.cse416.meetpeople.dev',
+    VITE_GOOGLE_MAPS_API_KEY: 'AIzaSyAqYGUSZD12OhU5Kb-mPKemWIsb5Bn8SR8' })
+  assert.equal(hostedBuildEnv(hostedTarget(['--target', 'production'], {}), {}).VITE_APP_SCHEME, 'com.cse416.meetpeople')
   assert.equal('VITE_GOOGLE_MAPS_API_KEY' in hostedBuildEnv(hostedTarget(['--target', 'production'], {}), { VITE_GOOGLE_MAPS_API_KEY: 'shell' }), false)
 })
 

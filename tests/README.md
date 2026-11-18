@@ -73,7 +73,7 @@ Additional existing checks remain explicit:
 | `pnpm test:hosted <https-origin>` | Opt-in deployed-site smoke check |
 | `pnpm test:hosted <https-origin> --account --target sandbox\|production` | Opt-in hosted account/browser check; retains legacy onboarding expectations |
 | `pnpm test:hosted <https-origin> --product --target sandbox\|production` | Opt-in hosted product/API check; optional real browser login when Chromium is on PATH |
-| `pnpm test:hosted <https-origin> --messaging --target production` | Opt-in hosted messaging check (production only) |
+| `pnpm test:hosted <https-origin> --messaging --target sandbox\|production` | Opt-in hosted messaging check |
 
 The hosted account/product/messaging scripts use administrative credentials and create
 disposable users. `--target` is required: public values come from `shared/targets.json` and the

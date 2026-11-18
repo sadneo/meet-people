@@ -16,6 +16,7 @@ else {
   }
   // Mobile builds never read .env (envDir: false), so these are the only values that reach the APK.
   env = hostedBuildEnv(target)
+  console.log(`In Android Studio, pick the ${target.name}Debug build variant so the package matches this build's URL scheme.`)
   steps = [['pnpm', 'exec', 'vite', 'build', '--config', 'vite.mobile.config.ts', '--mode', 'android'], ['pnpm', 'exec', 'cap', 'sync', 'android'], ['pnpm', 'exec', 'cap', 'open', 'android']]
 }
 for (const [command, ...rest] of steps) {

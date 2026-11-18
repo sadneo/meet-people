@@ -14,7 +14,7 @@ const signatures = ['get_account()', 'public_live_events(text,integer,integer,uu
 const schemaQuery = `select json_build_object('missing', (select coalesce(json_agg(name), '[]'::json) from unnest(array[${signatures.map(name => `'${name}'`).join(',')}]) name where to_regprocedure('public.' || name) is null), 'worker', to_regprocedure('public.claim_local_event_group_job(text,integer,uuid)') is not null);`
 
 const hostedEnvKeys = ['VITE_API_BASE_URL', 'SUPABASE_URL', 'VITE_SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'VITE_SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SERVICE_ROLE_KEY']
-const legacyEnvFiles = ['.env.local', 'supabase/.env', '.env.android', '.env.android-dev', '.env.prod', '.env.hosting.local', '.env.development', '.env.development.local']
+const legacyEnvFiles = ['.env.local', 'supabase/.env', '.env.android', '.env.android-dev', '.env.prod', '.env.sandbox', '.env.hosting.local', '.env.development', '.env.development.local']
 
 async function occupied(port) {
   return new Promise(resolve => {

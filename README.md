@@ -60,7 +60,7 @@ It needs that target's `*_SUPABASE_SERVICE_ROLE_KEY` in `.env`, ignores local
 typing migrations on that project first; see
 [messaging activation and manual testing](docs/messaging-realtime.md#test-against-remote-supabase).
 With the remote test app running and the Supabase CLI logged in,
-`pnpm test:hosted <url> --messaging --target <t>` runs the production acceptance check with temporary
+`pnpm test:hosted <url> --messaging --target <t>` runs the hosted messaging acceptance check with temporary
 accounts and automatic cleanup. It writes `test-results/remote-messaging-report.json`.
 
 Web (`src/web/App.tsx`) is the desktop-first public website: a demo-matched landing

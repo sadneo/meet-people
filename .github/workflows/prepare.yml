@@ -48,14 +48,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Require frontend environment configuration
         run: node scripts/configure-deployment.mjs --validate-frontend
-      - name: Build production web
-        if: inputs.environment == 'production'
-        run: VITE_DEV_TOOLS=false pnpm build:web
-      - name: Build development web and mobile
-        if: inputs.environment == 'sandbox'
+      - name: Build web and mobile
+        env:
+          # The developer toolbar is the one deliberate frontend difference; see docs/deployment.md.
+          VITE_DEV_TOOLS: ${{ inputs.environment == 'sandbox' }}
         run: |
-          VITE_DEV_TOOLS=true pnpm build:web
-          VITE_DEV_TOOLS=true pnpm build:mobile
+          pnpm build:web
+          pnpm build:mobile
       - name: Record frontend product, source and backend
         run: node scripts/configure-deployment.mjs --write-build-info
       - uses: actions/upload-artifact@v7

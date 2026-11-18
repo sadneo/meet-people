@@ -30,7 +30,7 @@ if (check) {
   let target
   try { target = hostedTarget(process.argv.slice(2)) } catch (error) { console.error(`${error.message}\n${usage}`); process.exit(2) }
   if (!target.serviceRoleKey) { console.error(`Set ${target.name.toUpperCase()}_SUPABASE_SERVICE_ROLE_KEY in .env.`); process.exit(2) }
-  Object.assign(env, { SUPABASE_URL: target.supabaseUrl, SUPABASE_PUBLISHABLE_KEY: target.supabasePublishableKey,
+  Object.assign(env, { DEPLOY_ENVIRONMENT: target.name, SUPABASE_URL: target.supabaseUrl, SUPABASE_PUBLISHABLE_KEY: target.supabasePublishableKey,
     SUPABASE_SERVICE_ROLE_KEY: target.serviceRoleKey, VITE_API_BASE_URL: target.apiBaseUrl })
 }
 if (check?.chromium) env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = onPath('chromium') ?? ''

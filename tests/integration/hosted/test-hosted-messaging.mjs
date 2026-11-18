@@ -1,4 +1,5 @@
-// Opt-in production messaging acceptance; run through pnpm test:hosted <url> --messaging --target production.
+// Opt-in hosted messaging acceptance (production or sandbox) with generated fixtures; run through
+// pnpm test:hosted <url> --messaging --target <t>, which supplies the target's values and DEPLOY_ENVIRONMENT.
 // Requires the remote test app and logged-in Supabase CLI for scoped SQL cleanup.
 import { writeFileSync } from 'node:fs'
 import process from 'node:process'
@@ -10,13 +11,16 @@ import { execFileSync } from 'node:child_process'
 import { chromium, expect } from '@playwright/test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createClient } from '@supabase/supabase-js'
+import { supabaseRefs } from '../../../scripts/configure-deployment.mjs'
 
 const { fetch, AbortSignal } = globalThis
 
 const env = process.env
 const target = new URL(env.SUPABASE_URL)
 const origin = new URL(env.VITE_API_BASE_URL)
-if (target.origin !== 'https://wacgxhsdhrqigrmqaonc.supabase.co' || origin.origin !== 'https://pebble.garden') throw new Error('Unexpected configured target')
+const environment = process.env.DEPLOY_ENVIRONMENT ?? 'production'
+const expectedApi = { production: 'https://pebble.garden', sandbox: 'https://web.dev.pebble.garden' }[environment]
+if (!expectedApi || target.origin !== `https://${supabaseRefs[environment]}.supabase.co` || origin.origin !== expectedApi) throw new Error('Unexpected configured target')
 const run = randomUUID(), password = randomBytes(28).toString('base64url') + '-Aa1!'
 const report = { target: target.host, api: origin.origin, run, checks: [], cleanup: {} }
 const users = [], clients = [], conversations = []

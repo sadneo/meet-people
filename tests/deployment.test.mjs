@@ -23,11 +23,11 @@ test('release stages run backend then services in dependency order for each envi
   const backend = run('backend', stageEnv)
   assert.deepEqual(backend.slice(0, EDGE_FUNCTIONS.length), EDGE_FUNCTIONS.map(name => `pnpm exec supabase functions deploy ${name} --project-ref wixdiotkntapwrbibaom --use-api`))
   assert.deepEqual(backend.slice(EDGE_FUNCTIONS.length), ['node scripts/push-reviewed-migrations.mjs --yes', 'node scripts/deploy-product-schema.mjs', 'pnpm hosting:configure', 'node scripts/configure-sbengaged-sync.mjs'])
-  assert.deepEqual(run('services', stageEnv), ['sh scripts/deploy-api.sh', 'sh scripts/deploy-worker.sh'])
-  assert.deepEqual(run('services', { DEPLOY_ENVIRONMENT: 'production' }), ['sh scripts/deploy-api.sh', 'node scripts/deploy-production-workers.mjs', 'node scripts/deploy-dining-schedules.mjs', 'node scripts/retire-google-dining-schedule.mjs'])
+  assert.deepEqual(run('services', stageEnv), ['sh scripts/deploy-api.sh', 'node scripts/deploy-workers.mjs', 'node scripts/deploy-dining-schedules.mjs'])
+  assert.deepEqual(stageSteps('services', stageEnv), stageSteps('services', { DEPLOY_ENVIRONMENT: 'production' }), 'Both environments run the same service steps')
   const partial = []
   assert.throws(() => runStage('services', { DEPLOY_ENVIRONMENT: 'production' }, (command, args) => { partial.push(args[0]); if (partial.length === 2) throw new Error('worker failed') }), /worker failed/)
-  assert.deepEqual(partial, ['scripts/deploy-api.sh', 'scripts/deploy-production-workers.mjs'], 'A failed step stops later steps')
+  assert.deepEqual(partial, ['scripts/deploy-api.sh', 'scripts/deploy-workers.mjs'], 'A failed step stops later steps')
   for (const env of [{}, { DEPLOY_ENVIRONMENT: 'staging' }]) assert.throws(() => stageSteps('services', env), /production or sandbox/)
   assert.throws(() => stageSteps('backend', { DEPLOY_ENVIRONMENT: 'sandbox' }), /SUPABASE_PROJECT_REF/)
   assert.throws(() => stageSteps('hosting', stageEnv), /backend or services/)
@@ -44,13 +44,11 @@ test('preview and apply use the same reviewed migration ordering guard', () => {
   const apply = stageSteps('backend', stageEnv).map(([, , args]) => args.join(' ')).filter(args => args.startsWith('scripts/push-reviewed-migrations.mjs'))
   assert.deepEqual(apply, ['scripts/push-reviewed-migrations.mjs --yes'])
   const head = '20261114010000 | 20261114010000 | time'
-  assert.deepEqual(reviewedMigrationFlags(`${head}\n20261113010000 | | time`, 'wacgxhsdhrqigrmqaonc'), ['--include-all'])
-  assert.deepEqual(reviewedMigrationFlags(`${head}\n20261115010000 | | time`, 'wacgxhsdhrqigrmqaonc'), [])
-  assert.deepEqual(reviewedMigrationFlags(head, 'sandbox'), [])
-  assert.throws(() => reviewedMigrationFlags(`${head}\n20261113010000 | | time`, 'sandbox'))
-  assert.throws(() => reviewedMigrationFlags(`${head}\n20261112010000 | | time`, 'wacgxhsdhrqigrmqaonc'))
-  assert.throws(() => reviewedMigrationFlags('| 20261114010000 | time', 'wacgxhsdhrqigrmqaonc'))
-  assert.throws(() => reviewedMigrationFlags('unrecognized output', 'wacgxhsdhrqigrmqaonc'))
+  assert.deepEqual(reviewedMigrationFlags(`${head}\n20261115010000 | | time`), [])
+  assert.deepEqual(reviewedMigrationFlags(head), [])
+  assert.throws(() => reviewedMigrationFlags(`${head}\n20261113010000 | | time`), /out-of-order/)
+  assert.throws(() => reviewedMigrationFlags('| 20261114010000 | time'))
+  assert.throws(() => reviewedMigrationFlags('unrecognized output'))
 })
 
 test('dining and onboarding can follow the previous dev database without an ordering exception', () => {
@@ -62,13 +60,11 @@ test('dining and onboarding can follow the previous dev database without an orde
       const version = name.split('_')[0]
       return `${version} | ${name < firstPending ? version : ''} | time`
     }).join('\n')
-    for (const project of ['sandbox', 'wacgxhsdhrqigrmqaonc']) {
-      assert.deepEqual(reviewedMigrationFlags(ledger, project), [])
-    }
+    assert.deepEqual(reviewedMigrationFlags(ledger), [])
   }
 })
 
-test('main pushes deploy production; sandbox is manual-only; manual sources belong to the destination branch', () => {
+test('main pushes deploy production; dev pushes deploy sandbox; manual sources belong to the destination branch', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-deployment-'))
   const git = args => execFileSync('git', ['-C', directory, ...args], {
     encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
@@ -102,7 +98,7 @@ test('main pushes deploy production; sandbox is manual-only; manual sources belo
     assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'sandbox', SOURCE_REF: 'main' }, git), /full commit SHA/)
     const automatic = resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main', GITHUB_SHA: main, DEPLOY_ENVIRONMENT: 'sandbox' }, git)
     assert.deepEqual(automatic, { sha: main, branch: 'main', environment: 'production' })
-    assert.throws(() => resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/dev', GITHUB_SHA: dev }, git), /Production must use the workflow on main/, 'dev pushes never deploy')
+    assert.deepEqual(resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/dev', GITHUB_SHA: dev, DEPLOY_ENVIRONMENT: 'production' }, git), { sha: dev, branch: 'dev', environment: 'sandbox' })
     assert.throws(() => resolveDeployment({ GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/feature/demo', GITHUB_SHA: feature }, git), /workflow on main or dev/)
     assert.throws(() => resolveDeployment({ ...env, GITHUB_EVENT_NAME: 'pull_request' }, git), /Unsupported/)
     assert.throws(() => resolveDeployment({ ...env, DEPLOY_ENVIRONMENT: 'invalid' }, git), /Choose production or sandbox/)
@@ -116,12 +112,12 @@ test('dev and main PRs run CI, main accepts only dev, and releases reuse reviewe
   assert.match(workflow('main-source'), /pull_request:\n {4}branches: \[main\]\n/)
   assert.ok(workflow('main-source').includes('[ "$HEAD_REF" != dev ] || [ "$HEAD_REPO" != "$REPO" ]'))
   const release = workflow('release')
-  assert.match(release, /push:\n {4}branches: \[main\]\n/)
+  assert.match(release, /push:\n {4}branches: \[main, dev\]\n/)
   for (const removed of ['ci.yml', 'skip_checks', 'override_reason', '--check-current']) assert.ok(!release.includes(removed), removed)
   assert.ok(workflow('prepare').includes('cache-to: type=gha,scope=api,mode=max'), 'Release builds keep a cache readable from main and dev')
 })
 
-test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
+test('each environment hosts web and mobile sites on only its own backend and Auth callbacks', () => {
   const base = JSON.parse(readFileSync('firebase.json', 'utf8'))
   const env = {
     DEPLOY_ENVIRONMENT: 'sandbox', GCP_PROJECT_ID: 'example-project', GCP_REGION: 'us-east4', GAR_REPOSITORY: 'meet-people-sandbox',
@@ -131,7 +127,7 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
     SUPABASE_PROJECT_REF: 'wixdiotkntapwrbibaom', SUPABASE_URL: 'https://wixdiotkntapwrbibaom.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'test-public-key',
   }
   const config = deploymentConfiguration(env, base)
-  assert.ok(config.auth.includes('site_url = "https://mobile.dev.pebble.garden"'))
+  assert.ok(config.auth.includes('site_url = "https://web.dev.pebble.garden"'))
   assert.ok(config.auth.includes('com.cse416.meetpeople://app/auth/callback**'))
   assert.ok(config.auth.includes('com.cse416.meetpeople://app/reset-password**'))
   assert.ok(config.auth.includes('com.cse416.meetpeople.dev://app/auth/callback**'))
@@ -154,6 +150,7 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
   assert.throws(() => deploymentConfiguration({ ...env, SUPABASE_PROJECT_REF: 'abcdefghijklmnopqrst', SUPABASE_URL: 'https://abcdefghijklmnopqrst.supabase.co' }, base), /pebble-sandbox/)
   assert.throws(() => deploymentConfiguration({ ...env, FIREBASE_WEB_SITE_ID: 'cse416-meet-people' }, base), /production site/)
   assert.throws(() => deploymentConfiguration({ ...env, FIREBASE_MOBILE_SITE_ID: 'cse416-meet-people' }, base), /production site/)
+  assert.throws(() => deploymentConfiguration({ ...env, FIREBASE_MOBILE_SITE_ID: 'cse416-meet-people-mobile' }, base), /production site/)
   assert.throws(() => deploymentConfiguration({ ...env, FIREBASE_MOBILE_SITE_ID: env.FIREBASE_WEB_SITE_ID }, base), /distinct/)
   assert.throws(() => deploymentConfiguration({ ...env, FIREBASE_MOBILE_SITE_ID: undefined }, base))
   assert.throws(() => deploymentConfiguration({ ...env, API_SECRET: 'pebble-supabase-service-role' }, base))
@@ -161,14 +158,13 @@ test('sandbox sites share only the sandbox backend and Auth callbacks', () => {
     ...env, DEPLOY_ENVIRONMENT: 'production', API_SERVICE: 'pebble-api', API_SECRET: 'pebble-supabase-service-role',
     API_RUNTIME_ACCOUNT: 'pebble-api@example-project.iam.gserviceaccount.com', WORKER_JOB: 'pebble-event-group-worker',
     WORKER_RUNTIME_ACCOUNT: 'pebble-event-group-worker@example-project.iam.gserviceaccount.com',
-    FIREBASE_WEB_SITE_ID: 'cse416-meet-people', SUPABASE_PROJECT_REF: 'wacgxhsdhrqigrmqaonc', SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co',
+    FIREBASE_WEB_SITE_ID: 'cse416-meet-people', FIREBASE_MOBILE_SITE_ID: 'cse416-meet-people-mobile', SUPABASE_PROJECT_REF: 'wacgxhsdhrqigrmqaonc', SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co',
   }, base)
-  assert.equal(production.firebase.hosting.length, 1)
-  assert.equal(production.firebase.hosting[0].site, 'cse416-meet-people')
-  assert.equal(production.firebase.hosting[0].public, 'dist/web')
-  assert.equal(production.firebase.hosting[0].rewrites[0].run.serviceId, 'pebble-api')
+  assert.deepEqual(production.firebase.hosting.map(site => [site.site, site.public, site.rewrites[0].run.serviceId]), [
+    ['cse416-meet-people', 'dist/web', 'pebble-api'], ['cse416-meet-people-mobile', 'dist/mobile', 'pebble-api'],
+  ])
   assert.ok(production.auth.includes('site_url = "https://pebble.garden"'))
-  assert.ok(production.auth.includes('https://pebble.garden/auth/callback**'))
+  for (const domain of ['pebble.garden', 'mobile.pebble.garden']) assert.ok(production.auth.includes(`https://${domain}/auth/callback**`))
   assert.ok(!production.auth.includes('.dev.pebble.garden'))
   assert.ok(!production.auth.includes('com.cse416.meetpeople.dev://'))
 })
@@ -186,7 +182,7 @@ test('frontend builds reject the wrong branch, project, missing key or unresolve
   assert.throws(() => validateFrontendConfiguration({ ...env, DEPLOY_ENVIRONMENT: 'other' }), /sandbox or production/)
   const production = { ...env, DEPLOY_ENVIRONMENT: 'production', VITE_BUILD_BRANCH: 'main', VITE_SUPABASE_URL: 'https://wacgxhsdhrqigrmqaonc.supabase.co' }
   assert.equal(validateFrontendConfiguration(production).branch, 'main')
-  assert.equal(validateFrontendConfiguration({ ...production, VITE_GOOGLE_MAPS_API_KEY: '' }).branch, 'main', 'Production does not require sandbox Maps configuration')
+  assert.throws(() => validateFrontendConfiguration({ ...production, VITE_GOOGLE_MAPS_API_KEY: '' }), /Maps browser key/)
   assert.throws(() => validateFrontendConfiguration({ ...production, VITE_BUILD_BRANCH: 'dev' }), /main/)
   assert.throws(() => validateFrontendConfiguration({ ...production, VITE_SUPABASE_URL: env.VITE_SUPABASE_URL }), /matching Supabase/)
 })
@@ -252,7 +248,7 @@ test('hosted smoke checks reject incorrect product, branch, commit, backend and 
   assert.throws(() => smoke({}, `${info.supabaseUrl} Continue with email`), /Command failed/, 'Missing Maps key must fail the mobile hosted smoke')
 })
 
-test('sandbox API deployment merges Maps references and static egress; production never inherits sandbox configuration', () => {
+test('both environments deploy the API identically, each with only its own resources', () => {
   const directory = mkdtempSync(join(tmpdir(), 'pebble-maps-deploy-'))
   try {
     // The script can invoke only this mock gcloud; no network or credentials are used.
@@ -275,7 +271,8 @@ test('sandbox API deployment merges Maps references and static egress; productio
     assert.ok(args.includes('--vpc-egress=all-traffic'))
     const vars = args.find(arg => arg.startsWith('--update-env-vars='))
     assert.ok(vars.includes('GOOGLE_MAPS_STORAGE_APPROVED=true'))
-    assert.ok(vars.includes('GOOGLE_MAPS_REQUESTS_PER_DAY=2000'))
+    assert.ok(vars.includes('GOOGLE_MAPS_REQUESTS_PER_DAY=200'))
+    assert.ok(vars.includes('GOOGLE_MAPS_OAUTH_PROJECT=cse416-meet-people'))
     assert.ok(vars.includes(`SUPABASE_URL=${base.SUPABASE_URL}`))
     assert.ok(args.includes('--update-secrets=SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role-sandbox:latest,GOOGLE_MAPS_SERVER_API_KEY=pebble-google-maps-server-key-sandbox:1,SEARCH_LOCATION_SIGNING_KEY=pebble-search-location-signing-key-sandbox:1'))
     assert.ok(!args.some(arg => arg.startsWith('--set-env-vars=') || arg.startsWith('--set-secrets=')))
@@ -288,7 +285,8 @@ test('sandbox API deployment merges Maps references and static egress; productio
     assert.ok(production.includes('--network=pebble-production-egress'))
     assert.ok(production.includes('--subnet=pebble-production-egress-us-east4'))
     assert.ok(production.includes('--vpc-egress=all-traffic'))
-    assert.ok(production.some(arg => arg.includes('GOOGLE_MAPS_REQUESTS_PER_DAY=200')))
+    const normalize = argv => argv.join('\n').replace(/-?(sandbox|production)/g, '').replaceAll(base.SUPABASE_URL, 'DATABASE').replaceAll('https://wacgxhsdhrqigrmqaonc.supabase.co', 'DATABASE')
+    assert.equal(normalize(args), normalize(production), 'Only resource names may differ between environments')
     for (const overrides of [
       { API_SERVICE: 'pebble-api' }, { API_SECRET: 'pebble-supabase-service-role' },
       { API_RUNTIME_ACCOUNT: 'pebble-api@cse416-meet-people.iam.gserviceaccount.com' },
@@ -316,7 +314,7 @@ test('Android CI installs explicit current SDK packages instead of obsolete acti
   assert.ok(setup, 'Android setup must override the action package defaults')
   assert.ok(setup.includes("packages: 'platform-tools platforms;android-36 build-tools;36.0.0'"))
   assert.ok(setup.includes("log-accepted-android-sdk-licenses: 'false'"))
-  assert.ok(workflow.includes('assembleDebug'), 'Compilation remains required')
+  assert.ok(workflow.includes('assembleProductionDebug assembleSandboxDebug'), 'Both flavours must compile')
 })
 
 test('pending Android push migrations follow the existing hosted migration head in dependency order', () => {
