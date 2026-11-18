@@ -174,12 +174,20 @@ export async function startStack(stack, { minimal = false, workdir, siteUrl, sig
     renameSync(pending, ownerFile(stack.projectId))
   }
   const env = { ...process.env, ...stackEnv(stack), ...(siteUrl && { SUPABASE_AUTH_SITE_URL: siteUrl }) }
-  const base = ['scripts/supabase.sh', ...(workdir ? ['--workdir', workdir] : [])]
   // Analytics would need one more allocated port per stack and only serves Studio's logs UI.
   // Mailpit stays: Auth sends the sign-up confirmation mail and answers 500 without an SMTP server.
   const exclude = ['-x', minimal ? 'studio,logflare,vector,imgproxy,edge-runtime,supavisor,postgres-meta' : 'logflare,vector']
-  await new Promise((done, fail) => {
-    const child = run('sh', [...base, 'start', ...exclude], { cwd: repoRoot, env, stdio: ['ignore', 'pipe', 'pipe'] })
+  await cli(['start', ...exclude], { workdir, env, signal, run })
+  const { stdout } = await promisify(execFile)('sh', [...cliBase(workdir), 'status', '--output', 'json'], { cwd: repoRoot, env, maxBuffer: 8 * 1024 * 1024 })
+  const status = JSON.parse(stdout)
+  return { apiUrl: stack.apiUrl, publishableKey: status.PUBLISHABLE_KEY, anonKey: status.ANON_KEY, serviceRoleKey: status.SERVICE_ROLE_KEY }
+}
+
+const cliBase = workdir => ['scripts/supabase.sh', ...(workdir ? ['--workdir', workdir] : [])]
+
+function cli(args, { workdir, env, signal, run = spawn }) {
+  return new Promise((done, fail) => {
+    const child = run('sh', [...cliBase(workdir), ...args], { cwd: repoRoot, env, stdio: ['ignore', 'pipe', 'pipe'] })
     let tail = ''
     // The data listeners keep both pipes drained until the child exits, so it never dies of SIGPIPE mid-cleanup.
     for (const stream of [child.stdout, child.stderr]) stream.on('data', chunk => { process.stderr.write(chunk); tail = (tail + chunk).slice(-4000) })
@@ -189,18 +197,35 @@ export async function startStack(stack, { minimal = false, workdir, siteUrl, sig
     child.once('close', code => {
       signal?.removeEventListener('abort', abort)
       if (code === 0) done()
-      else fail(signal?.aborted ? signal.reason : new Error(`supabase start failed (exit ${code}). ${tail}`))
+      else fail(signal?.aborted ? signal.reason : new Error(`supabase ${args[0]} failed (exit ${code}). ${tail}`))
     })
   })
-  const { stdout } = await promisify(execFile)('sh', [...base, 'status', '--output', 'json'], { cwd: repoRoot, env, maxBuffer: 8 * 1024 * 1024 })
-  const status = JSON.parse(stdout)
-  return { apiUrl: stack.apiUrl, publishableKey: status.PUBLISHABLE_KEY, anonKey: status.ANON_KEY, serviceRoleKey: status.SERVICE_ROLE_KEY }
+}
+
+// supabase start only migrates when it creates the db volume, so a first start that died after creating it
+// leaves an empty schema on every later start. Only a provably empty one is reset (migrations + seed); an
+// initialized one gets new migrations, and a history the CLI rejects (e.g. a renamed migration) only warns.
+export async function migrateStack(stack, { container = engine, signal, run, warn = console.warn } = {}) {
+  const env = { ...process.env, ...stackEnv(stack) }
+  let initialized = ''
+  try {
+    initialized = await container(['exec', stack.dbContainer, 'psql', '-U', 'postgres', '-tAc',
+      "select to_regclass('supabase_migrations.schema_migrations') is not null or exists (select 1 from pg_tables where schemaname = 'public')"])
+  } catch { /* reported below */ }
+  if (initialized === 'f') return cli(['db', 'reset', '--local'], { env, signal, run })
+  if (initialized !== 't') { warn('Could not inspect the local database; skipped applying migrations.'); return }
+  try { await cli(['migration', 'up', '--local'], { env, signal, run }) } catch (error) {
+    if (signal?.aborted) throw error
+    warn('Could not apply new migrations; the app still starts. Fix the history with pnpm supabase migration repair, or wipe local data with pnpm supabase db reset.')
+  }
 }
 
 const conflict = /address already in use|port is already allocated/i
 
 // Two launchers can pick the same preferred ports before either binds them; on a bind conflict start over once with fresh ports.
-export async function startDevStack(root = repoRoot, { container = engine, start = startStack, remove = id => removeStack(id, { container }), ports = freePorts, options, signal, home } = {}) {
+const startMigrated = async (stack, options) => { const keys = await startStack(stack, options); await migrateStack(stack, options); return keys }
+
+export async function startDevStack(root = repoRoot, { container = engine, start = startMigrated, remove = id => removeStack(id, { container }), ports = freePorts, options, signal, home } = {}) {
   const wasRunning = await container(['ps', '-q', '--filter', `name=^supabase_db_${devProjectId(root, home)}$`])
   const stack = await devStack(root, { container, home })
   // An interrupted start can leave a half-started stack; only remove one this launch was creating.

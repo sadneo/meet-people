@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import test from 'node:test'
-import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, reapTestStacks, removeStack, requireStack, startDevStack, startStack, startTestStack, stackEnv } from '../../scripts/lib/stack.mjs'
+import { assertLocalStack, credentialsDir, currentStack, devProjectId, devStack, migrateStack, reapTestStacks, removeStack, requireStack, startDevStack, startStack, startTestStack, stackEnv } from '../../scripts/lib/stack.mjs'
 
 const stack = { projectId: 'meet-people-x', ports: { api: 1, db: 2, shadow: 3, studio: 4, mail: 5 }, apiUrl: 'http://127.0.0.1:1', dbContainer: 'supabase_db_meet-people-x' }
 const tmp = () => mkdtempSync(join(tmpdir(), 'stack-test-'))
@@ -310,6 +310,41 @@ test('startStack kills the CLI on abort and keeps draining its output until it e
   assert.equal(child.signal, 'SIGTERM')
   assert.equal(child.stdout.listenerCount('data'), 1)
   await assert.rejects(startStack(stack, { signal: controller.signal, run: () => assert.fail('spawned') }), error => error === controller.signal.reason)
+})
+
+const exitingCli = (calls, code = 0) => (_, args) => {
+  calls.push(args.slice(1))
+  const child = Object.assign(new EventEmitter(), { stdout: new PassThrough(), stderr: new PassThrough(), kill() {} })
+  setImmediate(() => child.emit('close', code))
+  return child
+}
+
+test('a migration history the CLI rejects warns instead of blocking startup', async () => {
+  const calls = [], warnings = []
+  await migrateStack(stack, { container: async () => 't', run: exitingCli(calls, 1), warn: line => warnings.push(line) })
+  assert.deepEqual(calls, [['migration', 'up', '--local']])
+  assert.match(warnings.join('\n'), /pnpm supabase migration repair/)
+})
+
+test('a database that cannot be inspected is never reset', async () => {
+  for (const container of [async () => { throw new Error('exec failed') }, async () => '']) {
+    const calls = [], warnings = []
+    await migrateStack(stack, { container, run: exitingCli(calls), warn: line => warnings.push(line) })
+    assert.deepEqual(calls, [])
+    assert.equal(warnings.length, 1)
+  }
+})
+
+test('migrateStack resets a database whose volume outlived a failed first start', async () => {
+  const calls = []
+  await migrateStack(stack, { container: async () => 'f', run: exitingCli(calls) })
+  assert.deepEqual(calls, [['db', 'reset', '--local']])
+})
+
+test('migrateStack applies pending migrations to an initialized database', async () => {
+  const calls = []
+  await migrateStack(stack, { container: async () => 't', run: exitingCli(calls) })
+  assert.deepEqual(calls, [['migration', 'up', '--local']])
 })
 
 const recordingEngine = () => {

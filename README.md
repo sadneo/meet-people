@@ -70,8 +70,11 @@ provisioned account; it does not seed data or bypass authentication. See
 [development setup](docs/development-onboarding.md) and
 [local schema prerequisites](docs/demo-matchmaking-readiness.md).
 
-A fresh database needs the existing schema activation process. Starting the app
-does not install SQL. Missing optional capabilities display unavailable states.
+`pnpm dev` applies new local migrations on start, and gives an empty local database
+its migrations and seed. If the CLI rejects the migration history (for example after
+a migration was renamed), it warns and still starts; fix it with
+`pnpm supabase migration repair` or `pnpm supabase db reset`. Missing optional
+capabilities display unavailable states.
 The new frontend does not change deployed Auth, database or hosting configuration.
 
 Active SQL inputs live in [`supabase/schema-sources/`](supabase/schema-sources/README.md).
