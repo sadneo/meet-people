@@ -134,10 +134,8 @@ than relying on HTTP 200 alone. There are no automatic retries.
 
 `scripts/deploy-dining-schedules.mjs` reconciles the native job during every sandbox
 and production release, after functions, migrations and Vault are ready. The
-wrapper only accepts a `https://<ref>.supabase.co` URL from Vault.
-`scripts/retire-google-dining-schedule.mjs` (production only)
-verifies the native job and removes only the known legacy Google dining job;
-subsequent releases treat its absence as success. Event scraping also uses
+wrapper only accepts a `https://<ref>.supabase.co` URL from Vault. The legacy
+Google Cloud Scheduler dining job was retired from production on 2026-11-17. Event scraping also uses
 Supabase cron; Google event-group matching and push workers are separate jobs.
 
 To reconcile with an existing Supabase login (Google credentials are unnecessary):

@@ -59,7 +59,7 @@ sandbox builds use one resolved commit, one API deployment and one database.
    |---|---|---|
    | Preflight | `release.yml` | settings validation, image check, production recovery policy, migration preview. Changes nothing. |
    | Backend | `deploy-stages.mjs backend` | Edge Functions, reviewed migrations (no development seeds), product schema, hosted config, event sync |
-   | Services | `deploy-stages.mjs services` | API, push and event-group workers with their schedules, the 6 a.m. Supabase dining cron, then (production only) retiring the legacy Google dining schedule |
+   | Services | `deploy-stages.mjs services` | API, push and event-group workers with their schedules, the 6 a.m. Supabase dining cron |
    | Hosting | `release.yml` | web site, then mobile site |
    | Verify | `release.yml` | hosted smoke checks and summary |
 
