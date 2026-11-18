@@ -48,5 +48,5 @@ test('readSecrets parses .env and tolerates its absence', () => {
   const root = mkdtempSync(join(tmpdir(), 'targets-'))
   assert.deepEqual(readSecrets(root), {})
   writeFileSync(join(root, '.env'), 'SANDBOX_SUPABASE_SERVICE_ROLE_KEY=abc\n')
-  assert.deepEqual(readSecrets(root), { SANDBOX_SUPABASE_SERVICE_ROLE_KEY: 'abc' })
+  assert.deepEqual({ ...readSecrets(root) }, { SANDBOX_SUPABASE_SERVICE_ROLE_KEY: 'abc' })
 })

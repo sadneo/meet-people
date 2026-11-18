@@ -189,8 +189,7 @@ test('adds to four, moves the profile photo, and promotes the next photo after r
   for (let i=1; i<4; i++) {
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'),dialog.getByRole('button',{name:'Add photo'}).click()])
     await chooser.setFiles(photos[i])
-    await expect(dialog.getByRole('img',{name:'New photo preview'})).toBeVisible()
-    await dialog.getByRole('button',{name:'Upload photo'}).click()
+    await expect(dialog.getByRole('button',{name:'Upload photo'})).toHaveCount(0)
     await expect(dialog.getByText(`${i+1} of 4 photos`)).toBeVisible()
   }
   await expect(dialog.getByRole('button',{name:'Add photo'})).toHaveCount(0)

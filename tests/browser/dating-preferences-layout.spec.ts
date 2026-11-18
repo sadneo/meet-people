@@ -35,8 +35,9 @@ for (const width of [320, 626]) test(`Dating preferences use the focused search 
   await expect(dialog).toHaveCount(0);
   await page.getByRole('button', { name: 'Dating preferences', exact: true }).click();
   await expect(dialog.getByRole('slider', { name: 'Distance', exact: true })).toHaveValue('100');
-  await dialog.getByRole('link', { name: 'Edit profile details', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Dating Profile', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await dialog.getByRole('button', { name: 'Edit profile details', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Dating details', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/matchmaking/);
 });
 
 test('Dating preferences require read-only recovery after a conflicting auto-save', async ({ page }) => {

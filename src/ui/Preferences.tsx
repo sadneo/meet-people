@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
-import { Link } from 'react-router';
 import type { FriendsPreferences } from "../../shared/friends-search-preferences";
 import {
   DatingProfileSchema,
@@ -12,9 +11,12 @@ import {
 import { useFriendsPreferences } from "../features/matchmaking/useFriendsPreferences";
 import { matchingClient } from "./matching-client";
 import { useDatingPreferences } from "../features/matchmaking/useDatingPreferences";
-import { ErrorMessage, Icon, ResourceState } from "./common";
+import { ErrorMessage, Icon, Modal, ResourceState } from "./common";
+import { SharedProfileEditor } from './SharedProfileEditor';
 import { useCurrent } from "./current";
 import { LocationPicker } from './SearchAreaPicker';
+import { datingLiveClient } from '../features/matchmaking/dating-live-client';
+import { useAction } from './hooks';
 
 type Bounds = Pick<FriendsPreferences, "ageMin" | "ageMax" | "radiusMiles">;
 export function BoundsFields({
@@ -98,13 +100,15 @@ function DistanceRange({ value, change, commit }: { value: number; change: (valu
     <div className="row between dating-distance-limits"><span>1 mile</span><span>100+ miles</span></div>
   </div>;
 }
-export function FriendsPreferencesPanel({ done, onSavingChange, finishSetup, submitLabel }: {
+export function FriendsPreferencesPanel({ done, onSavingChange, finishSetup, submitLabel, areaOnly = false }: {
   done: () => void;
   onSavingChange?: (saving: boolean) => void;
   finishSetup?: () => Promise<string>;
   submitLabel?: string;
+  areaOnly?: boolean;
 }) {
   const [reloadKey, setReloadKey] = useState(0);
+  const [sharedField, setSharedField] = useState<'interests' | 'availability' | null>(null);
   const current = useCurrent(),
     resource = useFriendsPreferences(
       current.session.user.id,
@@ -118,7 +122,17 @@ export function FriendsPreferencesPanel({ done, onSavingChange, finishSetup, sub
         error={resource.error}
         reload={() => void resource.reload().then(result => { if (result) setReloadKey(value => value + 1); })}
       />
-      {resource.snapshot && (
+      {resource.snapshot && areaOnly && <LocationPicker mode="friends" openInitially onClose={done}
+        value={resource.snapshot.preferences?.searchArea ?? { source: 'home', resolvedLocationRef: null }}
+        radiusMiles={resource.snapshot.preferences?.radiusMiles ?? defaultBounds.radiusMiles} disabled={!resource.canWrite}
+        save={async searchArea => {
+          onSavingChange?.(true);
+          try { return !!await resource.save({ expectedRevision: resource.snapshot!.revision,
+            preferences: { ...(resource.snapshot!.preferences ?? { ...defaultBounds, goals: [] }), searchArea } }); }
+          finally { onSavingChange?.(false); }
+        }}/>
+      }
+      {resource.snapshot && !areaOnly && (
         <FriendsForm
           key={reloadKey}
           initial={
@@ -132,6 +146,7 @@ export function FriendsPreferencesPanel({ done, onSavingChange, finishSetup, sub
           saving={resource.busy}
           done={done}
           submitLabel={submitLabel}
+          editShared={setSharedField}
           verify={async () => {
             onSavingChange?.(true);
             try {
@@ -155,6 +170,7 @@ export function FriendsPreferencesPanel({ done, onSavingChange, finishSetup, sub
           }}
         />
       )}
+      {sharedField && <SharedProfileEditor field={sharedField} close={() => setSharedField(null)}/>}
     </>
   );
 }
@@ -166,6 +182,7 @@ function FriendsForm({
   done,
   verify,
   submitLabel,
+  editShared,
 }: {
   initial: FriendsPreferences;
   disabled: boolean;
@@ -174,6 +191,7 @@ function FriendsForm({
   done: () => void;
   verify: () => Promise<string>;
   submitLabel?: string;
+  editShared: (field: 'interests' | 'availability') => void;
 }) {
   const current = useCurrent();
   const [value, setValue] = useState(initial),
@@ -262,45 +280,70 @@ function FriendsForm({
       <fieldset disabled={disabled || finishing}>
         {submitLabel ? <>{locationPicker}<details className="setup-optional-preferences"><summary>Optional preferences</summary>{matchFilters}</details></> : matchFilters}
       </fieldset>
-      {!submitLabel && <><section className="friends-shared-interests"><h4>Interests · shared with Profile</h4><p className="account-note">{profile?.interests.join(' · ') || 'Add your interests'}</p><Link className="btn light" to="/profile?section=basics">Edit profile</Link></section>
-      <section className="friends-shared-availability"><h4>Availability · shared with Profile</h4><div className="row between"><p className="account-note">{[...new Set(availability)].join(', ') || 'Add your availability'}</p><Link to="/profile?section=interests">Edit</Link></div></section></>}
+      {!submitLabel && <><section className="friends-shared-interests"><h4>Interests · shared with Profile</h4><p className="account-note">{profile?.interests.join(' · ') || 'Add your interests'}</p><button type="button" className="btn light" disabled={disabled || saving || finishing} onClick={() => editShared('interests')}>Edit interests</button></section>
+      <section className="friends-shared-availability"><h4>Availability · shared with Profile</h4><div className="row between"><p className="account-note">{[...new Set(availability)].join(', ') || 'Add your availability'}</p><button type="button" className="text-link" disabled={disabled || saving || finishing} onClick={() => editShared('availability')}>Edit availability</button></div></section></>}
       <ErrorMessage>{validation}</ErrorMessage>
       {saving && <p role="status" className="account-note">Saving preferences…</p>}
       <button className="btn" disabled={disabled || saving || finishing}>{finishing ? 'Checking setup…' : submitLabel ?? 'Done'}</button>
     </form>
   );
 }
-export function DatingPreferencesPanel({ done, view = 'all', onSavingChange }: { done: () => void; view?: 'all' | 'profile' | 'setup'; onSavingChange?: (saving: boolean) => void }) {
+export function DatingPreferencesPanel({ done, view = 'all', onSavingChange, finishSetup, areaOnly = false }: { done: () => void; view?: 'all' | 'profile' | 'setup'; onSavingChange?: (saving: boolean) => void; finishSetup?: () => Promise<string>; areaOnly?: boolean }) {
   const [reloadKey, setReloadKey] = useState(0);
+  const [detailsOpen, setDetailsOpen] = useState(false), [detailsBusy, setDetailsBusy] = useState(false);
+  const [finishing, setFinishing] = useState(false), [finishError, setFinishError] = useState('');
+  const finishLock = useRef(false);
+  const pause = useAction();
+  const [pauseUncertain, setPauseUncertain] = useState(false);
   const current = useCurrent(),
     resource = useDatingPreferences(
       current.session.user.id,
       current.session.access_token,
       current.busy,
     );
-  async function savePreferences(profile: DatingProfile, search: DatingSearch) {
+  async function savePreferences(profile: DatingProfile, search: DatingSearch, notify = true) {
     if (!resource.snapshot) return false;
-    onSavingChange?.(true);
+    if (notify) onSavingChange?.(true);
     const nextProfile = automaticDatingTargets(profile) !== null ? { ...profile, clarifiedTargets: [] } : profile;
     try { return !!await resource.save({ expectedProfileRevision: resource.snapshot.profileRevision, expectedSearchRevision: resource.snapshot.searchRevision, profile: nextProfile, search }); }
-    finally { onSavingChange?.(false); }
+    finally { if (notify) onSavingChange?.(false); }
   }
   return (
     <>
       <ResourceState
         loading={resource.loading}
         error={resource.error}
-        reload={() => void resource.reload().then(result => { if(result)setReloadKey(value => value + 1); })}
+        reload={() => void resource.reload().then(result => { if(result) { setReloadKey(value => value + 1); setPauseUncertain(false); } })}
       />
+      <ErrorMessage>{finishError}</ErrorMessage>
       {resource.snapshot?.profile.enabled && (
-        <p className="account-note">Pause Dating to edit preferences. <Link to="/matchmaking?mode=dating">Open Discover</Link></p>
+        <div className="account-note"><p>Pause Dating to edit preferences. Your profile stays paused until you start discovery again.</p>
+          <button type="button" className="btn light" disabled={pause.busy || resource.busy || resource.loading || pauseUncertain} onClick={() => {
+            onSavingChange?.(true);
+            void pause.run(async () => {
+              setPauseUncertain(true);
+              await datingLiveClient(current.session.access_token).enable({ enabled: false,
+                expectedProfileRevision: resource.snapshot!.profileRevision, expectedSearchRevision: resource.snapshot!.searchRevision });
+              if (await resource.reload()) setPauseUncertain(false);
+            }).finally(() => onSavingChange?.(false));
+          }}>{pause.busy ? 'Pausing…' : 'Pause Dating to edit'}</button>
+        </div>
       )}
-      {resource.snapshot && view === 'all' && <DatingSearchForm key={reloadKey} initialProfile={resource.snapshot.profile} initialSearch={resource.snapshot.search ?? { ...defaultBounds, searchArea: { source: 'home', resolvedLocationRef: null } }} disabled={!resource.canWrite} saving={resource.busy} save={savePreferences} done={done}/>}
+      <ErrorMessage>{pause.error}</ErrorMessage>
+      {pauseUncertain && !pause.busy && <><p role="status">Reload Dating preferences to check whether Dating was paused.</p><button type="button" className="btn light" disabled={resource.loading} onClick={() => void resource.reload().then(result => { if (result) { setPauseUncertain(false); setReloadKey(value => value + 1); } })}>Reload Dating preferences</button></>}
+      {resource.snapshot && areaOnly && !resource.snapshot.profile.enabled && <LocationPicker mode="dating" openInitially onClose={done}
+        value={resource.snapshot.search?.searchArea ?? { source: 'home', resolvedLocationRef: null }}
+        radiusMiles={resource.snapshot.search?.radiusMiles ?? defaultBounds.radiusMiles} disabled={!resource.canWrite || pause.busy}
+        save={searchArea => savePreferences(resource.snapshot!.profile, { ...(resource.snapshot!.search ?? defaultBounds), searchArea })}/>}
+      {resource.snapshot && view === 'all' && !areaOnly && <DatingSearchForm key={reloadKey} initialProfile={resource.snapshot.profile} initialSearch={resource.snapshot.search ?? { ...defaultBounds, searchArea: { source: 'home', resolvedLocationRef: null } }} disabled={!resource.canWrite} saving={resource.busy} save={savePreferences} done={done} editDetails={() => setDetailsOpen(true)}/>}
+      {detailsOpen && <Modal title="Dating details" close={() => { if (!detailsBusy) setDetailsOpen(false) }}>
+        <DatingPreferencesPanel view="profile" onSavingChange={setDetailsBusy} done={() => { setDetailsOpen(false); void resource.reload().then(result => { if (result) setReloadKey(value => value + 1); }); }}/>
+      </Modal>}
       {resource.snapshot && view !== 'all' && (
         <DatingForm
           view={view}
           cancel={done}
-          saving={resource.phase === 'saving'}
+          saving={resource.phase === 'saving' || finishing}
           key={`${resource.snapshot.profileRevision}:${resource.snapshot.searchRevision}`}
           initialProfile={resource.snapshot.profile}
           initialSearch={
@@ -309,19 +352,32 @@ export function DatingPreferencesPanel({ done, view = 'all', onSavingChange }: {
               searchArea: { source: "home", resolvedLocationRef: null },
             }
           }
-          disabled={!resource.canWrite}
+          disabled={!resource.canWrite || finishing}
+          submitLabel={finishSetup ? 'Save and start Dating' : undefined}
             save={async (profile, search) => {
-              if (await savePreferences(profile, search)) { done(); return true; }
-              return false;
+              if (finishLock.current) return false;
+              finishLock.current = true;
+              setFinishing(true); setFinishError(''); onSavingChange?.(true);
+              try {
+                if (!await savePreferences(profile, search, false)) return false;
+                // The final labeled save also opts in, after checking fresh revisions.
+                const error = await finishSetup?.();
+                if (error) { setFinishError(error); return false; }
+                done(); return true;
+              } catch (error) {
+                setFinishError(error instanceof Error ? error.message : 'Dating could not be started. Check your saved preferences and try again.');
+                return false;
+              } finally { finishLock.current = false; setFinishing(false); onSavingChange?.(false); }
             }}
         />
       )}
     </>
   );
 }
-function DatingSearchForm({ initialProfile, initialSearch, disabled, saving, save, done }: {
+function DatingSearchForm({ initialProfile, initialSearch, disabled, saving, save, done, editDetails }: {
   initialProfile: DatingProfile; initialSearch: DatingSearch; disabled: boolean; saving: boolean;
   save: (profile: DatingProfile, search: DatingSearch) => Promise<boolean>; done: () => void;
+  editDetails: () => void;
 }) {
   const profile = initialProfile;
   const [search, setSearch] = useState(initialSearch), [validation, setValidation] = useState('');
@@ -351,7 +407,7 @@ function DatingSearchForm({ initialProfile, initialSearch, disabled, saving, sav
     {saving && <p className="account-note" role="status">Saving preferences…</p>}
     <section className="dating-preference-summary"><h3>Your Dating profile</h3><dl>
       <div><dt>Your intention</dt><dd>{profile.intent || 'Not set'}</dd></div><div><dt>Relationship style</dt><dd>{profile.style || 'Not set'}</dd></div>
-    </dl><Link to="/profile?section=dating">Edit profile details <Icon name="ChevronRight"/></Link></section>
+    </dl><button type="button" className="text-link" disabled={saving} onClick={editDetails}>Edit profile details <Icon name="ChevronRight"/></button></section>
     <button className="btn" disabled={saving}>Done</button>
   </form>;
 }
@@ -363,6 +419,7 @@ function DatingForm({
   view = 'all',
   cancel,
   saving = false,
+  submitLabel,
 }: {
   initialProfile: DatingProfile;
   initialSearch: DatingSearch;
@@ -371,6 +428,7 @@ function DatingForm({
   view?: 'all' | 'profile' | 'setup';
   cancel?: () => void;
   saving?: boolean;
+  submitLabel?: string;
 }) {
   const [profile, setProfile] = useState(initialProfile),
     [search, setSearch] = useState(initialSearch),
@@ -557,7 +615,8 @@ function DatingForm({
             <BoundsFields value={search} change={bounds => setSearch({ ...search, ...bounds })}/>
           </details>
         </>}
-        {view !== 'profile' && <><ErrorMessage>{validation}</ErrorMessage><button className="btn">{view === 'setup' ? 'Continue' : 'Save Dating preferences'}</button></>}
+        {view === 'setup' && submitLabel && <p className="account-note">Your profile will appear in Dating. You can pause from Discover anytime.</p>}
+        {view !== 'profile' && <><ErrorMessage>{validation}</ErrorMessage><button className="btn" disabled={saving}>{saving ? 'Saving…' : submitLabel ?? (view === 'setup' ? 'Continue' : 'Save Dating preferences')}</button></>}
       </fieldset>
       {view === 'profile' && <div className="profile-save-bar"><button type="button" className="btn light" disabled={saving} onClick={cancel}>Cancel</button><button className="btn" disabled={disabled}>{saving ? 'Saving…' : 'Save changes'}</button></div>}
     </form>

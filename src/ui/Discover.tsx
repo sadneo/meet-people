@@ -291,11 +291,12 @@ export function Discover(){
   const cache=useQueryClient()
   const allowance=useRequestAllowance()
   const current=useCurrent(),[epoch,setEpoch]=useState(0),[preferencesBusy,setPreferencesBusy]=useState(false)
+  const [areaOnly, setAreaOnly] = useState(false)
   const [search,setSearch]=useSearchParams()
   const adult=canShowDating(current.account?.profile?.birthdate)
   const mode=adult&&search.get('mode')==='dating'?'Dating':'Friends', preferences=search.get('preferences')==='true'
   function setMode(value:'Friends'|'Dating'){setSearch(before=>{const next=new URLSearchParams(before);next.set('mode',value.toLowerCase());return next},{replace:true})}
-  function setPreferences(open:boolean){if(!open)cache.removeQueries({queryKey:['discovery-deck']});setSearch(before=>{const next=new URLSearchParams(before);if(open)next.set('preferences','true');else next.delete('preferences');return next},{replace:true})}
+  function setPreferences(open:boolean, onlyArea = false){setAreaOnly(open && onlyArea);if(!open)cache.removeQueries({queryKey:['discovery-deck']});setSearch(before=>{const next=new URLSearchParams(before);if(open)next.set('preferences','true');else next.delete('preferences');return next},{replace:true})}
   const token = current.session.access_token, home = current.account?.profile?.location_city;
   const area = useLoad(useCallback(async signal => {
     void epoch;
@@ -306,7 +307,7 @@ export function Discover(){
     return saved.source === 'temporary' ? saved.areaLabel : saved.source === 'home' ? home : null;
   }, [mode, token, epoch, home]));
   const revision=JSON.stringify([epoch,current.account?.profile])
-  return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className={`area-link ${!area.loading&&!area.value?'needs-area':''}`} aria-label="Search area & preferences" onClick={()=>setPreferences(true)}><Icon name="Location"/><span>{area.loading ? 'Search area' : area.error ? 'Check search area' : area.value || 'Choose an area'}</span><span className="area-chevron" aria-hidden="true">⌄</span></button></div>
+  return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className={`area-link ${!area.loading&&!area.value?'needs-area':''}`} aria-label="Search area & preferences" onClick={()=>setPreferences(true, true)}><Icon name="Location"/><span>{area.loading ? 'Search area' : area.error ? 'Check search area' : area.value || 'Choose an area'}</span><span className="area-chevron" aria-hidden="true">⌄</span></button></div>
   <div className="discovertools"><DiscoverModes adult={adult} mode={mode} discoverSearch={search.toString()} onModeChange={setMode}/><div className="row discover-tool-row"><button className="discover-tool" aria-label={`${mode} preferences`} onClick={()=>setPreferences(true)}><span className="discover-tool-icon"><Icon name="DiscoveryPreferences"/></span><span className="discover-tool-label" aria-hidden="true">Filters</span></button><Link className="discover-tool discovery-activity" to="/matches" aria-label="Matches and activity"><span className="discover-tool-icon"><Icon name="DiscoveryActivity" /></span><span className="discover-tool-label" aria-hidden="true">Activity</span></Link></div></div>
   <ResourceState loading={!allowance.value && allowance.checking} error={allowance.error} reload={()=>void allowance.refresh()} skeleton={<span className="sr-only" role="status">Checking request availability</span>}/>
  {allowance.limited ? <section className="friends-waiting discovery-request-limit" aria-labelledby="request-limit-title">
@@ -318,6 +319,6 @@ export function Discover(){
  <div hidden={mode!=='Friends'}><Friends visible={mode==='Friends'} allowance={allowance} key={current.session.user.id} token={current.session.access_token} revision={revision}/></div>
  {adult&&<div hidden={mode!=='Dating'}><Dating visible={mode==='Dating'} allowance={allowance} key={current.session.user.id} token={current.session.access_token} revision={revision}/></div>}
  </>}
-  {preferences&&<Modal className={mode==='Friends'?'friends-preferences-modal':'dating-preferences-modal'} title={`${mode} preferences`} close={()=>{if(!preferencesBusy){setPreferences(false);setEpoch(value=>value+1)}}}>{mode==='Friends'?<FriendsPreferencesPanel onSavingChange={setPreferencesBusy} done={()=>{setPreferences(false);setEpoch(value=>value+1)}}/>:<DatingPreferencesPanel onSavingChange={setPreferencesBusy} done={()=>{setPreferences(false);setEpoch(value=>value+1)}}/>}</Modal>}
+  {preferences&&<Modal className={mode==='Friends'?'friends-preferences-modal':'dating-preferences-modal'} title={`${mode} preferences`} close={()=>{if(!preferencesBusy){setPreferences(false);setEpoch(value=>value+1)}}}>{mode==='Friends'?<FriendsPreferencesPanel areaOnly={areaOnly} onSavingChange={setPreferencesBusy} done={()=>{setPreferences(false);setEpoch(value=>value+1)}}/>:<DatingPreferencesPanel areaOnly={areaOnly} onSavingChange={setPreferencesBusy} done={()=>{setPreferences(false);setEpoch(value=>value+1)}}/>}</Modal>}
  </div>
 }

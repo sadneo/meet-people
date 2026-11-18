@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { PullToRefresh } from './PullToRefresh';
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { respondToConnectionRequest } from "./request-actions";
 import { connections } from "../features/connections/client";
 import { matchmakingClient } from "../features/matchmaking/client";
@@ -18,6 +18,7 @@ import { useCurrent } from "./current";
 import { SafetyActions } from "./Safety";
 
 export function Activity() {
+  const navigate = useNavigate();
   const matches = useLocation().pathname === '/matches';
   const [tab, setTab] = useState('Upcoming');
   const current = useCurrent(),
@@ -79,9 +80,10 @@ export function Activity() {
                   void action.run(async () => {
                     try {
                       setUncertain(true);
-                      await respondToConnectionRequest(current.session.access_token, person, true);
+                      const result = await respondToConnectionRequest(current.session.access_token, person, true);
                       setUncertain(false);
                       window.dispatchEvent(new Event("pebble:matching-changed"));
+                      if (result.conversationId) navigate(`/messages/chat?conversation=${encodeURIComponent(result.conversationId)}`);
                     } finally {
                       people.reload();
                       window.dispatchEvent(
@@ -158,7 +160,9 @@ export function Activity() {
               {new Date(item.createdAt).toLocaleString()}
             </time>
             <div className="row wrap">
-              <Link className="btn light" to={`/events/${item.eventId}`}>
+              <Link className="btn light" to={`/events/${item.eventId}`} onClick={() => {
+                if (!item.readAt) void action.run(async () => { await client.notificationRead(item.id); updates.reload(); });
+              }}>
                 View suggested group
               </Link>
               {!item.readAt && (

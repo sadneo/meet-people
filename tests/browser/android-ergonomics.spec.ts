@@ -49,9 +49,9 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
       await page.screenshot({ path: testInfo.outputPath('discovery-targets.png') });
       await page.getByRole('button', { name: 'Friends preferences', exact: true }).click();
       const dialog = page.getByRole('dialog');
-      await expect(dialog.getByRole('link', { name: 'Edit profile', exact: true })).toBeVisible();
-      for (const name of ['Edit profile', 'Edit']) {
-        const link = dialog.getByRole('link', { name, exact: true });
+      await expect(dialog.getByRole('button', { name: 'Edit interests', exact: true })).toBeVisible();
+      for (const name of ['Edit interests', 'Edit availability']) {
+        const link = dialog.getByRole('button', { name, exact: true });
         await link.scrollIntoViewIfNeeded();
         await touchTarget(link);
       }

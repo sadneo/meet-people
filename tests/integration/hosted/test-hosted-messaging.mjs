@@ -176,7 +176,6 @@ try {
       const page = await context.newPage(); pages.push(page)
       await page.goto(`${root}/login?returnTo=${encodeURIComponent(`/messages/chat?conversation=${conversation}`)}`)
       await page.getByLabel('Email',{exact:true}).fill(user.email)
-      await page.getByRole('button',{name:'Continue with email',exact:true}).click()
       await page.getByLabel('Password',{exact:true}).fill(password)
       await page.getByRole('button',{name:'Sign in',exact:true}).click()
       await check(page.getByRole('log',{name:'Message history'})).toBeVisible()

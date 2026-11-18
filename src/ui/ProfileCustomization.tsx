@@ -144,7 +144,6 @@ export function OwnProfilePreview({ ownerId, account, details, photoRevision, ad
 export function PromptsEditor({ prompts, change, adult, disabled }: {
   prompts: ProfilePrompt[]; change: (prompts: ProfilePrompt[]) => void; adult: boolean; disabled?: boolean
 }) {
-  const [adding, setAdding] = useState('')
   const counts = { friends: promptCount(prompts, 'friends'), dating: promptCount(prompts, 'dating') }
   const room = (mode: 'friends' | 'dating') => counts[mode] < promptLimit
   // A new prompt goes everywhere it fits; Dating-only questions go to Dating.
@@ -218,17 +217,17 @@ export function PromptsEditor({ prompts, change, adult, disabled }: {
       ? <p className="account-note">{adult ? `Friends and Dating each have ${promptLimit} prompts.` : `You have ${promptLimit} prompts.`} Remove one to add another.</p>
       : <div className="prompt-add">
         <label htmlFor="prompt-add-select" className="sr-only">Choose a prompt</label>
-        <select id="prompt-add-select" value={adding} disabled={disabled} onChange={event => setAdding(event.target.value)}>
+        <select id="prompt-add-select" value="" disabled={disabled} onChange={event => {
+          const id = event.target.value
+          const audience = placement(id)
+          if (!id || !audience) return
+          haptic('light')
+          change([...prompts, { id: id as ProfilePrompt['id'], answer: '', ...(audience === 'both' ? {} : { audience }) }])
+          requestAnimationFrame(() => document.getElementById(`prompt-${id}`)?.focus())
+        }}>
           <option value="">{prompts.length ? 'Add another prompt' : 'Choose a prompt'}</option>
           {available.map(prompt => <option key={prompt.id} value={prompt.id} disabled={!placement(prompt.id)}>{prompt.text}{prompt.audience === 'dating' ? ' (Dating)' : ''}</option>)}
         </select>
-        <button type="button" className="btn light" disabled={disabled || !adding || !placement(adding)} onClick={() => {
-          const audience = placement(adding)
-          if (!audience) return
-          haptic('light')
-          change([...prompts, { id: adding as ProfilePrompt['id'], answer: '', ...(audience === 'both' ? {} : { audience }) }])
-          setAdding('')
-        }}>Add prompt</button>
       </div>}
   </section>
 }

@@ -10,7 +10,6 @@ import { geodeRocks, isGeode } from './geodes'
 import { landscapeNames, loadGardenArt, type GardenArt } from './art'
 import { drawGardenSky, gardenProjection } from './sky'
 import { Link } from 'react-router'
-import { Modal } from '../../ui/common'
 import { haptic } from '../../ui/feedback'
 import { CountUp } from '../../ui/CountUp'
 import './garden.css'
@@ -43,7 +42,7 @@ export function Garden() {
   }
   const storeRock=async(id:UpgradeId)=>{await dispatch({type:'remove-garden-item',id})}
   const [announcement,setAnnouncement]=useState(''), [reveal,setReveal]=useState<string|null>(null)
-  const [inventoryOpen,setInventoryOpen]=useState(false), [friendIsland,setFriendIsland]=useState(false)
+  const [inventoryOpen,setInventoryOpen]=useState(false)
   const canvas=useRef<HTMLCanvasElement>(null), drawer=useRef<HTMLDialogElement>(null), reset=useRef<HTMLDialogElement>(null), revealDialog=useRef<HTMLDialogElement>(null)
   const trigger=useRef<HTMLButtonElement>(null)
   const islandArt=useRef<HTMLImageElement|null>(null)
@@ -70,7 +69,7 @@ export function Garden() {
       const viewCamera=activityOpen?{x:0,y:0,zoom:1}:camera
       drawGardenSky(ctx,rect.width,rect.height,ratio,t,viewCamera,islandArt.current)
       const islandLocations=[[.17,.22],[.81,.29],[.54,.15]]
-      islandTargets.current?.querySelectorAll<HTMLElement>('button').forEach((target,i)=>{
+      islandTargets.current?.querySelectorAll<HTMLElement>('a').forEach((target,i)=>{
         target.style.left=`${Math.round(islandLocations[i][0]*rect.width-viewCamera.x*.13)}px`
         target.style.top=`${Math.round(islandLocations[i][1]*rect.height-viewCamera.y*.08+Math.sin(t*.55+i*2)*3)}px`
       })
@@ -164,8 +163,7 @@ export function Garden() {
       if(e.key==='+'||e.key==='='||e.key==='-'){e.preventDefault();setCamera(c=>({...c,zoom:Math.max(.7,Math.min(2.5,c.zoom+(e.key==='-'?-.1:.1)))}));return}
       if(selected&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();void dispatch({type:'nudge-community-item',id:selected,delta:{x:e.key==='ArrowLeft'?-12:e.key==='ArrowRight'?12:0,y:e.key==='ArrowUp'?-12:e.key==='ArrowDown'?12:0}})}
     }}/>
-    <div ref={islandTargets} className="garden-friend-islands" aria-label="Illustrative friend islands">{[0,1,2].map(i=><button disabled={!sceneReady||!!error} key={i} className={`garden-friend-island island-${i}`} aria-label="An island for a future friend" onClick={()=>setFriendIsland(true)}/>)}</div>
-    {friendIsland&&<Modal variant="sheet" title="Room for a new friend" close={()=>setFriendIsland(false)}><img className="garden-friend-preview" src="/pebble/square-garden-cutout.png" alt="Illustrative pixel garden"/><p>A little island is waiting. Meet someone new and grow your worlds together.</p><p className="mini muted">An illustration, not another person's private Garden.</p><Link className="btn" to="/matchmaking?mode=friends">Discover people</Link></Modal>}
+    <div ref={islandTargets} className="garden-friend-islands" aria-label="Illustrative friend islands">{[0,1,2].map(i=><Link to="/matchmaking?mode=friends" aria-disabled={!sceneReady||!!error} tabIndex={!sceneReady||error?-1:0} key={i} className={`garden-friend-island island-${i}`} aria-label="Discover new friends" onClick={event=>{if(!sceneReady||error)event.preventDefault()}}/>)}</div>
     {selected&&!activityOpen&&<div className="garden-selection" role="group" aria-label="Selected Garden item"><span>{selected==='pebble'?'Your Pebble':upgrades.find(item=>item.id===selected)?.name}</span>{selected!=='pebble'&&<button disabled={!available} onClick={async()=>{if(!(await dispatch({type:'remove-garden-item',id:selected as UpgradeId})).cancelled)setSelected(null)}}>{isGeode(selected)?'Return to inventory':'Remove & refund'}</button>}<button aria-label="Deselect item" onClick={()=>setSelected(null)}><Icon name="close"/></button></div>}
     <div ref={activityPanel} className="garden-bottom">
       {activityOpen ? <WeeklyActivity owner={owner} community={community} preview={historyPreview?.day??null} onPreview={setHistoryPreview} close={()=>{closeActivity();requestAnimationFrame(()=>activityTrigger.current?.focus({preventScroll:true}))}}/> :
