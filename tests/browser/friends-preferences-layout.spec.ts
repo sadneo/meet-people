@@ -73,6 +73,7 @@ test('Friends preference auto-save failures require reconciliation and do not cl
   await dialog.getByRole('button', { name: 'Reload saved data', exact: true }).click();
   await expect(dialog.getByRole('combobox', { name: 'Friendship goal', exact: true })).toHaveValue('New friends');
   expect(writes).toBe(1);
-  await dialog.getByRole('link', { name: 'Edit profile', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'About You', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await dialog.getByRole('button', { name: 'Edit interests', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Your interests', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/matchmaking/);
 });

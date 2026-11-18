@@ -131,12 +131,14 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
   const disabled = busy || reconcile || !state || query.isError || query.isFetching
 
   function select(file: File) {
+    if (disabled || lock.current || !state || state.count >= profilePhotoLimit) return
     if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
       setError('Choose a JPEG, PNG or WebP photo up to 5 MB.')
       return
     }
     setError('')
     setSelection({ file, url: URL.createObjectURL(file) })
+    void edit({ action:'append', file })
   }
 
   async function edit(change: { action: 'append'; file: File } | { action: 'move'; position: number; toPosition: number } | { action: 'remove'; position: number }) {
@@ -153,6 +155,7 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
       cache.setQueryData(['profile-photo', owner, 'gallery'], next)
       window.dispatchEvent(new CustomEvent(photoChangedEvent, {detail:owner}))
       if (change.action === 'append') setSelection(null)
+      if (change.action === 'append') toast('Photo added')
       if (change.action === 'move') {
         setAnnouncement(`Photo moved to position ${change.toPosition}.`)
         setPreview(null)
@@ -322,8 +325,7 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
       {selection && <div className="photo-gallery-selection">
         <img src={selection.url} alt="New photo preview"/>
         <div>
-          <ActionButton disabled={disabled || state.count >= profilePhotoLimit} onClick={() => void edit({action:'append',file:selection.file})}>{busy ? 'Uploading…' : 'Upload photo'}</ActionButton>
-          <ActionButton secondary disabled={busy} onClick={() => setSelection(null)}>Cancel</ActionButton>
+          <p role="status">{busy ? 'Adding photo…' : 'Reload photos to check whether your photo was added.'}</p>
         </div>
       </div>}
       {!inline && addPhoto}

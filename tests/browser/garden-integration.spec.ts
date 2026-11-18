@@ -15,9 +15,8 @@ test('Garden aliases use the sky composition, active navigation and sliding inve
  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2,box.y-30,{steps:6});await page.mouse.up()
  await expect(page.getByRole('dialog',{name:'Your garden',exact:true})).toBeVisible()
  await page.keyboard.press('Escape');await expect(tray).toBeFocused()
- await page.getByRole('button',{name:'An island for a future friend'}).nth(1).click()
- await expect(page.getByRole('dialog',{name:'Room for a new friend'})).toBeVisible()
- await page.getByRole('link',{name:'Discover people'}).click()
+ await page.getByRole('link',{name:'Discover new friends'}).nth(1).click()
+ await expect(page).toHaveURL(/matchmaking\?mode=friends/)
  await expect(page).toHaveURL(/\/matchmaking\?mode=friends/)
 })
 for(const width of [390,1280])test(`Garden integration: drag, undo, four geodes, reset, reload ${width}`,async({page},info)=>{

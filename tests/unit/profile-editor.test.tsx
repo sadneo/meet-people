@@ -1,7 +1,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
+import { createRef } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { Profile, PhotoEditor } from '../../src/ui/Profile';
+import { Profile, PhotoEditor, type PhotoEditorHandle } from '../../src/ui/Profile';
 import { ProfileSettings } from '../../src/ui/Settings';
 import { accountFixture, requiredPreferences } from './complete-profile-fixture';
 
@@ -144,6 +145,27 @@ it('keeps standalone photo upload immediate and separate from the profile draft'
   await waitFor(() => expect(savePhoto).toHaveBeenCalledOnce());
 });
 
+it('saves the matching setup preview through continue and blocks duplicate writes after a failed readback', async () => {
+  const ref = createRef<PhotoEditorHandle>();
+  reloadPhoto.mockResolvedValueOnce(null);
+  render(<PhotoEditor ref={ref}/>);
+  choose();
+  expect(screen.queryByRole('button', { name: 'Upload photo' })).toBeNull();
+  expect(savePhoto).not.toHaveBeenCalled();
+  await act(async () => {
+    await expect(ref.current!.save()).rejects.toThrow('Photo saved. Reload its current state before continuing.');
+  });
+  expect(savePhoto).toHaveBeenCalledOnce();
+  await act(async () => {
+    await expect(ref.current!.save()).rejects.toThrow('Reload the photo before retrying.');
+  });
+  expect(savePhoto).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole('button', { name: 'Reload photo before retrying' }));
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Reload photo before retrying' })).toBeNull());
+  await act(async () => { await ref.current!.save(); });
+  expect(savePhoto).toHaveBeenCalledOnce();
+});
+
 it('offers the canonical sharing control in Privacy, not the unused legacy account flag', async () => {
   let schedule = { revision: 2, timeZone: 'UTC', showAvailability: false };
   vi.mocked(fetch).mockImplementation(async (_input, init) => {
@@ -173,7 +195,7 @@ it('offers the canonical sharing control in Privacy, not the unused legacy accou
 it('explains the location gate and preserves independent availability on settings saves', async () => {
   render(<MemoryRouter><ProfileSettings section="discovery"/></MemoryRouter>);
   fireEvent.click(screen.getByRole('switch', { name: 'Allow device location for search areas' }));
-  expect(screen.getByText(/this switch alone does not request coordinates/)).toBeTruthy();
+  expect(screen.getByText(/asks for device permission and enables this setting/)).toBeTruthy();
   // The switch saves immediately.
   await waitFor(() => expect(saveAccount).toHaveBeenCalledWith(expect.objectContaining({ settings: expect.objectContaining({ availability: true, location: true }) })));
 });

@@ -61,6 +61,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
   }
   function selectCategory(value: string) {
     browse(value, 1);
+    setFiltersOpen(false);
   }
   const content = (
     <section className="events-page" aria-labelledby="events-title">
@@ -81,7 +82,6 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
         </select>
         <div className="event-filter-actions">
           <ActionButton secondary disabled={!category} onClick={() => selectCategory('')}>Reset filters</ActionButton>
-          <ActionButton onClick={() => setFiltersOpen(false)}>Done</ActionButton>
         </div>
       </Modal>}
       <ResourceState

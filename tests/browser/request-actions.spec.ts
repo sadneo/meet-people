@@ -18,8 +18,7 @@ for (const surface of ['/activity', '/messages/requests']) {
       await page.goto(surface)
       await page.getByRole('button', { name: surface === '/messages/requests' && mode === 'dating' ? 'Like back' : 'Accept', exact: true }).click()
       await expect.poll(() => writes).toEqual([expected])
-      if (surface === '/messages/requests') await expect(page).toHaveURL(new RegExp(`conversation=${conversationId}`))
-      else await expect(page.getByText('No pending requests.', { exact: true })).toBeVisible()
+      await expect(page).toHaveURL(new RegExp(`conversation=${conversationId}`))
     })
   }
 }

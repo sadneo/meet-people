@@ -128,7 +128,6 @@ test('sign-out clears private reads before signing into the account again', asyn
   await page.route('**/api/conversations?page=1', async route => { started = true; await held; return route.fallback() })
   try {
     await page.getByLabel('Email', { exact: true }).fill('development-fixture@example.test')
-    await page.getByRole('button', { name: 'Continue with email', exact: true }).click()
     await page.getByLabel('Password', { exact: true }).fill('Synthetic-fixture-password-1!')
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     const nav = page.getByRole('navigation', { name: 'Main navigation' })

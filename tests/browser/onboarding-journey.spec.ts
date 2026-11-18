@@ -102,7 +102,7 @@ test('shared matching setup carries forward while Friends and Dating start indep
   await expect(friends.getByRole('alert')).toHaveText('Choose at least one interest.')
   await friends.getByRole('button', { name: 'Coffee', exact: true }).click()
   await friends.getByRole('button', { name: 'Save and continue' }).click()
-  await expect(friends.getByRole('alert')).toHaveText('Upload a profile photo to continue.')
+  await expect(friends.getByRole('alert')).toHaveText('Choose a profile photo to continue.')
   const photoPanel = friends.getByRole('region', { name: 'Your photo' })
   const portrait = photoPanel.locator('.matching-photo-portrait')
   async function expectSameBottom(first: typeof portrait, second: typeof portrait) {
@@ -121,8 +121,7 @@ test('shared matching setup carries forward while Friends and Dating start indep
   })
   await expect(friends.getByRole('button', { name: 'Choose another' })).toBeVisible()
   await expectSameBottom(portrait, photoPanel.getByRole('button', { name: 'Choose another' }))
-  await friends.getByRole('button', { name: 'Upload photo' }).click()
-  await expect(friends.getByRole('button', { name: 'Change photo' })).toBeEnabled()
+  await expect(friends.getByRole('button', { name: 'Upload photo' })).toHaveCount(0)
   await expect(friends.getByRole('img', { name: 'Jamie' })).toBeVisible()
   await friends.getByRole('button', { name: 'Save and continue' }).click()
   await expect(friends.getByRole('heading', { name: 'Choose your search area' })).toBeVisible()
@@ -142,7 +141,6 @@ test('shared matching setup carries forward while Friends and Dating start indep
   await dating.getByLabel('Looking for').selectOption('Long-term relationship')
   await dating.getByLabel('Relationship style').selectOption('Monogamy')
   await confirmArea(page)
-  await dating.getByRole('button', { name: 'Continue', exact: true }).click()
   await expect(dating.getByRole('button', { name: 'Save and start Dating' })).toBeVisible()
   expect(fixture.calls.some(call => call.path.endsWith('/dating/enabled'))).toBe(false)
   await dating.getByRole('button', { name: 'Save and start Dating' }).click()
@@ -172,7 +170,6 @@ test('event matching prompts beside the queue and group matching requires a save
   await page.goto('/messages')
   await page.getByRole('button', { name: 'Find a group', exact: true }).click()
   const group = page.getByRole('dialog', { name: 'Find a group' })
-  await group.getByRole('button', { name: 'Set up group matching' }).click()
   await expect(group.getByRole('heading', { name: 'When can you meet?' })).toBeVisible()
   await group.getByRole('button', { name: 'Save and continue' }).click()
   await expect(group.getByRole('alert')).toHaveText('Choose at least one hour when you can meet.')
@@ -187,7 +184,6 @@ test('event matching prompts beside the queue and group matching requires a save
   }
   groupScheduleReady = true
   await group.getByRole('button', { name: 'Save and continue' }).click()
-  await group.getByRole('button', { name: 'Finish setup' }).click()
   await expect(group.getByRole('button', { name: 'Find a group', exact: true })).toBeEnabled()
   expect(fixture.calls.filter(call => call.method === 'POST' &&
     /\/(friends\/start|active-friends\/queue|group-queue)$/.test(call.path))).toHaveLength(0)

@@ -10,7 +10,7 @@ import { PageSkeleton } from './loading/PageSkeleton'
 import './parity-account.css'
 import { MatchingSchedule } from './MatchingSchedule';
 import { DatingPreferencesPanel } from './Preferences';
-import { useEffect, useId, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useImperativeHandle, useRef, useState, type CSSProperties, type FormEvent, type ReactNode, type Ref } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
 import {
   SaveAccountSchema,
@@ -235,7 +235,8 @@ export function Availability({
     </fieldset>
   );
 }
-export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boolean) => void }) {
+export type PhotoEditorHandle = { save: () => Promise<void> };
+export function PhotoEditor({ onSavingChange, ref, busy = false }: { onSavingChange?: (saving: boolean) => void; ref?: Ref<PhotoEditorHandle>; busy?: boolean }) {
   const photo = useProfilePhoto();
   const current = useCurrent();
   const action = useAction();
@@ -245,7 +246,9 @@ export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boole
   const [selectionError, setSelectionError] = useState('');
   const [galleryOpen, setGalleryOpen] = useState(false);
   const preview = selection?.preview;
-  const disabled = action.busy || photo.loading || !!photo.error || !photo.snapshot || reconcile;
+  const pending = useRef(false);
+  const disabled = busy || action.busy || photo.loading || !!photo.error || !photo.snapshot || reconcile;
+  useImperativeHandle(ref, () => ({ save: saveSelection }));
 
   useEffect(() => {
     return () => { if (preview) URL.revokeObjectURL(preview); };
@@ -261,12 +264,17 @@ export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boole
     setSelection({ file, preview: URL.createObjectURL(file) });
   }
 
-  async function upload() {
-    if (!selection || !photo.client || !photo.snapshot || disabled) return;
+  async function saveSelection() {
+    if (pending.current || reconcile) throw new Error('Reload the photo before retrying.');
+    if (!photo.client || !photo.snapshot || photo.loading || photo.error) throw new Error('Reload your photo before continuing.');
+    if (!selection) {
+      if (!photo.snapshot.hasPhoto) throw new Error('Choose a profile photo to continue.');
+      return;
+    }
     const client = photo.client, revision = photo.snapshot.revision;
-    onSavingChange(true);
+    pending.current = true;
+    onSavingChange?.(true);
     try {
-      await action.run(async () => {
         setReconcile(true);
         await client.save(selection.file, revision, crypto.randomUUID());
         setSelection(null);
@@ -274,9 +282,9 @@ export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boole
         window.dispatchEvent(new CustomEvent(photoChangedEvent, { detail: current.session.user.id }));
         if (!await photo.reload()) throw new Error('Photo saved. Reload its current state before continuing.');
         setReconcile(false);
-      });
     } finally {
-      onSavingChange(false);
+      pending.current = false;
+      onSavingChange?.(false);
     }
   }
 
@@ -295,8 +303,8 @@ export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boole
       </div>
       <div className="matching-photo-actions">
         <p className="matching-photo-title">{selection ? 'Looking like you?' : photo.snapshot?.hasPhoto ? 'Ready to meet people' : 'Put a face to your name'}</p>
-        <p className="matching-photo-hint">{selection ? 'Upload to add this photo to your profile.' : photo.snapshot?.hasPhoto ? 'Your photo is on your matching profile.' : 'Choose a clear photo of yourself.'}</p>
-        {selection && <ActionButton disabled={disabled} onClick={() => void upload()}>{action.busy ? 'Uploading…' : 'Upload photo'}</ActionButton>}
+        <p className="matching-photo-hint">{selection ? ref ? 'Your photo will be saved when you continue.' : 'Upload to add this photo to your profile.' : photo.snapshot?.hasPhoto ? 'Your photo is on your matching profile.' : 'Choose a clear photo of yourself.'}</p>
+        {selection && !ref && <ActionButton disabled={disabled} onClick={() => void action.run(saveSelection)}>{action.busy ? 'Uploading…' : 'Upload photo'}</ActionButton>}
         <ActionButton secondary={!!selection || !!photo.snapshot?.hasPhoto} disabled={disabled} onClick={() => input.current?.click()}>
           {selection ? 'Choose another' : photo.snapshot?.hasPhoto ? 'Change photo' : 'Add photo'}
         </ActionButton>
@@ -317,7 +325,7 @@ export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boole
     </div>
     <ResourceState loading={photo.loading} error={photo.error} reload={photo.reload}/>
     <ErrorMessage>{selectionError || action.error}</ErrorMessage>
-    {reconcile && <ActionButton secondary disabled={action.busy || photo.loading} onClick={() => {
+    {reconcile && <ActionButton secondary disabled={busy || action.busy || photo.loading} onClick={() => {
       void photo.reload().then(saved => { if (saved) setReconcile(false); });
     }}>Reload photo before retrying</ActionButton>}
   </section>;
@@ -371,7 +379,7 @@ export function Profile() {
         <ProfileFinishCard profile={profile} hasPhoto={!!photo.snapshot?.hasPhoto} onAddPhoto={() => {
           const section = document.getElementById('profile-photos');
           section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          section?.querySelector<HTMLButtonElement>('.photo-gallery-toolbar .btn')?.focus({ preventScroll: true });
+          section?.querySelector<HTMLButtonElement>('.photo-gallery-toolbar .btn')?.click();
         }}/>
         <section id="profile-photos" className="profile-photos-section" aria-labelledby="profile-photos-title">
           <h3 id="profile-photos-title">Photos</h3>

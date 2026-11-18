@@ -65,7 +65,7 @@ function MasterSettings({ category }: { category: 'discovery' | 'notifications' 
             </label>
           ))}
           <p className="account-note">
-            {category === 'discovery' ? 'Allows “Use my current location” when choosing a search area in Discover. Your device asks permission when you use it; this switch alone does not request coordinates. You can still search or move the map manually when it is off.' : 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.'}
+            {category === 'discovery' ? '“Use my current location” asks for device permission and enables this setting when you allow access. You can also search or move the map to choose an area.' : 'Choose whether to receive activity notifications. Delivery depends on your device and notification permissions.'}
           </p>
         </fieldset>
         <ErrorMessage>{current.error}</ErrorMessage>

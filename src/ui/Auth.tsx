@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { supabase } from "../supabase";
-import { apiUrl } from "../platform/native";
 import { legalPublication } from "../features/public/legal-content";
 import { safeReturnTo } from "../auth/returnTo";
 import { parseCallbackGrant } from "../auth/callback-grant";
@@ -32,7 +31,6 @@ export function Auth({
   const [email, setEmail] = useState(() => search.get("email") ?? emailDrafts.get(mode) ?? ""),
     [password, setPassword] = useState(""),
     [confirm, setConfirm] = useState(""),
-    [stage, setStage] = useState<"email" | "password">("email"),
     [notice, setNotice] = useState("");
   useEffect(() => { emailDrafts.set(mode, email); }, [mode, email]);
   const form = useRef<HTMLFormElement>(null);
@@ -55,9 +53,6 @@ export function Auth({
     setConfirm("");
     setNotice("");
     action.clearError();
-    setStage("email");
-    if (register)
-      navigate(`/login?${new URLSearchParams({ email: value, returnTo })}`, { replace: true });
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -65,34 +60,6 @@ export function Auth({
     await action.run(async () => {
       if (!supabase)
         throw new Error("Sign-in is unavailable. Try again later.");
-      if (mode === "login" && stage === "email") {
-        let response: Response;
-        try {
-          response = await fetch(apiUrl("/api/auth/email"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email }),
-            signal: AbortSignal.timeout(15000),
-          });
-        } catch {
-          throw new Error('Could not check your email. Check your connection and try again.');
-        }
-        if (response.status === 429)
-          throw new Error('Too many email checks. Wait a moment and try again.');
-        const value: unknown = await response.json().catch(() => null);
-        if (
-          !response.ok ||
-          !value ||
-          typeof value !== "object" ||
-          !("exists" in value) ||
-          typeof value.exists !== "boolean"
-        )
-          throw new Error('Email checking is temporarily unavailable. Please try again shortly.');
-        if (!alive.current) return;
-        if (value.exists) setStage("password");
-        else navigate(`/register?${new URLSearchParams({ email, returnTo })}`);
-        return;
-      }
       if (forgot) {
         const result = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: authCallbackUrl(returnTo, true),
@@ -192,7 +159,7 @@ export function Auth({
               />
             </>
           )}
-          {!forgot && (stage === "password" || register || reset) && (
+          {!forgot && (
             <>
               <PasswordField
                   label="Password"
@@ -225,7 +192,7 @@ export function Auth({
               (!supabase ? "Sign-in is unavailable. Try again later." : "")}
           </ErrorMessage>
           {notice && <p role="status">{notice}</p>}
-          {mode === "login" && stage === "password" && <div className="auth-recovery-options">
+          {mode === "login" && <div className="auth-recovery-options">
             <button
               type="button"
               className="text-link"
@@ -248,7 +215,7 @@ export function Auth({
               Email me a sign-in link
             </button>
             <Link
-              to={`/auth/forgot-password?${new URLSearchParams({ returnTo })}`}
+              to={`/auth/forgot-password?${new URLSearchParams({ email, returnTo })}`}
             >
               Forgot password?
             </Link>
@@ -262,9 +229,7 @@ export function Auth({
                   ? "Send recovery link"
                   : register
                     ? "Create account"
-                    : stage === "email"
-                       ? "Continue with email"
-                      : "Sign in"}
+                    : "Sign in"}
           </button>
         </form>
         {mode === 'login' && <Link className="auth-account-link" to={`/register?${new URLSearchParams({ email, returnTo })}`}>New to Pebble? Create an account</Link>}
@@ -311,7 +276,7 @@ export function Auth({
             )}
           </>
         )}
-        {(register || forgot) && <Link className="auth-home-link" to="/login">Back to sign in</Link>}
+        {(register || forgot) && <Link className="auth-home-link" to={`/login?${new URLSearchParams({ email, returnTo })}`}>Back to sign in</Link>}
         {mode !== "login" && <p className="account-note auth-consent">
           By continuing, you agree to our <Link to="/terms">Terms</Link> and{" "}
           <Link to="/privacy">Privacy Policy</Link>.
