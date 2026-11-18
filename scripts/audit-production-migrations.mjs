@@ -27,7 +27,8 @@ export function compareInventory(files, rows, functions) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const cwd = fileURLToPath(new URL('../', import.meta.url))
-  const projectRef = supabaseRefs.production
+  const projectRef = supabaseRefs[process.env.DEPLOY_ENVIRONMENT ?? 'production']
+  if (!projectRef) throw new Error('Choose DEPLOY_ENVIRONMENT=production or sandbox.')
   const query = `BEGIN READ ONLY;
 SELECT jsonb_build_object(
  'migrations',(SELECT coalesce(jsonb_agg(jsonb_build_object('version',version)),'[]') FROM supabase_migrations.schema_migrations),

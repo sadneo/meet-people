@@ -19,7 +19,8 @@ Commit the updated `pnpm-lock.yaml` (the Dockerfile installs with `--frozen-lock
 
 ## 2. Firebase
 1. Open the Firebase project you already use for hosting -> Project settings -> **Add app** -> Android.
-   Package name: `com.cse416.meetpeople`.
+   Package names: `garden.pebble.android` (production) and `garden.pebble.android.dev`
+   (the sandbox "Pebble Dev" flavour); register both and download one file containing both.
 2. Download `google-services.json` into `android/app/google-services.json`. The Gradle files already apply
    the Google services plugin when that file exists.
 3. Project settings -> **Service accounts** -> *Generate new private key*. This JSON lets the server send
