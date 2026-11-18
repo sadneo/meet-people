@@ -91,7 +91,7 @@ clients cannot grant themselves test funds.
    still work, social rewards stay disabled, and weekday history is not fabricated.
 2. Release API and mobile builds together after the migration. Web remains public
    marketing/events. An old/missing backend fails closed; it does not silently use
-   local money. For local browser review, use `pnpm dev:mobile` and the existing API.
+   local money. For local browser review, use `pnpm dev` and the existing API.
 3. Review the device-to-account transition with the team before rollout. The current
    Terms/Privacy/Cookie text still describes Garden session/local storage. Legal
    content was preserved; update those specific disclosures for server-owned Garden

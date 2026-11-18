@@ -10,6 +10,7 @@ export const HelloRequestSchema = z.object({
 
 export const HealthResponseSchema = z.object({
   status: z.literal('ok'),
+  run: z.string().optional(),
 })
 
 export type HelloResponse = z.infer<typeof HelloResponseSchema>

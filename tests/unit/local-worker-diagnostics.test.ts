@@ -1,12 +1,21 @@
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { localWorkerFailure, workerDiagnosticMessage, type LocalWorkerStage } from '../../scripts/local-worker-diagnostics'
 import type { WorkerDiagnostic } from '../../api/event-group-worker'
+
+vi.mock('../../scripts/lib/stack.mjs', async importOriginal => (await import('./hermetic-stack')).hermeticStack(await importOriginal<typeof import('../../scripts/lib/stack.mjs')>()))
 
 it.each<LocalWorkerStage>(['runtime', 'database', 'configuration', 'credentials', 'identity', 'provisioning', 'policySetup', 'workerSetup', 'policyCheck', 'authentication', 'transport', 'personalCycle', 'generalCycle'])('has actionable, redacted guidance for %s', stage => {
   const text = localWorkerFailure(stage)
   expect(text).toMatch(/stopped \[[a-z_]+\]/)
   expect(text).toContain('No credentials printed; no automatic replay.')
   expect(text).not.toContain('reset the database to')
+})
+it('names the current stack\'s worker credential file, or generic text without a stack', () => {
+  vi.stubEnv('PEBBLE_SUPABASE_PROJECT_ID', 'meet-people-wt-unit'); vi.stubEnv('PEBBLE_SUPABASE_URL', 'http://127.0.0.1:55321')
+  expect(localWorkerFailure('credentials')).toMatch(/[\\/]\.local[\\/]share[\\/]pebble[\\/]meet-people-wt-unit[\\/]event-group-worker\.json/)
+  vi.stubEnv('PEBBLE_SUPABASE_PROJECT_ID', ''); vi.stubEnv('PEBBLE_SUPABASE_URL', '')
+  expect(localWorkerFailure('credentials')).not.toContain('<credentialsDir>')
+  vi.unstubAllEnvs()
 })
 it('keeps uncertain queue recovery explicit instead of recommending automatic restarts or rejoining', () => {
   for (const stage of ['personalCycle', 'generalCycle'] as const) {

@@ -6,6 +6,11 @@ import { join } from 'node:path'
 import process from 'node:process'
 import console from 'node:console'
 
+// Only the Release workflow generates each environment's Auth settings and holds its provider secrets.
+if (process.env.CI !== 'true') {
+  console.error('hosting:configure runs only in the Release workflow (CI=true). Change hosted secrets with: pnpm exec supabase secrets set --project-ref <ref> NAME=value')
+  process.exit(1)
+}
 const ref = process.env.SUPABASE_PROJECT_REF
 if (!/^[a-z]{20}$/.test(ref ?? '')) throw new Error('Set SUPABASE_PROJECT_REF to the intended hosted project.')
 // Auth settings are generated per environment by configure-deployment.mjs; there is no fallback.

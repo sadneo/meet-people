@@ -47,25 +47,25 @@ review and the protected purge job. Maps remain explicitly unavailable without
 configuration. New selections are private, mode-specific manual search centers;
 using GPS is optional and never enables tracking or Dating participation.
 
-For a fresh canonical matchmaking test stack, run `pnpm supabase:start:matching`.
+For a fresh canonical matchmaking test stack, run `pnpm test:integration --matching`.
 This uses an ignored local work directory, installs the reviewed product SQL before
 matching, omits the two incompatible service-messaging replacement migrations, and
 disables the old seed. Historical migrations are unchanged. It never resets a
-database. The normal `supabase:start` migration track is not compatible with this
+database. The normal `pnpm supabase start` migration track is not compatible with this
 canonical backend yet; production schema reconciliation remains separate.
 
 For an existing canonical stack, apply the reviewed
 product migrations, then all four `20261028` matching migrations in order. Existing
 schema reconciliation instructions still apply; **do not reset a populated database**
-just to enable matching. In `.env.local`, configure the existing Supabase URL,
-public key and service-role key. Friends/Dating recommendations and the active
-worker are enabled by default when those credentials are configured; there are
+just to enable matching. `pnpm dev` supplies the local Supabase URL, public key and
+service-role key; there is nothing to configure. Friends/Dating recommendations and the active
+worker are enabled by default when those credentials are present; there are
 no matchmaking environment feature switches. Keep service-role credentials server-only.
 Restart `pnpm dev`. Active matching also requires the DB policy gate; the explicit
 local-only `--enable-active` option below enables it.
 
-The scripts require Docker and the running local `supabase_db_meet-people`
-container with the expected Supabase project label. They refuse remote targets.
+The scripts require Docker and this worktree's running local Supabase database
+container (`supabase_db_<project>`) with the expected Supabase project label. They refuse remote targets.
 They never accept an arbitrary account ID. Dry runs do not access Docker, the
 network or credentials. Local test fixtures may be created and removed by the integration check; no
 hosted database is targeted.
@@ -73,8 +73,8 @@ hosted database is targeted.
 ## Add passive discovery profiles
 
 ```sh
-pnpm demo:seed --count 20 --dry-run
-pnpm demo:seed --count 20
+pnpm demo seed --count 20 --dry-run
+pnpm demo seed --count 20
 ```
 
 The existing seeder prompts for a hidden shared demo password. It creates marked,
@@ -93,10 +93,10 @@ catalogue records must remain valid; use the existing seeder's documented
 ## Add selected people to active matchmaking
 
 ```sh
-pnpm demo:active --count 3 --start 1 --dry-run
-pnpm demo:active --count 3 --start 1 --new-friends 2 --enable-active
-pnpm matchmaking:active:once
-pnpm demo:active --count 3 --start 1 --action status
+pnpm demo active --count 3 --start 1 --dry-run
+pnpm demo active --count 3 --start 1 --new-friends 2 --enable-active
+pnpm demo matchmaking-once
+pnpm demo active --count 3 --start 1 --action status
 ```
 
 `--new-friends 2` prefers a total of three, with two as the minimum. Queuing uses
@@ -110,9 +110,9 @@ rosters in Messages. Existing group growth additionally requires all members'
 ready-up and consent.
 
 ```sh
-pnpm demo:active --count 3 --start 1 --action cancel
-pnpm demo:remove --count 20 --start 1 --dry-run
-pnpm demo:remove --count 20 --start 1
+pnpm demo active --count 3 --start 1 --action cancel
+pnpm demo remove --count 20 --start 1 --dry-run
+pnpm demo remove --count 20 --start 1
 ```
 
 Cancel frees queue participation without deleting established chats. Remove is
@@ -121,8 +121,8 @@ accounts and their cascading data, in one guarded transaction. A changed/missing
 marker rejects the whole selection. Do not use removal to simulate ordinary
 unmatching or leaving a group.
 
-`demo:queue` is the **legacy** queue tool retained for old-flow debugging; use
-`demo:active` for the new Messages flow.
+`pnpm demo queue` is the **legacy** queue tool retained for old-flow debugging; use
+`pnpm demo active` for the new Messages flow.
 
 ## Verification
 
@@ -137,7 +137,7 @@ and an end-to-end test against running local Supabase remain environment steps.
 
 ## Real local HTTP acceptance
 
-After `pnpm supabase:start:matching`, run `pnpm test:integration:matching`. This
+Run `pnpm test:integration --matching`, which starts that stack itself. This
 requires demo slots 001–002 to be unused, preserves occupied slots, generates a
 password only in memory, signs in through real Supabase Auth, and exercises both
 passive batches, explicit Friends acceptance, active proposals, exact-roster

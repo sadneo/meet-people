@@ -1,7 +1,7 @@
-// Opt-in hosted messaging acceptance (production, or sandbox with DEPLOY_ENVIRONMENT=sandbox) using the root .env and generated fixtures.
+// Opt-in hosted messaging acceptance (production or sandbox) with generated fixtures; run through
+// pnpm test:hosted <url> --messaging --target <t>, which supplies the target's values and DEPLOY_ENVIRONMENT.
 // Requires the remote test app and logged-in Supabase CLI for scoped SQL cleanup.
-import { readFileSync, writeFileSync } from 'node:fs'
-import { parseEnv } from 'node:util'
+import { writeFileSync } from 'node:fs'
 import process from 'node:process'
 import console from 'node:console'
 import { URL } from 'node:url'
@@ -15,7 +15,7 @@ import { supabaseRefs } from '../../../scripts/configure-deployment.mjs'
 
 const { fetch, AbortSignal } = globalThis
 
-const env = parseEnv(readFileSync('.env', 'utf8'))
+const env = process.env
 const target = new URL(env.SUPABASE_URL)
 const origin = new URL(env.VITE_API_BASE_URL)
 const environment = process.env.DEPLOY_ENVIRONMENT ?? 'production'
@@ -101,7 +101,7 @@ try {
     execFileSync('pnpm',['exec','supabase','db','query','--linked','--project-ref',target.hostname.split('.')[0],'--file',cleanupProbe,'--output','json'],{stdio:'pipe',encoding:'utf8',timeout:30000})
   } catch { throw new Error('Run supabase login before testing; SQL cleanup access is required') }
   const readiness = await fetch('http://127.0.0.1:3302/api/health',{signal:AbortSignal.timeout(5000)})
-  requireValue(readiness.status===200,'Start pnpm run dev:remote before this test')
+  requireValue(readiness.status===200,'Start pnpm dev --remote before this test')
   const shape = await admin.from('conversations').select('id,source_key').limit(0)
   requireValue(!shape.error || ['42703', 'PGRST204'].includes(shape.error.code), `conversation_schema_${shape.error?.code}`)
   native = !shape.error

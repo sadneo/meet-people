@@ -13,16 +13,15 @@ not a second AuthScreen or automatic grant exchange.
 ### Google sign-in
 
 Local Google authentication is enabled in `supabase/config.toml`. Put
-`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in ignored `supabase/.env`
-(see `supabase/.env.example`). Supabase CLI loads this file; Vite/API use
-`.env.local`, which `pnpm env:local` regenerates. Never expose the secret through
-a `VITE_` variable.
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in the ignored root `.env`
+(see `.env.example`). `pnpm dev` and `pnpm supabase` load it before starting
+Supabase. Never expose the secret through a `VITE_` variable.
 
 Register a Google OAuth **Web application** client with authorized JavaScript
 origin `http://127.0.0.1:3000` and authorized redirect URI
 `http://127.0.0.1:54321/auth/v1/callback`. Add your account as a test user if the
 Google consent screen is External and in Testing. After changing credentials or
-provider configuration, run `pnpm supabase:stop` then `pnpm supabase:start`
+provider configuration, run `pnpm supabase stop` then `pnpm supabase start`
 (no database reset), followed by `pnpm dev`. Use the Google button at `/login`.
 The existing callback verifies the session and routes incomplete accounts through
 onboarding.

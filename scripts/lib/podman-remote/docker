@@ -1,0 +1,9 @@
+#!/bin/sh
+# Stdin-tar `cp` fails in podman's chroot-untar helper once another stack runs (even via the API); copying from a directory works.
+if [ "${1:-}" = cp ] && [ "${2:-}" = - ] && [ $# -eq 3 ]; then
+  tmp=$(mktemp -d) || exit 1
+  trap 'rm -rf "$tmp"' EXIT
+  tar -C "$tmp" -xf - && podman cp "$tmp/." "$3"
+  exit
+fi
+exec podman --remote "$@"

@@ -2,12 +2,12 @@
 
 The app already sends every request through `apiUrl()` (`src/platform/native.ts`), so moving off the
 local stack is configuration plus one-time hosting setup. Do the steps in order; `HOSTING-SETUP.md` and
-`pnpm hosting:configure` cover the web deploy and may already do some of steps 1-4.
+the Release workflow (which runs `pnpm hosting:configure`) cover the web deploy and may already do some of steps 1-4.
 
 ## 1. Hosted Supabase
 1. Create a project; note the **URL**, **publishable key** and **service-role key** (Settings -> API Keys).
 2. Push the schema: `pnpm exec supabase link --project-ref <ref>` then `pnpm exec supabase db push`.
-3. Regenerate types only against local (`pnpm supabase:types`); do not point it at production by accident.
+3. Regenerate types only against local (`pnpm db:types`); do not point it at production by accident.
 
 ## 2. Supabase Auth settings (Authentication -> URL Configuration)
 - **Site URL**: your web URL.
@@ -34,10 +34,11 @@ server. Deploy it as a Cloud Run **Job** with the same image and a scheduler if 
 so `https://<site>.web.app/api/health` works and the app needs only one base URL.
 
 ## 5. Build the Android app
-1. `copy .env.android.example .env.android` and fill in the hosted values.
-2. `pnpm android` (builds with `--mode android`, runs `cap sync`, opens Android Studio).
-3. Run on a device. For an emulator against your local stack, use the commented `10.0.2.2` block in
-   `.env.android.example`; cleartext is switched on automatically only for `http://` values.
+1. Put the hosted public values (Supabase URL, publishable key, project ref, API base URL, Android Maps key)
+   in that target's entry of `shared/targets.json`.
+2. `pnpm android --target sandbox|production` (builds with `--mode android`, runs `cap sync`, opens Android Studio).
+3. Run on a device. For an emulator against your local stack, run `pnpm dev:mobile` and `pnpm android --dev`
+   instead (see `ANDROID-DEV-MODE.md`); cleartext HTTP is switched on only for that build.
 
 ## 6. Verify on a device
 - Sign up with a real email; tapping the confirmation link opens Pebble.

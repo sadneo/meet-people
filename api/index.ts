@@ -79,7 +79,7 @@ app.use('/api/garden', createGardenRouter(ownerTransport))
 app.use('/api/dining', createDiningRouter(eventsClient, ownerTransport))
 
 app.get('/api/health', (_request, response) => {
-  response.json(HealthResponseSchema.parse({ status: 'ok' }))
+  response.json(HealthResponseSchema.parse({ status: 'ok', run: process.env.PEBBLE_RUN_ID }))
 })
 
 app.get('/api/hello', (request, response) => {

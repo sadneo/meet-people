@@ -18,7 +18,7 @@ the two migration snapshots written by `scripts/generate-product-migrations.mjs`
 Verify that the snapshots match their sources:
 
 ```sh
-pnpm test:unit tests/unit/product-migrations.test.ts
+pnpm exec vitest run tests/unit/product-migrations.test.ts
 ```
 
 Generated SQL retains the historical `docs/` source labels because those comments

@@ -1,11 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { mobileEntry } from './vite.mobile.config.js'
+import { runIdPlugin } from './dev/run-id.js'
 
 // Browser test process only: no .env loading, API server, proxy or real auth client.
 export default defineConfig({
   envDir: false,
-  plugins: [react(), mobileEntry, {
+  plugins: [react(), mobileEntry, runIdPlugin(), {
     name: 'isolated-browser-boundaries',
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
@@ -20,5 +21,5 @@ export default defineConfig({
       })
     },
   }],
-  server: { watch: { ignored: ['**/tmp/**', '**/Pebble-Garden-Asset-Work/**', '**/Pebble-Starter/**'] }, host: '127.0.0.1', port: 3194, strictPort: true },
+  server: { watch: { ignored: ['**/tmp/**', '**/Pebble-Garden-Asset-Work/**', '**/Pebble-Starter/**'] }, host: '127.0.0.1', port: Number(process.env.PEBBLE_BROWSER_PORT), strictPort: true },
 })

@@ -2,7 +2,7 @@
 
 This harness uses the **already installed** Node, pnpm, Supabase CLI, Docker,
 Playwright/Chromium and application dependencies. It does not install packages,
-download browsers, change global agent settings, write your normal `.env.local`,
+download browsers, change global agent settings, write your `.env`,
 or reset your development database. k6 and Hermes are not required.
 
 The initial implementation supports **Linux** (process birth-time verification
@@ -255,7 +255,7 @@ features remain out of scope.
 Maps are disabled by default. To enable paid Maps calls, stop the run and resume
 with `up RUN_ID --maps`. This reads only `VITE_GOOGLE_MAPS_API_KEY`,
 `GOOGLE_MAPS_SERVER_API_KEY` and `GOOGLE_MAPS_STORAGE_APPROVED=true` from the
-repository's private `.env.local`; development database settings are never loaded.
+repository's private `.env`; development database settings are never loaded.
 Keys are copied to private runtime state and removed by purge. Browser traffic is
 allowed only to the explicit Maps API/static and Google Fonts hosts in addition
 to the local services. Google sign-in remains blocked. The server Maps budget is

@@ -12,8 +12,9 @@ to a GitHub release, issue, repository, APK directory or chat. Losing the signin
 key can prevent updating existing direct-download installations. No off-device
 backup is created by this build process.
 
-Prerequisites: `.env.prod` verified public settings, `.android-build/` JDK/SDK,
-and the private signing files. Run from the project root:
+Prerequisites: the `production` entry of `shared/targets.json` (the script refuses
+while its `androidMapsKey` is null), `.android-build/` JDK/SDK, and the private
+signing files. Run from the project root:
 
 ```sh
 PEBBLE_VERSION_CODE=1 PEBBLE_VERSION_NAME=1.0.0 node scripts/build-android-release.mjs
@@ -25,13 +26,12 @@ PEBBLE_VERSION_CODE=1 PEBBLE_VERSION_NAME=1.0.0 node scripts/build-android-relea
 
 | Flavour | Package | Name | URL scheme | Endpoints from |
 |---|---|---|---|---|
-| `production` (default) | `garden.pebble.android` | Pebble | `com.cse416.meetpeople` | `.env.prod` |
-| `sandbox` | `garden.pebble.android.dev` | Pebble Dev | `com.cse416.meetpeople.dev` | `.env.sandbox` |
+| `production` (default) | `garden.pebble.android` | Pebble | `com.cse416.meetpeople` | `production` in `shared/targets.json` |
+| `sandbox` | `garden.pebble.android.dev` | Pebble Dev | `com.cse416.meetpeople.dev` | `sandbox` in `shared/targets.json` |
 
-Different packages install side by side. `.env.sandbox` is gitignored and supplied by the
-operator, like `.env.prod`, with `VITE_API_BASE_URL=https://web.dev.pebble.garden`,
-`VITE_SUPABASE_URL=https://wixdiotkntapwrbibaom.supabase.co`, the sandbox publishable key
-and Maps key. Build a sandbox release with:
+Different packages install side by side. Each environment's API URL, Supabase URL,
+publishable key, URL scheme and Maps key come from its entry in `shared/targets.json`;
+no env file is involved. Build a sandbox release with:
 
 ```sh
 PEBBLE_ENVIRONMENT=sandbox PEBBLE_VERSION_CODE=1 PEBBLE_VERSION_NAME=1.0.0 node scripts/build-android-release.mjs
@@ -39,17 +39,17 @@ PEBBLE_ENVIRONMENT=sandbox PEBBLE_VERSION_CODE=1 PEBBLE_VERSION_NAME=1.0.0 node 
 
 Outputs are named `Pebble-<environment>-<version>-<code>`. The script sets `VITE_APP_SCHEME`
 to match the flavour and rejects a bundle containing the other environment's Supabase URL.
-Android Studio Run and `pnpm build:android` default to `productionDebug`; pick `sandboxDebug`
-in Build Variants for Pebble Dev (set `VITE_APP_SCHEME=com.cse416.meetpeople.dev` in the
-env file you build with so auth links open it). `android/app/google-services.json` holds
-Firebase clients for both packages.
+`pnpm android --target sandbox|production` bundles the matching values and URL scheme.
+Android Studio Run defaults to `productionDebug`; pick `sandboxDebug` in Build Variants for
+Pebble Dev so the package matches the sandbox scheme. `android/app/google-services.json`
+holds Firebase clients for both packages.
 
 Increment versionCode for every published update; never overwrite a delivered
 release. The script outputs a signed APK and AAB plus checksums/source metadata in
 ignored `Pebble-APKs/`. The AAB is not uploaded anywhere. Only public frontend
 settings reach Vite; signing passwords enter only the Gradle child environment.
-Checks reject private env/key files, supplied backend credentials, a sandbox URL,
-missing production settings and debuggable APKs. Test installation and all real
+Checks reject private env/key files, any `.env` secret found in the APK, the other
+environment's Supabase URL, missing settings and debuggable APKs. Test installation and all real
 service flows before publishing; these checks alone do not certify release readiness.
 
 System Android backup is disabled to avoid backing up private WebView sessions.

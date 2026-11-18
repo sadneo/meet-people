@@ -7,10 +7,7 @@ routes and the ingestion branch's navigation stay as they were.
 ## Run locally
 
 ```bash
-pnpm supabase:start
-pnpm exec supabase migration up --local
-pnpm env:local
-pnpm dev
+pnpm dev   # starts this worktree's Supabase and applies pending migrations
 ```
 
 Open `http://127.0.0.1:3000/events`. Existing Ticketmaster and SB Engaged ingestion
@@ -18,9 +15,9 @@ populates `listings`; only active/rescheduled upcoming or ongoing events appear.
 The migration does not seed fictional events. An empty local database or one
 containing only past events produces an empty calendar.
 
-`pnpm env:local` writes both public browser configuration and private API
-configuration to ignored `.env.local`. The API development command loads that
-file. Deployed APIs need `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` set in
+`pnpm dev` passes both public browser configuration and private API
+configuration to the processes it starts; local Supabase values are never written
+to a file. Deployed APIs need `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` set in
 their environment; never put the service-role key in a `VITE_*` variable.
 
 Sign in from an event detail using an email link. Local email is delivered to
@@ -67,14 +64,15 @@ pnpm verify
 pnpm test:browser
 ```
 
-With the app API on port 3101, run the real authenticated integration check:
+With `pnpm dev` running and the app API on port 3101, run the real authenticated integration check
+(it finds this worktree's Supabase itself):
 
 ```bash
-node --env-file=.env.local tests/integration/local/test-events-live.mjs
+node tests/integration/local/test-events-live.mjs
 ```
 
-For the normal development port, prefix that command with
-`EVENTS_TEST_API_URL=http://127.0.0.1:3001`. The check only accepts a local Supabase
+For the API `pnpm dev` started, prefix that command with
+`EVENTS_TEST_API_URL=<api URL printed by pnpm dev>`. The check only accepts a local Supabase
 URL, creates a disposable event and two confirmed test accounts, then deletes
 them. `tests/integration/sql/event-company.sql` also checks group capacity, idempotency, leaving,
 cleanup, cancellations, and permissions inside a transaction that rolls back.

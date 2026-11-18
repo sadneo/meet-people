@@ -3,7 +3,7 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync, readdirSync, existsSync, copyFileSync, mkdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { parseEnv } from 'node:util'
+import { hostedTarget, privateValues, readSecrets } from './lib/targets.mjs'
 import { fileURLToPath } from 'node:url'
 import { resolve, join } from 'node:path'
 import process from 'node:process'
@@ -13,25 +13,29 @@ import { supabaseRefs } from './configure-deployment.mjs'
 const root = fileURLToPath(new URL('../', import.meta.url))
 const tools = join(root, '.android-build')
 const environment = process.env.PEBBLE_ENVIRONMENT || 'production'
+// Independent of shared/targets.json on purpose: a wrong edit there must not produce a release.
 const target = {
-  production: { file: '.env.prod', api: 'https://pebble.garden', packageId: 'garden.pebble.android', scheme: 'com.cse416.meetpeople', other: 'sandbox' },
-  sandbox: { file: '.env.sandbox', api: 'https://web.dev.pebble.garden', packageId: 'garden.pebble.android.dev', scheme: 'com.cse416.meetpeople.dev', other: 'production' },
+  production: { api: 'https://pebble.garden', packageId: 'garden.pebble.android', scheme: 'com.cse416.meetpeople', other: 'sandbox' },
+  sandbox: { api: 'https://web.dev.pebble.garden', packageId: 'garden.pebble.android.dev', scheme: 'com.cse416.meetpeople.dev', other: 'production' },
 }[environment]
 if (!target) throw new Error('PEBBLE_ENVIRONMENT must be production or sandbox.')
 const flavor = environment[0].toUpperCase() + environment.slice(1)
-const supplied = parseEnv(readFileSync(join(root, target.file), 'utf8'))
+const hosted = hostedTarget(['--target', environment], {})
+const supplied = { VITE_API_BASE_URL: hosted.apiBaseUrl, VITE_SUPABASE_URL: hosted.supabaseUrl,
+  VITE_SUPABASE_PUBLISHABLE_KEY: hosted.supabasePublishableKey, VITE_GOOGLE_MAPS_API_KEY: hosted.androidMapsKey }
+if (hosted.appScheme !== target.scheme) throw new Error(`${flavor} app scheme in shared/targets.json must be ${target.scheme}.`)
 const signing = JSON.parse(readFileSync(join(root, '.android-signing/release.json'), 'utf8'))
 const code = process.env.PEBBLE_VERSION_CODE
 const name = process.env.PEBBLE_VERSION_NAME
 if (!/^[1-9]\d*$/.test(code ?? '') || Number(code) > 2100000000 || !/^[0-9]+\.[0-9]+\.[0-9]+(?:-[a-z0-9.-]+)?$/.test(name ?? '')) throw new Error('Set an explicit positive PEBBLE_VERSION_CODE and semantic PEBBLE_VERSION_NAME.')
 if (supplied.VITE_API_BASE_URL !== target.api || supplied.VITE_SUPABASE_URL !== `https://${supabaseRefs[environment]}.supabase.co`) throw new Error(`${flavor} endpoints required.`)
 const env = { ...process.env }
-for (const key of Object.keys(env)) if (/^(VITE_|SUPABASE_|GOOGLE_MAPS_|SEARCH_LOCATION_|PEBBLE_KEY)/.test(key)) delete env[key]
+for (const key of Object.keys(env)) if (/^(VITE_|SUPABASE_|GOOGLE_MAPS_|SEARCH_LOCATION_|PEBBLE_KEY|CAP_)/.test(key)) delete env[key]
 for (const key of ['VITE_API_BASE_URL', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY', 'VITE_GOOGLE_MAPS_API_KEY']) {
-  if (!supplied[key]) throw new Error(`Missing ${key}`)
+  if (!supplied[key]) throw new Error(`Missing ${key}: fill in the ${environment} entry of shared/targets.json`)
   env[key] = supplied[key]
 }
-Object.assign(env, { VITE_APP_SCHEME: target.scheme, VITE_DEV_TOOLS: 'false', VITE_DEV_LOGIN_EMAIL: '', VITE_DEV_LOGIN_PASSWORD: '', CAP_ANDROID_MODE: 'production',
+Object.assign(env, { VITE_APP_SCHEME: target.scheme, VITE_DEV_TOOLS: 'false', VITE_DEV_LOGIN_EMAIL: '', VITE_DEV_LOGIN_PASSWORD: '',
   JAVA_HOME: join(tools, 'java', readdirSync(join(tools, 'java'))[0]), ANDROID_HOME: join(tools, 'sdk'), ANDROID_SDK_ROOT: join(tools, 'sdk'),
   GRADLE_USER_HOME: join(tools, 'gradle-cache'), ANDROID_USER_HOME: join(tools, 'android-user'), XDG_CACHE_HOME: join(tools, 'cache') })
 env.PATH = `${env.JAVA_HOME}/bin:${env.PATH}`
@@ -50,7 +54,7 @@ const apk = join(root, `android/app/build/outputs/apk/${environment}/release/app
 const listing = execFileSync('unzip', ['-Z1', apk], { encoding: 'utf8' }).trim().split('\n')
 if (listing.some(file => /(^|\/)\.env(?:\.|$)|\.jks$|\.keystore$|release\.json$/.test(file))) throw new Error('Unexpected private file in APK')
 const contents = execFileSync('unzip', ['-p', apk], { maxBuffer: 256 * 1024 * 1024 })
-for (const key of ['SUPABASE_SERVICE_ROLE_KEY', 'GOOGLE_MAPS_SERVER_API_KEY', 'SEARCH_LOCATION_SIGNING_KEY', 'VITE_DEV_LOGIN_EMAIL', 'VITE_DEV_LOGIN_PASSWORD']) if (supplied[key] && contents.includes(Buffer.from(supplied[key]))) throw new Error(`Forbidden credential bundled: ${key}`)
+for (const [key, value] of Object.entries(privateValues(readSecrets(root)))) if (contents.includes(Buffer.from(value))) throw new Error(`Forbidden credential bundled: ${key}`)
 if (contents.includes(Buffer.from(`https://${supabaseRefs[target.other]}.supabase.co`))) throw new Error(`${target.other} endpoint bundled`)
 for (const key of ['VITE_API_BASE_URL', 'VITE_SUPABASE_URL', 'VITE_GOOGLE_MAPS_API_KEY']) if (!contents.includes(Buffer.from(supplied[key]))) throw new Error(`Expected ${environment} setting missing: ${key}`)
 if (!contents.includes(Buffer.from(target.scheme))) throw new Error('Expected app scheme missing')

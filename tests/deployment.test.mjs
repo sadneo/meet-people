@@ -189,27 +189,32 @@ test('frontend builds reject the wrong branch, project, missing key or unresolve
 
 test('dev web and mobile include their own screens and toolbar; production web excludes mobile and development controls', () => {
   const env = { ...process.env, DEPLOY_ENVIRONMENT: 'sandbox', VITE_BUILD_BRANCH: 'dev', VITE_BUILD_SHA: 'a'.repeat(40), VITE_SUPABASE_URL: 'https://wixdiotkntapwrbibaom.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', VITE_GOOGLE_MAPS_API_KEY: 'test-browser-maps-key', GOOGLE_MAPS_SERVER_API_KEY: 'private-server-key-must-not-be-bundled', SEARCH_LOCATION_SIGNING_KEY: 'private-signing-key-must-not-be-bundled' }
-  const bundle = (product = 'web') => readdirSync(`dist/${product}/assets`).filter(file => file.endsWith('.js')).map(file => readFileSync(`dist/${product}/assets/${file}`, 'utf8')).join('\n')
-  execFileSync('pnpm', ['build:web:devtools'], { stdio: 'inherit', env })
-  assert.ok(bundle().includes('Development navigation'))
-  assert.ok(!bundle().includes('/__dev/login'))
-  assert.ok(!bundle().includes('Continue with email'))
-  execFileSync('pnpm', ['build:mobile:devtools'], { stdio: 'inherit', env })
-  assert.ok(bundle('mobile').includes('Development navigation'))
-  assert.ok(bundle('mobile').includes('Continue with email'))
-  assert.ok(!bundle('mobile').includes('/__dev/login'))
-  assert.ok(bundle('mobile').includes(env.VITE_GOOGLE_MAPS_API_KEY), 'Public Maps key is compiled into mobile')
-  execFileSync('node', ['scripts/configure-deployment.mjs', '--write-build-info'], { stdio: 'inherit', env })
-  for (const product of ['web', 'mobile']) {
-    assert.deepEqual(JSON.parse(readFileSync(`dist/${product}/build-info.json`, 'utf8')), { branch: 'dev', sha: env.VITE_BUILD_SHA, supabaseUrl: env.VITE_SUPABASE_URL, product })
-    assert.ok(bundle(product).includes(env.VITE_SUPABASE_URL))
-    assert.ok(!bundle(product).includes(env.GOOGLE_MAPS_SERVER_API_KEY))
-    assert.ok(!bundle(product).includes(env.SEARCH_LOCATION_SIGNING_KEY))
-    assert.ok(!readFileSync(`dist/${product}/build-info.json`, 'utf8').includes('Maps'))
+  const dist = mkdtempSync(join(tmpdir(), 'pebble-dist-'))
+  const bundle = (product = 'web') => readdirSync(`${dist}/${product}/assets`).filter(file => file.endsWith('.js')).map(file => readFileSync(`${dist}/${product}/assets/${file}`, 'utf8')).join('\n')
+  try {
+    execFileSync('pnpm', ['build:web', '--outDir', `${dist}/web`, '--emptyOutDir'], { stdio: 'inherit', env: { ...env, VITE_DEV_TOOLS: 'true' } })
+    assert.ok(bundle().includes('Development navigation'))
+    assert.ok(!bundle().includes('/__dev/login'))
+    assert.ok(!bundle().includes('Continue with email'))
+    execFileSync('pnpm', ['build:mobile', '--outDir', `${dist}/mobile`, '--emptyOutDir'], { stdio: 'inherit', env: { ...env, VITE_DEV_TOOLS: 'true' } })
+    assert.ok(bundle('mobile').includes('Development navigation'))
+    assert.ok(bundle('mobile').includes('Continue with email'))
+    assert.ok(!bundle('mobile').includes('/__dev/login'))
+    assert.ok(bundle('mobile').includes(env.VITE_GOOGLE_MAPS_API_KEY), 'Public Maps key is compiled into mobile')
+    execFileSync('node', ['scripts/configure-deployment.mjs', '--write-build-info'], { stdio: 'inherit', env: { ...env, PEBBLE_DIST: dist } })
+    for (const product of ['web', 'mobile']) {
+      assert.deepEqual(JSON.parse(readFileSync(`${dist}/${product}/build-info.json`, 'utf8')), { branch: 'dev', sha: env.VITE_BUILD_SHA, supabaseUrl: env.VITE_SUPABASE_URL, product })
+      assert.ok(bundle(product).includes(env.VITE_SUPABASE_URL))
+      assert.ok(!bundle(product).includes(env.GOOGLE_MAPS_SERVER_API_KEY))
+      assert.ok(!bundle(product).includes(env.SEARCH_LOCATION_SIGNING_KEY))
+      assert.ok(!readFileSync(`${dist}/${product}/build-info.json`, 'utf8').includes('Maps'))
+    }
+    execFileSync('pnpm', ['build:web', '--outDir', `${dist}/web`, '--emptyOutDir'], { stdio: 'inherit', env: { ...process.env, VITE_DEV_TOOLS: 'false' } })
+    assert.ok(!bundle().includes('Development navigation'))
+    assert.ok(!bundle().includes('/__dev/login'))
+  } finally {
+    rmSync(dist, { recursive: true, force: true })
   }
-  execFileSync('pnpm', ['build:web'], { stdio: 'inherit', env: { ...process.env, VITE_DEV_TOOLS: 'false' } })
-  assert.ok(!bundle().includes('Development navigation'))
-  assert.ok(!bundle().includes('/__dev/login'))
 })
 
 test('hosted smoke checks reject incorrect product, branch, commit, backend and frontend bundles', () => {

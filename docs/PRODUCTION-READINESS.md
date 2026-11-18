@@ -178,6 +178,8 @@ data, auth configuration, deployment or backup settings were deliberately change
 - GitHub production variables identify this same project, URL and public key.
   The local ignored `.env.prod` now uses those confirmed public values. Backend
   secrets and Maps keys remain blank; no production secrets were fetched.
+  (Later retired: `.env.prod` and the `.env.android*` files are no longer read.
+  Public values now live in `shared/targets.json`; secrets in the single `.env`.)
 
 ### Launch gates
 
@@ -364,7 +366,7 @@ deployed pipeline or any provider settings.
 - The production deployment workflow runs this gate before Edge Function deployment,
   database migrations, canonical schema installation, Auth configuration or API/site
   deployment. Sandbox behavior remains unchanged. CI override does not bypass it.
-- `pnpm test:deployment` now includes the new recovery/migration audit unit tests.
+- `pnpm test` now includes the new recovery/migration audit unit tests.
   All 16 deployment-related tests passed, along with focused lint and diff checks.
 - Running the recovery gate against live production correctly refused permission
   because no qualifying recovery point exists. This read-only check did not create

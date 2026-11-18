@@ -11,7 +11,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   { languageOptions: { parserOptions: { tsconfigRootDir: import.meta.dirname } } },
   {
-    files: ['scripts/**/*.{js,mjs,cjs}', 'tools/qa-real-users/**/*.mjs'],
+    files: ['scripts/**/*.{js,mjs,cjs}', 'tools/qa-real-users/**/*.mjs', 'tests/scripts/*.mjs'],
     languageOptions: { globals: globals.node },
   },
   {

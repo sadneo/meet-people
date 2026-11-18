@@ -77,7 +77,7 @@ existing cached posters reduce the actual backlog. Counts vary with the calendar
 Regression checks:
 
 ```sh
-pnpm test:unit tests/unit/sbengaged-month-sync.test.ts
+pnpm exec vitest run tests/unit/sbengaged-month-sync.test.ts
 # Local SQL test fixtures roll back:
 docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/sbengaged-month-sync.sql
 deno check supabase/functions/ingest-sbengaged/index.ts supabase/functions/enrich-sbengaged/index.ts supabase/functions/export-sbengaged/index.ts
@@ -86,9 +86,9 @@ deno check supabase/functions/ingest-sbengaged/index.ts supabase/functions/enric
 ## Backfill existing local listings
 
 ```sh
-pnpm events:images --dry-run
-pnpm events:images
-pnpm events:images --limit 100
+pnpm demo images --dry-run
+pnpm demo images
+pnpm demo images --limit 100
 ```
 
 The tool accepts only the verified running local `meet-people` Supabase project.

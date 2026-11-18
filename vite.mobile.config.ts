@@ -19,6 +19,8 @@ export const mobileEntry: Plugin = {
 }
 
 export default mergeConfig(config, {
+  // APKs and the mobile site get only the VITE_* values their build script passes, never .env's.
+  envDir: false,
   plugins: [mobileEntry],
   build: { outDir: 'dist/mobile' },
   server: { port: Number(process.env.VITE_PORT ?? 3002) },

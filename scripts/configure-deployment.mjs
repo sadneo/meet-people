@@ -62,7 +62,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const info = validateFrontendConfiguration(process.env)
     if (process.argv.includes('--write-build-info')) {
       for (const product of ['web', 'mobile']) {
-        writeFileSync(`dist/${product}/build-info.json`, JSON.stringify({ ...info, product }) + '\n')
+        writeFileSync(`${process.env.PEBBLE_DIST ?? 'dist'}/${product}/build-info.json`, JSON.stringify({ ...info, product }) + '\n')
       }
     }
     console.info(`Validated ${info.branch} frontend configuration.`)
