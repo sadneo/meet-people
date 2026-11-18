@@ -24,6 +24,26 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Same code, separate installs: production is today's app, sandbox is "Pebble Dev" against the sandbox backend.
+    flavorDimensions = ["environment"]
+    productFlavors {
+        production {
+            dimension "environment"
+            isDefault = true
+            resValue "string", "app_name", "Pebble"
+            resValue "string", "title_activity_main", "Pebble"
+            resValue "string", "custom_url_scheme", "com.cse416.meetpeople"
+            manifestPlaceholders = [appScheme: "com.cse416.meetpeople"]
+        }
+        sandbox {
+            dimension "environment"
+            applicationIdSuffix ".dev"
+            resValue "string", "app_name", "Pebble Dev"
+            resValue "string", "title_activity_main", "Pebble Dev"
+            resValue "string", "custom_url_scheme", "com.cse416.meetpeople.dev"
+            manifestPlaceholders = [appScheme: "com.cse416.meetpeople.dev"]
+        }
+    }
     signingConfigs {
         if (signingPath) {
             production {
@@ -68,6 +88,10 @@ try {
     def servicesJSON = file('google-services.json')
     if (servicesJSON.text) {
         apply plugin: 'com.google.gms.google-services'
+        // shortcut: sandbox has no Firebase client yet, so it builds without push; add garden.pebble.android.dev to google-services.json to enable it.
+        if (!servicesJSON.text.contains('"garden.pebble.android.dev"')) {
+            tasks.configureEach { if (it.name ==~ /processSandbox\w*GoogleServices/) it.enabled = false }
+        }
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")

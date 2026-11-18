@@ -23,13 +23,13 @@
             </intent-filter>
 
             <!-- Email confirm / magic-link / password-reset links from Supabase.
-                 Must match APP_SCHEME in src/platform/native.ts and the Supabase
-                 Auth redirect allow-list: com.cse416.meetpeople://app/** -->
+                 appScheme comes from the product flavour (com.cse416.meetpeople, or .dev for sandbox).
+                 Must match APP_SCHEME in src/platform/native.ts and the Supabase Auth redirect allow-list. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.cse416.meetpeople" android:host="app" />
+                <data android:scheme="${appScheme}" android:host="app" />
             </intent-filter>
 
         </activity>

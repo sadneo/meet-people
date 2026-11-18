@@ -309,7 +309,7 @@ test('Android CI installs explicit current SDK packages instead of obsolete acti
   assert.ok(setup, 'Android setup must override the action package defaults')
   assert.ok(setup.includes("packages: 'platform-tools platforms;android-36 build-tools;36.0.0'"))
   assert.ok(setup.includes("log-accepted-android-sdk-licenses: 'false'"))
-  assert.ok(workflow.includes('assembleDebug'), 'Compilation remains required')
+  assert.ok(workflow.includes('assembleProductionDebug assembleSandboxDebug'), 'Both flavours must compile')
 })
 
 test('pending Android push migrations follow the existing hosted migration head in dependency order', () => {
