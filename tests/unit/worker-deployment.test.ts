@@ -21,11 +21,12 @@ it('deploys and schedules the same workers in both environments, each with only 
     expect(sandbox.status, sandbox.stderr).toBe(0)
     expect(sandbox.stdout).toContain('run jobs deploy pebble-push-dispatcher-sandbox')
     expect(sandbox.stdout).toContain('scheduler jobs create http pebble-event-group-worker-sandbox-schedule')
+    expect(sandbox.stdout).toContain('--oauth-service-account-email=pebble-scheduler-sandbox@cse416-meet-people.iam.gserviceaccount.com')
     expect(sandbox.stdout).toContain('EVENT_GROUP_WORKER_CREDENTIALS_JSON=pebble-event-group-worker-credentials-sandbox:1')
     expect(sandbox.stdout).toContain('SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role-sandbox:latest')
     expect(production.stdout).not.toContain('sandbox')
     expect(production.stdout).not.toContain('--execute-now')
-    const normalize = (output: string) => output.replaceAll('pebble-worker-sandbox@', 'pebble-event-group-worker@').replace(/-?(sandbox|production)/g, '').replace(/https:\/\/\w+\.supabase\.co/g, 'DATABASE')
+    const normalize = (output: string) => output.replaceAll('pebble-worker-sandbox@', 'pebble-event-group-worker@').replaceAll('pebble-scheduler-sandbox@', 'pebble-worker-scheduler@').replace(/-?(sandbox|production)/g, '').replace(/https:\/\/\w+\.supabase\.co/g, 'DATABASE')
     expect(normalize(sandbox.stdout)).toBe(normalize(production.stdout))
     for (const mismatch of [
       { ...environments.sandbox, SUPABASE_URL: environments.production.SUPABASE_URL },

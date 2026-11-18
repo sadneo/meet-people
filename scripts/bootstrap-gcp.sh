@@ -9,7 +9,10 @@ REGION=us-east4
 DEPLOYER="github-deployer$SUFFIX@$GCP_PROJECT_ID.iam.gserviceaccount.com"
 RUNTIME="pebble-api$SUFFIX@$GCP_PROJECT_ID.iam.gserviceaccount.com"
 PUSH="pebble-push-dispatcher$SUFFIX@$GCP_PROJECT_ID.iam.gserviceaccount.com"
-SCHEDULER="pebble-worker-scheduler$SUFFIX@$GCP_PROJECT_ID.iam.gserviceaccount.com"
+# Account IDs are at most 30 characters, so sandbox shortens the scheduler name.
+SCHEDULER_ID=pebble-worker-scheduler
+if [ "$ENVIRONMENT" = sandbox ]; then SCHEDULER_ID=pebble-scheduler-sandbox; fi
+SCHEDULER="$SCHEDULER_ID@$GCP_PROJECT_ID.iam.gserviceaccount.com"
 REPOSITORY="meet-people$SUFFIX"
 PROVIDER="github-actions$SUFFIX"
 POOL="github$SUFFIX"
@@ -22,7 +25,7 @@ gcloud services enable run.googleapis.com artifactregistry.googleapis.com \
   sts.googleapis.com firebase.googleapis.com firebasehosting.googleapis.com monitoring.googleapis.com \
   cloudscheduler.googleapis.com fcm.googleapis.com \
   --project="$GCP_PROJECT_ID" --quiet
-for name in "github-deployer$SUFFIX" "pebble-api$SUFFIX" "$WORKER_ID" "pebble-push-dispatcher$SUFFIX" "pebble-worker-scheduler$SUFFIX"; do
+for name in "github-deployer$SUFFIX" "pebble-api$SUFFIX" "$WORKER_ID" "pebble-push-dispatcher$SUFFIX" "$SCHEDULER_ID"; do
   if ! gcloud iam service-accounts describe "$name@$GCP_PROJECT_ID.iam.gserviceaccount.com" --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
     gcloud iam service-accounts create "$name" --project="$GCP_PROJECT_ID" --quiet
   fi

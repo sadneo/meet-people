@@ -18,7 +18,8 @@ const ensureIdentity = name => {
   return email
 }
 const pushIdentity = ensureIdentity('pebble-push-dispatcher'+suffix)
-const scheduler = ensureIdentity('pebble-worker-scheduler'+suffix)
+// Account IDs are at most 30 characters, so sandbox shortens the scheduler name.
+const scheduler = ensureIdentity(environment === 'sandbox' ? 'pebble-scheduler-sandbox' : 'pebble-worker-scheduler')
 for (const worker of [
   { name:'pebble-push-dispatcher'+suffix, identity:pushIdentity, main:'push-dispatcher-main', env:'FIREBASE_PROJECT_ID='+project+',PUSH_DISPATCH_ENABLED=true', secret:`SUPABASE_SERVICE_ROLE_KEY=pebble-supabase-service-role${suffix}:latest`, schedule:'* * * * *' },
   { name:groupJob, identity:groupIdentity, main:'event-group-worker-main', env:`EVENT_GROUP_WORKER_ENABLED=true,MATCHMAKING_SCORING_ENABLED=true,EVENT_GROUP_WORKER_ID=${environment}-worker`, secret:`EVENT_GROUP_WORKER_CREDENTIALS_JSON=pebble-event-group-worker-credentials-${environment}:1`, schedule:'*/2 * * * *' },
