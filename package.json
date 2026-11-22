@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:mobile": "node scripts/dev.mjs --android",
+    "dev:check": "node scripts/dev.mjs --check",
+    "dev:status": "node scripts/dev.mjs --status",
     "build": "pnpm typecheck && pnpm build:web && pnpm build:mobile && pnpm build:api",
     "build:web": "vite build",
     "build:mobile": "vite build --config vite.mobile.config.ts",

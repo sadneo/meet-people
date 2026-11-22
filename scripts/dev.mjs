@@ -9,6 +9,7 @@ import { freePorts, isFree } from './lib/ports.mjs'
 import { childEnv, currentStack, startDevStack } from './lib/stack.mjs'
 import { waitForRun } from './lib/wait.mjs'
 import { main as doctor } from './doctor.mjs'
+import { main as status } from './status.mjs'
 
 const root = resolve(fileURLToPath(import.meta.url), '../..')
 const attempts = 3
@@ -47,9 +48,10 @@ function mainCheckout(base) {
 }
 
 export function helpText(list) {
-  return ['Usage: pnpm dev [--check [--json] | --remote --target sandbox|production | --help]', '',
+  return ['Usage: pnpm dev [--check [--json] | --status | --remote --target sandbox|production | --help]', '',
     'pnpm dev starts the local stack for this worktree on its own Supabase and free ports. Secrets come from .env.',
-    '--check runs read-only diagnostics; --remote runs web + API against a hosted project.',
+    '--check (pnpm dev:check) runs read-only diagnostics; --status (pnpm dev:status) lists every stack, app and test process on this machine;',
+    '--remote runs web + API against a hosted project.',
     `pnpm dev:mobile is for the Android emulator only: the stack and the API on port ${androidApiPort}, no web servers. Not for browsers.`, '',
     `${'part'.padEnd(10)}${'required'.padEnd(10)}requires`,
     ...list.map(part => `${part.name.padEnd(10)}${(part.required ? 'yes' : 'no').padEnd(10)}${part.needs}`)].join('\n')
@@ -113,6 +115,7 @@ async function remote(args) {
 export async function main(args = process.argv.slice(2), { engineReachable = reachable, portFree = isFree, log = console.log, error = console.error } = {}) {
   if (args.includes('--help')) { log(helpText(parts({ root }))); return 0 }
   if (args.includes('--check')) return doctor(args.filter(arg => arg !== '--check'), { stack: currentStack(root, {}) })
+  if (args.includes('--status')) return status(root, { log })
   const copy = () => { for (const file of copySecrets(root, mainCheckout(root))) log(`Copied ${file} from the main checkout.`) }
   if (args.includes('--remote')) { copy(); return remote(args.filter(arg => arg !== '--remote')) }
   const android = args.includes('--android')

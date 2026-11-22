@@ -19,7 +19,8 @@ tools with `nix develop`.
 ```sh
 pnpm install --frozen-lockfile
 pnpm dev --help   # what pnpm dev starts and what each part requires
-pnpm dev --check  # read-only diagnostics
+pnpm dev:check    # read-only diagnostics (same as pnpm dev --check)
+pnpm dev:status   # every stack, app server and test run on this machine, plus leftovers
 pnpm dev
 ```
 

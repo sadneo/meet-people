@@ -10,6 +10,8 @@ type Engine = (args: string[]) => Promise<string>
 export function devProjectId(root?: string, home?: string): string
 export function credentialsDir(projectId: string, home?: string): string
 export function stackEnv(stack: Stack): Record<string, string>
+export function readOwner(projectId: string): { pid: number; host: string; started: string } | undefined
+export function alive(pid: number): boolean
 export function devStack(root?: string, deps?: { container?: Engine; home?: string }): Promise<Stack>
 export function testStack(runId: string): Promise<Stack>
 export function startStack(

@@ -156,11 +156,11 @@ export function assertLocalStack(url, stack) {
 // A fixed per-user location: every agent and shell sees the same owner files whatever its temp dir.
 const ownerFile = projectId => join(process.env.XDG_STATE_HOME || join(homedir(), '.local/state'), 'pebble/stacks', `${projectId}.json`)
 
-function readOwner(projectId) {
+export function readOwner(projectId) {
   try { return JSON.parse(readFileSync(ownerFile(projectId), 'utf8')) } catch { return undefined }
 }
 
-function alive(pid) {
+export function alive(pid) {
   if (!pid) return false
   try { process.kill(pid, 0); return true } catch (error) { return error.code !== 'ESRCH' }
 }
