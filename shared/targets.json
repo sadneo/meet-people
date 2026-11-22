@@ -8,8 +8,8 @@
     "androidMapsKey": "AIzaSyAqYGUSZD12OhU5Kb-mPKemWIsb5Bn8SR8",
     "appName": "Pebble Dev",
     "iosBundleId": "garden.pebble.ios.dev",
-    "iosFirebaseAppId": null,
-    "iosFirebaseApiKey": null
+    "iosFirebaseAppId": "1:368545465466:ios:42b0e66390ede0637be7c3",
+    "iosFirebaseApiKey": "AIzaSyCTirIVv0HuEL0AIVa5ciof0kdJUwiU_2k"
   },
   "production": {
     "supabaseUrl": "https://wacgxhsdhrqigrmqaonc.supabase.co",
@@ -20,7 +20,7 @@
     "androidMapsKey": null,
     "appName": "Pebble",
     "iosBundleId": "garden.pebble.ios",
-    "iosFirebaseAppId": null,
-    "iosFirebaseApiKey": null
+    "iosFirebaseAppId": "1:368545465466:ios:dbae4ab701bdc3b57be7c3",
+    "iosFirebaseApiKey": "AIzaSyCTirIVv0HuEL0AIVa5ciof0kdJUwiU_2k"
   }
 }

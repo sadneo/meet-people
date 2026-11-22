@@ -3,6 +3,19 @@
 The iOS app is the same Capacitor shell as Android (`dist/mobile` inside a WebView). It was scaffolded on
 Linux and **has never been built**: everything below "On the Mac" is the first verification pass.
 
+## Status
+
+| Step | State |
+|---|---|
+| Xcode project, targets, push code, `ios` push platform, docs | Done (branch `feat/ios`), unverified |
+| Firebase iOS apps registered, ids in `shared/targets.json` (§2 steps 1–2) | Done |
+| Apple Developer account for `dev.pebble.garden@gmail.com` (§1) | Deferred |
+| APNs key uploaded to Firebase (§2 step 3) | Deferred: needs the Apple account |
+| App Store Connect record (§1 step 6) | Deferred: needs the Apple account |
+| Migration `20261122000000_push_devices_ios.sql` on sandbox and production (§3) | Not applied |
+| First build, `Package.resolved` committed, first-run checklist (§4) | Deferred: needs the Mac |
+| Sign in with Apple (§5) | Not started; likely required for App Store review |
+
 ## What is in the repo
 
 | Piece | Where |
@@ -24,7 +37,9 @@ built at a time (Android uses flavours instead).
 
 ## 1. Apple Developer account (any computer)
 
-1. Make sure your Apple ID has two-factor authentication on (appleid.apple.com).
+The account belongs to the group address `dev.pebble.garden@gmail.com`.
+
+1. Create an Apple ID for that address (account.apple.com) and turn on two-factor authentication.
 2. Enroll at https://developer.apple.com/programs/enroll/ ($99/year).
    - **Individual**: the App Store shows your personal name as the seller. Usually approved within 48 hours.
    - **Organization**: shows the organization's name, but needs a legal entity, a D-U-N-S number (free, can
@@ -43,14 +58,13 @@ built at a time (Android uses flavours instead).
 
 Push goes through the same Firebase project as Android (`cse416-meet-people`); the dispatcher does not change.
 
-1. Firebase console → Project settings → **Add app → iOS**, twice: `garden.pebble.ios` and `garden.pebble.ios.dev`.
-   Skip the "download config file" and SDK steps: the app reads its ids from `shared/targets.json`.
-2. From each app's `GoogleService-Info.plist` (or the app's settings page) copy `GOOGLE_APP_ID` and `API_KEY`
-   into `iosFirebaseAppId` and `iosFirebaseApiKey` of the matching entry in `shared/targets.json`. Both are public ids.
-3. Project settings → **Cloud Messaging** → each iOS app → APNs Authentication Key → upload the `.p8`
-   with its Key ID and your Team ID.
-
-Until step 2 is done the app runs normally, but turning notifications on reports a failure.
+1. Done: iOS apps "Pebble" (`garden.pebble.ios`, `1:368545465466:ios:dbae4ab701bdc3b57be7c3`) and "Pebble Dev"
+   (`garden.pebble.ios.dev`, `1:368545465466:ios:42b0e66390ede0637be7c3`) are registered. No
+   `GoogleService-Info.plist` is needed: the app reads its ids from `shared/targets.json`.
+2. Done: `iosFirebaseAppId` and `iosFirebaseApiKey` are filled in for both targets (public ids; both apps share the
+   auto-created "iOS key").
+3. **Deferred.** Project settings → **Cloud Messaging** → each iOS app → APNs Authentication Key → upload the `.p8`
+   from §1 step 5 with its Key ID and Team ID. Until then the app registers a token, but nothing is delivered.
 
 ## 3. Database
 
