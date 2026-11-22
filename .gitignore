@@ -36,3 +36,5 @@ qa/**/*.png
 qa/runs/**/*.json
 # Per-worktree Supabase stack identity.
 /.pebble/
+# Written by pnpm ios from shared/targets.json.
+/ios/App/Pebble.target.xcconfig

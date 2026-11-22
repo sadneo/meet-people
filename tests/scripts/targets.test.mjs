@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import { hostedBuildEnv, hostedTarget, privateValues, readSecrets, withoutTarget } from '../../scripts/lib/targets.mjs'
+import { hostedBuildEnv, hostedTarget, iosTargetXcconfig, privateValues, readSecrets, withoutTarget } from '../../scripts/lib/targets.mjs'
 
 test('only secret-named .env values count as private, so public IDs never fail a release scan', () => {
   const secrets = { GOOGLE_CLIENT_ID: 'x.apps.googleusercontent.com', FIREBASE_PROJECT_ID: 'cse416-meet-people', GOOGLE_CLIENT_SECRET: 'g-secret',
@@ -38,6 +38,15 @@ test('a target combines committed public values with its own prefixed secret', (
   assert.equal(production.apiBaseUrl, 'https://pebble.garden')
   assert.equal(production.serviceRoleKey, 'production-key')
   assert.equal(hostedTarget(['--target', 'sandbox'], {}).serviceRoleKey, undefined)
+})
+
+test('an iOS target gets its own bundle id and the URL scheme the web build uses', () => {
+  const sandbox = iosTargetXcconfig(hostedTarget(['--target', 'sandbox'], {}))
+  assert.match(sandbox, /^PEBBLE_BUNDLE_ID = garden\.pebble\.ios\.dev$/m)
+  assert.match(sandbox, /^PEBBLE_DISPLAY_NAME = Pebble Dev$/m)
+  assert.match(sandbox, new RegExp(`^PEBBLE_APP_SCHEME = ${hostedBuildEnv(hostedTarget(['--target', 'sandbox'], {}), {}).VITE_APP_SCHEME.replaceAll('.', '\\.')}$`, 'm'))
+  assert.match(iosTargetXcconfig(hostedTarget(['--target', 'production'], {})), /^PEBBLE_BUNDLE_ID = garden\.pebble\.ios$/m)
+  assert.doesNotMatch(sandbox, /null|undefined/)
 })
 
 test('withoutTarget strips the flag and its value only', () => {

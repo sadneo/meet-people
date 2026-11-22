@@ -68,7 +68,7 @@ Web (`src/web/App.tsx`) is the desktop-first public website: a demo-matched land
 page, event browsing and legal pages. It has no Sign in link. Until an app listing exists, the
 Android badge opens Google Play's general store; the iOS badge is non-interactive.
 Web hosts no authentication forms or private destinations. Mobile (`src/mobile/App.tsx`) is the application,
-used by Capacitor Android and the browser preview. Signed-out startup opens login;
+used by Capacitor Android, Capacitor iOS and the browser preview. Signed-out startup opens login;
 returning sessions pass through account readiness to Garden or onboarding.
 
 The browser requires `VITE_SUPABASE_URL` and
@@ -112,7 +112,8 @@ The website builds to `dist/web`, mobile to `dist/mobile`, and the server to `di
 (`pnpm build`, or `build:web`, `build:mobile`, `build:api`). Production runs the compiled
 output with `node dist/api/api/server.js`. `pnpm android --target sandbox|production`
 builds mobile against that hosted project from `shared/targets.json` and syncs it to
-Capacitor (`pnpm android --dev` builds the skip-login variant for `pnpm dev:mobile`). Prefix `VITE_DEV_TOOLS=true` to `build:web` or `build:mobile` for the devtools variants.
+Capacitor (`pnpm android --dev` builds the skip-login variant for `pnpm dev:mobile`).
+`pnpm ios` takes the same flags and needs a Mac; see [iOS](docs/IOS.md). Prefix `VITE_DEV_TOOLS=true` to `build:web` or `build:mobile` for the devtools variants.
 Releases from `dev` publish web to `web.dev.pebble.garden` and mobile to
 `mobile.dev.pebble.garden`, both using `pebble-sandbox`. Releases from `main`
 publish web to `pebble.garden` using `pebble-production`.

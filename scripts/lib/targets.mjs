@@ -29,6 +29,16 @@ export function hostedBuildEnv(target, base = process.env) {
     VITE_APP_SCHEME: target.appScheme, ...(target.androidMapsKey && { VITE_GOOGLE_MAPS_API_KEY: target.androidMapsKey }) }
 }
 
+// Overrides ios/App/Pebble.xcconfig, so one Xcode target builds either app (like Android's flavours).
+export const iosTargetXcconfig = target => [
+  `PEBBLE_BUNDLE_ID = ${target.iosBundleId}`,
+  `PEBBLE_DISPLAY_NAME = ${target.appName}`,
+  `PEBBLE_APP_SCHEME = ${target.appScheme}`,
+  `PEBBLE_FIREBASE_APP_ID = ${target.iosFirebaseAppId ?? ''}`,
+  `PEBBLE_FIREBASE_API_KEY = ${target.iosFirebaseApiKey ?? ''}`,
+  '',
+].join('\n')
+
 export function withoutTarget(args) {
   const at = args.indexOf('--target')
   return at < 0 ? args : args.filter((_, index) => index !== at && index !== at + 1)

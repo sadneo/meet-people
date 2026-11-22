@@ -5,7 +5,11 @@
     "supabaseProjectRef": "wixdiotkntapwrbibaom",
     "apiBaseUrl": "https://web.dev.pebble.garden",
     "appScheme": "com.cse416.meetpeople.dev",
-    "androidMapsKey": "AIzaSyAqYGUSZD12OhU5Kb-mPKemWIsb5Bn8SR8"
+    "androidMapsKey": "AIzaSyAqYGUSZD12OhU5Kb-mPKemWIsb5Bn8SR8",
+    "appName": "Pebble Dev",
+    "iosBundleId": "garden.pebble.ios.dev",
+    "iosFirebaseAppId": null,
+    "iosFirebaseApiKey": null
   },
   "production": {
     "supabaseUrl": "https://wacgxhsdhrqigrmqaonc.supabase.co",
@@ -13,6 +17,10 @@
     "supabaseProjectRef": "wacgxhsdhrqigrmqaonc",
     "apiBaseUrl": "https://pebble.garden",
     "appScheme": "com.cse416.meetpeople",
-    "androidMapsKey": null
+    "androidMapsKey": null,
+    "appName": "Pebble",
+    "iosBundleId": "garden.pebble.ios",
+    "iosFirebaseAppId": null,
+    "iosFirebaseApiKey": null
   }
 }

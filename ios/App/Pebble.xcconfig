@@ -1,0 +1,12 @@
+// Production identity, used when no target has been built. `pnpm ios --target ...` and `pnpm ios --dev`
+// write Pebble.target.xcconfig (gitignored) from shared/targets.json, which overrides these values.
+// PEBBLE_APP_SCHEME must match APP_SCHEME in src/platform/native.ts and the Supabase redirect allow-list.
+PEBBLE_BUNDLE_ID = garden.pebble.ios
+PEBBLE_DISPLAY_NAME = Pebble
+PEBBLE_APP_SCHEME = com.cse416.meetpeople
+PEBBLE_FIREBASE_APP_ID =
+PEBBLE_FIREBASE_API_KEY =
+PEBBLE_FIREBASE_PROJECT_ID = cse416-meet-people
+PEBBLE_FIREBASE_SENDER_ID = 368545465466
+CODE_SIGN_ENTITLEMENTS = App/App.entitlements
+#include? "Pebble.target.xcconfig"

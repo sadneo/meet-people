@@ -52,7 +52,7 @@ export function helpText(list) {
     'pnpm dev starts the local stack for this worktree on its own Supabase and free ports. Secrets come from .env.',
     '--check (pnpm dev:check) runs read-only diagnostics; --status (pnpm dev:status) lists every stack, app and test process on this machine;',
     '--remote runs web + API against a hosted project.',
-    `pnpm dev:mobile is for the Android emulator only: the stack and the API on port ${androidApiPort}, no web servers. Not for browsers.`, '',
+    `pnpm dev:mobile is for the Android emulator and iOS simulator only: the stack and the API on port ${androidApiPort}, no web servers. Not for browsers.`, '',
     `${'part'.padEnd(10)}${'required'.padEnd(10)}requires`,
     ...list.map(part => `${part.name.padEnd(10)}${(part.required ? 'yes' : 'no').padEnd(10)}${part.needs}`)].join('\n')
 }
@@ -95,7 +95,7 @@ async function launch(context, stack, keys, { log, interrupt, signal }) {
     throw error
   }
   log(`\n${servers.map(name => `${name.padEnd(8)}${base(ports[name])}`).join('\n')}`)
-  if (context.android) log(`Android emulator only: the dev APK (pnpm android --dev) reaches this API at http://10.0.2.2:${androidApiPort}. Not for browsers.`)
+  if (context.android) log(`Emulators only: pnpm android --dev reaches this API at http://10.0.2.2:${androidApiPort}, pnpm ios --dev at http://127.0.0.1:${androidApiPort}. Not for browsers.`)
   log(`supabase  ${keys.apiUrl}  (studio ${base(stack.ports.studio)})`)
   for (const part of list) if (!part.required && !part.ready) log(`skipped ${part.name}: needs ${part.needs}`)
   const failed = await Promise.race([result.then(() => null, () => null), died.then(() => null, error => error)])
