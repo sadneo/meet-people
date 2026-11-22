@@ -59,8 +59,13 @@ describe('POST /api/push/devices', () => {
     const { client, upsert } = fakeClient()
     const call = await start(client)
     expect((await call('POST', { token: 'jwt', body: { token: 'short' } })).status).toBe(400)
-    expect((await call('POST', { token: 'jwt', body: { token: TOKEN, platform: 'ios' } })).status).toBe(400)
+    expect((await call('POST', { token: 'jwt', body: { token: TOKEN, platform: 'web' } })).status).toBe(400)
     expect(upsert).not.toHaveBeenCalled()
+  })
+  it('accepts iOS devices', async () => {
+    const { client, upsert } = fakeClient({ id: 'abc' })
+    expect((await (await start(client))('POST', { token: 'jwt', body: { token: TOKEN, platform: 'ios' } })).status).toBe(204)
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ platform: 'ios' }), { onConflict: 'token' })
   })
   it('hides database errors', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)

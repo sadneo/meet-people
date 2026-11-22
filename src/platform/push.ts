@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { PushNotifications } from '@capacitor/push-notifications'
 import { z } from 'zod'
 import { authorizedRequest } from '../auth/authorizedRequest'
@@ -13,6 +14,7 @@ const CLEANUP_TIMEOUT_MS = 3000
 const preferenceListeners = new Set<() => void>()
 type PushOperation = { userId: string; controller: AbortController }
 let activeOperation: PushOperation | undefined
+const isIos = () => Capacitor.getPlatform() === 'ios'
 
 function remember(key: string, value: string | null) {
   try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value) } catch { /* storage unavailable */ }
@@ -78,7 +80,7 @@ async function runPushOperation<T>(userId: string, signal: AbortSignal | undefin
 
 async function sendToken(token: string, operation: PushOperation) {
   checkOperation(operation)
-  await authorizedRequest('/api/push/devices', z.null(), { method: 'POST', body: { token, platform: 'android' }, signal: operation.controller.signal, expectedUserId: operation.userId })
+  await authorizedRequest('/api/push/devices', z.null(), { method: 'POST', body: { token, platform: isIos() ? 'ios' : 'android' }, signal: operation.controller.signal, expectedUserId: operation.userId })
   checkOperation(operation)
   remember(TOKEN_KEY, token)
 }
@@ -130,7 +132,8 @@ export async function enablePush(userId: string, signal?: AbortSignal): Promise<
     if (signal?.aborted) return 'failed'
     if (permission.receive !== 'granted') return 'denied'
     return await runPushOperation<EnablePushResult>(userId, signal, async operation => {
-      await PushNotifications.createChannel({ id: CHANNEL_ID, name: 'Pebble', description: 'Messages and connection requests', importance: 4 })
+      // Channels are Android-only; the iOS plugin rejects createChannel as unimplemented.
+      if (!isIos()) await PushNotifications.createChannel({ id: CHANNEL_ID, name: 'Pebble', description: 'Messages and connection requests', importance: 4 })
       checkOperation(operation)
       await sendToken(await fetchPushToken(operation.controller.signal), operation)
       checkOperation(operation)

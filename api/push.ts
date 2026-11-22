@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit'
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-const DeviceBody = z.object({ token: z.string().min(20).max(4096), platform: z.literal('android').default('android') }).strict()
+const DeviceBody = z.object({ token: z.string().min(20).max(4096), platform: z.enum(['android', 'ios']).default('android') }).strict()
 const RemoveBody = z.object({ token: z.string().min(20).max(4096) }).strict()
 
 // Registers / removes the signed-in user's push token. `client` is the service-role client:

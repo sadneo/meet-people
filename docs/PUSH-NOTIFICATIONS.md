@@ -1,5 +1,8 @@
 # Push notifications (Android)
 
+iOS uses the same pipeline: the app registers an FCM token with `platform = 'ios'`. For the Firebase/APNs
+setup, see `IOS.md`.
+
 Flow: a message or connection request is saved -> a database trigger queues a push (`push_outbox`) for
 people who have a registered phone -> the dispatcher (`api/push-dispatcher-main.ts`) sends it through
 Firebase Cloud Messaging -> the phone shows an alert; tapping it opens Messages.
