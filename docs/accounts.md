@@ -17,10 +17,11 @@ Local Google authentication is enabled in `supabase/config.toml`. Put
 (see `.env.example`). `pnpm dev` and `pnpm supabase` load it before starting
 Supabase. Never expose the secret through a `VITE_` variable.
 
-Register a Google OAuth **Web application** client with authorized JavaScript
-origin `http://127.0.0.1:3000` and authorized redirect URI
-`http://127.0.0.1:54321/auth/v1/callback`. Add your account as a test user if the
-Google consent screen is External and in Testing. After changing credentials or
+Use a Google OAuth **Desktop app** client. Each worktree's stack gets its own
+API port, and Google accepts any `http://127.0.0.1:<port>` callback only for
+Desktop clients; a Web application client would need every port registered.
+Supabase sends `<stack API URL>/auth/v1/callback` itself. Add your account as a
+test user if the Google consent screen is External and in Testing. After changing credentials or
 provider configuration, run `pnpm supabase stop` then `pnpm supabase start`
 (no database reset), followed by `pnpm dev`. Use the Google button at `/login`.
 The existing callback verifies the session and routes incomplete accounts through
