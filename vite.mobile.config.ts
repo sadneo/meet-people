@@ -21,6 +21,8 @@ export const mobileEntry: Plugin = {
 export default mergeConfig(config, {
   // APKs and the mobile site get only the VITE_* values their build script passes, never .env's.
   envDir: false,
+  // pnpm dev runs web and mobile Vite side by side; a shared deps cache makes each invalidate the other's.
+  cacheDir: 'node_modules/.vite-mobile',
   plugins: [mobileEntry],
   build: { outDir: 'dist/mobile' },
   server: { port: Number(process.env.VITE_PORT ?? 3002) },
