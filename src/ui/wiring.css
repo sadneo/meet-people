@@ -588,7 +588,14 @@ body:has(.development-navigator) .sky-garden-main > div { min-height: 100%; }
 }
 .proposal-members > div {
   display: grid;
+  justify-items: center;
   gap: 8px;
+}
+.proposal-members > div > :is(.portrait, .initial-avatar) {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 .live-messages {
   display: grid;

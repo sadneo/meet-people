@@ -9,7 +9,6 @@ it('isolates direct/group identities and keeps the exact operation through uncer
   const write = vi.fn().mockRejectedValueOnce(new Error('Lost ack')).mockResolvedValue(saved)
   await store.send('me:direct:chat', 'chat', 'me', true, write)
   const operation = store.get('me:direct:chat').operation
-  store.edit('me:direct:chat', 'Do not replace uncertain text')
   await store.send('me:direct:chat', 'chat', 'me', false, write)
   expect(write).toHaveBeenCalledTimes(1)
   expect(store.get('me:group:chat').body).toBe('Group draft')
@@ -33,4 +32,25 @@ it.each(['success', 'failure'])('clears sensitive state on logout/account change
   const write = vi.fn()
   await other.send('other:direct:chat', 'chat', 'me', true, write)
   expect(write).not.toHaveBeenCalled()
+})
+
+it('treats a 4xx as a definite rejection and keeps the draft editable', async () => {
+  const store = createMessageDrafts('me')
+  store.edit('k', 'Too spicy')
+  await store.send('k', 'chat', 'me', true, () => Promise.reject(Object.assign(new Error('Nope'), { status: 400 })))
+  expect(store.get('k')).toMatchObject({ body: 'Too spicy', status: 'draft', operation: null })
+  expect(store.get('k').error).not.toMatch(/request ID|confirmed/i)
+})
+
+it('keeps an uncertain failure editable: editing makes a new message and discard clears it', async () => {
+  const store = createMessageDrafts('me')
+  store.edit('k', 'Hello')
+  await store.send('k', 'chat', 'me', true, () => Promise.reject(Object.assign(new Error('boom'), { status: 500 })))
+  expect(store.get('k').status).toBe('uncertain')
+  expect(store.get('k').error).not.toMatch(/request ID/i)
+  store.edit('k', 'Hello there')
+  expect(store.get('k')).toMatchObject({ body: 'Hello there', status: 'draft', operation: null })
+  await store.send('k', 'chat', 'me', true, () => Promise.reject(new Error('offline')))
+  store.discard('k')
+  expect(store.get('k')).toMatchObject({ body: '', status: 'draft', operation: null, error: '' })
 })

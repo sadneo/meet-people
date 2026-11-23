@@ -11,6 +11,7 @@ import type { DiscoveryPerson } from './useDiscoveryDeck'
 import { useAction, useLoad } from './hooks'
 import { ActionButton, ErrorMessage, Icon, Modal, ResourceState } from './common'
 import { useCurrent } from './current'
+import { useDetailedSettings } from '../features/account/useDetailedSettings'
 import { DatingPreferencesPanel, FriendsPreferencesPanel } from './Preferences'
 import { SafetyActions } from './Safety'
 import { matchingClient } from './matching-client'
@@ -26,6 +27,7 @@ import { PromptCards } from './ProfileCustomization'
 import { orderInterests } from '../../shared/profile-customization'
 import { ArtPreview } from '../features/garden/ArtPreview'
 import { gardenItemName } from '../features/garden/showcase'
+const EXPIRED_AREA = 'Area expired · Update'
 export function Connect({
   id,
   dating = false,
@@ -236,38 +238,44 @@ function Candidate({
   );
 }
 
-function Feed({token,mode,enabled,visible,revision,allowance,refreshStatus}:{token:string;mode:'Friends'|'Dating';enabled:boolean;visible:boolean;revision:string;allowance:RequestAllowanceControl;refreshStatus?:()=>void}){
+function Feed({token,mode,enabled,visible,revision,allowance,refreshStatus,openFilters}:{token:string;mode:'Friends'|'Dating';enabled:boolean;visible:boolean;revision:string;allowance:RequestAllowanceControl;refreshStatus?:()=>void;openFilters?:()=>void}){
  const deck=useDiscoveryDeck(token,mode,enabled,revision)
  const setupRefreshed=useRef(false)
  useEffect(()=>{if(['friends_setup_required','dating_setup_required'].includes(deck.errorCode)&&!setupRefreshed.current){setupRefreshed.current=true;refreshStatus?.()}},[deck.errorCode,refreshStatus])
  if(!enabled)return null
  const notices=[...deck.outcomes.filter(item=>item.state!=='confirmed'),...deck.outcomes.filter(item=>item.state==='confirmed').slice(-1)]
+ const empty=!deck.cards.length&&!deck.loading&&!deck.error
+ const sent=empty?deck.outcomes.filter(item=>item.state==='confirmed'&&item.result?.status!=='connected').slice(-1)[0]:undefined
  return <>
     {deck.loading&&!deck.error&&(deck.cards.length ? <p role="status" className="sr-only">Loading more people…</p> : <PageSkeleton view="discover" label="Finding people…"/>)}
    <ErrorMessage>{deck.error}</ErrorMessage>
    {deck.error && <ActionButton secondary disabled={deck.loading} onClick={()=>{setupRefreshed.current=false;deck.reset()}}>Try again</ActionButton>}
   {deck.cards.slice(0,10).map((person,index)=><div className="discovery-card-slot" hidden={index!==0} key={person.id}><Candidate {...person} photoGalleryActive={visible && index===0} dating={mode==='Dating'} connectDisabled={allowance.blocked} onConnect={()=>void allowance.send(()=>deck.connect(person))} onSkip={()=>deck.advance(person)} onUndo={deck.undo} canUndo={deck.canUndo}/></div>)}
-  {!deck.cards.length&&!deck.loading&&<div className="friends-waiting"><Icon name={mode}/><h2>{deck.searched?'You’re all caught up.':'Your next connection starts here.'}</h2><p className="muted">Check again as more people join.</p></div>}
-  {notices.map(item=><div key={item.person.id} className="account-note" role="status">
-   {item.state==='saving'?`Sending a request to ${item.person.name}…`:item.state==='rejected'?<>{item.person.name}: request not sent. {item.error}</>:item.state==='uncertain'?<>{item.person.name}: request unconfirmed. <Link to="/activity">Check Connections</Link> before sending again. {item.error}</>:item.result?.status==='connected'?<>Connected with {item.person.name}. <Link to={`/messages/chat?conversation=${encodeURIComponent(item.result.conversationId??'')}`}>Open conversation</Link></>:`Request sent to ${item.person.name}.`}
+  {sent&&<section className="friends-waiting" role="status"><Icon name="Check"/><h2>Request sent to {sent.person.name}.</h2><p>We’ll let you know when they respond.</p><Link className="btn light" to="/messages/requests">View sent requests</Link></section>}
+  {empty&&<div className="friends-waiting"><Icon name={mode}/><h2>{sent?'Keep looking':deck.searched?'You’re out of people nearby.':'Your next connection starts here.'}</h2><p className="muted">{deck.searched?'Widen your distance or age range, or check back later.':'Check again as more people join.'}</p><div className="row wrap">{openFilters&&<ActionButton onClick={openFilters}>Change filters</ActionButton>}<ActionButton secondary onClick={deck.reset}>Refresh</ActionButton></div></div>}
+  {notices.filter(item=>item.person.id!==sent?.person.id).map(item=><div key={item.person.id} className="account-note" role="status">
+   {item.state==='saving'?`Sending a request to ${item.person.name}…`:item.state==='rejected'?<>{item.person.name}: request not sent. {item.error}</>:item.state==='uncertain'?<>{item.person.name}: request unconfirmed. <Link to="/activity">Check Connections</Link> before sending again. {item.error}</>:item.result?.status==='connected'?<>Connected with {item.person.name}. <Link to={`/messages/chat?conversation=${encodeURIComponent(item.result.conversationId??'')}`}>Open conversation</Link></>:<>Request sent to {item.person.name}. <Link to="/messages/requests">View sent requests</Link></>}
   </div>)}
   {!deck.cards.length && deck.canUndo && <ActionButton secondary onClick={deck.undo}>Undo skip</ActionButton>}
  </>
 }
-function Friends({token,revision,allowance,visible}:{token:string;revision:string;allowance:RequestAllowanceControl;visible:boolean}){
- const [setup,setSetup]=useState(false)
+function Friends({token,revision,allowance,visible,openFilters}:{token:string;revision:string;allowance:RequestAllowanceControl;visible:boolean;openFilters:()=>void}){
+ const [setup,setSetup]=useState(false),current=useCurrent()
  const status=useLoad(useCallback(signal=>{void revision;return matchingClient(token).friendsStatus(signal)},[token,revision]))
- const reason=status.value?.reason
+ const detailed=useDetailedSettings(current.session.user.id,token,current.busy),settings=detailed.snapshot
+ // The status RPC reports discovery_off for a missing photo/interest/setup too; only trust it when a switch is really off.
+ const switchOff=!!settings&&(settings.settings.friendsDiscovery===false||settings.masters?.discoverable===false)
+ const reason=status.value?.reason==='discovery_off'&&settings&&!switchOff?'profile':status.value?.reason
  const guidance=reason==='age'?{title:'Friends discovery is for ages 18–99.',text:'Your saved birthdate is outside the supported age range.',label:'Review birthdate',to:'/profile?section=basics'}
   :reason==='discovery_off'?{title:'Friends discovery is paused.',text:'Turn on Friends discovery when you’re ready.',label:'Discovery settings',to:'/profile?section=discovery'}
   :reason==='location'?{title:'Confirm your Friends search area.',text:'Your saved search area has expired or changed.',label:'Review Friends setup'}
   :{title:'Set up Friends matchmaking.',text:'Add a photo and an interest, then confirm where you’d like to meet people.',label:'Set up Friends'}
   return <><ResourceState loading={status.loading} error={status.error} reload={status.reload} skeleton={<PageSkeleton view="discover" label="Checking Friends setup"/>}/>
-  {status.value&&!status.value.eligible&&<section className="friends-waiting"><Icon name="Friends"/><h2>{guidance.title}</h2><p>{guidance.text}</p>{guidance.to?<Link className="btn light" to={guidance.to}>{guidance.label}</Link>:<ActionButton onClick={()=>setSetup(true)}>{guidance.label}</ActionButton>}</section>}
- <Feed visible={visible} allowance={allowance} token={token} mode="Friends" enabled={status.value?.eligible===true} revision={revision} refreshStatus={status.reload}/>
+  {status.value&&!status.value.eligible&&!(status.value.reason==='discovery_off'&&detailed.loading&&!settings)&&<section className="friends-waiting"><Icon name="Friends"/><h2>{guidance.title}</h2><p>{guidance.text}</p>{guidance.to?<Link className="btn light" to={guidance.to}>{guidance.label}</Link>:<ActionButton onClick={()=>setSetup(true)}>{guidance.label}</ActionButton>}</section>}
+ <Feed visible={visible} allowance={allowance} token={token} openFilters={openFilters} mode="Friends" enabled={status.value?.eligible===true} revision={revision} refreshStatus={status.reload}/>
  {setup&&<MatchingSetup mode="friends" close={()=>{setSetup(false);status.reload()}} done={()=>{setSetup(false);status.reload()}}/>}</>
 }
-function Dating({token,revision,allowance,visible}:{token:string;revision:string;allowance:RequestAllowanceControl;visible:boolean}){
+function Dating({token,revision,allowance,visible,openFilters}:{token:string;revision:string;allowance:RequestAllowanceControl;visible:boolean;openFilters:()=>void}){
  const runtime=useLoad(useCallback(signal=>{void revision;return datingLiveClient(token).status(signal)},[token,revision])), action=useAction()
  const [uncertain,setUncertain]=useState(false),[setup,setSetup]=useState(false),manual=useRef(false)
  useEffect(()=>{if(manual.current&&runtime.value){manual.current=false;setUncertain(false)}},[runtime.value])
@@ -281,7 +289,7 @@ function Dating({token,revision,allowance,visible}:{token:string;revision:string
   :{title:'Set up Dating.',text:'Add a photo and an interest, then choose who you’d like to meet and confirm your Dating search area.',label:'Set up Dating'}
   return <><ResourceState loading={runtime.loading} error={runtime.error} reload={runtime.reload} skeleton={<PageSkeleton view="discover" label="Checking Dating setup"/>}/><ErrorMessage>{action.error}</ErrorMessage>
   {value&&blocker&&<section className="friends-waiting"><Icon name="Dating"/><h2>{guidance.title}</h2><p>{guidance.text}</p>{guidance.to?<Link className="btn light" to={guidance.to}>{guidance.label}</Link>:guidance.label&&<ActionButton onClick={()=>setSetup(true)}>{guidance.label}</ActionButton>}</section>}
- <Feed visible={visible} allowance={allowance} token={token} mode="Dating" enabled={!!value&&!blocker&&!uncertain} revision={`${revision}:${value?.aggregate.profileRevision??0}:${value?.aggregate.searchRevision??0}`} refreshStatus={runtime.reload}/>
+ <Feed visible={visible} allowance={allowance} token={token} openFilters={openFilters} mode="Dating" enabled={!!value&&!blocker&&!uncertain} revision={`${revision}:${value?.aggregate.profileRevision??0}:${value?.aggregate.searchRevision??0}`} refreshStatus={runtime.reload}/>
  <div className="match-actions">{value&&(value.aggregate.profile.enabled||blocker==='paused')&&<ActionButton disabled={action.busy||uncertain} onClick={()=>void toggle()}>{value.aggregate.profile.enabled?'Pause Dating':'Start Dating discovery'}</ActionButton>}
  {uncertain&&<ActionButton secondary disabled={action.busy||runtime.loading} onClick={()=>{manual.current=true;runtime.reload()}}>Refresh Dating status</ActionButton>}</div>
  {setup&&<MatchingSetup mode="dating" close={()=>{setSetup(false);runtime.reload()}} done={()=>{setSetup(false);runtime.reload()}}/>}
@@ -304,10 +312,15 @@ export function Discover(){
       ? (await friendsPreferencesClient(token).read(signal)).preferences?.searchArea
       : (await datingLiveClient(token).status(signal)).aggregate.search?.searchArea;
     if (!saved?.resolvedLocationRef) return null;
-    return saved.source === 'temporary' ? saved.areaLabel : saved.source === 'home' ? home : null;
+    const label = saved.source === 'temporary' ? saved.areaLabel : saved.source === 'home' ? home : null;
+    // A saved device area expires after an hour; the label alone would still look current.
+    const expired = mode === 'Friends'
+      ? (await matchingClient(token).friendsStatus(signal)).reason === 'location'
+      : datingDiscoveryBlocker(await datingLiveClient(token).status(signal)) === 'location';
+    return expired ? EXPIRED_AREA : label;
   }, [mode, token, epoch, home]));
   const revision=JSON.stringify([epoch,current.account?.profile])
-  return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className={`area-link ${!area.loading&&!area.value?'needs-area':''}`} aria-label="Search area & preferences" onClick={()=>setPreferences(true, true)}><Icon name="Location"/><span>{area.loading ? 'Search area' : area.error ? 'Check search area' : area.value || 'Choose an area'}</span><span className="area-chevron" aria-hidden="true">⌄</span></button></div>
+  return <div className="discovery-page"><div className="discoverhead"><h2>Discover</h2><button className={`area-link ${!area.loading&&(!area.value||area.value===EXPIRED_AREA)?'needs-area':''}`} aria-label="Search area & preferences" onClick={()=>setPreferences(true, true)}><Icon name="Location"/><span>{area.loading ? 'Search area' : area.error ? 'Check search area' : area.value || 'Choose an area'}</span><span className="area-chevron" aria-hidden="true">⌄</span></button></div>
   <div className="discovertools"><DiscoverModes adult={adult} mode={mode} discoverSearch={search.toString()} onModeChange={setMode}/><div className="row discover-tool-row"><button className="discover-tool" aria-label={`${mode} preferences`} onClick={()=>setPreferences(true)}><span className="discover-tool-icon"><Icon name="DiscoveryPreferences"/></span><span className="discover-tool-label" aria-hidden="true">Filters</span></button><Link className="discover-tool discovery-activity" to="/matches" aria-label="Matches and activity"><span className="discover-tool-icon"><Icon name="DiscoveryActivity" /></span><span className="discover-tool-label" aria-hidden="true">Activity</span></Link></div></div>
   <ResourceState loading={!allowance.value && allowance.checking} error={allowance.error} reload={()=>void allowance.refresh()} skeleton={<span className="sr-only" role="status">Checking request availability</span>}/>
  {allowance.limited ? <section className="friends-waiting discovery-request-limit" aria-labelledby="request-limit-title">
@@ -316,8 +329,8 @@ export function Discover(){
   {allowance.value?.availableAt ? <p>Your next request is available <time dateTime={allowance.value.availableAt}>{new Date(allowance.value.availableAt).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'})}</time>.</p> : <p>Check back as your earlier requests pass 24 hours.</p>}
   <div className="row wrap"><Link className="btn" to="/messages">Go to Messages</Link><Link className="btn light" to="/messages/requests">View incoming requests</Link><ActionButton secondary disabled={allowance.checking || allowance.busy} onClick={()=>void allowance.refresh()}>Check availability</ActionButton></div>
  </section> : <>
- <div hidden={mode!=='Friends'}><Friends visible={mode==='Friends'} allowance={allowance} key={current.session.user.id} token={current.session.access_token} revision={revision}/></div>
- {adult&&<div hidden={mode!=='Dating'}><Dating visible={mode==='Dating'} allowance={allowance} key={current.session.user.id} token={current.session.access_token} revision={revision}/></div>}
+ <div hidden={mode!=='Friends'}><Friends openFilters={()=>setPreferences(true)} visible={mode==='Friends'} allowance={allowance} key={current.session.user.id} token={current.session.access_token} revision={revision}/></div>
+ {adult&&<div hidden={mode!=='Dating'}><Dating openFilters={()=>setPreferences(true)} visible={mode==='Dating'} allowance={allowance} key={current.session.user.id} token={current.session.access_token} revision={revision}/></div>}
  </>}
   {preferences&&<Modal className={mode==='Friends'?'friends-preferences-modal':'dating-preferences-modal'} title={`${mode} preferences`} close={()=>{if(!preferencesBusy){setPreferences(false);setEpoch(value=>value+1)}}}>{mode==='Friends'?<FriendsPreferencesPanel areaOnly={areaOnly} onSavingChange={setPreferencesBusy} done={()=>{setPreferences(false);setEpoch(value=>value+1)}}/>:<DatingPreferencesPanel areaOnly={areaOnly} onSavingChange={setPreferencesBusy} done={()=>{setPreferences(false);setEpoch(value=>value+1)}}/>}</Modal>}
  </div>

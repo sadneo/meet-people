@@ -162,3 +162,15 @@
 .prompt-edit-card .prompt-edit-move .ui-icon { width: 16px; height: 16px; }
 /* A pressed mode stays clearly on even when it can't be turned off. */
 .prompt-modes button[aria-pressed="true"]:disabled { opacity: 1; }
+
+/* Errors sit in the save bar so they are never below the fold; an empty prompt is outlined. */
+.profile-save-bar { flex-wrap: wrap; }
+.profile-save-bar .account-error { flex-basis: 100%; margin: 0; text-align: left; }
+.prompt-edit-card textarea[aria-invalid="true"] { border-color: #a04032; }
+
+/* Editing on a phone: no tab bar, so the keyboard and the save bar get the room. */
+@media (max-width: 800px) {
+  .shell:has(.profile-editor) { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .shell:has(.profile-editor) > .app-navigation { display: none; }
+  .shell:has(.profile-editor) .profile-save-bar { bottom: env(safe-area-inset-bottom); }
+}

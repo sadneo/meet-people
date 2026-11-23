@@ -20,8 +20,13 @@ import { PageSkeleton } from '../../ui/loading/PageSkeleton'
 import type { GardenAction } from './reducer'
 
 
+// An unconfirmed balance shows a dash, never 0, so loading or a failed load can't look like an empty wallet.
+export function GardenBalance({balance,known,failed,live,disabled,onClick}:{balance:number;known:boolean;failed:boolean;live:boolean;disabled:boolean;onClick:()=>void}){
+  return <button className="garden-balance" disabled={disabled} onClick={onClick} aria-label={known?`Build with ${balance} Pebbles`:failed?'Pebble balance unavailable':'Pebble balance loading'}><CurrencyIcon/><strong>{known?<CountUp value={balance} live={live}/>:<span aria-hidden="true">—</span>}</strong></button>
+}
 export function Garden() {
   const { owner, state, dispatch:dispatchGarden, refresh, earn, available } = useGarden(), community = state.community
+  const balanceKnown=!!state.remote||state.preview
   const [art,setArt]=useState<GardenArt|null>(null), [error,setError]=useState('')
   const [sceneReady,setSceneReady]=useState(false), [artAttempt,setArtAttempt]=useState(0)
   const [selected,setSelected]=useState<MovableId|null>(null), [preview,setPreview]=useState<{ owner: string; id: MovableId; point: Position }|null>(null)
@@ -135,7 +140,7 @@ export function Garden() {
   }
   const unlocked=community.geodeUnlocks??[],revealed=geodeRocks.find(rock=>rock.id===reveal)
   return <section className="garden-workspace integrated-sky-garden" aria-label="Pebble Garden">
-    <header className="garden-heading"><h1 className="garden-wordmark" aria-label="Your Garden"><img src="/pebble/pebble-wordmark.svg" width="216" height="96" alt=""/></h1><button className="garden-balance" disabled={!sceneReady||!!error} onClick={()=>open()} aria-label={`Build with ${community.balance} Pebbles`}><CurrencyIcon/><strong><CountUp value={community.balance} live={sceneReady&&!!state.remote}/></strong></button></header>
+    <header className="garden-heading"><h1 className="garden-wordmark" aria-label="Your Garden"><img src="/pebble/pebble-wordmark.svg" width="216" height="96" alt=""/></h1><GardenBalance balance={community.balance} known={balanceKnown} failed={!!state.error} live={sceneReady&&!!state.remote} disabled={!sceneReady||!!error} onClick={open}/></header>
     <button className="garden-earn-flag" aria-label="How to earn Pebbles" title="How to earn Pebbles" onClick={()=>{closeActivity();setEarningOpen(true);if(!state.preview)void refresh()}}><svg viewBox="0 0 36 44" aria-hidden="true"><path d="M3 2h30v39L18 33 3 41Z"/><path d="M18 11v10m0 6v1"/></svg>{!state.error&&!state.preview&&hasGardenReward(state.remote?.rewards)&&<span className="garden-reward-dot" role="status" aria-label="Reward available"/>}</button>
     {earningOpen&&<EarnPebbles rewards={state.remote?.rewards} disabled={!available||state.preview} claim={earn} error={state.error} refresh={()=>void refresh()} close={()=>setEarningOpen(false)}/>}
     {(state.error||state.preview)&&<div className="garden-account-notice"><p role={state.error?'alert':'status'}>{state.preview?'Test Garden preview — changes are not saved to your account.':state.error}</p><button disabled={state.pending} onClick={()=>{setUndo([]);void refresh()}}>{state.preview?'Return to saved Garden':'Refresh Garden'}</button></div>}

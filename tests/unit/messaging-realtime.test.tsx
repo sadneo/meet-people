@@ -352,3 +352,47 @@ it('removes the old account subscription and ignores its late callbacks', async 
   expect(api.request.mock.calls).toHaveLength(calls)
   expect(screen.queryByText(/Live updates are unavailable/)).toBeNull()
 })
+
+it('shows a closed conversation with a neutral name, no read call and a disabled composer', async () => {
+  snapshot = { ...snapshot, canSend: false, participants: [participants[0], { id: 'them', display_name: 'Account 22222222-2222-4222-8222-222222222222', last_read_seq: 0 }] }
+  open(); await tick()
+  expect(screen.getByRole('heading', { name: 'Unavailable account' })).toBeTruthy()
+  expect(screen.queryByText(/Account 2222/)).toBeNull()
+  expect(readCalls()).toHaveLength(0)
+  expect(screen.queryByText(/Read status could not be saved/)).toBeNull()
+  expect(screen.getByText(/This conversation is closed/)).toBeTruthy()
+  expect((screen.getByRole('textbox', { name: 'Message' }) as HTMLTextAreaElement).disabled).toBe(true)
+})
+
+it('keeps the draft editable after a definite 4xx rejection', async () => {
+  const original = api.request.getMockImplementation()!
+  api.request.mockImplementation(async (...args) => {
+    if (args[0] === '/chat/messages' && args[2]?.body) throw Object.assign(new Error('Rejected'), { status: 422 })
+    return original(...args)
+  })
+  open(); await tick()
+  const composer = screen.getByRole('textbox', { name: 'Message' }) as HTMLTextAreaElement
+  fireEvent.change(composer, { target: { value: 'Too long' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' })); await tick()
+  expect(composer.disabled).toBe(false)
+  expect(screen.queryByRole('button', { name: 'Retry same message' })).toBeNull()
+  expect(screen.getByText(/Couldn’t send/)).toBeTruthy()
+})
+
+it('leaves an unconfirmed send editable with a plain Retry and a Discard', async () => {
+  const original = api.request.getMockImplementation()!
+  api.request.mockImplementation(async (...args) => {
+    if (args[0] === '/chat/messages' && args[2]?.body) throw new Error('offline')
+    return original(...args)
+  })
+  open(); await tick()
+  const composer = screen.getByRole('textbox', { name: 'Message' }) as HTMLTextAreaElement
+  fireEvent.change(composer, { target: { value: 'Hello' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' })); await tick()
+  expect(composer.disabled).toBe(false)
+  expect(screen.getByText(/Not sent/)).toBeTruthy()
+  expect(screen.queryByText(/request ID/i)).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
+  expect(composer.value).toBe('')
+  expect(screen.queryByRole('button', { name: 'Retry same message' })).toBeNull()
+})

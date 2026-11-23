@@ -256,3 +256,20 @@ it('keeps unresolved active filters and deferred downtime results honest', async
   mode = 'downtime'; providerError = { code: 'AQ503' }
   expect(await request('/result')).toMatchObject({ status: 503, data: { code: 'unavailable' } })
 })
+it('normalizes and validates new or changed usernames on account writes without tightening reads', async () => {
+  const saved = accountFixture({ ...profile, username: 'Legacy Name', birthdate: '2000-01-01' })
+  actor.account.mockResolvedValue({ data: saved, error: null })
+  const put = (username: string) => request('/account', 'PUT', { ...saved, profile: { ...saved.profile, username } })
+  expect((await put('  GRACE_x ')).status).toBe(200)
+  expect(actor.saveAccount).toHaveBeenLastCalledWith(expect.objectContaining({ profile: expect.objectContaining({ username: 'grace_x' }) }))
+  actor.saveAccount.mockClear()
+  for (const bad of ['a b!', 'ab', 'x'.repeat(31), 'grace-x']) expect(await put(bad)).toMatchObject({ status: 400, data: { code: 'invalid' } })
+  expect(actor.saveAccount).not.toHaveBeenCalled()
+  // An existing handle that predates the rule keeps saving unchanged.
+  expect((await put('Legacy Name')).status).toBe(200)
+  expect(actor.saveAccount).toHaveBeenLastCalledWith(expect.objectContaining({ profile: expect.objectContaining({ username: 'Legacy Name' }) }))
+  expect(MatchingProfileSchema.safeParse({ ...profile, username: 'Legacy Name' }).success).toBe(true)
+  providerError = { code: '23505' }
+  expect(await put('taken_one')).toMatchObject({ status: 400, data: { error: 'That username is taken. Choose another.' } })
+  actor.account.mockImplementation(async () => ({ data: accountFixture(profile), error: providerError }))
+})

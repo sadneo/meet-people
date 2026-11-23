@@ -54,6 +54,7 @@ function MatchingSetupSteps({ mode, status, done, onBusyChange }: {
       // The POST is idempotent. Confirm the owner state first on every attempt.
       const before = await client.friendsStatus()
       if (!before.eligible && before.reason === 'discovery_off') return 'Turn on Friends discovery in your privacy settings first.'
+      if (!before.eligible && before.reason === 'location') return 'Your saved search area has expired. Choose your area again, then tap “Save and start Friends”.'
       if (!before.eligible) await client.startFriends()
       return (await client.friendsStatus()).eligible ? '' : 'Friends setup could not be confirmed.'
     }

@@ -129,3 +129,11 @@ test('Dating can be paused inside preferences and an uncertain pause requires a 
   await expect(preferences.getByRole('slider', { name: 'Distance', exact: true })).toBeEnabled()
   await expect(page).toHaveURL(/matchmaking\?mode=dating&preferences=true/)
 })
+
+test('Activity opened from Messages links back to Messages', async ({ page }) => {
+  await wiringFixture(page)
+  await page.goto('/messages')
+  await page.getByRole('link', { name: 'Activity inbox' }).click()
+  await page.getByRole('link', { name: 'Messages', exact: true }).and(page.locator('.account-back')).click()
+  await expect(page).toHaveURL(/\/messages$/)
+})

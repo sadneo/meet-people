@@ -161,7 +161,9 @@ test("event groups automatically show a suggested group without replaying the jo
   expect(methods.filter(method => method === "GET")).toHaveLength(readsAfterMatch);
   await expect(page.getByRole("button", { name: /proposal/i })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.getByRole("button", { name: "Leave group queue", exact: true }).click();
+  await page.getByRole("button", { name: "Leave group", exact: true }).click();
+  expect(methods.filter(method => method === "DELETE")).toHaveLength(0);
+  await page.getByRole("dialog", { name: "Leave this group?" }).getByRole("button", { name: "Leave group", exact: true }).click();
   await expect(page.getByRole("button", { name: "Join group queue", exact: true })).toBeVisible();
   expect(methods.filter(method => method === "DELETE")).toHaveLength(1);
   const readsAfterLeaving = methods.filter(method => method === "GET").length;

@@ -19,7 +19,9 @@ import { SafetyActions } from "./Safety";
 
 export function Activity() {
   const navigate = useNavigate();
-  const matches = useLocation().pathname === '/matches';
+  const location = useLocation();
+  const matches = location.pathname === '/matches';
+  const fromMessages = location.state?.from === '/messages';
   const [tab, setTab] = useState('Upcoming');
   const current = useCurrent(),
     client = useMemo(
@@ -32,7 +34,8 @@ export function Activity() {
   const [uncertain, setUncertain] = useState(false);
   return (
     <div className={`activity-page ${matches ? 'plans-page' : ''}`}>
-      {matches && <><Link className="account-back" to="/matchmaking"><Icon name="Back"/>Discover</Link><div className="eyebrow">Matches &amp; Plans</div></>}
+      <Link className="account-back" to={fromMessages ? "/messages" : "/matchmaking"}><Icon name="Back"/>{fromMessages ? "Messages" : "Discover"}</Link>
+      {matches && <div className="eyebrow">Matches &amp; Plans</div>}
       <div className="pagehead">
         <h2>{matches ? 'From a hello to a “see you there.”' : 'Your little updates.'}</h2>
         <ActionButton

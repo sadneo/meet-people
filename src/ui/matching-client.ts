@@ -6,9 +6,10 @@ import { ActiveStatusSchema, ActiveGroupsSchema, ActiveGroupSchema, ActiveHistor
 import { MatchingScoringSettingsResponseSchema, SaveMatchingScoringSettingsSchema, type SaveMatchingScoringSettings } from '../../shared/matching-scoring'
 import { ConnectionStateSchema } from '../../shared/connections'
 import { MessageSchema, ReadStateSchema } from '../../shared/messaging'
+const peopleLoadError = 'Couldn’t load people. Check your connection and try again.'
 export class MatchingError extends Error { constructor(readonly status: number, message: string, readonly code?: string) { super(message) } }
 export function matchingClient(token: string) {
-  async function request<T>(path: string, schema: z.ZodType<T>, options: { body?: unknown; method?: string; signal?: AbortSignal } = {}): Promise<T> {
+  async function request<T>(path: string, schema: z.ZodType<T>, options: { body?: unknown; method?: string; signal?: AbortSignal; read?: string } = {}): Promise<T> {
     const controller = new AbortController(), abort = () => controller.abort()
     options.signal?.addEventListener('abort', abort, { once: true }); if (options.signal?.aborted) abort()
     const timer = setTimeout(abort, 15000)
@@ -26,15 +27,17 @@ export function matchingClient(token: string) {
       return parsed.data
     } catch (error) {
       if (error instanceof MatchingError) throw error
-      throw new MatchingError(0, 'Connection interrupted. Refresh before trying again; changes may already be saved.')
+      // Reads cannot have saved anything; only writes keep the "may already be saved" warning.
+      const read = options.read ?? (options.body === undefined && (options.method ?? 'GET') === 'GET' ? 'Couldn’t load. Check your connection and try again.' : undefined)
+      throw new MatchingError(0, read ?? 'Connection interrupted. Refresh before trying again; changes may already be saved.')
     } finally { clearTimeout(timer); options.signal?.removeEventListener('abort', abort) }
   }
   return {
     matchingSetup: (signal?: AbortSignal) => request('/friends/setup', MatchingSetupStatusSchema, { signal }),
     startFriends: () => request('/friends/start', FriendsDiscoveryStatusSchema, { body: {} }),
     friendsStatus: (signal?: AbortSignal) => request('/friends/status', FriendsDiscoveryStatusSchema, { signal }),
-    friends: (excludedIds: string[], signal?: AbortSignal) => request('/friends/recommendations', FriendsBatchResponseSchema, { body: FriendsBatchRequestSchema.parse({ excludedIds, limit: 10 }), signal }),
-    dating: (excludedIds: string[], signal?: AbortSignal) => request('/dating/recommendations', DatingBatchResponseSchema, { body: DatingBatchRequestSchema.parse({ excludedIds, limit: 10 }), signal }),
+    friends: (excludedIds: string[], signal?: AbortSignal) => request('/friends/recommendations', FriendsBatchResponseSchema, { body: FriendsBatchRequestSchema.parse({ excludedIds, limit: 10 }), signal, read: peopleLoadError }),
+    dating: (excludedIds: string[], signal?: AbortSignal) => request('/dating/recommendations', DatingBatchResponseSchema, { body: DatingBatchRequestSchema.parse({ excludedIds, limit: 10 }), signal, read: peopleLoadError }),
     connect: (mode: 'Friends' | 'Dating', target: string) => request(mode === 'Friends' ? `/friends/requests/${encodeURIComponent(target)}` : `/dating/requests/${encodeURIComponent(target)}`, ConnectionStateSchema, { body: {} }),
     acceptFriend: (target: string) => request(`/friends/requests/${encodeURIComponent(target)}/accept`, ConnectionStateSchema, { body: {} }),
     schedule: (signal?: AbortSignal) => request('/schedule', MatchingScoringSettingsResponseSchema, { signal }),
