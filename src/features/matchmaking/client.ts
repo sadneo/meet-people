@@ -35,6 +35,8 @@ export function matchmakingClient(token: string) {
     } catch (failure) {
       // Aborting local transport does not prove a write was rolled back.
       if (controller.signal.aborted) throw new MatchmakingClientError('provider', 503, 'Matching request timed out. Its outcome may be uncertain; refresh to confirm.')
+      // fetch rejects with a bare TypeError when offline; the write may still have landed.
+      if (failure instanceof TypeError) throw new MatchmakingClientError('network', 503, 'Couldn’t reach the matching service. It may not have gone through; check your connection and try again.')
       throw failure
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort) }
   }

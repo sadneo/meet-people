@@ -4,6 +4,7 @@ import { profilePhotoLimit, type ProfileGalleryState } from '../../shared/profil
 import { usePhotoCaptions, usePhotoGallery, usePhotoSlot } from '../features/account/usePhotoGallery'
 import { contactDetailsHint, photoCaptionLimit } from '../../shared/profile-prompts'
 import { toast } from './feedback'
+import { ProfilePhotoError } from '../features/account/profile-photo-client'
 import { photoChangedEvent } from '../features/account/useProfilePhoto'
 import { useCurrent } from './current'
 import { ActionButton, ErrorMessage, Modal, PersonPhoto, ResourceState } from './common'
@@ -44,6 +45,8 @@ function DiscoverPhotoViewer({ owner, name, token, gallery, revision, fallback, 
     onDragStart={event => event.preventDefault()}
     onPointerDown={event => {
       if (count < 2 || !event.isPrimary || event.button !== 0) return
+      // Progress segments (and any control layered on the photo) handle their own taps.
+      if ((event.target as Element).closest('button, a')) return
       swipe.current = { id:event.pointerId, x:event.clientX, y:event.clientY }
       event.currentTarget.setPointerCapture(event.pointerId)
     }}
@@ -53,6 +56,11 @@ function DiscoverPhotoViewer({ owner, name, token, gallery, revision, fallback, 
       swipe.current = null
       const dx = event.clientX - start.x, dy = event.clientY - start.y
       if (Math.abs(dx) >= 44 && Math.abs(dx) > Math.abs(dy) * 1.25) step(dx < 0 ? 1 : -1)
+      else if (Math.hypot(dx, dy) < 10) {
+        // A tap on the left third goes back; anywhere else goes forward.
+        const box = event.currentTarget.getBoundingClientRect()
+        step(event.clientX - box.left < box.width * 0.35 ? -1 : 1)
+      }
     }}
     onLostPointerCapture={() => { swipe.current = null }}
     onKeyDown={event => {
@@ -69,9 +77,11 @@ function DiscoverPhotoViewer({ owner, name, token, gallery, revision, fallback, 
     {count > 1 && <>
       <div className="discover-photo-progress" aria-label={`Photo ${position} of ${count}`} aria-live="polite">
         <span className="sr-only">{`Photo ${position} of ${count}`}</span>
-        {Array.from({ length: count }, (_, i) => <span key={i} aria-hidden="true" className={i+1 === position ? 'current' : ''}/>)}
+        {Array.from({ length: count }, (_, i) => <button type="button" key={i} tabIndex={-1}
+          aria-label={`Show photo ${i+1}`} aria-current={i+1 === position || undefined}
+          className={i+1 === position ? 'current' : ''} onClick={() => setPosition(i+1)}><span aria-hidden="true"/></button>)}
       </div>
-      <span className="sr-only" id={instructions}>Swipe or use the left and right arrow keys to change photos.</span>
+      <span className="sr-only" id={instructions}>Tap the sides of the photo, swipe, or use the left and right arrow keys to change photos.</span>
     </>}
   </div>
 }
@@ -124,6 +134,7 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
   const dragInstructions = useId()
   const input = useRef<HTMLInputElement>(null)
   const lock = useRef(false)
+  const flushCaption = useRef<(() => Promise<boolean>) | null>(null)
   const url = selection?.url
   useEffect(() => () => { if (url) URL.revokeObjectURL(url) }, [url])
 
@@ -163,8 +174,17 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
       if (change.action === 'remove') setPreview(null)
       setRemoving(false)
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Photo change could not be confirmed.')
-      setReconcile(true)
+      // A 4xx the server answers definitively means nothing changed: say so and keep editing.
+      const status = failure instanceof ProfilePhotoError ? failure.status : 0
+      if (status === 400 || status === 413 || status === 429) {
+        setError(status === 429 ? 'Photo limit reached. Try again later.'
+          : status === 400 && change.action === 'append' ? 'That file isn’t a photo we can use.'
+          : failure instanceof Error ? failure.message : 'Photo change failed.')
+        setSelection(null)
+      } else {
+        setError(failure instanceof Error ? failure.message : 'Photo change could not be confirmed.')
+        setReconcile(true)
+      }
     } finally {
       lock.current = false
       setBusy(false)
@@ -274,6 +294,48 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
     }
   }
 
+  // Make the phone Back gesture close the preview sheet instead of leaving the page.
+  const previewOpen = preview !== null
+  useEffect(() => {
+    if (!previewOpen) return
+    let pushed = false, popped = false
+    const timer = setTimeout(() => {
+      window.history.pushState({ ...window.history.state, photoPreview: true }, '')
+      pushed = true
+    }, 0)
+    async function onPop() {
+      if (!pushed) return
+      const flush = flushCaption.current
+      if (flush) {
+        // Keep the sheet in history until the draft has actually been saved.
+        window.history.pushState({ ...window.history.state, photoPreview: true }, '')
+        if (!await flush()) return
+      } else {
+        popped = true
+      }
+      setPreview(null)
+      setRemoving(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('popstate', onPop)
+      if (pushed && !popped && window.history.state?.photoPreview) window.history.back()
+    }
+  }, [previewOpen])
+
+  // A typed caption is saved before the sheet closes or the photo moves.
+  async function closePreview() {
+    if (lock.current) return
+    if (await flushCaption.current?.() === false) return
+    setPreview(null)
+    setRemoving(false)
+  }
+  async function makeMain(position: number) {
+    if (await flushCaption.current?.() === false) return
+    void edit({ action:'move', position, toPosition:1 })
+  }
+
   useEffect(() => { if (busyRef) busyRef.current = busy })
   const addPhoto = !selection && !removing && state && state.count < profilePhotoLimit
     ? <ActionButton secondary={inline} disabled={disabled} onClick={() => input.current?.click()}>Add photo</ActionButton>
@@ -339,10 +401,12 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
     {reconcile && !preview && <ActionButton secondary disabled={query.isFetching} onClick={() => void reload()}>Reload photos</ActionButton>}
     {preview && <Modal variant="sheet" className="photo-preview-modal"
       title={preview.position === 1 ? 'Profile photo' : `Photo ${preview.position}`}
-      close={() => { if (!lock.current) { setPreview(null); setRemoving(false) } }}>
+      close={() => void closePreview()}>
       {state?.revision === preview.revision
         ? <GalleryPhoto token={token} owner={owner} revision={preview.revision} position={preview.position}/>
         : <p role="status">Your photos changed. Reload to see the current order.</p>}
+      {state?.revision === preview.revision && !removing &&
+        <PhotoCaptionEditor key={`${preview.revision}:${preview.position}`} owner={owner} revision={preview.revision} position={preview.position} disabled={disabled} flushRef={flushCaption}/>}
       {state?.revision === preview.revision && <div className="photo-preview-actions">
         {removing ? <>
           <p role="status">{preview.position === 1 ? 'Remove your current profile photo?' : `Remove photo ${preview.position}?`}</p>
@@ -352,14 +416,12 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
           <ActionButton secondary disabled={busy} onClick={() => setRemoving(false)}>Cancel</ActionButton>
         </> : <>
           {preview.position !== 1 &&
-            <ActionButton disabled={disabled} onClick={() => void edit({ action:'move', position:preview.position, toPosition:1 })}>
+            <ActionButton disabled={disabled} onClick={() => void makeMain(preview.position)}>
               {busy ? 'Saving…' : 'Make profile photo'}
             </ActionButton>}
           <ActionButton secondary disabled={disabled} onClick={() => setRemoving(true)}>Remove photo</ActionButton>
         </>}
       </div>}
-      {state?.revision === preview.revision && !removing &&
-        <PhotoCaptionEditor key={`${preview.revision}:${preview.position}`} owner={owner} revision={preview.revision} position={preview.position} disabled={disabled}/>}
       <ErrorMessage>{error}</ErrorMessage>
       {(reconcile || query.isError || state?.revision !== preview.revision) &&
         <ActionButton secondary disabled={query.isFetching || busy} onClick={() => void reload()}>Reload photos</ActionButton>}
@@ -368,7 +430,9 @@ export function PhotoGalleryPanel({ inline = false, busyRef }: { inline?: boolea
 }
 
 // Optional caption for one photo. It stays with the photo when photos move.
-function PhotoCaptionEditor({ owner, revision, position, disabled }: { owner: string; revision: number; position: number; disabled: boolean }) {
+function PhotoCaptionEditor({ owner, revision, position, disabled, flushRef }: {
+  owner: string; revision: number; position: number; disabled: boolean; flushRef: { current: (() => Promise<boolean>) | null }
+}) {
   const { client } = usePhotoGallery(owner, false)
   const cache = useQueryClient()
   const captions = usePhotoCaptions(owner, revision)
@@ -380,8 +444,8 @@ function PhotoCaptionEditor({ owner, revision, position, disabled }: { owner: st
   const hint = contactDetailsHint(value)
   const changed = draft !== null && draft.trim() !== saved
   const canSave = !disabled && !saving && !captions.isPending && !captions.isError && changed
-  async function save() {
-    if (!client || !canSave) return
+  async function save(): Promise<boolean> {
+    if (!client || !canSave) return false
     setSaving(true)
     setError('')
     try {
@@ -390,10 +454,16 @@ function PhotoCaptionEditor({ owner, revision, position, disabled }: { owner: st
       setDraft(null)
       haptic('success')
       toast(value.trim() ? 'Caption saved' : 'Caption removed')
+      return true
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Caption could not be saved.')
+      return false
     } finally { setSaving(false) }
   }
+  useEffect(() => {
+    flushRef.current = changed ? save : null
+    return () => { flushRef.current = null }
+  })
   return <div className="photo-caption-editor">
     <label htmlFor={`photo-caption-${position}`}>Caption <span>(optional)</span></label>
     <div className="photo-caption-row">

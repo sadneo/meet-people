@@ -1256,6 +1256,10 @@ export type Database = {
       }
       block_owner_target: { Args: { target_in: string }; Returns: Json }
       can_connect: { Args: { user1: string; user2: string }; Returns: boolean }
+      cancel_sent_request: {
+        Args: { requested_at_in: string; target_in: string }
+        Returns: boolean
+      }
       claim_active_friends_job: { Args: never; Returns: Json }
       claim_event_group_job: {
         Args: { lease_seconds: number; worker_id: string }
@@ -1877,6 +1881,10 @@ export type Database = {
       sweep_active_friends: { Args: never; Returns: Json }
       unblock_owner_target: { Args: { target_in: string }; Returns: Json }
       user_interest_vector: { Args: { p_id: string }; Returns: number[] }
+      username_policy_identity_write: {
+        Args: { profile_in: Json }
+        Returns: Json
+      }
       valid_account_identity: { Args: { profile_in: Json }; Returns: boolean }
       valid_dating_profile: { Args: { p: Json }; Returns: boolean }
       valid_dating_search: { Args: { s: Json }; Returns: boolean }

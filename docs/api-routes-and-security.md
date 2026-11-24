@@ -87,6 +87,7 @@ The safety routes have no screen wired to them yet.
 |---|---|
 | `GET /api/connections` | Your connections |
 | `GET / POST / DELETE /api/connections/:targetId`, `POST /api/connections/:targetId/accept` | Read, request, remove or accept a connection |
+| `POST /api/connections/:targetId/cancel` | Cancel your pending outgoing request using its original requestedAt timestamp. A stale request returns HTTP 409. |
 | `GET /api/conversations?page=` | Inbox |
 | `GET /api/conversations/activity` | Unread activity |
 | `GET /api/conversations/:id/messages?before=\|after=` | Message history |

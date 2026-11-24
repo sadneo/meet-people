@@ -90,7 +90,7 @@ for (const path of ['/reset-password', '/reset-password/', '/RESET-PASSWORD/', '
 test('a normalized recovery route still rejects an incomplete grant', async ({ page }) => {
   await wiringFixture(page, { guest: true })
   await page.goto('/RESET-PASSWORD/#access_token=browser-user-jwt')
-  await expect(page.getByText('This link could not be verified. Request a new link.')).toBeVisible()
+  await expect(page.getByText('This link could not be verified. It may have been used already or expired.')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Set a new password' })).toHaveCount(0)
   await expect(page).toHaveURL(new URL('/auth/callback', page.url()).href)
 })

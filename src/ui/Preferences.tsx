@@ -156,7 +156,7 @@ export function FriendsPreferencesPanel({ done, onSavingChange, finishSetup, sub
               if (status.reason === 'location') return 'Your saved search area has expired or changed. Confirm it again before finishing.';
               return '';
             } catch {
-              return 'Friends setup could not be confirmed. Your saved choices are kept. Try Done again to recheck.';
+              return `Friends setup could not be confirmed. Your saved choices are kept. Tap “${submitLabel ?? 'Save'}” to try again.`;
             } finally { onSavingChange?.(false); }
           }}
           save={async (preferences) => {

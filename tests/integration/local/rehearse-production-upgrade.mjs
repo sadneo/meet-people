@@ -27,6 +27,12 @@ assert.deepEqual(pending, [
   '20261116030100_profile_photo_gallery.sql',
   '20261116040000_profile_customization.sql',
   '20261116050000_photo_captions_prompts.sql',
+  '20261117010000_dining_supabase_cron.sql',
+  '20261117020000_dining_cron_every_environment.sql',
+  '20261117030000_map_cache_purge_cron.sql',
+  '20261117040000_sbengaged_producer_every_environment.sql',
+  '20261119050000_username_normalization.sql',
+  '20261124000000_cancel_sent_request.sql',
 ], 'Production baseline changed; review the rehearsal before executing.')
 const container = `pebble-production-rehearsal-${process.pid}`
 const docker = args => containerSync(args)
@@ -87,6 +93,8 @@ try {
   sql(source('tests/integration/sql/profile-photo-gallery.sql'))
   sql(source('tests/integration/sql/profile-customization.sql'))
   sql(source('tests/integration/sql/photo-captions-prompts.sql'))
+  sql(source('tests/integration/sql/username-normalization.sql'))
+  sql(source('tests/integration/sql/cancel-sent-request.sql'))
   sql(source('tests/integration/sql/public-live-events.sql'))
   sql(source('tests/integration/sql/adult-release.sql'))
   assert.equal(sql(`select has_table_privilege('anon','public.push_devices','SELECT') or has_table_privilege('authenticated','public.push_devices','SELECT') or has_table_privilege('authenticated','garden_private.wallets','SELECT')`), 'f')

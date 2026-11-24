@@ -18,7 +18,7 @@ for (const width of [320, 390, 1280]) {
     await page.goto('/events')
     await expect(page.getByRole('heading', { name: 'Create your profile' })).toBeVisible()
     await expect(page.getByText('The name people see.')).toBeVisible()
-    await expect(page.getByText('Your unique @handle.')).toBeVisible()
+    await expect(page.getByText('Your unique @handle: letters, numbers, . or _.')).toBeVisible()
     await expect(page.getByLabel('Username')).toBeEmpty()
     await expect(page.getByLabel(/city|campus|availability/i)).toHaveCount(0)
     await identity(page)
@@ -64,7 +64,7 @@ test('validates the birthday and lets the user correct a taken username', async 
   const fixture = await wiringFixture(page, { fresh: true })
   await page.route('**/api/matchmaking/account', route =>
     route.request().method() === 'PUT' && route.request().postDataJSON().profile.username === 'jamie'
-      ? route.fulfill({ status: 400, json: { code: 'invalid', error: 'That username is already taken. Choose another.' } })
+      ? route.fulfill({ status: 400, json: { code: 'invalid', error: 'That username is taken. Choose another.' } })
       : route.fallback())
   await page.goto('/events')
   await identity(page)
@@ -74,10 +74,24 @@ test('validates the birthday and lets the user correct a taken username', async 
   await expect(page.getByRole('alert')).toHaveText('Enter a valid birthday.')
   await page.getByLabel('Day', { exact: true }).fill('28')
   await submit(page)
-  await expect(page.getByRole('alert')).toHaveText('That username is already taken. Choose another.')
+  await expect(page.getByRole('alert')).toHaveText('That username is taken. Choose another.')
   await page.getByLabel('Username').fill('jamie_p')
   await submit(page)
   await expect(page).toHaveURL(/\/events$/)
+  expect(fixture.getAccount().profile?.username).toBe('jamie_p')
+})
+
+test('rejects an invalid username inline and lands new users on Discover', async ({ page }) => {
+  const fixture = await wiringFixture(page, { fresh: true })
+  await page.goto('/onboarding')
+  await identity(page)
+  await page.getByLabel('Username').fill('a b!')
+  await submit(page)
+  await expect(page.getByRole('alert')).toHaveText('Use 3-30 lowercase letters, numbers, . or _ for your username.')
+  expect(fixture.calls.filter(call => call.method === 'PUT')).toHaveLength(0)
+  await page.getByLabel('Username').fill('  Jamie_P ')
+  await submit(page)
+  await expect(page).toHaveURL(/\/matchmaking$/)
   expect(fixture.getAccount().profile?.username).toBe('jamie_p')
 })
 

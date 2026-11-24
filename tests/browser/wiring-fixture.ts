@@ -22,6 +22,7 @@ export async function wiringFixture(
     queue?: "downtime";
     lostMessage?: boolean;
     progressive?: boolean;
+    peerDisplayName?: string;
     conversationMode?: 'friends' | 'dating' | null;
   } = {},
 ) {
@@ -408,7 +409,7 @@ export async function wiringFixture(
       return reply({ incomingRequests: 0, unreadConversations: 1 });
     const participants = [
       { id: user, display_name: "Sam", avatar_url: null, last_read_seq: 0 },
-      { id: peer, display_name: "Taylor", avatar_url: null, last_read_seq: 0 },
+      { id: peer, display_name: options.peerDisplayName ?? "Taylor", avatar_url: null, last_read_seq: 0 },
     ];
     if (path === "/api/conversations")
       return reply({

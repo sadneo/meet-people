@@ -21,3 +21,4 @@ dialog.account-modal.garden-earn-modal{width:calc(100% - 32px);max-width:480px;h
 .garden-check-in-week span.checked{animation:pop-in 420ms var(--ease-out) both}
 .garden-check-in-week li[aria-current="date"] span.checked{animation-delay:120ms}
 .garden-quest-progress{flex:none;max-width:42%;color:var(--muted);font-size:13px;font-weight:600;text-align:right;line-height:1.3}
+.garden-earn-modal .garden-earn-content a.btn{display:inline-flex;align-items:center;justify-content:center;max-width:50%;height:auto;text-align:center;text-decoration:none;line-height:1.2}

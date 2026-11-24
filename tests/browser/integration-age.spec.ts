@@ -33,7 +33,7 @@ test('new dev onboarding rejects an under-18 birthday before saving',async({page
  const fixture=await wiringFixture(page,{fresh:true})
  await page.goto('/onboarding')
  await page.getByLabel('Display name').fill('Test')
- await page.getByLabel('Username').fill('fixture-child')
+ await page.getByLabel('Username').fill('fixture_child')
  const year = String(new Date().getUTCFullYear() - 10)
  await page.getByLabel('Month', { exact: true }).fill('1')
  await page.getByLabel('Day', { exact: true }).fill('1')

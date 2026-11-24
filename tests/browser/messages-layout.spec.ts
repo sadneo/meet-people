@@ -75,3 +75,15 @@ for (const mode of ['friends', 'dating', null] as const) {
     await expect(row).not.toContainText('Connection')
   })
 }
+
+test('an active peer named Unavailable account retains safety actions everywhere', async ({ page }) => {
+  await wiringFixture(page, { peerDisplayName: 'Unavailable account' })
+  await page.goto('/messages')
+  await expect(page.locator('.swipe-reveal-action button[aria-label="Block or report"]')).toHaveCount(1)
+  await page.locator('.contact-row').click()
+  await page.getByLabel('Conversation options and safety').click()
+  await expect(page.getByRole('button', { name: 'Block or report' })).toBeVisible()
+  await page.getByLabel('Conversation options and safety').click()
+  await page.getByRole('button', { name: 'View conversation members' }).click()
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Block or report' })).toBeVisible()
+})

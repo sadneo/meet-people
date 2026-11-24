@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { ConnectionListSchema, ConnectionStateSchema, ConnectionRequestAllowanceSchema } from '../../../shared/connections'
 import { authorizedRequest } from '../../auth/authorizedRequest'
 
@@ -9,5 +10,6 @@ export const connections = {
   // Accepts instead when this person already asked.
   request: (userId: string) => authorizedRequest(person(userId), ConnectionStateSchema, { body: {} }),
   accept: (userId: string) => authorizedRequest(`${person(userId)}/accept`, ConnectionStateSchema, { body: {} }),
+  cancelSent: (userId: string, requestedAt: string) => authorizedRequest(`${person(userId)}/cancel`, z.literal(true), { body: { requestedAt } }),
   remove: (userId: string) => authorizedRequest(person(userId), ConnectionStateSchema, { method: 'DELETE' }),
 }
