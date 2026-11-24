@@ -46,9 +46,9 @@ hotlinked into a member profile. After import, authenticated private photo
 storage supplies the images through the existing authorization rules.
 
 ```sh
-pnpm demo:portraits --dry-run
-pnpm demo:portraits
-pnpm demo:portraits --restore-initials
+pnpm demo portraits --dry-run
+pnpm demo portraits
+pnpm demo portraits --restore-initials
 ```
 
 The importer validates local Docker project identity and all account ownership

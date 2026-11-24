@@ -4,6 +4,7 @@ import { eventId, wiringFixture } from './wiring-fixture'
 for (const width of [320, 390, 630]) {
   test(`event directory matches the demo at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 980 })
+    await page.clock.setFixedTime(new Date("2026-11-01T12:00:00Z"))
     await wiringFixture(page)
     await page.goto('/events')
     await expect(page.getByRole('heading', { name: 'Events', exact: true })).toHaveCSS('color', 'rgb(40, 86, 64)')
@@ -35,6 +36,7 @@ const hostedCategories = [
 for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 1280, height: 800 }]) {
   test(`large category catalog stays in Filters at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport)
+    await page.clock.setFixedTime(new Date("2026-11-01T12:00:00Z"))
     await wiringFixture(page)
     const requests: URL[] = []
     await page.route('**/api/events?*', route => {
@@ -75,7 +77,6 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
     await expect.poll(() => requests.at(-1)?.searchParams.get('category')).toBe('Health Clinic/Screening')
     expect(requests.at(-1)?.searchParams.get('page')).toBe('1')
     await expect(page.getByRole('heading', { name: 'Filtered campus concert', exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(page.getByText('Page 1', { exact: true })).toBeVisible()
     await expect(page.locator('#event-filter-summary')).toHaveText('Category: Health Clinic/Screening')
 
@@ -86,8 +87,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
     await expect(page.locator('#event-filter-summary')).toBeVisible()
     await filters.click()
     await page.getByRole('button', { name: 'Reset filters', exact: true }).click()
-    await expect(category).toHaveValue('')
-    await page.getByRole('button', { name: 'Done', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Filter events' })).toHaveCount(0)
     await expect(page.locator('#event-filter-summary')).toHaveCount(0)
     // Reset can restore the fresh unfiltered cache without another network read.
     await expect(page.getByRole('heading', { name: 'Campus concert', exact: true })).toBeVisible()

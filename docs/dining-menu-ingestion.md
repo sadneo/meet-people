@@ -20,9 +20,9 @@ These commands only read public sources and write the requested JSON file. They
 never connect to Supabase or create ingestion runs:
 
 ```sh
-pnpm dining:scrape --source nutrislice --mode full --output /tmp/sbu-menus.json
-pnpm dining:scrape --source hospital --mode full --output /tmp/hospital-menus.json
-pnpm dining:scrape --source nutrislice --mode full --locations east-side-dining,west-side-dining --output /tmp/dine-in-menus.json
+pnpm demo dining-scrape --source nutrislice --mode full --output /tmp/sbu-menus.json
+pnpm demo dining-scrape --source hospital --mode full --output /tmp/hospital-menus.json
+pnpm demo dining-scrape --source nutrislice --mode full --locations east-side-dining,west-side-dining --output /tmp/dine-in-menus.json
 ```
 
 Optional: `--start-date YYYY-MM-DD`. The CLI exits with status 1 for failed or
@@ -39,13 +39,7 @@ exclusive end and remain correct across daylight saving changes.
 Apply `supabase/migrations/20261115010000_dining_menu_ingestion.sql` to the target
 database. Set `INGEST_TOKEN`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` in the
 Edge Function environment, as for SB Engaged. Dry-runs only need `INGEST_TOKEN`.
-For local serving, put function secrets in the existing ignored `supabase/.env`:
-
-```sh
-pnpm supabase:functions:serve:nutrislice
-# Or, in place of the command above:
-pnpm supabase:functions:serve:hospital
-```
+For local serving, put function secrets in the ignored root `.env`; `pnpm dev` then serves every Edge Function.
 
 Request a preview (use the corresponding function name for the hospital):
 
@@ -68,13 +62,13 @@ For a local database, start Supabase and apply pending migrations without resett
 existing data, then serve both functions in one terminal:
 
 ```sh
-pnpm supabase:start
-pnpm exec supabase migration up --local
-pnpm exec supabase functions serve --env-file supabase/.env
+pnpm supabase start
+pnpm supabase migration up --local
+pnpm supabase functions serve --env-file .env
 ```
 
 In another terminal, export `INGEST_TOKEN` with the same value configured in
-`supabase/.env`, then import both sources into the database:
+`.env`, then import both sources into the database:
 
 ```sh
 for function in ingest-nutrislice ingest-sbu-hospital; do
@@ -89,7 +83,7 @@ For a hosted database, use its `SUPABASE_URL` instead of
 `http://127.0.0.1:54321`; both functions must be deployed, the migration applied,
 and `INGEST_TOKEN` configured as a function secret. Check each response for
 `status: "ok"` and a nonzero `storage.upserted`; HTTP 200 can also indicate a
-partial import. `pnpm dining:scrape` only writes JSON and does not populate the app.
+partial import. `pnpm demo dining-scrape` only writes JSON and does not populate the app.
 
 ## Storage and refresh behavior
 
@@ -112,9 +106,9 @@ Menus are separate from `listings`, which represents events, restaurants, and
 parks. The new table uses RLS and service-role-only access, matching ingestion
 storage conventions. Release CI deploys both functions.
 
-## Production schedule
+## Schedule
 
-Supabase cron in production (`wacgxhsdhrqigrmqaonc`) runs both imports daily
+Supabase cron in each environment runs both imports daily against its own project
 at **6:00 a.m. America/New_York**, including daylight saving changes. The single
 job `pebble-ingest-dining` invokes the private `hosting_private.ingest_dining()`
 wrapper, which calls the combined `ingest-dining` Edge Function through `pg_net`.
@@ -132,11 +126,10 @@ refreshes the next seven days of available menus. Missing or unpublished days ca
 produce partial imports; inspect those records and the `pg_net` response rather
 than relying on HTTP 200 alone. There are no automatic retries.
 
-`scripts/deploy-dining-schedules.mjs` reconciles the native job during production
-releases, after functions, migrations and Vault are ready. Sandbox releases do not
-install a recurring food import. `scripts/retire-google-dining-schedule.mjs`
-verifies the native job and removes only the known legacy Google dining job;
-subsequent releases treat its absence as success. Event scraping also uses
+`scripts/deploy-dining-schedules.mjs` reconciles the native job during every sandbox
+and production release, after functions, migrations and Vault are ready. The
+wrapper only accepts a `https://<ref>.supabase.co` URL from Vault. The legacy
+Google Cloud Scheduler dining job was retired from production on 2026-11-17. Event scraping also uses
 Supabase cron; Google event-group matching and push workers are separate jobs.
 
 To reconcile with an existing Supabase login (Google credentials are unnecessary):
@@ -150,7 +143,7 @@ node scripts/deploy-dining-schedules.mjs
 An authorized database operator can run once outside the scheduled hour with
 `select hosting_private.ingest_dining(true);`. This returns a `pg_net` request ID;
 check `net._http_response` and both ingestion run records for completion. A forced
-run counts for that local date; it never enables a sandbox schedule.
+run counts for that local date.
 
 ## Browse menus in Pebble
 
@@ -174,7 +167,7 @@ database with no imported menus shows an unpublished day. The UI does not schedu
 or trigger scraping. Validate browsing with:
 
 ```sh
-pnpm test:unit tests/unit/api-dining.test.ts
+pnpm exec vitest run tests/unit/api-dining.test.ts
 pnpm test:browser tests/browser/food.spec.ts
 ```
 
@@ -203,7 +196,7 @@ pnpm test:browser tests/browser/food.spec.ts
 ## Validation
 
 ```sh
-pnpm test:unit tests/unit/dining-menus.test.ts tests/unit/dining-ingestion.test.ts
+pnpm exec vitest run tests/unit/dining-menus.test.ts tests/unit/dining-ingestion.test.ts
 deno check supabase/functions/ingest-nutrislice/index.ts supabase/functions/ingest-sbu-hospital/index.ts supabase/functions/ingest-dining/index.ts
 docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/dining-menus.sql
 ```

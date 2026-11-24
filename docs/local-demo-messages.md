@@ -1,7 +1,7 @@
 # Local messaging preview
 
-Run `pnpm demo:messages` after `pnpm demo:seed --count 20` and development-account
-sign-in. `pnpm demo:messages --dry-run` previews without database or Docker access.
+Run `pnpm demo messages` after `pnpm demo seed --count 20` and development-account
+sign-in. `pnpm demo messages --dry-run` previews without database or Docker access.
 
 The guarded script targets only the running local `meet-people` Docker database.
 It verifies the development account's admin-owned marker and all four reserved
@@ -40,6 +40,6 @@ notification or proof of delivery to a device. Mobile Back returns to the inbox.
 Unsent text is retained separately per conversation while the Messages screen
 remains mounted; it is not persisted to browser storage or the database.
 
-For cleanup, the existing guarded `demo:remove` tool can remove selected marked
+For cleanup, the existing guarded `pnpm demo remove` tool can remove selected marked
 demo accounts and their cascading local data. It is destructive and must be run
 explicitly; starting/stopping the app does not remove conversations or reset data.

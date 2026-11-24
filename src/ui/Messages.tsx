@@ -79,7 +79,7 @@ export function Messages() {
       preview: group.latestMessage?.body ?? 'Say hello', date: group.latestMessage?.created_at, unread: group.unreadCount, label: 'Friends',
     })),
     ...(inbox.value?.conversations ?? []).map(conversation => {
-      const people = conversation.participants.filter(person => person.id !== current.session.user.id);
+      const people = conversation.participants.filter(person => person.id !== current.session.user.id).map(named);
       return { id: conversation.id, group: false, title: people.map(person => person.display_name).join(', ') || 'Conversation', people,
         preview: conversation.latest_message?.body ?? 'Say hello', date: conversation.latest_message?.created_at ?? conversation.created_at,
         unread: conversation.unread_count, label: conversation.kind === 'direct' ? conversation.mode === 'friends' ? 'Friends' : conversation.mode === 'dating' ? 'Dating' : '' : conversation.kind === 'event_group' ? 'Event group' : 'Friends',
@@ -94,7 +94,7 @@ export function Messages() {
         <h2>Messages</h2>
         <div className="row messages-header-actions">
           <button type="button" className="messages-group-action" aria-label="Find a group" onClick={()=>setFindGroup(true)}><Icon name="Friends" /><span>Find a group</span></button>
-          <Link className="round messages-activity" to="/activity" aria-label="Activity inbox"><Icon name="Bell" /></Link>
+          <Link className="round messages-activity" to="/activity" state={{ from: "/messages" }} aria-label="Activity inbox"><Icon name="Bell" /></Link>
         </div>
       </div>
       {realtime.error && <div><ErrorMessage>{realtime.error}</ErrorMessage><ActionButton secondary onClick={realtime.reconnect}>Reconnect live updates</ActionButton></div>}
@@ -128,8 +128,8 @@ export function Messages() {
                 className={`conversation-row contact-row ${selected === row.id ? "selected" : ""}`}
                 to={`/messages/chat?${row.group ? 'group' : 'conversation'}=${encodeURIComponent(row.id)}`}
               >
-                {row.people.length > 1 ? <span className="group-avatar">{row.people.slice(0, 2).map(person => <PersonPhoto key={person.id} id={person.id} name={person.display_name} fallback={person.avatar_url} />)}</span>
-                  : row.people[0] ? <PersonPhoto id={row.people[0].id} name={row.title} fallback={row.people[0].avatar_url} /> : <Avatar name={row.title} />}
+                {row.people.length > 1 ? <span className="group-avatar">{row.people.slice(0, 2).map(person => <MemberPhoto key={person.id} person={person} />)}</span>
+                  : row.people[0] ? <MemberPhoto person={row.people[0]} /> : <Avatar name={row.title} />}
                 <span className="contact-copy">
                   <span className="contact-top"><b>{row.title}</b><small><time dateTime={row.date}>{inboxTime(row.date)}</time></small></span>
                   <span className="contact-bottom"><span className={`contact-preview ${row.unread ? 'unread' : ''}`}>{row.preview}</span>
@@ -174,6 +174,12 @@ export function Messages() {
     </section>
   );
 }
+// The server names people it can no longer show "Account <id>"; never show that id as a name.
+const unavailable = (person: { display_name: string }) => /^(Account [0-9a-f-]{36}|Unavailable account)$/i.test(person.display_name)
+const named = <T extends { display_name: string }>(person: T): T => unavailable(person) ? { ...person, display_name: 'Unavailable account' } : person
+function MemberPhoto({ person }: { person: { id: string; display_name: string; avatar_url?: string | null } }) {
+  return unavailable(person) ? <Avatar name={person.display_name} /> : <PersonPhoto id={person.id} name={person.display_name} fallback={person.avatar_url} />
+}
 function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing }: { id: string; changed: () => void; isGroup?: boolean; connectionLabel?: string; draftKey: string; typing: TypingEvent[] }) {
   const [group,setGroup]=useState<ActiveGroup|null>(null)
   const [removeOpen, setRemoveOpen] = useState(false);
@@ -198,19 +204,20 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
 
   const { draft, store } = useMessageDraft(draftKey);
   const { body, confirmed } = draft;
-  const sending = draft.status === 'pending', uncertain = sending || draft.status === 'uncertain';
-  const announceTyping = useConversationTyping(id, isGroup, !!history.value?.canSend && !history.error && !uncertain, current.session.user.id)
+  const sending = draft.status === 'pending', uncertain = draft.status === 'uncertain';
+  const closed = !!history.value && !history.value.canSend;
+  const announceTyping = useConversationTyping(id, isGroup, !!history.value?.canSend && !history.error && !sending, current.session.user.id)
   const [older, setOlder] = useState<Message[]>([]),
     [cursor, setCursor] = useState<number | null>(null),
     [readError, setReadError] = useState("");
   const composer = useRef<HTMLTextAreaElement>(null),
     focusAfterSend = useRef(false);
   useEffect(() => {
-    if (focusAfterSend.current && !action.busy && !uncertain && canSend) {
+    if (focusAfterSend.current && !action.busy && !sending && canSend) {
       composer.current?.focus();
       focusAfterSend.current = false;
     }
-  }, [action.busy, uncertain, canSend]);
+  }, [action.busy, sending, canSend]);
   const live = useRef(true);
   useEffect(() => {
     live.current = true;
@@ -241,7 +248,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
     lastVisibleMessage.current = lastMessage.id;
   }, [lastMessage, current.session.user.id]);
   useEffect(() => {
-    if (history.refreshing || history.error || !newest || newest <= acknowledgedRead.current || document.visibilityState !== "visible") return;
+    if (history.refreshing || history.error || history.value?.canSend === false || !newest || newest <= acknowledgedRead.current || document.visibilityState !== "visible") return;
     if (pendingRead.current && pendingRead.current.seq >= newest) return;
     pendingRead.current?.controller.abort();
     const controller = new AbortController();
@@ -263,7 +270,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
       }).finally(() => {
         if (pendingRead.current?.controller === controller) pendingRead.current = null;
       });
-  }, [id, newest, changed, token, isGroup, history.refreshing, history.error, history.updatedAt]);
+  }, [id, newest, changed, token, isGroup, history.refreshing, history.error, history.value?.canSend, history.updatedAt]);
   async function send(event: FormEvent) {
     event.preventDefault();
     if (action.busy) return;
@@ -279,7 +286,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
   const others =
     history.value?.participants.filter(
       (person) => person.id !== current.session.user.id,
-    ) ?? [];
+    ).map(named) ?? [];
   const olderCursor = cursor ?? history.value?.nextCursor;
   const typists = history.value?.canSend && !history.error ? others.filter(person => typing.some(event => event.conversationId === id && event.isGroup === isGroup && event.userId === person.id)) : []
   const typingLabel = typists.length === 1 ? `${typists[0].display_name} is typing` : `${typists.length} people are typing`
@@ -289,7 +296,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
         <Link className="chat-back" to="/messages" aria-label="Back to conversations">
           <Icon name="Back" />
         </Link>
-        {others[0] && <PersonPhoto id={others[0].id} name={others[0].display_name} fallback={others[0].avatar_url} />}
+        {others[0] && <MemberPhoto person={others[0]} />}
         <button className="chat-identity-button" type="button" aria-label="View conversation members" onClick={() => setPeopleOpen(true)}><h3>
           {group?.name || others.map((person) => person.display_name).join(", ") ||
             "Conversation"}
@@ -319,7 +326,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
           </div>
         </details>
       </header>
-      {peopleOpen && <Modal variant="sheet" title={isGroup ? 'Group members' : 'Conversation members'} close={() => setPeopleOpen(false)}><div className="conversation-members">{history.value?.participants.map(person => <div className="row item" key={person.id}><PersonPhoto id={person.id} name={person.display_name} fallback={person.avatar_url}/><div><b>{person.id === current.session.user.id ? 'You' : person.display_name}</b></div>{person.id !== current.session.user.id && <SafetyActions id={person.id} name={person.display_name}/>}</div>)}</div></Modal>}
+      {peopleOpen && <Modal variant="sheet" title={isGroup ? 'Group members' : 'Conversation members'} close={() => setPeopleOpen(false)}><div className="conversation-members">{history.value?.participants.map(named).map(person => <div className="row item" key={person.id}><MemberPhoto person={person}/><div><b>{person.id === current.session.user.id ? 'You' : person.display_name}</b></div>{person.id !== current.session.user.id && <SafetyActions id={person.id} name={person.display_name}/>}</div>)}</div></Modal>}
       {removeOpen && others[0] && <Modal variant="sheet" title="Remove connection?" close={() => setRemoveOpen(false)}>
         <p>Remove your connection with {others[0].display_name}? This does not block the account or erase saved messages.</p>
         <ErrorMessage>{action.error}</ErrorMessage>
@@ -382,8 +389,8 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
       </div>}
       <ErrorMessage>{action.error}</ErrorMessage>
       <ErrorMessage>{draft.error}</ErrorMessage>
-      {history.value && !history.value.canSend && (
-        <p>You can’t send messages in this conversation.</p>
+      {closed && (
+        <p className="account-note">This conversation is closed. You can still read earlier messages.</p>
       )}
       <form className="live-composer" onSubmit={(event) => void send(event)}>
         <label className="sr-only" htmlFor="message">
@@ -402,29 +409,29 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
           onKeyDown={(event) => {
             if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             event.preventDefault();
-            if (event.repeat || !body.trim() || !canSend || action.busy || uncertain) return;
+            if (event.repeat || !body.trim() || !canSend || action.busy || sending) return;
             focusAfterSend.current = true;
             event.currentTarget.form?.requestSubmit();
           }}
           aria-describedby="message-keyboard-help"
-          disabled={!history.value || action.busy || uncertain}
+          disabled={!history.value || closed || action.busy || sending}
         />
         <button
           className={`btn message-send ${uncertain ? 'retry' : ''}`}
           aria-label={sending || action.busy ? 'Sending…' : uncertain ? 'Retry same message' : 'Send'}
           disabled={!canSend || action.busy || sending || !body.trim()}
         >
-          {sending || action.busy ? "…" : uncertain ? "Retry same message" : <Icon name="Send" />}
+          {sending || action.busy ? "…" : uncertain ? "Retry" : <Icon name="Send" />}
         </button>
       </form>
       <p id="message-keyboard-help" className="sr-only">
         Enter to send · Shift+Enter for a new line.
       </p>
       {uncertain && (
-        <p className="account-note">
-          Delivery is unconfirmed. Retrying uses the same request ID to avoid a
-          duplicate.
-        </p>
+        <div className="row">
+          <p className="account-note">Edit it, or</p>
+          <ActionButton secondary onClick={() => store.discard(draftKey)}>Discard</ActionButton>
+        </div>
       )}
     </section>
   );

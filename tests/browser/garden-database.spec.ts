@@ -51,7 +51,7 @@ test('account Garden earns and persists across two browsers through real API and
   await page.getByRole('button',{name:'Open Garden inventory'}).click();await page.locator('summary[aria-label="Random Pebbles"]').click()
   await page.getByRole('button',{name:'Open',exact:true}).click();await expect(page.locator('.garden-reveal')).toBeVisible()
   const rock=await page.locator('#garden-reveal-title').innerText();await page.getByRole('button',{name:'Keep in inventory'}).click()
-  await second.goto('http://127.0.0.1:3194/home');await expect(second.getByRole('button',{name:'Build with 150 Pebbles'})).toBeVisible()
+  await second.goto(`http://127.0.0.1:${process.env.PEBBLE_BROWSER_PORT}/home`);await expect(second.getByRole('button',{name:'Build with 150 Pebbles'})).toBeVisible()
   await second.getByRole('button',{name:'Open Garden inventory'}).click();await second.locator('summary[aria-label="Random Pebbles"]').click()
   await second.locator('.garden-shop-item').filter({has:second.getByText(rock,{exact:true})}).getByRole('button',{name:'Place',exact:true}).click()
   await second.getByRole('button',{name:'Open Garden inventory'}).click();await second.getByRole('button',{name:'Reset Garden',exact:true}).click()

@@ -32,7 +32,7 @@ try {
     assert.ifError(signed.error); actor.token = signed.data.session.access_token
     let account = await api(actor, matching + '/account')
     assert.equal(account.profile, null)
-    account.profile = { username: `check-${randomUUID()}`, display_name: `Deployment Check ${index + 1}`, bio: 'Disposable deployment verification', avatar_url: null, birthdate: null, location_city: null, interests: [], availability: [] }
+    account.profile = { username: `check_${randomBytes(12).toString('hex')}`, display_name: `Deployment Check ${index + 1}`, bio: 'Disposable deployment verification', avatar_url: null, birthdate: null, location_city: null, interests: [], availability: [] }
     for (let chapter = 0; chapter < 4; chapter++) {
       if (chapter === 1) account.profile.interests = ['Coffee', 'Hiking', 'Music']
       if (chapter === 2) account.preferences.intents = ['Activity partners']
@@ -48,10 +48,19 @@ try {
     assert.deepEqual(await api(actor, matching + '/account'), account)
     const details = await api(actor, matching + '/detailed-settings')
     await api(actor, matching + '/detailed-settings', 'PUT', { expectedRevision: details.revision, settings: { messages: true, plans: false, matches: true, friendsDiscovery: true, datingDiscovery: true } })
-    const places = await api(actor, matching + '/search-locations/places?q=Stony%20Brook')
-    assert.ok(places.places.length)
+    const state = await api(actor, matching + '/profile-photo')
+    const image = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#dceacc' } }).jpeg().toBuffer()
+    const uploaded = await api(actor, `${matching}/profile-photo?expectedRevision=${state.revision}&requestId=${randomUUID()}`, 'PUT', image)
+    assert.equal(uploaded.hasPhoto, true)
+    assert.ok((await api(actor, `${matching}/profile-photo/${actor.id}/${uploaded.revision}`)).byteLength > 0)
+    const map = matching + '/search-locations/map'
     for (const mode of ['friends', 'dating']) {
-      const receipt = await api(actor, matching + '/search-locations/resolve', 'POST', { requestId: randomUUID(), mode, source: 'temporary', placeId: places.places[0].id })
+      const sessionToken = randomUUID()
+      const { suggestions } = await api(actor, map + '/suggestions', 'POST', { mode, sessionToken, input: 'Stony Brook University, NY' })
+      const campus = suggestions.find(place => /Stony Brook University/i.test(place.label))
+      assert.ok(campus, 'Stony Brook University should appear in place search')
+      const { ticket } = await api(actor, map + '/preview', 'POST', { mode, sessionToken, kind: 'place', placeId: campus.placeId })
+      const receipt = await api(actor, map + '/confirm', 'POST', { mode, ticket })
       assert.equal(receipt.usable, true)
       const search = { ageMin: 18, ageMax: 99, radiusMiles: 15, searchArea: { source: 'temporary', areaLabel: receipt.areaLabel, resolvedLocationRef: receipt.id } }
       if (mode === 'friends') {
@@ -66,11 +75,6 @@ try {
         assert.equal(enabled.aggregate.effectiveEnabled, true)
       }
     }
-    const state = await api(actor, matching + '/profile-photo')
-    const image = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#dceacc' } }).jpeg().toBuffer()
-    const uploaded = await api(actor, `${matching}/profile-photo?expectedRevision=${state.revision}&requestId=${randomUUID()}`, 'PUT', image)
-    assert.equal(uploaded.hasPhoto, true)
-    assert.ok((await api(actor, `${matching}/profile-photo/${actor.id}/${uploaded.revision}`)).byteLength > 0)
     await api(actor, matching + '/profile-details')
     await api(actor, matching + '/safety/blocks')
   }
@@ -99,13 +103,11 @@ try {
     try {
       const page = await browser.newPage()
       page.setDefaultTimeout(20000)
-      await page.goto(new URL('/login', origin).href)
+      await page.goto(new URL('/login?returnTo=%2Fmessages', origin).href)
       await page.getByLabel('Email', { exact: true }).fill(a.email)
-      await page.getByRole('button', { name: 'Continue', exact: true }).click()
       await page.getByLabel('Password', { exact: true }).fill(password)
       await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-      await expect(page).toHaveURL(origin.href)
-      await page.goto(new URL('/messages', origin).href)
+      await expect(page).toHaveURL(new URL('/messages', origin).href)
       await expect(page.getByText(b.email)).toHaveCount(0)
       await expect(page.getByText(other.profile.display_name, { exact: true }).first()).toBeVisible()
       await page.reload()

@@ -58,14 +58,24 @@
   z-index: 2;
   pointer-events: none;
 }
-.discover-photo-progress span:not(.sr-only) {
-  height: 3px;
+.discover-photo-progress button {
   flex: 1;
+  min-width: 0;
+  padding: 10px 0;
+  margin: -10px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.discover-photo-progress button span {
+  display: block;
+  height: 4px;
   border-radius: 5px;
   background: #ffffff80;
   box-shadow: 0 1px 3px #0005;
 }
-.discover-photo-progress span.current { background: white; }
+.discover-photo-progress button.current span { background: white; }
 .discovery-photo-viewer {
   position: absolute;
   inset: 0;
@@ -154,6 +164,8 @@ button.gallery-thumbnail:focus-visible {
   max-height: min(56dvh, 500px);
   object-fit: contain;
 }
+.photo-preview-modal .gallery-full-photo { min-height: 120px; }
+.photo-preview-modal .gallery-full-photo img { max-height: min(34dvh, 320px); }
 .photo-preview-actions {
   display: grid;
   gap: 8px;

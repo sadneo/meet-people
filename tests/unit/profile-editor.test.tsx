@@ -1,8 +1,10 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
+import { createRef } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { Profile, PhotoEditor } from '../../src/ui/Profile';
+import { Profile, PhotoEditor, type PhotoEditorHandle } from '../../src/ui/Profile';
 import { ProfileSettings } from '../../src/ui/Settings';
+import { ProfilePhotoError } from '../../src/features/account/profile-photo-client';
 import { accountFixture, requiredPreferences } from './complete-profile-fixture';
 
 const mocks = vi.hoisted(() => ({ current: {} as Record<string, unknown>, photo: {} as Record<string, unknown>, facts: {} as Record<string, unknown>, detailed: {} as Record<string, unknown> }));
@@ -25,6 +27,8 @@ const choose = (file = upload()) => fireEvent.change(screen.getByLabelText('Choo
 const savePhoto = vi.fn(), reloadPhoto = vi.fn(), saveAccount = vi.fn(), saveFacts = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
+  HTMLDialogElement.prototype.showModal = function showModal() { this.setAttribute('open', ''); };
+  HTMLDialogElement.prototype.close = function close() { this.removeAttribute('open'); };
   vi.stubGlobal('fetch', vi.fn(async () => Response.json({ revision: 2, timeZone: 'UTC', showAvailability: false })));
   vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:draft'), revokeObjectURL: vi.fn() }));
   savePhoto.mockResolvedValue({ revision: 5, hasPhoto: true });
@@ -43,6 +47,7 @@ it('previews selection without a write and revokes its URL on Cancel', async () 
   await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalledOnce());
   expect(savePhoto).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
   expect(savePhoto).not.toHaveBeenCalled(); expect(saveAccount).not.toHaveBeenCalled();
   expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:draft');
 });
@@ -51,6 +56,7 @@ it('stages removal without a write and Cancel discards it', () => {
   editor(); fireEvent.click(screen.getByRole('button', { name: 'Remove photo' }));
   expect(screen.getByText('Photo removal will be saved with Save changes.')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
   expect(savePhoto).not.toHaveBeenCalled();
 });
 
@@ -101,6 +107,47 @@ it('reports partial success and requires a successful read-only reload after an 
   expect(savePhoto).toHaveBeenCalledOnce();
 });
 
+it('asks before Cancel throws away unsaved edits', () => {
+  editor();
+  fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Changed' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.getByRole('dialog', { name: 'Discard changes?' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+  expect((screen.getByLabelText('Display name') as HTMLInputElement).value).toBe('Changed');
+});
+
+it('closes without asking when nothing changed', () => {
+  editor();
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.queryByRole('dialog', { name: 'Discard changes?' })).toBeNull();
+});
+
+it('guards the tab, and links elsewhere in the app, while there are unsaved edits', () => {
+  const view = render(<MemoryRouter initialEntries={['/profile?section=basics']}><a href="/messages">Messages</a><Profile/></MemoryRouter>);
+  const leave = () => fireEvent.click(view.getByText('Messages'));
+  const unload = () => { const event = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented; };
+  expect(unload()).toBe(false);
+  fireEvent.change(view.getByLabelText('Display name'), { target: { value: 'Changed' } });
+  expect(unload()).toBe(true);
+  leave();
+  expect(view.getByRole('dialog', { name: 'Discard changes?' })).toBeTruthy();
+});
+
+it('shows a clear photo rejection plainly, without asking to reload and without claiming nothing-changed details were saved', async () => {
+  savePhoto.mockRejectedValueOnce(new ProfilePhotoError(429, 'Photo change limit reached. Try again later.'));
+  editor(); choose(); fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('Photo change limit reached. Try again later.'));
+  expect(screen.queryByRole('button', { name: 'Reload saved photo and discard photo draft' })).toBeNull();
+  expect(screen.queryByText('Photo selection will be saved with Save changes.')).toBeNull();
+});
+
+it('keeps the error inside the save bar', async () => {
+  savePhoto.mockRejectedValueOnce(new Error('Disconnected'));
+  editor(); choose(); fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  const alert = await screen.findByRole('alert');
+  expect(alert.closest('.profile-save-bar')).not.toBeNull();
+});
+
 it('does not overwrite a photo revision changed after selection', async () => {
   const view = editor(); choose();
   mocks.photo = { ...mocks.photo, snapshot: { revision: 6, hasPhoto: true } };
@@ -144,6 +191,27 @@ it('keeps standalone photo upload immediate and separate from the profile draft'
   await waitFor(() => expect(savePhoto).toHaveBeenCalledOnce());
 });
 
+it('saves the matching setup preview through continue and blocks duplicate writes after a failed readback', async () => {
+  const ref = createRef<PhotoEditorHandle>();
+  reloadPhoto.mockResolvedValueOnce(null);
+  render(<PhotoEditor ref={ref}/>);
+  choose();
+  expect(screen.queryByRole('button', { name: 'Upload photo' })).toBeNull();
+  expect(savePhoto).not.toHaveBeenCalled();
+  await act(async () => {
+    await expect(ref.current!.save()).rejects.toThrow('Photo saved. Reload its current state before continuing.');
+  });
+  expect(savePhoto).toHaveBeenCalledOnce();
+  await act(async () => {
+    await expect(ref.current!.save()).rejects.toThrow('Reload the photo before retrying.');
+  });
+  expect(savePhoto).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole('button', { name: 'Reload photo before retrying' }));
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Reload photo before retrying' })).toBeNull());
+  await act(async () => { await ref.current!.save(); });
+  expect(savePhoto).toHaveBeenCalledOnce();
+});
+
 it('offers the canonical sharing control in Privacy, not the unused legacy account flag', async () => {
   let schedule = { revision: 2, timeZone: 'UTC', showAvailability: false };
   vi.mocked(fetch).mockImplementation(async (_input, init) => {
@@ -173,7 +241,7 @@ it('offers the canonical sharing control in Privacy, not the unused legacy accou
 it('explains the location gate and preserves independent availability on settings saves', async () => {
   render(<MemoryRouter><ProfileSettings section="discovery"/></MemoryRouter>);
   fireEvent.click(screen.getByRole('switch', { name: 'Allow device location for search areas' }));
-  expect(screen.getByText(/this switch alone does not request coordinates/)).toBeTruthy();
+  expect(screen.getByText(/asks for device permission and enables this setting/)).toBeTruthy();
   // The switch saves immediately.
   await waitFor(() => expect(saveAccount).toHaveBeenCalledWith(expect.objectContaining({ settings: expect.objectContaining({ availability: true, location: true }) })));
 });

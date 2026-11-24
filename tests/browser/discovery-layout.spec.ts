@@ -112,7 +112,7 @@ test('profile transitions respect reduced motion', async ({ page }) => {
   await expect(content).toBeVisible()
   await expect(content).toHaveCSS('animation-name', 'none')
   await page.getByRole('button', { name: 'Pass', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'You’re all caught up.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'You’re out of people nearby.' })).toBeVisible()
   await page.getByRole('button', { name: 'Undo skip', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Taylor, 23' })).toBeVisible()
   await expect(content).toHaveCSS('animation-name', 'none')

@@ -141,7 +141,7 @@ and preceding matching migrations. API services are enabled by default with vali
 server configuration. The database policy gate remains an operational safety check:
 verify in sandbox, configure scheduled processing, then enable that policy. Arrivals,
 ready-up and manual checks trigger immediate bounded processing. Run
-`pnpm matchmaking:active:once` as a scheduled existing-infrastructure job for idle
+`pnpm demo matchmaking-once` as a scheduled existing-infrastructure job for idle
 queue progress; a once-per-minute fallback may add up to a minute plus scheduling
 latency. Increase cadence/batch capacity only after measurements. The migration
 registers one-minute expiry/retention maintenance if pg_cron is already installed;

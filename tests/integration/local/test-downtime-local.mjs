@@ -1,12 +1,14 @@
 import process from 'node:process';
 import console from 'node:console';
 if (process.env.PEBBLE_LOCAL_DOWNTIME_TEST !== '1') throw Error('Set PEBBLE_LOCAL_DOWNTIME_TEST=1 to authorize one disposable local Auth account. No Gemini calls.');
-const { execFileSync } = await import('node:child_process');
 const { chromium, expect } = await import('@playwright/test');
 const { randomBytes } = await import('node:crypto');
-const v=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}));
-if(v.API_URL!=='http://127.0.0.1:54321') throw Error('Local-only Supabase required');
-const queueRows=execFileSync('docker',['exec','supabase_db_meet-people','psql','-X','-U','postgres','-d','postgres','-Atc','select count(*) from public.queue_entries;'],{encoding:'utf8'}).trim();
+const { containerSync } = await import('../../../scripts/lib/containers.mjs');
+const { assertLocalStack, requireStack, supabaseStatus } = await import('../../../scripts/lib/stack.mjs');
+const stack=requireStack();
+const v=supabaseStatus(stack);
+try{assertLocalStack(v.API_URL,stack)}catch{throw Error('Local-only Supabase required')}
+const queueRows=containerSync(['exec',stack.dbContainer,'psql','-X','-U','postgres','-d','postgres','-Atc','select count(*) from public.queue_entries;']);
 if(queueRows!=='0') throw Error('Abort: populated queue could invoke Gemini. Empty isolated local queue required.');
 async function auth(path,body,key=v.SERVICE_ROLE_KEY){
  const r=await globalThis.fetch(v.API_URL+'/auth/v1/'+path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -22,7 +24,7 @@ try {
  browser=await chromium.launch();
  const page=await browser.newPage({viewport:{width:390,height:844}});
  const errors=[];page.on('pageerror',()=>errors.push('browser-error'));
- await page.goto('http://127.0.0.1:3000/downtime-matchmaking');
+ await page.goto(`${process.env.PEBBLE_WEB_URL??'http://127.0.0.1:3000'}/downtime-matchmaking`);
  await expect(page.getByRole('heading',{name:'Sign in to match'})).toBeVisible();
  await page.evaluate(async ({access_token,refresh_token})=>{
   const {supabase}=await import('/src/supabase.ts');
@@ -48,7 +50,7 @@ try {
  await expect(page.getByRole('heading',{name:'No candidate yet'})).toBeVisible();
  await page.getByRole('link',{name:'Active matchmaking',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('downtime queue');
- await page.goto('http://127.0.0.1:3000/downtime-matchmaking');
+ await page.goto(`${process.env.PEBBLE_WEB_URL??'http://127.0.0.1:3000'}/downtime-matchmaking`);
  await expect(page.getByRole('button',{name:'Pause downtime matching',exact:true})).toBeEnabled();
  await page.getByRole('button',{name:'Pause downtime matching',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('Ready when you are');

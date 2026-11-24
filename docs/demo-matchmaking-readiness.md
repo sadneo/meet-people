@@ -116,7 +116,7 @@ or credential files were inspected/edited. Correct PC launch:
 
 ```sh
 node scripts/start-local-demo-api.mjs
-VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_API_BASE_URL=http://127.0.0.1:3006 pnpm dev:web --port 3006
+VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_API_BASE_URL=http://127.0.0.1:3006 pnpm exec vite --port 3006
 ```
 
 The API launcher requires exact-approved runtime public-key use: local CLI status is

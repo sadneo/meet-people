@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { PullToRefresh } from './PullToRefresh';
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { respondToConnectionRequest } from "./request-actions";
 import { connections } from "../features/connections/client";
 import { matchmakingClient } from "../features/matchmaking/client";
@@ -18,7 +18,10 @@ import { useCurrent } from "./current";
 import { SafetyActions } from "./Safety";
 
 export function Activity() {
-  const matches = useLocation().pathname === '/matches';
+  const navigate = useNavigate();
+  const location = useLocation();
+  const matches = location.pathname === '/matches';
+  const fromMessages = location.state?.from === '/messages';
   const [tab, setTab] = useState('Upcoming');
   const current = useCurrent(),
     client = useMemo(
@@ -31,7 +34,8 @@ export function Activity() {
   const [uncertain, setUncertain] = useState(false);
   return (
     <div className={`activity-page ${matches ? 'plans-page' : ''}`}>
-      {matches && <><Link className="account-back" to="/matchmaking"><Icon name="Back"/>Discover</Link><div className="eyebrow">Matches &amp; Plans</div></>}
+      <Link className="account-back" to={fromMessages ? "/messages" : "/matchmaking"}><Icon name="Back"/>{fromMessages ? "Messages" : "Discover"}</Link>
+      {matches && <div className="eyebrow">Matches &amp; Plans</div>}
       <div className="pagehead">
         <h2>{matches ? 'From a hello to a “see you there.”' : 'Your little updates.'}</h2>
         <ActionButton
@@ -79,9 +83,10 @@ export function Activity() {
                   void action.run(async () => {
                     try {
                       setUncertain(true);
-                      await respondToConnectionRequest(current.session.access_token, person, true);
+                      const result = await respondToConnectionRequest(current.session.access_token, person, true);
                       setUncertain(false);
                       window.dispatchEvent(new Event("pebble:matching-changed"));
+                      if (result.conversationId) navigate(`/messages/chat?conversation=${encodeURIComponent(result.conversationId)}`);
                     } finally {
                       people.reload();
                       window.dispatchEvent(
@@ -158,7 +163,9 @@ export function Activity() {
               {new Date(item.createdAt).toLocaleString()}
             </time>
             <div className="row wrap">
-              <Link className="btn light" to={`/events/${item.eventId}`}>
+              <Link className="btn light" to={`/events/${item.eventId}`} onClick={() => {
+                if (!item.readAt) void action.run(async () => { await client.notificationRead(item.id); updates.reload(); });
+              }}>
                 View suggested group
               </Link>
               {!item.readAt && (

@@ -17,7 +17,7 @@ it.each(['/', '/login', '/messages', '/auth/callback'])('web %s stays public and
   expect(await screen.findByRole('heading', { name: /Meet new friends/ })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Open Google Play for Android' }).getAttribute('href')).toBe('https://play.google.com/store/apps')
   expect(screen.queryByRole('link', { name: /Sign in/ })).toBeNull()
-  expect(screen.queryByRole('button', { name: 'Continue with email' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull()
   expect(screen.getByLabelText('Current URL').textContent).toBe('/')
 })
 
@@ -62,7 +62,7 @@ it('web event browsing reads the registry without private group controls', async
 
 it('signed-out mobile opens directly at login', async () => {
   render(<MemoryRouter><Mobile /><Location /></MemoryRouter>)
-  expect(await screen.findByRole('button', { name: 'Continue with email' })).toBeTruthy()
+  expect(await screen.findByRole('button', { name: 'Sign in' })).toBeTruthy()
   expect(screen.getByLabelText('Current URL').textContent).toBe('/login')
   expect(screen.queryByRole('heading', { name: /Meet new friends/ })).toBeNull()
 })

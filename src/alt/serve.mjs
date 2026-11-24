@@ -57,6 +57,6 @@ createServer(async (req, res) => {
     exec(`${cmd} ${url}`)
   }
 }).on('error', (err) => {
-  console.error(err.code === 'EADDRINUSE' ? `Port ${port} is in use. Try: pnpm dev:alt --port ${port + 1}` : err)
+  console.error(err.code === 'EADDRINUSE' ? `Port ${port} is in use. Try: node src/alt/serve.mjs --port ${port + 1}` : err)
   process.exit(1)
 })

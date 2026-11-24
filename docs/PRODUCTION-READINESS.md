@@ -41,8 +41,7 @@ A deleted one-shot job using the production image, network and attached runtime
 identity successfully called Geocoding v4 reverse lookup and Places autocomplete
 with ADC OAuth (HTTP 200 for both). No downloaded service-account key, stored token
 or additional IAM grant was needed. The backend now supports renewable ADC with
-`GOOGLE_MAPS_OAUTH_PROJECT`; production selects it while sandbox retains API-key
-authentication. OAuth failures are sanitized and never fall back to the key.
+`GOOGLE_MAPS_OAUTH_PROJECT`; both environments select it. OAuth failures are sanitized and never fall back to the key.
 Reverse geocoding requests only place ID/address components and preserves the
 user-selected center. Existing signatures, expiry, owner/mode checks and retention
 policy are unchanged. The Geocoding v4 reverse daily provider quota was set and
@@ -179,6 +178,8 @@ data, auth configuration, deployment or backup settings were deliberately change
 - GitHub production variables identify this same project, URL and public key.
   The local ignored `.env.prod` now uses those confirmed public values. Backend
   secrets and Maps keys remain blank; no production secrets were fetched.
+  (Later retired: `.env.prod` and the `.env.android*` files are no longer read.
+  Public values now live in `shared/targets.json`; secrets in the single `.env`.)
 
 ### Launch gates
 
@@ -365,7 +366,7 @@ deployed pipeline or any provider settings.
 - The production deployment workflow runs this gate before Edge Function deployment,
   database migrations, canonical schema installation, Auth configuration or API/site
   deployment. Sandbox behavior remains unchanged. CI override does not bypass it.
-- `pnpm test:deployment` now includes the new recovery/migration audit unit tests.
+- `pnpm test` now includes the new recovery/migration audit unit tests.
   All 16 deployment-related tests passed, along with focused lint and diff checks.
 - Running the recovery gate against live production correctly refused permission
   because no qualifying recovery point exists. This read-only check did not create

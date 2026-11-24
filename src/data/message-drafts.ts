@@ -18,7 +18,12 @@ export function createMessageDrafts(scope: string) {
     clear() { generation++; entries.clear(); listeners.forEach(listener => listener()) },
     edit(key: string, body: string) {
       const draft = get(key)
-      if (draft.status !== 'pending' && draft.status !== 'uncertain') put(key, { ...draft, body, status: 'draft', error: '' })
+      // Editing an unconfirmed message makes it a new message with its own request ID.
+      if (draft.status !== 'pending') put(key, { ...draft, body, operation: null, status: 'draft', error: '' })
+    },
+    discard(key: string) {
+      const draft = get(key)
+      if (draft.status !== 'pending') put(key, { ...draft, body: '', operation: null, status: 'draft', error: '' })
     },
     async send(key: string, id: string, account: string, allowed: boolean, write: (operation: Operation) => Promise<Message>) {
       const draft = get(key)
@@ -33,8 +38,12 @@ export function createMessageDrafts(scope: string) {
           throw new Error('The message response could not be confirmed. Refresh messages before retrying.')
         put(key, { body: '', operation: null, status: 'confirmed', confirmed: [...draft.confirmed, saved], error: '' })
         return true
-      } catch {
-        if (started === generation) put(key, { ...draft, operation, status: 'uncertain', error: 'Delivery could not be confirmed. Refresh messages, then retry the same message.' })
+      } catch (error) {
+        if (started !== generation) return false
+        // A 4xx means the server definitely rejected it, so nothing was saved and the draft stays editable.
+        const status = (error as { status?: unknown }).status
+        if (typeof status === 'number' && status >= 400 && status < 500 && status !== 408) put(key, { ...draft, operation: null, status: 'draft', error: 'Couldn’t send. Check your message and try again.' })
+        else put(key, { ...draft, operation, status: 'uncertain', error: 'Not sent. Check your connection, then tap Retry.' })
         return false
       }
     },

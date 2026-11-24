@@ -9,6 +9,7 @@ import { ActionButton, EmptyState, ErrorMessage, Icon, PersonPhoto, ResourceStat
 import { respondToConnectionRequest } from './request-actions'
 import { useCurrent } from './current'
 import { SafetyActions } from './Safety'
+import { SentRequests } from './SentRequests'
 import { PageSkeleton } from './loading/PageSkeleton'
 import { useMessagingRealtime } from '../features/messaging/useMessagingRealtime'
 
@@ -76,5 +77,6 @@ export function Requests() {
       </div>
     </section>)}
     </details>)}
+    {people.value && <SentRequests sent={people.value.sent} disabled={uncertain} changed={() => { window.dispatchEvent(new Event('pebble:activity-changed')); window.dispatchEvent(new Event('pebble:matching-changed')); people.reload() }}/>}
   </main>
 }

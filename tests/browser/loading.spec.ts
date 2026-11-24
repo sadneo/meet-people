@@ -18,7 +18,7 @@ test('mobile has a real pre-JavaScript startup fallback with no forced display d
     await page.locator('.boot-recovery').evaluate(element => element.getAnimations().forEach(animation => animation.finish()))
     await expect(page.getByRole('link', { name: 'Reload Pebble' })).toBeVisible()
     scripts.release()
-    await expect(page.getByRole('button', { name: 'Continue with email' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
     await expect(page.locator('.pebble-boot')).toHaveCount(0)
   } finally { scripts.release() }
 })

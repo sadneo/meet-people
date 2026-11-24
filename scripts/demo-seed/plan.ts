@@ -5,7 +5,6 @@ import { FriendsPreferencesSchema } from '../../shared/friends-search-preference
 import { ProfileFactsSchema } from '../../shared/profile-details.js'
 import { globalInterestChoices } from '../../src/features/account/global-interests.js'
 export const seedMarker='pebble-local-demo-v1'
-export const seedContainer='supabase_db_meet-people'
 export const campusId='b641ad29-9f92-4e66-9490-0b616f8fd85c'
 export const campusLabel='Stony Brook University'
 export function seedIdentity(index:number){

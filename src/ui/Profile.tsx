@@ -1,7 +1,7 @@
 import { PhotoGalleryEditor, PhotoGalleryPanel } from './PhotoGallery';
 import { AudienceSelect, GardenShowcasePicker, InterestOrderEditor, OwnProfilePreview, ProfileFinishCard, PromptsEditor } from './ProfileCustomization';
 import { useProfileCustomization } from '../features/account/profile-customization-client';
-import { haptic } from './feedback';
+import { haptic, toast } from './feedback';
 import { ProfileCustomizationValueSchema, sameCustomization, type ProfileCustomizationValue } from '../../shared/profile-customization';
 import { usePhotoGallery } from '../features/account/usePhotoGallery';
 import { legalPublication } from '../features/public/legal-content';
@@ -10,8 +10,8 @@ import { PageSkeleton } from './loading/PageSkeleton'
 import './parity-account.css'
 import { MatchingSchedule } from './MatchingSchedule';
 import { DatingPreferencesPanel } from './Preferences';
-import { useEffect, useId, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
-import { Link, Navigate, useSearchParams } from "react-router";
+import { useContext, useEffect, useId, useImperativeHandle, useRef, useState, type CSSProperties, type FormEvent, type ReactNode, type Ref } from "react";
+import { Link, Navigate, UNSAFE_DataRouterContext, useBlocker, useNavigate, useSearchParams } from "react-router";
 import {
   SaveAccountSchema,
   type Account,
@@ -22,6 +22,7 @@ import { ProfileFactsSchema } from '../../shared/profile-details';
 import { globalInterestChoices } from "../features/account/global-interests";
 import { customInterestLimit, interestAdditionProblem, interestCounts, interestLimit } from '../../shared/interests';
 import { useProfileDetails } from "../features/account/useProfileDetails";
+import { ProfilePhotoError } from '../features/account/profile-photo-client';
 import {
   photoChangedEvent,
   useProfilePhoto,
@@ -235,7 +236,8 @@ export function Availability({
     </fieldset>
   );
 }
-export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boolean) => void }) {
+export type PhotoEditorHandle = { save: () => Promise<void> };
+export function PhotoEditor({ onSavingChange, ref, busy = false }: { onSavingChange?: (saving: boolean) => void; ref?: Ref<PhotoEditorHandle>; busy?: boolean }) {
   const photo = useProfilePhoto();
   const current = useCurrent();
   const action = useAction();
@@ -245,7 +247,9 @@ export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boole
   const [selectionError, setSelectionError] = useState('');
   const [galleryOpen, setGalleryOpen] = useState(false);
   const preview = selection?.preview;
-  const disabled = action.busy || photo.loading || !!photo.error || !photo.snapshot || reconcile;
+  const pending = useRef(false);
+  const disabled = busy || action.busy || photo.loading || !!photo.error || !photo.snapshot || reconcile;
+  useImperativeHandle(ref, () => ({ save: saveSelection }));
 
   useEffect(() => {
     return () => { if (preview) URL.revokeObjectURL(preview); };
@@ -261,12 +265,17 @@ export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boole
     setSelection({ file, preview: URL.createObjectURL(file) });
   }
 
-  async function upload() {
-    if (!selection || !photo.client || !photo.snapshot || disabled) return;
+  async function saveSelection() {
+    if (pending.current || reconcile) throw new Error('Reload the photo before retrying.');
+    if (!photo.client || !photo.snapshot || photo.loading || photo.error) throw new Error('Reload your photo before continuing.');
+    if (!selection) {
+      if (!photo.snapshot.hasPhoto) throw new Error('Choose a profile photo to continue.');
+      return;
+    }
     const client = photo.client, revision = photo.snapshot.revision;
-    onSavingChange(true);
+    pending.current = true;
+    onSavingChange?.(true);
     try {
-      await action.run(async () => {
         setReconcile(true);
         await client.save(selection.file, revision, crypto.randomUUID());
         setSelection(null);
@@ -274,9 +283,9 @@ export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boole
         window.dispatchEvent(new CustomEvent(photoChangedEvent, { detail: current.session.user.id }));
         if (!await photo.reload()) throw new Error('Photo saved. Reload its current state before continuing.');
         setReconcile(false);
-      });
     } finally {
-      onSavingChange(false);
+      pending.current = false;
+      onSavingChange?.(false);
     }
   }
 
@@ -295,8 +304,8 @@ export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boole
       </div>
       <div className="matching-photo-actions">
         <p className="matching-photo-title">{selection ? 'Looking like you?' : photo.snapshot?.hasPhoto ? 'Ready to meet people' : 'Put a face to your name'}</p>
-        <p className="matching-photo-hint">{selection ? 'Upload to add this photo to your profile.' : photo.snapshot?.hasPhoto ? 'Your photo is on your matching profile.' : 'Choose a clear photo of yourself.'}</p>
-        {selection && <ActionButton disabled={disabled} onClick={() => void upload()}>{action.busy ? 'Uploading…' : 'Upload photo'}</ActionButton>}
+        <p className="matching-photo-hint">{selection ? ref ? 'Your photo will be saved when you continue.' : 'Upload to add this photo to your profile.' : photo.snapshot?.hasPhoto ? 'Your photo is on your matching profile.' : 'Choose a clear photo of yourself.'}</p>
+        {selection && !ref && <ActionButton disabled={disabled} onClick={() => void action.run(saveSelection)}>{action.busy ? 'Uploading…' : 'Upload photo'}</ActionButton>}
         <ActionButton secondary={!!selection || !!photo.snapshot?.hasPhoto} disabled={disabled} onClick={() => input.current?.click()}>
           {selection ? 'Choose another' : photo.snapshot?.hasPhoto ? 'Change photo' : 'Add photo'}
         </ActionButton>
@@ -317,7 +326,7 @@ export function PhotoEditor({ onSavingChange }: { onSavingChange: (saving: boole
     </div>
     <ResourceState loading={photo.loading} error={photo.error} reload={photo.reload}/>
     <ErrorMessage>{selectionError || action.error}</ErrorMessage>
-    {reconcile && <ActionButton secondary disabled={action.busy || photo.loading} onClick={() => {
+    {reconcile && <ActionButton secondary disabled={busy || action.busy || photo.loading} onClick={() => {
       void photo.reload().then(saved => { if (saved) setReconcile(false); });
     }}>Reload photo before retrying</ActionButton>}
   </section>;
@@ -330,7 +339,8 @@ export function Profile() {
     );
   const photo = useProfilePhoto();
   const [search, setSearch] = useSearchParams();
-  const [preview, setPreview] = useState(false);
+  const draft = useRef<EditorDraft | null>(null);
+  const [preview, setPreview] = useState<EditorDraft | null>(null);
   const [view, setView] = useState<"profile" | "preview">("profile");
   const adult = canShowDating(current.account?.profile?.birthdate);
   const requestedSection = search.get('section') === 'dating' && !adult ? 'basics' : search.get('section');
@@ -358,7 +368,7 @@ export function Profile() {
     <div className="account-page profile-page live-profile">
       <div className="pagehead">
         <h2>{section ? 'Edit profile' : 'Profile'}</h2>
-        <div className="row">{section && <button type="button" className="btn light small" onClick={() => setPreview(true)}>Preview</button>}{!section && <Link className="round" aria-label="Settings" to="/profile?section=settings"><Icon name="Settings"/></Link>}</div>
+        <div className="row">{section && <button type="button" className="btn light small" onClick={() => { if (draft.current) setPreview(draft.current); }}>Preview</button>}{!section && <Link className="round" aria-label="Settings" to="/profile?section=settings"><Icon name="Settings"/></Link>}</div>
       </div>
       {!section && <div className="profile-view-switch" role="group" aria-label="Profile view">
         <button type="button" aria-pressed={view === 'profile'} onClick={() => { if (view !== 'profile') haptic('light'); setView('profile'); }}>Your profile</button>
@@ -371,14 +381,14 @@ export function Profile() {
         <ProfileFinishCard profile={profile} hasPhoto={!!photo.snapshot?.hasPhoto} onAddPhoto={() => {
           const section = document.getElementById('profile-photos');
           section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          section?.querySelector<HTMLButtonElement>('.photo-gallery-toolbar .btn')?.focus({ preventScroll: true });
+          section?.querySelector<HTMLButtonElement>('.photo-gallery-toolbar .btn')?.click();
         }}/>
         <section id="profile-photos" className="profile-photos-section" aria-labelledby="profile-photos-title">
           <h3 id="profile-photos-title">Photos</h3>
           <PhotoGalleryPanel inline/>
         </section>
         <div className="account-group">
-          <button className="account-row" onClick={() => setSection('basics')}><span className="account-row-icon"><Icon name="Profile"/></span><span className="account-row-copy"><b>About you</b><small>Photo, bio, hometown & personal details</small></span><Icon name="ChevronRight"/></button>
+          <button className="account-row" onClick={() => setSection('basics')}><span className="account-row-icon"><Icon name="Profile"/></span><span className="account-row-copy"><b>About you</b><small>Photo, bio, prompts & personal details</small></span><Icon name="ChevronRight"/></button>
           <button className="account-row" onClick={() => setSection('interests')}><span className="account-row-icon"><Icon name="Events"/></span><span className="account-row-copy"><b>Interests & availability</b><small>{profile?.interests.length ?? 0} interests · {profile?.availability.length ?? 0} saved time windows</small></span><Icon name="ChevronRight"/></button>
           {adult && <button className="account-row" onClick={() => setSection('dating')}><span className="account-row-icon"><Icon name="Dating"/></span><span className="account-row-copy"><b>Dating details</b><small>Your identity & intentions</small></span><Icon name="ChevronRight"/></button>}
         </div>
@@ -391,16 +401,13 @@ export function Profile() {
         {(section === 'basics' || section === 'interests' || section === 'dating') && <div className="account-segments" role="group" aria-label="Profile sections">{(['basics', 'interests', 'dating'] as const).filter(tab => tab !== 'dating' || adult).map((tab, i) => <button key={tab} aria-pressed={section === tab} aria-label={['About You', 'Interests & Availability', 'Dating Profile'][i]} onClick={() => setSection(tab)}>{['About', 'Interests', 'Dating'][i]}</button>)}</div>}
         <div hidden={section !== 'basics' && section !== 'interests'}>
           <ResourceState loading={facts.loading && !facts.details} error={facts.error} reload={() => void facts.reload()} skeleton={<PageSkeleton view="profile" label="Loading profile details"/>}/>
-          {facts.details && <ProfileDraft initial={current.account!} initialFacts={facts.details} factsResource={facts} section={section === 'interests' ? 'interests' : 'basics'} done={closeEditor}/>}
+          {facts.details && <ProfileDraft initial={current.account!} initialFacts={facts.details} factsResource={facts} section={section === 'interests' ? 'interests' : 'basics'} done={closeEditor} draftRef={draft}/>}
         </div>
         {adult && section === 'dating' && <section className="account-edit-fields"><DatingPreferencesPanel view="profile" done={closeEditor}/></section>}
       </>}
-      {preview && <Modal className="account-preview-modal" title="Your profile" close={() => setPreview(false)}>
-        <p className="account-note">Preview of your saved profile. Your full schedule and birthdate stay private.</p>
-        <div className="own-profile-photo"><Avatar name={profile?.display_name ?? ''} url={photo.url} large/><div><h2>{profile?.display_name}</h2><p>{profile?.location_city}</p></div></div>
-        {profile?.bio && <section className="own-preview-section"><h3>About you</h3><p>{profile.bio}</p></section>}
-        {!!profile?.interests.length && <section className="own-preview-section"><h3>Interests</h3><div className="own-preview-interests">{profile.interests.map(interest => <span className="chip" key={interest}>{interest}</span>)}</div></section>}
-        {facts.details && <dl className="own-profile-facts">{(['education', 'occupation', 'languages'] as const).filter(key => facts.details!.facts.visibility[key] && facts.details!.facts[key].length).map(key => <div key={key}><dt>{key[0].toUpperCase() + key.slice(1)}</dt><dd>{Array.isArray(facts.details!.facts[key]) ? (facts.details!.facts[key] as string[]).join(', ') : facts.details!.facts[key]}</dd></div>)}</dl>}
+      {preview && <Modal className="account-preview-modal" title="Preview" close={() => setPreview(null)}>
+        <OwnProfilePreview ownerId={current.session.user.id} account={{ ...current.account!, profile: preview.profile }} details={facts.details ? { ...facts.details, facts: preview.facts } : null}
+          photoRevision={photo.snapshot?.revision} adult={adult} customization={preview.customization}/>
       </Modal>}
     </div>
   );
@@ -416,14 +423,34 @@ function ProfileCompletion({ profile, hasPhoto, children }: { profile: Account['
   </div>;
 }
 
-function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
+// The editor's current, possibly unsaved, choices.
+type EditorDraft = { profile: MatchingProfile; facts: ProfileDetails['facts']; customization: ProfileCustomizationValue };
+
+function DraftHistoryGuard() {
+  const blocker = useBlocker(({ currentLocation, nextLocation, historyAction }) => {
+    if (historyAction !== 'POP') return false;
+    if (nextLocation.pathname !== currentLocation.pathname) return true;
+    return !['basics', 'dating', 'interests'].includes(new URLSearchParams(nextLocation.search).get('section') ?? '');
+  });
+  return blocker.state === 'blocked' ? <DiscardDraft keep={blocker.reset} discard={blocker.proceed}/> : null;
+}
+
+function DiscardDraft({ keep, discard }: { keep: () => void; discard: () => void }) {
+  return <Modal variant="sheet" title="Discard changes?" close={keep}>
+    <p>Your unsaved edits will be lost.</p>
+    <div className="row wrap"><ActionButton secondary onClick={keep}>Keep editing</ActionButton><button type="button" className="btn" onClick={discard}>Discard</button></div>
+  </Modal>;
+}
+
+function ProfileDraft({ initial, initialFacts, factsResource, section, done, draftRef }: {
   initial: Account;
   initialFacts: ProfileDetails;
   factsResource: ReturnType<typeof useProfileDetails>;
   section: 'basics' | 'interests';
   done: () => void;
+  draftRef?: { current: EditorDraft | null };
 }) {
-  const current = useCurrent(), formId = useId();
+  const current = useCurrent(), formId = useId(), navigate = useNavigate();
   const photo = useProfilePhoto(), photoInput = useRef<HTMLInputElement>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const { query: gallery } = usePhotoGallery(current.session.user.id, section === 'basics' && !!photo.snapshot?.hasPhoto);
@@ -442,10 +469,31 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
   const [customDraft, setCustomDraft] = useState<ProfileCustomizationValue | null>(null);
   const customValue = customDraft ?? custom.value;
   const customChanged = !!customDraft && !sameCustomization(customDraft, custom.value);
-  const changeCustom = (value: Partial<ProfileCustomizationValue>) => setCustomDraft({ ...customValue, ...value });
+  const [invalidPrompt, setInvalidPrompt] = useState<string | null>(null);
+  const changeCustom = (value: Partial<ProfileCustomizationValue>) => { setInvalidPrompt(null); setCustomDraft({ ...customValue, ...value }); };
   const adultDraft = canShowDating(current.account?.profile?.birthdate);
+  const dataRouter = useContext(UNSAFE_DataRouterContext);
   const dirty = customChanged || !!photoDraft || JSON.stringify(profile) !== JSON.stringify(source) || JSON.stringify(facts) !== JSON.stringify(initialFacts.facts);
   const [error, setError] = useState(''), [saving, setSaving] = useState(false);
+  const [leaving, setLeaving] = useState<{ go: () => void } | null>(null);
+  useEffect(() => { if (draftRef) draftRef.current = { profile, facts, customization: customValue }; });
+  // Unsaved edits ask before they are thrown away: Cancel, links elsewhere in the app, and closing the tab.
+  useEffect(() => {
+    if (!dirty) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    const click = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = (event.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+      if (!link || link.target || link.origin !== window.location.origin || link.closest('dialog')) return;
+      const to = link.pathname + link.search + link.hash;
+      if (link.pathname + link.search === window.location.pathname + window.location.search) return;
+      event.preventDefault(); event.stopPropagation();
+      setLeaving({ go: () => navigate(to) });
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    document.addEventListener('click', click, true);
+    return () => { window.removeEventListener('beforeunload', beforeUnload); document.removeEventListener('click', click, true); };
+  }, [dirty, navigate]);
   if (source !== initial.profile) {
     setSource(initial.profile);
     setProfile(structuredClone(initial.profile!));
@@ -484,8 +532,15 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
     let nextCustomization;
     if (customChanged && customDraft) {
       const prompts = (customDraft.prompts ?? []).map(item => ({ ...item, answer: item.answer.trim() }));
-      if (prompts.some(item => !item.answer)) {
+      const empty = prompts.find(item => !item.answer);
+      if (empty) {
         setError('Answer each prompt or remove it.');
+        setInvalidPrompt(empty.id);
+        requestAnimationFrame(() => {
+          const field = document.getElementById(`prompt-${empty.id}`);
+          field?.scrollIntoView?.({ block: 'center' });
+          field?.focus({ preventScroll: true });
+        });
         return;
       }
       const result = ProfileCustomizationValueSchema.safeParse({
@@ -507,21 +562,22 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
     }
     saveLock.current = true;
     setSaving(true);
-    let savedDetails = false;
+    let wrote = false;
     let photoAttempted = false;
     try {
-      if (JSON.stringify(profile) !== JSON.stringify(current.account?.profile) && !await current.save(parsed.data)) return;
+      if (JSON.stringify(profile) !== JSON.stringify(current.account?.profile)) { if (!await current.save(parsed.data)) return; wrote = true; }
+      if (factsChanged) wrote = true;
       if (factsChanged && !await factsResource.save({ expectedRevision: initialFacts.revision, facts: optional.data })) {
         setError('Your main profile is saved, but optional details could not be confirmed. The photo has not been changed. Reload optional details before trying again.');
         return;
       }
-      savedDetails = true;
       if (nextCustomization) {
         try {
+          wrote = true;
           await custom.save(nextCustomization);
           setCustomDraft(null);
         } catch {
-          setError('Your profile is saved, but your display choices could not be confirmed. Reload before trying again.');
+          setError('Your profile is saved, but your prompts and display choices were not. Try saving again.');
           return;
         }
       }
@@ -538,10 +594,18 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
         setPhotoReconcile(false);
       }
       haptic('success');
+      toast('Profile saved');
       done();
     } catch (failure) {
+      // A clear rejection (not a photo we can use, or the change limit) changed nothing, so there is nothing to reload.
+      if (photoAttempted && failure instanceof ProfilePhotoError && (failure.status === 400 || failure.status === 429)) {
+        setPhotoDraft(null);
+        setPhotoReconcile(false);
+        setError(`${wrote ? 'Profile details are saved. ' : ''}${failure.message}`);
+        return;
+      }
       setError(photoAttempted
-        ? `${savedDetails ? 'Profile details are saved. ' : ''}The photo change could not be confirmed and may already be saved. Reload the saved photo before retrying. ${failure instanceof Error ? failure.message : ''}`
+        ? `${wrote ? 'Profile details are saved. ' : ''}The photo change could not be confirmed and may already be saved. Reload the saved photo before retrying. ${failure instanceof Error ? failure.message : ''}`
         : 'Profile details could not be confirmed. Reload account and optional details before retrying. The photo has not been changed.');
     } finally { saveLock.current = false; setSaving(false); }
   }
@@ -602,7 +666,7 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
               <label className="account-check"><input type="checkbox" checked={facts.visibility.languages} onChange={event => setFacts({ ...facts, visibility: { ...facts.visibility, languages: event.target.checked } })}/>Show languages</label>
               {adultDraft && facts.visibility.languages && <AudienceSelect field="languages" value={customValue.audiences.languages} disabled={!custom.query.data} change={value => changeCustom({ audiences: { ...customValue.audiences, languages: value } })}/>}
             </fieldset>
-            <PromptsEditor prompts={customValue.prompts ?? []} adult={adultDraft} disabled={!custom.query.data} change={prompts => changeCustom({ prompts })}/>
+            <PromptsEditor prompts={customValue.prompts ?? []} adult={adultDraft} disabled={!custom.query.data} invalid={invalidPrompt} change={prompts => changeCustom({ prompts })}/>
             <GardenShowcasePicker value={customValue.gardenItem} disabled={!custom.query.data} change={gardenItem => changeCustom({ gardenItem })}/>
             <details className="profile-account-details"><summary>Account username</summary><label>Username<input required maxLength={80} value={profile.username} onChange={event => update({ username: event.target.value })}/></label></details>
           </div>
@@ -618,10 +682,11 @@ function ProfileDraft({ initial, initialFacts, factsResource, section, done }: {
         </fieldset>
       </form>
       {section === 'interests' && <MatchingSchedule compact token={current.session.access_token} disabled={busy} onSaved={() => window.dispatchEvent(new Event('pebble:matching-changed'))}/>}
-      <ErrorMessage>{error || current.error || factsResource.error}</ErrorMessage>
       {current.error && <ActionButton secondary onClick={current.reload}>Reload account and replace draft before saving again</ActionButton>}
       {!factsResource.canWrite && <ActionButton secondary disabled={busy} onClick={() => { void factsResource.reload().then(saved => { if (saved) { setFacts(structuredClone(saved.facts)); setError(''); } }); }}>Reload saved optional details to replace this draft</ActionButton>}
     </div>
-    <div className={`profile-save-bar ${dirty ? 'is-dirty' : ''}`}>{dirty && <span className="profile-save-status" role="status">Unsaved changes</span>}<button className="btn light" type="button" disabled={busy} onClick={done}>Cancel</button><button className="btn" form={formId} disabled={busy || !current.available}>{busy ? 'Saving…' : 'Save changes'}</button></div>
+    <div className={`profile-save-bar ${dirty ? 'is-dirty' : ''}`}><ErrorMessage>{error || current.error || factsResource.error}</ErrorMessage>{dirty && <span className="profile-save-status" role="status">Unsaved changes</span>}<button className="btn light" type="button" disabled={busy} onClick={() => dirty ? setLeaving({ go: done }) : done()}>Cancel</button><button className="btn" form={formId} disabled={busy || !current.available}>{busy ? 'Saving…' : 'Save changes'}</button></div>
+    {dirty && dataRouter && <DraftHistoryGuard/>}
+    {leaving && <DiscardDraft keep={() => setLeaving(null)} discard={leaving.go}/>}
   </div>;
 }

@@ -28,7 +28,6 @@ async function fixture(page: Page, publicView = false) {
 async function choose(page: Page, category: string) {
   await page.getByRole('button', { name: 'Filter events', exact: true }).click()
   await page.getByLabel('Category', { exact: true }).selectOption(category)
-  await page.getByRole('button', { name: 'Done', exact: true }).click()
 }
 
 for (const publicView of [false, true]) {
@@ -62,7 +61,6 @@ for (const publicView of [false, true]) {
     await page.goBack()
     await expect(page.getByLabel('Category', { exact: true })).toHaveValue('Health Clinic/Screening')
     await page.getByRole('button', { name: 'Reset filters', exact: true }).click()
-    await page.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(page.getByText('Page 1', { exact: true })).toBeVisible()
     await expect(page.locator('#event-filter-summary')).toHaveCount(0)
     expect(state.calls.filter(call => ['POST', 'PUT', 'DELETE'].includes(call.method))).toHaveLength(0)
@@ -81,7 +79,6 @@ for (const failure of ['http', 'network']) {
     await page.getByRole('button', { name: 'Filter events', exact: true }).click()
     await expect(page.getByLabel('Category', { exact: true }).locator('option[value="Health Clinic/Screening"]')).toHaveCount(1)
     await page.getByLabel('Category', { exact: true }).selectOption('Health Clinic/Screening')
-    await page.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Health Clinic/Screening page 1', exact: true })).toBeVisible()
     await choose(page, 'Lecture')
     await expect(page.getByRole('alert')).toBeVisible()

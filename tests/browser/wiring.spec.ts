@@ -8,12 +8,12 @@ test("public entry and private routes use the new frontend with real sign-in gat
   await wiringFixture(page, { guest: true });
   await page.goto("/");
   await expect(
-     page.getByRole("button", { name: "Continue with email", exact: true }),
+     page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/login\?returnTo=/);
   await expect(
-    page.getByRole("button", { name: "Continue with email", exact: true }),
+    page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /sample|simulate/i }),
@@ -161,7 +161,9 @@ test("event groups automatically show a suggested group without replaying the jo
   expect(methods.filter(method => method === "GET")).toHaveLength(readsAfterMatch);
   await expect(page.getByRole("button", { name: /proposal/i })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.getByRole("button", { name: "Leave group queue", exact: true }).click();
+  await page.getByRole("button", { name: "Leave group", exact: true }).click();
+  expect(methods.filter(method => method === "DELETE")).toHaveLength(0);
+  await page.getByRole("dialog", { name: "Leave this group?" }).getByRole("button", { name: "Leave group", exact: true }).click();
   await expect(page.getByRole("button", { name: "Join group queue", exact: true })).toBeVisible();
   expect(methods.filter(method => method === "DELETE")).toHaveLength(1);
   const readsAfterLeaving = methods.filter(method => method === "GET").length;
@@ -324,7 +326,7 @@ test("garden renders the new canvas, supports local building and cleans up on na
   expect(failures).toEqual([]);
 });
 
-test("email-first sign-in installs the real SDK session before entering the app", async ({
+test("single-submit sign-in installs the real SDK session before entering the app", async ({
   page,
 }) => {
   const fixture = await wiringFixture(page, { guest: true });
@@ -332,7 +334,6 @@ test("email-first sign-in installs the real SDK session before entering the app"
   await page
     .getByLabel("Email", { exact: true })
     .fill("development-fixture@example.test");
-  await page.getByRole("button", { name: "Continue with email", exact: true }).click();
   await page
     .getByLabel("Password", { exact: true })
     .fill("Synthetic-fixture-password-1!");
@@ -342,7 +343,7 @@ test("email-first sign-in installs the real SDK session before entering the app"
     fixture.calls.some(
       (call) => call.path === "/api/auth/email" && call.method === "POST",
     ),
-  ).toBe(true);
+  ).toBe(false);
 });
 
 test("optional facts save selected language chips and restore them when editing", async ({

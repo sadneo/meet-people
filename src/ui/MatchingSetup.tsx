@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { interestSelectionProblem } from '../../shared/interests'
 import type { MatchingSetupStatus } from '../../shared/friends-discovery'
 import { datingDiscoveryBlocker } from '../../shared/dating-live'
@@ -11,7 +11,7 @@ import { matchingClient } from './matching-client'
 import { useMatchingSetupStatus } from './useMatchingSetupStatus'
 import { MatchingSchedule } from './MatchingSchedule'
 import { DatingPreferencesPanel, FriendsPreferencesPanel } from './Preferences'
-import { Availability, Interests, PhotoEditor } from './Profile'
+import { Availability, Interests, PhotoEditor, type PhotoEditorHandle } from './Profile'
 import './matching-setup.css'
 
 type Mode = 'friends' | 'dating' | 'event' | 'group'
@@ -39,14 +39,12 @@ function MatchingSetupSteps({ mode, status, done, onBusyChange }: {
 }) {
   const [profileSaved, setProfileSaved] = useState(status.profileReady)
   const [scheduleSaved, setScheduleSaved] = useState(status.groupScheduleReady)
-  const [datingSaved, setDatingSaved] = useState(false)
   const current = useCurrent()
   const token = current.session.access_token
   const client = useMemo(() => matchingClient(token), [token])
-  const action = useAction()
 
-  const steps = mode === 'group' ? ['Profile', 'Schedule', 'Area'] : mode === 'dating' ? ['Profile', 'Preferences', 'Start'] : ['Profile', 'Area']
-  const step = !profileSaved ? 0 : mode === 'group' && !scheduleSaved ? 1 : mode === 'dating' && datingSaved ? 2 : steps.length === 2 ? 1 : mode === 'group' ? 2 : 1
+  const steps = mode === 'group' ? ['Profile', 'Schedule', 'Area'] : mode === 'dating' ? ['Profile', 'Preferences'] : ['Profile', 'Area']
+  const step = !profileSaved ? 0 : mode === 'group' && !scheduleSaved ? 1 : mode === 'group' ? 2 : 1
   const progress = <SetupProgress steps={steps} step={step}/>
   if (!profileSaved) return <>{progress}<div className="setup-step" key="profile"><SharedProfileStep onBusyChange={onBusyChange} done={() => setProfileSaved(true)}/></div></>
   if (mode === 'group' && !scheduleSaved) return <>{progress}<div className="setup-step" key="schedule"><GroupScheduleStep onBusyChange={onBusyChange} done={() => setScheduleSaved(true)}/></div></>
@@ -56,6 +54,7 @@ function MatchingSetupSteps({ mode, status, done, onBusyChange }: {
       // The POST is idempotent. Confirm the owner state first on every attempt.
       const before = await client.friendsStatus()
       if (!before.eligible && before.reason === 'discovery_off') return 'Turn on Friends discovery in your privacy settings first.'
+      if (!before.eligible && before.reason === 'location') return 'Your saved search area has expired. Choose your area again, then tap “Save and start Friends”.'
       if (!before.eligible) await client.startFriends()
       return (await client.friendsStatus()).eligible ? '' : 'Friends setup could not be confirmed.'
     }
@@ -67,51 +66,29 @@ function MatchingSetupSteps({ mode, status, done, onBusyChange }: {
   }
 
   async function finishDating() {
-    onBusyChange(true)
-    try {
-      await action.run(async () => {
-        const dating = datingLiveClient(token)
-        const saved = await dating.status()
-        const blocker = datingDiscoveryBlocker(saved)
-        if (blocker === 'profile' || blocker === 'location' || blocker === 'preferences') {
-          setDatingSaved(false)
-          throw new Error('Review your Dating details and search area.')
-        }
-        if (blocker === 'discovery_off') throw new Error('Turn on Dating discovery in your privacy settings first.')
-        if (blocker && blocker !== 'paused') throw new Error('Dating setup could not be confirmed. Check your photo, interests, and search area.')
-        if (!saved.aggregate.profile.enabled) {
-          await dating.enable({ enabled: true, expectedProfileRevision: saved.aggregate.profileRevision, expectedSearchRevision: saved.aggregate.searchRevision })
-        }
-        done()
-      })
-    } finally { onBusyChange(false) }
+    const dating = datingLiveClient(token)
+    const saved = await dating.status()
+    const blocker = datingDiscoveryBlocker(saved)
+    if (blocker === 'profile' || blocker === 'location' || blocker === 'preferences') {
+      return 'Review your Dating details and search area.'
+    }
+    if (blocker === 'discovery_off') return 'Turn on Dating discovery in your privacy settings first.'
+    if (blocker && blocker !== 'paused') return 'Dating setup could not be confirmed. Check your photo, interests, and search area.'
+    if (!saved.aggregate.profile.enabled) {
+      await dating.enable({ enabled: true, expectedProfileRevision: saved.aggregate.profileRevision, expectedSearchRevision: saved.aggregate.searchRevision })
+    }
+    return ''
   }
 
   if (mode === 'dating') return <>
     {progress}
-    <div className="setup-step" key={datingSaved ? 'start' : 'preferences'}>
-    <ErrorMessage>{action.error}</ErrorMessage>
-    {datingSaved ? <>
-      <h3>Ready to meet people?</h3>
-      <p>When you save, your profile can appear in Dating. You can pause from Discover anytime.</p>
-      <ActionButton disabled={action.busy} onClick={() => void finishDating()}>Save and start Dating</ActionButton>
-    </> : <DatingSetupPreferences done={() => setDatingSaved(true)} onBusyChange={onBusyChange}/>}
+    <div className="setup-step" key="preferences">
+    <DatingSetupPreferences done={done} finishSetup={finishDating} onBusyChange={onBusyChange}/>
     </div>
   </>
 
   if (mode !== 'friends' && status.friendsAreaReady) return <>
-    {progress}
-    <h3>Search area confirmed</h3>
-    <p>Return to {mode === 'event' ? 'the event' : 'Find a group'} when you’re ready to join.</p>
-    <ErrorMessage>{action.error}</ErrorMessage>
-    <ActionButton disabled={action.busy} onClick={() => {
-      onBusyChange(true)
-      void action.run(async () => {
-        const error = await finishFriends()
-        if (error) throw new Error(error)
-        done()
-      }).finally(() => onBusyChange(false))
-    }}>Finish setup</ActionButton>
+    <ConfirmMatchingReadiness mode={mode} done={done} onBusyChange={onBusyChange}/>
   </>
 
   return <>
@@ -125,6 +102,22 @@ function MatchingSetupSteps({ mode, status, done, onBusyChange }: {
   </>
 }
 
+function ConfirmMatchingReadiness({ mode, done, onBusyChange }: { mode: 'event' | 'group'; done: () => void; onBusyChange: (busy: boolean) => void }) {
+  const token = useCurrent().session.access_token
+  const ready = useLoad(useCallback(async signal => {
+    const saved = await matchingClient(token).matchingSetup(signal)
+    if (!saved.profileReady || !saved.friendsAreaReady || (mode === 'group' && !saved.groupScheduleReady))
+      throw new Error('Setup has changed. Close and reopen setup to review the missing details.')
+    return true
+  }, [mode, token]))
+  const finished = useRef(false)
+  useEffect(() => {
+    onBusyChange(ready.loading)
+    if (ready.value && !finished.current) { finished.current = true; done() }
+  }, [ready.loading, ready.value, done, onBusyChange])
+  return <ResourceState loading={ready.loading} error={ready.error} reload={ready.reload}/>
+}
+
 function SetupProgress({ steps, step }: { steps: string[]; step: number }) {
   return <div className="setup-progress">
     <p className="setup-progress-label">Step {step + 1} of {steps.length} · {steps[step]}</p>
@@ -132,7 +125,7 @@ function SetupProgress({ steps, step }: { steps: string[]; step: number }) {
   </div>
 }
 
-function DatingSetupPreferences({ done, onBusyChange }: { done: () => void; onBusyChange: (busy: boolean) => void }) {
+function DatingSetupPreferences({ done, finishSetup, onBusyChange }: { done: () => void; finishSetup: () => Promise<string>; onBusyChange: (busy: boolean) => void }) {
   const token = useCurrent().session.access_token
   const runtime = useLoad(useCallback(signal => datingLiveClient(token).status(signal), [token]))
   return <>
@@ -141,7 +134,7 @@ function DatingSetupPreferences({ done, onBusyChange }: { done: () => void; onBu
       {runtime.value.aggregate.eligibility.locationResolved
         ? <ActionButton onClick={done}>Continue</ActionButton>
         : <p>Pause Dating from Discover to confirm your search area again.</p>}
-    </> : runtime.value && <DatingPreferencesPanel view="setup" done={done} onSavingChange={onBusyChange}/>}
+    </> : runtime.value && <DatingPreferencesPanel view="setup" done={done} onSavingChange={onBusyChange} finishSetup={finishSetup}/>}
   </>
 }
 
@@ -152,25 +145,30 @@ function SharedProfileStep({ done, onBusyChange }: { done: () => void; onBusyCha
   const account = current.account!
   const profile = account.profile!
   const [interests, setInterests] = useState(profile.interests)
+  const photoEditor = useRef<PhotoEditorHandle>(null)
+  const saving = useRef(false)
   const busy = action.busy || current.busy || current.loading
 
   function submit(event: FormEvent) {
     event.preventDefault()
+    if (saving.current || busy) return
+    saving.current = true
     onBusyChange(true)
     void action.run(async () => {
       const problem = interestSelectionProblem(interests)
       if (problem) throw new Error(problem)
-      if (!photo.snapshot?.hasPhoto || photo.loading || photo.error) throw new Error('Upload a profile photo to continue.')
+      if (!photoEditor.current) throw new Error('Your photo is still loading. Try again.')
+      await photoEditor.current.save()
       if (JSON.stringify(interests) !== JSON.stringify(profile.interests) &&
           !await current.save({ ...account, profile: { ...profile, interests } })) return
       done()
-    }).finally(() => onBusyChange(false))
+    }).finally(() => { saving.current = false; onBusyChange(false) })
   }
 
   return <>
     <h3>Your matching profile</h3>
     <p>Your photo and interests carry across matching features.</p>
-    <PhotoEditor onSavingChange={onBusyChange}/>
+    <PhotoEditor ref={photoEditor} busy={busy}/>
     <form className="account-form" onSubmit={submit}>
       <fieldset disabled={busy}><Interests value={interests} change={setInterests}/></fieldset>
       <ErrorMessage>{action.error || current.error}</ErrorMessage>

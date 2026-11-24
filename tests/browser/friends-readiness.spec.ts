@@ -4,7 +4,7 @@ import { wiringFixture } from './wiring-fixture'
 for (const [reason, title, link, destination] of [
   ['age', 'Friends discovery is for ages 18–99.', 'Review birthdate', '/profile?section=basics'],
   ['profile', 'Set up Friends matchmaking.', 'Set up Friends', null],
-  ['discovery_off', 'Friends discovery is paused.', 'Discovery settings', '/profile?section=discovery'],
+  ['discovery_off', 'Set up Friends matchmaking.', 'Set up Friends', null],
   ['preferences', 'Set up Friends matchmaking.', 'Set up Friends', null],
   ['location', 'Confirm your Friends search area.', 'Review Friends setup', null],
 ] as const) {

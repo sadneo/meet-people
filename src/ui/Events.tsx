@@ -61,6 +61,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
   }
   function selectCategory(value: string) {
     browse(value, 1);
+    setFiltersOpen(false);
   }
   const content = (
     <section className="events-page" aria-labelledby="events-title">
@@ -81,7 +82,6 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
         </select>
         <div className="event-filter-actions">
           <ActionButton secondary disabled={!category} onClick={() => selectCategory('')}>Reset filters</ActionButton>
-          <ActionButton onClick={() => setFiltersOpen(false)}>Done</ActionButton>
         </div>
       </Modal>}
       <ResourceState
@@ -118,8 +118,10 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
                 {[event.location_name, event.city].filter(Boolean).join(' · ') || 'Location to be announced'}
               </span></span>
               <div className="event-card-footer">
-                <span className="event-company"><Icon name="Friends" /><span>Find people looking for company</span></span>
-                <span className="event-cta">See event &amp; people <Icon name="ArrowRight" /></span>
+                {hasStarted(event.starts_at)
+                  ? <span className="event-company"><Icon name="Clock" /><span>Happening now</span></span>
+                  : <span className="event-company"><Icon name="Friends" /><span>Find people looking for company</span></span>}
+                <span className="event-cta">{hasStarted(event.starts_at) ? 'See event' : <>See event &amp; people</>} <Icon name="ArrowRight" /></span>
               </div>
               </div>
             </Link>
@@ -164,6 +166,22 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
 function eventImageTransition(id: string) {
   return `event-image-${id.replace(/[^a-zA-Z0-9-]/g, '')}`;
 }
+// Listed events are live, so one whose start has passed is in progress.
+function hasStarted(startsAt: string | null | undefined) {
+  const time = Date.parse(startsAt ?? '');
+  return Number.isFinite(time) && time <= Date.now();
+}
+// Permanent failures (cancelled, ended, unknown or malformed id) can't be fixed by retrying.
+function EventUnavailable({ directory }: { directory: string }) {
+  return (
+    <div className="card blank">
+      <h3>This event is no longer available</h3>
+      <p>It may have ended or been cancelled.</p>
+      <Link className="btn" to={directory}>Browse events</Link>
+    </div>
+  );
+}
+const permanentEventErrors = ['This event is no longer available.', 'Invalid event ID.'];
 function EventDateChip({ startsAt }: { startsAt: string | null | undefined }) {
   const time = Date.parse(startsAt ?? '');
   if (!Number.isFinite(time)) return null;
@@ -204,9 +222,10 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
   return (
     <div className="event-detail">
       {!event && <Link className="account-back" to={directory}>‹ Events</Link>}
+      {permanentEventErrors.includes(resource.error) && <EventUnavailable directory={directory} />}
       <ResourceState
         loading={resource.loading}
-        error={resource.error}
+        error={permanentEventErrors.includes(resource.error) ? '' : resource.error}
         reload={resource.reload}
         skeleton={<PageSkeleton view="event" label="Loading event details"/>}
       />
@@ -229,7 +248,7 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
               .filter(Boolean)
               .join(" · ") || "Location to be announced"}
           </p>
-          <p className="event-company"><Icon name="Friends"/>Find people looking for company</p>
+          {groupAvailable && <p className="event-company"><Icon name="Friends"/>Find people looking for company</p>}
           <div className="event-detail-links">
           {groupAvailable && calendarLink(event) && (
             <a

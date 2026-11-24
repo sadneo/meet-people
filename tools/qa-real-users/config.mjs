@@ -83,16 +83,16 @@ export function validateMapsBudget(enabled, budget) {
 export async function mapsSettings(enabled, budget) {
   validateMapsBudget(enabled, budget);
   if (!enabled) return {};
-  const env = parseEnv(await readFile(join(repository, '.env.local'), 'utf8'));
+  const env = parseEnv(await readFile(join(repository, '.env'), 'utf8').catch(() => ''));
   if (!env.VITE_GOOGLE_MAPS_API_KEY || !env.GOOGLE_MAPS_SERVER_API_KEY || env.GOOGLE_MAPS_STORAGE_APPROVED !== 'true') {
-    throw new Error('Maps opt-in requires both Google Maps keys and GOOGLE_MAPS_STORAGE_APPROVED=true in .env.local.');
+    throw new Error('Maps opt-in requires both Google Maps keys and GOOGLE_MAPS_STORAGE_APPROVED=true in .env.');
   }
   return { mapsBrowserKey: env.VITE_GOOGLE_MAPS_API_KEY, mapsServerKey: env.GOOGLE_MAPS_SERVER_API_KEY, ...(budget === undefined ? {} : { mapsRequestLimit: budget }) };
 }
 
 export function serviceEnvironment(run, runtime) {
   validateMapsBudget(!!runtime.mapsServerKey, runtime.mapsRequestLimit);
-  // Do not inherit .env.local, shell provider keys, development credentials,
+  // Do not inherit .env, shell provider keys, development credentials,
   // cloud CLI configuration or an ambient database target.
   const keep = ['PATH', 'HOME', 'USER', 'LOGNAME', 'LANG', 'LC_ALL', 'SHELL', 'DISPLAY', 'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR'];
   const env = Object.fromEntries(keep.filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]]));

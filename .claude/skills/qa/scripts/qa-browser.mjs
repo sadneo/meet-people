@@ -18,16 +18,18 @@ import { createRequire } from 'node:module'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { requireStack, stackKeys } from '../../../../scripts/lib/stack.mjs'
 import { fileURLToPath } from 'node:url'
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..')
 const require = createRequire(join(project, 'package.json'))
 const { chromium } = require('@playwright/test')
-const env = Object.fromEntries(readFileSync(join(project, '.env.local'), 'utf8').trim().split('\n').map(line => line.split(/=(.*)/s, 2)))
+const stack = requireStack(project, {})
+const keys = stackKeys(stack)
 export const BASE = process.env.QA_BASE_URL ?? 'http://127.0.0.1:3000'
-const SUPABASE = env.VITE_SUPABASE_URL
+const SUPABASE = keys.apiUrl
 const STORAGE_KEY = `sb-${new URL(SUPABASE).hostname.split('.')[0]}-auth-token`
-const MAIL = 'http://127.0.0.1:54324'
+const MAIL = `http://127.0.0.1:${stack.ports.mail}`
 const SESSIONS = join(project, 'qa/.sessions')
 
 // Playwright 1.63 expects a Chromium build that may not be downloaded; use the newest cached one.
@@ -51,7 +53,7 @@ async function session(user) {
   }
   const email = user.includes('@') ? user : `${user}@example.com`
   const response = await fetch(`${SUPABASE}/auth/v1/token?grant_type=password`, {
-    method: 'POST', headers: { apikey: env.VITE_SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+    method: 'POST', headers: { apikey: keys.publishableKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password: process.env.QA_PASSWORD ?? 'password123' }),
   })
   const data = await response.json()

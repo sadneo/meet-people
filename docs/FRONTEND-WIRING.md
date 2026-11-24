@@ -35,7 +35,7 @@ proxying are unchanged, including the native app’s API base URL and callback b
 
 ## Validation
 
-Run `pnpm typecheck`, `pnpm build:web`, `pnpm build:api`, `pnpm test:unit` and
+Run `pnpm typecheck`, `pnpm build:web`, `pnpm build:api`, `pnpm test` and
 `pnpm test:browser`. The browser suite uses the isolated server and mocked
 Supabase/API boundaries; it must never contact a live account or database.
 It covers account gates, profile save/readback, shared preferences and trusted

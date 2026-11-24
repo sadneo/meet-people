@@ -56,13 +56,11 @@ test('prompts are answered in the editor, saved, and shown per mode in the previ
   const fixture = await wiringFixture(page)
   await page.goto('/profile?section=basics')
   await page.getByLabel('Choose a prompt').selectOption('study-spot')
-  await page.getByRole('button', { name: 'Add prompt' }).click()
   const answer = page.getByLabel(/Your answer to Best study spot/)
   await answer.fill('Text me at 631-555-0199')
   await expect(page.getByText(/looks like a phone number/)).toBeVisible()
   await answer.fill('Third floor of the library')
   await page.getByLabel('Choose a prompt').selectOption('first-date')
-  await page.getByRole('button', { name: 'Add prompt' }).click()
   await page.getByRole('button', { name: 'Save changes', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('Answer each prompt or remove it.')
   await page.getByLabel(/Your answer to My ideal first date/).fill('Coffee and a walk')
@@ -95,7 +93,6 @@ test('prompts can differ between Friends and Dating and Dating can use its own b
   await page.goto('/profile?section=basics')
   for (const [id, answer] of [['study-spot', 'Library roof'], ['ask-me-about', 'Ramen spots']] as const) {
     await page.getByLabel('Choose a prompt').selectOption(id)
-    await page.getByRole('button', { name: 'Add prompt' }).click()
     await page.getByLabel(new RegExp(`Your answer to ${id === 'study-spot' ? 'Best study spot' : 'Ask me about'}`)).fill(answer)
   }
   // Show the study spot only in Friends.

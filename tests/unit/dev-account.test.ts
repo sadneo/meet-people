@@ -1,5 +1,22 @@
+// @vitest-environment node
+import { mkdtempSync, statSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { ensureDevAccount } from '../../scripts/dev-account.mjs'
+import { androidDevCredentials, ensureDevAccount } from '../../scripts/dev-account.mjs'
+
+describe('androidDevCredentials', () => {
+  it('generates a private emulator login once per stack and then reuses it', () => {
+    const home = mkdtempSync(join(tmpdir(), 'android-dev-'))
+    const first = androidDevCredentials('meet-people-wt-x', home)
+    expect(first.email).toMatch(/^android-dev-[0-9a-f]{6}@example\.com$/)
+    expect(first.password.length).toBeGreaterThanOrEqual(32)
+    const file = join(home, '.local/share/pebble/meet-people-wt-x/android-dev-account.json')
+    expect(statSync(file).mode & 0o777).toBe(0o600)
+    expect(androidDevCredentials('meet-people-wt-x', home)).toEqual(first)
+    expect(androidDevCredentials('meet-people-wt-y', home).email).not.toBe(first.email)
+  })
+})
 
 const email = 'Dev@Example.com', password = 'pw'
 type Users = { id: string; email?: string | null }[]

@@ -20,3 +20,9 @@ it('does not retry an uncertain mutation',async()=>{
  const [url,init]=fetch.mock.calls[0] as unknown as [string,RequestInit]
  expect(url).toContain(`/proposals/${id}/accept`);expect(JSON.parse(String(init.body))).toEqual({requestId:id})
 })
+it('uses plain read wording, not the saved-changes warning, when a load fails',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>{throw new Error('offline')}))
+ await expect(matchingClient('owner').friends([])).rejects.toMatchObject({message:'Couldn’t load people. Check your connection and try again.'})
+ await expect(matchingClient('owner').friendsStatus()).rejects.toMatchObject({message:expect.not.stringContaining('may already be saved')})
+ await expect(matchingClient('owner').connect('Friends',id)).rejects.toMatchObject({message:expect.stringContaining('may already be saved')})
+})

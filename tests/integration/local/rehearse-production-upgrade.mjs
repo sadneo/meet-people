@@ -1,12 +1,13 @@
 // Synthetic production-like legacy upgrade. No hosted connection, no app DB writes.
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
 import { readFileSync, readdirSync } from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 import { URL } from 'node:url'
 import process from 'node:process'
 import console from 'node:console'
 import { buildProductSchema } from '../../../scripts/product-schema.mjs'
+import { containerResult, containerSync } from '../../../scripts/lib/containers.mjs'
+import { requireStack } from '../../../scripts/lib/stack.mjs'
 
 const root = new URL('../../../', import.meta.url)
 const source = path => readFileSync(new URL(path, root), 'utf8')
@@ -26,13 +27,20 @@ assert.deepEqual(pending, [
   '20261116030100_profile_photo_gallery.sql',
   '20261116040000_profile_customization.sql',
   '20261116050000_photo_captions_prompts.sql',
+  '20261117010000_dining_supabase_cron.sql',
+  '20261117020000_dining_cron_every_environment.sql',
+  '20261117030000_map_cache_purge_cron.sql',
+  '20261117040000_sbengaged_producer_every_environment.sql',
+  '20261119050000_username_normalization.sql',
+  '20261124000000_cancel_sent_request.sql',
 ], 'Production baseline changed; review the rehearsal before executing.')
 const container = `pebble-production-rehearsal-${process.pid}`
-const docker = args => execFileSync('docker', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).trim()
+const docker = args => containerSync(args)
+const { dbContainer } = requireStack()
 // Local Auth DDL only. No production access, and no source-table rows are copied.
-const image = docker(['inspect', 'supabase_db_meet-people', '--format', '{{.Config.Image}}'])
-const auth = docker(['exec', 'supabase_db_meet-people', 'pg_dump', '-U', 'postgres', '-d', 'postgres', '--schema-only', '--schema=auth', '--no-owner', '--no-privileges'])
-const sql = text => execFileSync('docker', ['exec', '-i', container, 'psql', '-X', '-qAt', '-U', 'supabase_admin', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1'], { input: text, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).trim()
+const image = docker(['inspect', dbContainer, '--format', '{{.Config.Image}}'])
+const auth = docker(['exec', dbContainer, 'pg_dump', '-U', 'postgres', '-d', 'postgres', '--schema-only', '--schema=auth', '--no-owner', '--no-privileges'])
+const sql = text => containerSync(['exec', '-i', container, 'psql', '-X', '-qAt', '-U', 'supabase_admin', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1'], { input: text })
 const migrate = name => {
   try {
     sql(source(`supabase/migrations/${name}`))
@@ -47,7 +55,7 @@ try {
   console.info(`Owned container: ${container}; emergency cleanup: docker rm -f -v ${container}`)
   let ready = false
   for (let i = 0; i < 60; i++) {
-    if (spawnSync('docker', ['exec', container, 'sh', '-c', 'read name < /proc/1/comm; case "$name" in *postgres*) pg_isready -U postgres ;; *) exit 1 ;; esac'], { stdio: 'pipe' }).status === 0) { ready = true; break }
+    if (containerResult(['exec', container, 'sh', '-c', 'read name < /proc/1/comm; case "$name" in *postgres*) pg_isready -U postgres ;; *) exit 1 ;; esac']).status === 0) { ready = true; break }
     if (docker(['inspect', container, '--format', '{{.State.Running}}']) !== 'true') throw new Error(docker(['logs', container]))
     await setTimeout(1000)
   }
@@ -85,6 +93,8 @@ try {
   sql(source('tests/integration/sql/profile-photo-gallery.sql'))
   sql(source('tests/integration/sql/profile-customization.sql'))
   sql(source('tests/integration/sql/photo-captions-prompts.sql'))
+  sql(source('tests/integration/sql/username-normalization.sql'))
+  sql(source('tests/integration/sql/cancel-sent-request.sql'))
   sql(source('tests/integration/sql/public-live-events.sql'))
   sql(source('tests/integration/sql/adult-release.sql'))
   assert.equal(sql(`select has_table_privilege('anon','public.push_devices','SELECT') or has_table_privilege('authenticated','public.push_devices','SELECT') or has_table_privilege('authenticated','garden_private.wallets','SELECT')`), 'f')

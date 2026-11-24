@@ -1,20 +1,20 @@
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
-import { execFileSync,spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { createClient,type SupabaseClient } from '@supabase/supabase-js'
 import { demoInitialsPhoto } from './demo-seed/photos.js'
-import { demoPlan,developmentDemoPlan,seedContainer,seedMarker } from './demo-seed/plan.js'
+import { demoPlan,developmentDemoPlan,seedMarker } from './demo-seed/plan.js'
+import { psql,verifiedStack } from './demo-seed/local.js'
+import { assertLocalStack,supabaseStatus } from './lib/stack.mjs'
 import { seedSql } from './demo-seed/sql.js'
 import { scenarioPlan,scenarioSql } from './demo-seed/scenarios.js'
 import { eventQueueSql } from './demo-seed/event.js'
 import { DevelopmentAnchorSchema,type DevelopmentAnchor } from './demo-seed/development.js'
 import { readDevelopmentCredentials } from '../dev/development-login.js'
 import { AccountSchema } from '../shared/account.js'
-const url='http://127.0.0.1:54321'
 const options=parseArgs({options:{count:{type:'string'},scenarios:{type:'boolean'},'for-development-account':{type:'boolean'},'refresh-events':{type:'boolean'},'dry-run':{type:'boolean'},'reset-profiles':{type:'boolean'},'password-stdin':{type:'boolean'},'no-photos':{type:'boolean'},'reset-passwords':{type:'boolean'},'refresh-location':{type:'boolean'}},args:process.argv.slice(2).filter(value=>value!=='--')}).values
 const forDevelopment=!!options['for-development-account']
-if(forDevelopment&&(!options.scenarios||options['reset-passwords']||options['password-stdin']))throw new Error('Development-account mode requires --scenarios and preserves fixture passwords; use demo:seed separately to choose fixture passwords')
+if(forDevelopment&&(!options.scenarios||options['reset-passwords']||options['password-stdin']))throw new Error('Development-account mode requires --scenarios and preserves fixture passwords; use pnpm demo seed separately to choose fixture passwords')
 const plan=(forDevelopment?developmentDemoPlan:demoPlan)(Number(options.count??(forDevelopment?'60':options.scenarios?'12':'50')))
 let scenarios=options.scenarios?scenarioPlan(plan.length,forDevelopment?{id:'d0000000-0000-4000-8000-000000000000',email:'development@example.test',username:'development'}:undefined):null
 if(options['no-photos']&&scenarios)throw new Error('Matching scenarios require profile photos; omit --no-photos')
@@ -41,7 +41,7 @@ async function passwordInput(){
  })
 }
 const pg=(sql:string,user='postgres')=>{
- const result=spawnSync('docker',['exec','-i',seedContainer,'psql','-X','-qAt','-U',user,'-v','ON_ERROR_STOP=1','-v','VERBOSITY=sqlstate','-d','postgres'],{input:sql,encoding:'utf8',maxBuffer:2*1024*1024})
+ const result=psql(['-X','-qAt','-U',user,'-v','ON_ERROR_STOP=1','-v','VERBOSITY=sqlstate','-d','postgres'],sql,2*1024*1024)
  if(result.status!==0){const code=result.stderr?.match(/ERROR:\s+([A-Z0-9]{5}):/)?.[1];throw new Error(`Local demo SQL rejected${code?` (${code})`:''}; transaction rolled back. Review schema, location expiry or existing demo edits.`)}
  return result.stdout
 }
@@ -60,12 +60,12 @@ async function main(){
   if(options['refresh-location'])console.log('A real run renews the existing reviewed Stony Brook campus-area catalogue entry for seven days.')
   return
  }
- const metadata=JSON.parse(execFileSync('docker',['inspect','--format','{"running":{{json .State.Running}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}}}',seedContainer],{encoding:'utf8',stdio:['ignore','pipe','pipe']}))
- if(!metadata.running||metadata.project!=='meet-people')throw new Error('Expected running local meet-people Supabase container; no remote target is supported')
+ const stack=verifiedStack('Expected running local Supabase container for this worktree; no remote target is supported'),url=stack.apiUrl
  let status:Record<string,string>
- try{status=JSON.parse(execFileSync('pnpm',['exec','supabase','status','--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:131072}))}catch{throw new Error('Local Supabase runtime configuration unavailable; no keys printed')}
+ try{status=supabaseStatus(stack)}catch{throw new Error('Local Supabase runtime configuration unavailable; no keys printed')}
  const target=new URL(status.API_URL)
- if(target.protocol!=='http:'||!['127.0.0.1','localhost'].includes(target.hostname)||target.port!=='54321'||target.username||target.password||!status.SERVICE_ROLE_KEY||!status.ANON_KEY)throw new Error('Refusing nonlocal or incomplete Supabase configuration')
+ assertLocalStack(target.href,stack)
+ if(!status.SERVICE_ROLE_KEY||!status.ANON_KEY)throw new Error('Refusing nonlocal or incomplete Supabase configuration')
  if(options['refresh-location'])pg(readFileSync(new URL('../supabase/schema-sources/stony-brook-demo-location.sql',import.meta.url),'utf8'),'supabase_admin')
  // Check safety prerequisites BEFORE creating any Auth fixtures.
  pg(`begin read only;do $$ begin if to_regprocedure('public.get_matching_scoring_settings()') is null or to_regprocedure('public.get_dating_runtime()') is null or to_regprocedure('public.start_friends_discovery()') is null or not exists(select 1 from location_private.places where id='b641ad29-9f92-4e66-9490-0b616f8fd85c' and enabled and verified_until>statement_timestamp()+interval '1 hour') then raise exception 'Local demo prerequisites missing/expired';end if;end $$;rollback;`)
@@ -149,7 +149,7 @@ async function main(){
   console.log('Event proposals require the existing worker. No worker/scoring configuration or group chats were created.')
  }else{
   console.log(`Ready: ${plan.length} onboarded demo accounts. New accounts are not queued; existing queue memberships are preserved. Dating opted in. Real Dating matcher readback: ${dating.data?.candidate?'candidate found':'no candidate'}.`)
-  console.log('Passive Friends and Dating need no queue. For Messages groups: pnpm demo:active --count 3 --enable-active, then pnpm matchmaking:active:once. Each member must accept their proposal.')
+  console.log('Passive Friends and Dating need no queue. For Messages groups: pnpm demo active --count 3 --enable-active, then pnpm demo matchmaking-once. Each member must accept their proposal.')
  }
  console.log(primary?'Sign in as development user. Contacts 001–006 are in Messages; 007/008 have incoming requests; 009 has an outgoing request. All contacts have labeled profile details and demo avatars. Existing passwords unchanged; no credentials saved.':`Logins: ${plan[0].email} through ${plan.at(-1)!.email}; use the password you entered. Fictional labelled avatars ${options['no-photos']?'omitted':'included'}. No credentials saved.`)
 }

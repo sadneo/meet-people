@@ -1,8 +1,9 @@
 import { Capacitor } from '@capacitor/core'
 
-// Custom URL scheme the Android app registers. Keep in sync with AndroidManifest.xml,
-// capacitor.config.ts (appId) and the Supabase redirect allow-list.
-export const APP_SCHEME = 'com.cse416.meetpeople'
+// Custom URL scheme the Android app registers: the production flavour's unless the build sets
+// VITE_APP_SCHEME (sandbox: com.cse416.meetpeople.dev). Keep in sync with the flavours in
+// android/app/build.gradle and the Supabase redirect allow-list.
+export const APP_SCHEME = (import.meta.env.VITE_APP_SCHEME as string | undefined) || 'com.cse416.meetpeople'
 
 export const isNative = () => Capacitor.isNativePlatform()
 

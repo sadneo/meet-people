@@ -8,6 +8,39 @@ routes live in `src/mobile/App.tsx`. The `dev` branch publishes separate sandbox
 web/mobile builds; `main` publishes production web. See `docs/deployment.md`.
 The standalone reference is not the application entry.
 
+## Task-flow review (November 18, 2026)
+
+Review covers the implemented destinations, their dialogs and their recovery
+states. Counts below describe action taps, excluding typing and OS pickers.
+Existing colors, icons, navigation and mobile layout remain the visual reference.
+
+| Feature | Result |
+| --- | --- |
+| Sign-in | Email and password are visible together: one submission instead of an email lookup followed by sign-in. Google and sign-in links remain direct actions. |
+| Registration and recovery | Email and the requested destination carry between forms. Editing the registration email stays in registration. Verification and password confirmation remain. |
+| Basic onboarding | One form and one Enter Pebble action; no matching-profile fields are added. |
+| Friends setup | Photo selection and interests save together. The final action explicitly starts Friends; optional filters remain collapsed. |
+| Dating setup | Save and start Dating combines preference save and opt-in, removing the separate ready screen and its extra tap. |
+| Discover search area | Header opens the map in one tap instead of opening preferences and then the map. Set search area saves and returns directly to Discover. |
+| Friends preferences | Interests and weekly availability open in-place editors. Save/Cancel returns to the same preferences, with no Profile round trip. Sliders and goals retain immediate saves. |
+| Dating preferences | Dating details open in place. A labeled pause action is available in preferences instead of requiring a trip to Discover before editing. Privacy changes retain revision checks and readback recovery. |
+| Profile photos | File selection adds a gallery photo immediately. Profile draft and setup photos save with their form. The completion-card photo action opens the chooser. Preview, captions, hold-to-reorder and removal confirmation remain. |
+| Profile prompts and details | Choosing a prompt opens/focuses its answer immediately; there is no Add prompt button. Multi-field drafts keep Save/Cancel. Language selection already adds immediately. |
+| Event filters | Category selection and Reset apply and close the sheet; no Done action. Directory pagination and Back preserve the URL search. |
+| Event matching | Setup remains within the event. Shared saved prerequisites are reused. Explicit queue join/leave and automatic waiting-state updates remain. |
+| Find a group | Missing setup opens directly after Find a group, avoiding another setup-entry tap. A completed area is rechecked without Finish setup. Availability and timezone edit together in place. Queue enrollment and roster acceptance stay explicit. |
+| Inbox and chat | Conversation rows already open chat directly; sending and explicit retries stay in chat. Header opens members directly. Connection removal and group leave retain confirmations. |
+| Requests and Activity | Acceptance opens the confirmed conversation on both surfaces. Opening an event-group notification also marks it read; manual marking remains available. Decline already takes one action. |
+| Food | Dates, locations, meals and search already apply immediately. Dish details open a sheet and return to the same menu. No extra save or navigation is added. |
+| Garden | Friend islands open Friends discovery directly, removing their introduction sheet. Build already purchases/places directly; dragging, undo, reward claims and history stay in place. Reset retains confirmation. |
+| Settings, permissions and safety | Settings switches already save immediately. Current location requests OS permission and enables the account setting from that action. Reports retain one explicit submission; blocking, account deletion and other destructive actions retain deliberate confirmation. |
+| Public website and policies | Event cards and installation links are already direct. Policy views retain working return navigation; no account actions or sample success states are introduced. |
+
+Validation uses deterministic browser fixtures for API/session responses and
+mobile layout at 320px and wider, plus the unit suite and product builds. It does
+not establish live email/OAuth delivery, actual Android/iOS permission behavior,
+or acceptance on a physical device.
+
 The local development navigator sits in its own normal-flow strip above the app,
 not over mobile actions or message composers. It remains absent from normal
 production builds. Discover shows a saved search-area label only after a location
@@ -52,7 +85,8 @@ grant cached write permission. Switching accounts clears snapshots and read stat
 Events keeps category selection inside the Filters dialog instead of wrapping
 category chips above the listings. A compact summary appears only when a category
 is selected. Category changes and Reset filters retain the page-one reset;
-Done, Escape and Close dismiss the existing dialog without changing that behavior.
+Selecting a category or Reset filters closes the sheet immediately; Escape and
+Close dismiss it without further changes.
 Category and page are URL-backed so detail/Close and Back/Forward preserve the
 directory search. The last successful category catalog remains in the session
 cache when a category's list request fails; the list still shows its real error.

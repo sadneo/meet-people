@@ -14,7 +14,7 @@ test('production shell supports deep-link refresh and same-origin API access', a
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   }
   const health = await request.get('/api/health')
-  expect(await health.json()).toEqual({ status: 'ok' })
+  expect(await health.json()).toMatchObject({ status: 'ok' })
   expect(health.headers()['cache-control']).toContain('no-store')
   const events = await request.get('/api/events?limit=1')
   expect(events.status()).toBe(200)

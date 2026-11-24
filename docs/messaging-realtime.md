@@ -47,9 +47,9 @@ positions advance and their change notifications refresh history.
 
 Verification:
 
-- `pnpm typecheck`, `pnpm lint`, `pnpm test:unit`.
+- `pnpm typecheck`, `pnpm lint`, `pnpm test`.
 - `pnpm test:browser tests/browser/messages-realtime.spec.ts tests/browser/messages-retry-navigation.spec.ts`.
-- `pnpm test:integration:schema` replays both database tracks in disposable
+- `pnpm test:integration` replays both database tracks in disposable
   containers and checks notification recipients, read no-ops, departures and
   owner-only receive/no client publish permissions. Those containers use a
   test stand-in for the platform-owned Realtime schema; they do not prove
@@ -66,26 +66,27 @@ message write and issue a database warning. Catch-up reads reconcile later.
 
 ## Test against remote Supabase
 
-Put the remote `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and
-`SUPABASE_SERVICE_ROLE_KEY` in the ignored root `.env`. Matching `VITE_SUPABASE_*`
-values may also be supplied. After the two migrations above are installed on
-that project, run:
+Put the target's service-role key (`SANDBOX_SUPABASE_SERVICE_ROLE_KEY` or
+`PRODUCTION_SUPABASE_SERVICE_ROLE_KEY`) in the ignored root `.env`. The project URL
+and public key come from `shared/targets.json`. After the two migrations above are
+installed on that project, run:
 
 ```sh
-pnpm run dev:remote
+pnpm dev --remote --target sandbox|production
 ```
 
-Open `http://127.0.0.1:3302/messages` in separate normal/private windows and sign
+Open the `/messages` URL it prints in separate normal/private windows and sign
 in with two connected remote accounts. This launcher uses the branch's frontend
-and API with that remote database, ignoring `.env.local` and the hosted
+and API with that remote database, ignoring local `VITE_*` settings and the hosted
 `VITE_API_BASE_URL`. It leaves the ordinary local servers and configuration intact.
 Local-only development accounts do not exist on the remote project.
 
-With that app running, the Supabase CLI logged in, and the root `.env` targeting
-the production project, run the complete acceptance check in another terminal:
+With that app running, the Supabase CLI logged in, and
+`PRODUCTION_SUPABASE_SERVICE_ROLE_KEY` in `.env`, run the complete acceptance
+check in another terminal:
 
 ```sh
-pnpm run test:hosted:messaging
+pnpm test:hosted <url> --messaging --target production
 ```
 
 This opt-in check creates three marked, temporary remote accounts. It checks
@@ -108,21 +109,17 @@ ledger reconciled; do not run the renamed SQL over an existing realtime schema.
 
 ## Try a local conversation
 
-With local Supabase running, the migration applied, and `.env.local` configured
-for that local stack, start the API/web server and mobile app in separate terminals:
+Start this worktree's Supabase (it applies the migration), API, web server and mobile app:
 
 ```sh
-pnpm run dev
+pnpm dev
 ```
 
-```sh
-pnpm run dev:mobile
-```
-
-Then run the real API acceptance check:
+Then run the real API acceptance check. It finds this worktree's running Supabase itself;
+pass the API port `pnpm dev` printed:
 
 ```sh
-pnpm exec node --env-file-if-exists=.env.local tests/integration/local/test-local-messaging.mjs
+PEBBLE_API_URL=http://127.0.0.1:<api port printed by pnpm dev> node tests/integration/local/test-local-messaging.mjs
 ```
 
 It prepares the local test accounts `a@example.com` and `b@example.com` (password
