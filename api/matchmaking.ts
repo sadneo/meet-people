@@ -104,6 +104,7 @@ export interface UserContextTransport {
     mapSearchLocation?(mode: 'friends' | 'dating', reference: string): PromiseLike<RpcResponse>
     confirmMapSearchLocation?(ticket: MapTicket): PromiseLike<RpcResponse>
     socialConnection?(target: string, action: 'get' | 'request' | 'accept' | 'remove'): PromiseLike<RpcResponse>
+    cancelSentRequest?(target: string, requestedAt: string): PromiseLike<RpcResponse>
     socialConnectionList?(): PromiseLike<RpcResponse>
     connectionRequestAllowance?(): PromiseLike<RpcResponse>
     socialInbox?(page: number): PromiseLike<RpcResponse>
@@ -168,6 +169,7 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         mapSearchLocation: (mode, reference) => client.rpc('get_search_location_map', { mode_in: mode, reference_in: reference }),
         confirmMapSearchLocation: ticket => client.rpc('confirm_map_search_location', { ticket_in: ticket }),
         socialConnection: (target, action) => client.rpc('social_connection', { target_in: target, action_in: action }),
+        cancelSentRequest: (target, requestedAt) => client.rpc('cancel_sent_request', { target_in: target, requested_at_in: requestedAt }),
         socialConnectionList: () => client.rpc('social_connection_list'),
         connectionRequestAllowance: () => client.rpc('get_connection_request_allowance'),
         socialInbox: page => client.rpc('social_inbox', { page_in: page }),

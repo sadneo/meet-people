@@ -122,7 +122,7 @@ export function Messages() {
             return (
               <SwipeReveal
                 key={`${row.group ? 'group' : 'direct'}:${row.id}`}
-                action={!row.group && row.people[0] && !unavailable(row.people[0]) ? <SafetyActions id={row.people[0].id} name={row.title} /> : null}
+                action={!row.group && row.people[0] ? <SafetyActions id={row.people[0].id} name={row.title} /> : null}
               >
               <Link
                 className={`conversation-row contact-row ${selected === row.id ? "selected" : ""}`}
@@ -319,14 +319,14 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
         >
           Refresh messages
         </ActionButton>
-        {history.value?.kind === "direct" && others[0] && !unavailable(others[0]) && (
+        {history.value?.kind === "direct" && others[0] && (
           <><SafetyActions id={others[0].id} name={others[0].display_name} />
           <ActionButton secondary onClick={() => setRemoveOpen(true)}>Remove connection</ActionButton></>
         )}
           </div>
         </details>
       </header>
-      {peopleOpen && <Modal variant="sheet" title={isGroup ? 'Group members' : 'Conversation members'} close={() => setPeopleOpen(false)}><div className="conversation-members">{history.value?.participants.map(named).map(person => <div className="row item" key={person.id}><MemberPhoto person={person}/><div><b>{person.id === current.session.user.id ? 'You' : person.display_name}</b></div>{person.id !== current.session.user.id && !unavailable(person) && <SafetyActions id={person.id} name={person.display_name}/>}</div>)}</div></Modal>}
+      {peopleOpen && <Modal variant="sheet" title={isGroup ? 'Group members' : 'Conversation members'} close={() => setPeopleOpen(false)}><div className="conversation-members">{history.value?.participants.map(named).map(person => <div className="row item" key={person.id}><MemberPhoto person={person}/><div><b>{person.id === current.session.user.id ? 'You' : person.display_name}</b></div>{person.id !== current.session.user.id && <SafetyActions id={person.id} name={person.display_name}/>}</div>)}</div></Modal>}
       {removeOpen && others[0] && <Modal variant="sheet" title="Remove connection?" close={() => setRemoveOpen(false)}>
         <p>Remove your connection with {others[0].display_name}? This does not block the account or erase saved messages.</p>
         <ErrorMessage>{action.error}</ErrorMessage>
