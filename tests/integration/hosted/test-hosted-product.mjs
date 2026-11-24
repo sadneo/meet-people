@@ -32,7 +32,7 @@ try {
     assert.ifError(signed.error); actor.token = signed.data.session.access_token
     let account = await api(actor, matching + '/account')
     assert.equal(account.profile, null)
-    account.profile = { username: `check-${randomUUID()}`, display_name: `Deployment Check ${index + 1}`, bio: 'Disposable deployment verification', avatar_url: null, birthdate: null, location_city: null, interests: [], availability: [] }
+    account.profile = { username: `check_${randomBytes(12).toString('hex')}`, display_name: `Deployment Check ${index + 1}`, bio: 'Disposable deployment verification', avatar_url: null, birthdate: null, location_city: null, interests: [], availability: [] }
     for (let chapter = 0; chapter < 4; chapter++) {
       if (chapter === 1) account.profile.interests = ['Coffee', 'Hiking', 'Music']
       if (chapter === 2) account.preferences.intents = ['Activity partners']
