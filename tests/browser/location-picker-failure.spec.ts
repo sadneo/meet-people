@@ -30,7 +30,7 @@ for(const back of ['button','cancel'] as const)test(`authorization-rejected map 
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message))
  await realMapAdapter(page)
  await page.route('https://maps.googleapis.com/**',route=>route.fulfill({contentType:'application/javascript',body:sdk}))
- await page.goto('/matchmaking?preferences=true')
+ await page.goto('/matchmaking?mode=friends&preferences=true')
  const trigger=page.getByRole('button',{name:'Search area Choose an area',exact:true})
  const picker=page.getByRole('region',{name:'Choose search area'})
  await trigger.click()
@@ -59,7 +59,7 @@ test('Back during SDK loading never initializes the detached map sheet',async({p
  let release!:()=>void
  const held=new Promise<void>(resolve=>{release=resolve})
  await page.route('https://maps.googleapis.com/**',async route=>{await held;await route.fulfill({contentType:'application/javascript',body:sdk})})
- await page.goto('/matchmaking?preferences=true')
+ await page.goto('/matchmaking?mode=friends&preferences=true')
  const request=page.waitForRequest('https://maps.googleapis.com/**')
  const trigger=page.getByRole('button',{name:'Search area Choose an area',exact:true})
  await trigger.click();await request

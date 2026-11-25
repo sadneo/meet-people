@@ -151,7 +151,7 @@ describe('native Back policy', () => {
     expect(mocks.navigate).toHaveBeenCalledWith(-1)
   })
 
-  it.each(['/', '/home', '/community', '/login'])('minimizes at root %s even with auth history', async pathname => {
+  it.each(['/', '/matchmaking', '/home', '/community', '/login'])('minimizes at root %s even with auth history', async pathname => {
     mocks.location = { pathname, search: '' }
     render(<NativeBridge />)
     await pressBack()

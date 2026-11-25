@@ -65,7 +65,7 @@ Raster artwork stays crisp and keeps its original aspect ratio.
 ## Navigation and layout
 
 Garden, Events, Discover, Messages and Profile are the primary destinations, in
-that order. Discover is the center tab on mobile, matching the complete demo.
+that order. A fresh signed-in launch opens Discover. Resuming keeps the current screen. Discover defaults to Dating for eligible users, with Friends second; everyone else opens Friends. Discover is the center tab on mobile, matching the complete demo.
 Activity is a supporting destination; account settings live within Profile. Desktop uses the alternate
 frontend’s left navigation; at 800px and below it becomes bottom navigation.
 Compact screens reach Activity from Messages and Settings through the Profile gear, without

@@ -45,7 +45,7 @@ try {
   await page.getByLabel('Day', { exact: true }).fill('01')
   await page.getByLabel('Year', { exact: true }).fill('2000')
   await page.getByRole('button', { name: 'Enter Pebble' }).click()
-  await expect(page).toHaveURL(/\/(home)?$/)
+  await expect(page).toHaveURL(/\/matchmaking$/)
   const first = createClient(url, key, options)
   const signedFirst = await first.auth.signInWithPassword({ email: users[0].email, password })
   assert.ifError(signedFirst.error)

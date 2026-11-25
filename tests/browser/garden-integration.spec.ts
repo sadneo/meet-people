@@ -20,7 +20,7 @@ test('Garden aliases use the sky composition, active navigation and sliding inve
  await expect(page).toHaveURL(/\/matchmaking\?mode=friends/)
 })
 for(const width of [390,1280])test(`Garden integration: drag, undo, four geodes, reset, reload ${width}`,async({page},info)=>{
- await page.setViewportSize({width,height:860});const fixture=await wiringFixture(page);fixture.garden.seed({balance:2000,owned:[],earnedChapters:[]});await page.goto('/')
+ await page.setViewportSize({width,height:860});const fixture=await wiringFixture(page);fixture.garden.seed({balance:2000,owned:[],earnedChapters:[]});await page.goto('/home')
  // A purchase is asynchronous even when its Build button click has completed.
  await page.route('**/api/garden',async route=>{
   if(route.request().method()==='POST'&&route.request().postDataJSON()?.action==='build')await new Promise(resolve=>setTimeout(resolve,200))
@@ -60,7 +60,7 @@ for(const width of [390,1280])test(`Garden integration: drag, undo, four geodes,
 })
 
 test('Garden fixed landscape, reduced motion and account isolation',async({page},info)=>{
- await page.setViewportSize({width:1280,height:860});const fixture=await wiringFixture(page);fixture.garden.seed({balance:2000,owned:[],earnedChapters:[]});await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/')
+ await page.setViewportSize({width:1280,height:860});const fixture=await wiringFixture(page);fixture.garden.seed({balance:2000,owned:[],earnedChapters:[]});await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/home')
  for(const name of ['River','Tree Cluster','Flower Meadow','Garnet']){
   await page.getByRole('button',{name:'Open Garden inventory'}).click()
   const category=page.locator(`summary[aria-label="${name==='Garnet'?'Rare Pebbles':'Landscape'}"]`)

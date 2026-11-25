@@ -74,7 +74,7 @@ test('legacy IndexedDB currency cannot credit the account wallet or become an of
   await transactGarden(owner,key,()=>({balance:999999,owned:['bench'],earnedChapters:[]}),()=>true)
  },{owner:user,key:legacyKey})
  const fixture=await wiringFixture(page)
- await page.goto('/')
+ await page.goto('/home')
  await expect(page.getByRole('button',{name:'Build with 300 Pebbles',exact:true})).toBeEnabled()
  expect(fixture.garden.read()).toMatchObject({balance:300,owned:[]})
  expect(fixture.garden.calls.filter(call=>call.method==='POST')).toHaveLength(0)

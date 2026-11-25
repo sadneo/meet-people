@@ -27,7 +27,7 @@ vi.mock('../../src/features/garden/ArtPreview', () => ({ ArtPreview: () => null 
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Discover } from '../../src/ui/Discover'
-const view = () => render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><Discover /></MemoryRouter></QueryClientProvider>)
+const view = () => render(<QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={['/matchmaking?mode=friends']}><Discover /></MemoryRouter></QueryClientProvider>)
 
 beforeEach(() => {
   state.status = { available: true, eligible: false, reason: 'discovery_off' }

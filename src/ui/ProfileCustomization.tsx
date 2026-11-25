@@ -155,7 +155,7 @@ function OwnPreviewCard({ ownerId, account, details, photoRevision, adult, custo
   const bio = mode === 'dating' && value.datingBio ? value.datingBio : profile.bio
   const prompts = (value.prompts ?? []).filter(item => item.answer.trim())
   return <section className="own-preview" aria-label="How others see your profile">
-    {adult && <DiscoverModes adult showFood={false} label="Preview as" mode={mode === 'friends' ? 'Friends' : 'Dating'}
+    {adult && <DiscoverModes adult label="Preview as" mode={mode === 'friends' ? 'Friends' : 'Dating'}
       onModeChange={option => { const next = option === 'Friends' ? 'friends' : 'dating'; if (mode !== next) haptic('light'); setMode(next) }}/>}
     <article className="own-preview-card">
       <div className="photo discovery-photo own-preview-photo">

@@ -9,7 +9,7 @@ test('an exhausted allowance replaces both discovery decks, survives reload and 
   await page.setViewportSize({ width: 320, height: 640 })
   const fixture = await wiringFixture(page)
   await page.route('**/api/connections/request-allowance', route => route.fulfill({ json: allowance(10) }))
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   await expect(page.getByRole('heading', { name: limitHeading })).toBeVisible()
   await expect(page.locator('.discovery-request-limit time')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Connect', exact: true })).toHaveCount(0)
@@ -33,7 +33,7 @@ for (const mode of ['Friends', 'Dating'] as const) {
       writes++; used++
       return route.fulfill({ json: { status: 'sent', conversationId: null } })
     })
-    await page.goto('/matchmaking')
+    await page.goto('/matchmaking?mode=friends')
     if (mode === 'Dating') {
       await page.getByRole('button', { name: 'Dating', exact: true }).click()
       await page.getByRole('button', { name: 'Start Dating discovery' }).click()
@@ -53,7 +53,7 @@ test('a failed allowance read blocks sending until it is reconciled, then reopen
   await page.route('**/api/connections/request-allowance', route => failed
     ? route.fulfill({ status: 503, json: { error: 'Unavailable' } })
     : route.fulfill({ json: allowance(used) }))
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   await expect(page.getByText('Request availability could not be checked. Try again.', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeDisabled()
   failed = false
@@ -78,7 +78,7 @@ test('the next profile cannot send while the previous request allowance is being
   } }))
   await page.route(`**/api/matchmaking/friends/requests/${peer}`, route => { writes++; return route.fulfill({ json: { status: 'sent', conversationId: null } }) })
   try {
-    await page.goto('/matchmaking')
+    await page.goto('/matchmaking?mode=friends')
     await page.getByRole('button', { name: 'Connect', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Jordan, 23' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeDisabled()

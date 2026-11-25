@@ -10,7 +10,7 @@ test('recent Garden revisits stay usable without waiting for a redundant API rea
     else await new Promise(resolve => setTimeout(resolve, 250))
     await route.fallback()
   })
-  await page.goto('/')
+  await page.goto('/home')
   await expect(page.getByRole('button', { name: 'Open Garden inventory', exact: true })).toBeEnabled()
   const reads = fixture.garden.calls.filter(call => call.method === 'GET').length
   expect(reads).toBe(1)
@@ -30,7 +30,7 @@ test('recent Garden revisits stay usable without waiting for a redundant API rea
 
 test('a cached Garden still waits for current server state and confirmation before a purchase is saved', async ({ page }) => {
   const fixture = await wiringFixture(page)
-  await page.goto('/')
+  await page.goto('/home')
   await expect(page.getByRole('button', { name: 'Open Garden inventory', exact: true })).toBeEnabled()
   let release!: () => void, heldRead = false
   const held = new Promise<void>(resolve => { release = resolve })
