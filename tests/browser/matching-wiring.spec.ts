@@ -10,7 +10,7 @@ for(const {status,code} of [{status:429,code:'request_limit'},{status:429,code:u
   await route.fulfill({status,json:{code,error:status===429?'Daily request limit reached (10 per 24 hours). Try again later.':'Your Friends action may already be saved. Check Connections before retrying.'}})
  })
  if(code==='request_limit')await page.route('**/api/connections/request-allowance',route=>route.fulfill({json:writes?{limit:10,used:10,remaining:0,availableAt:new Date(Date.now()+3600000).toISOString()}:{limit:10,used:9,remaining:1,availableAt:null}}))
- await page.goto('/matchmaking')
+ await page.goto('/matchmaking?mode=friends')
  await page.getByRole('button',{name:'Connect',exact:true}).click()
  if(code==='request_limit'){
   await expect(page.getByRole('heading',{name:'You’ve reached today’s request limit.'})).toBeVisible()
@@ -33,7 +33,7 @@ test('buffered Discover profiles advance while the refill request is held',async
   return route.fulfill({json:{algorithmVersion:'friends-rules-v1',candidates:[peer,third].map((id,index)=>({id,name:index?'Jordan':'Taylor',age:23,city:null,bio:null,avatar:null,photoRevision:0,interests:['Coffee'],areaDistanceMiles:2}))}})
  })
  try{
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   await expect(page.getByRole('heading',{name:'Taylor, 23'})).toBeVisible()
   await page.getByRole('button',{name:'Pass',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Jordan, 23'})).toBeVisible()

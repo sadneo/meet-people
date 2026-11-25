@@ -56,7 +56,7 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/onboarding` | One mobile form for display name, chosen username and private birthday. A confirmed adult profile can enter Pebble. |
 | `/home`, `/community` | Integrated pixel-art Garden; account-backed inventory, placement, Random Pebble unlocks and capped earning rewards; weekly scene history stays device-local |
 | `/matchmaking` | Passive Friends/Dating recommendations, consent and search preferences |
-| `/matchmaking/food` | Food menus reached from Discover; campus-date picker, dining location and meal choices, dish search and published ingredient/nutrition details. Authenticated reads of imported campus and hospital snapshots; no sample dishes or inferred opening hours. |
+| `/matchmaking/food` | Food menus accessible by direct link; campus-date picker, dining location and meal choices, dish search and published ingredient/nutrition details. Authenticated reads of imported campus and hospital snapshots; no sample dishes or inferred opening hours. |
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
 | Web `/explore`, `/explore/:id` | Public event reads; installation link for group participation |
 | `/messages`, `/messages/chat?conversation=…` | Saved inbox, history, read state and idempotent sends |

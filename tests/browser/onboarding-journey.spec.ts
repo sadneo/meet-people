@@ -107,7 +107,7 @@ test('shared matching setup carries forward while Friends and Dating start indep
   await page.setViewportSize({ width: 390, height: 780 })
   const fixture = await wiringFixture(page, { fresh: true })
   const { calls: mapCalls } = await mockLocationPicker(page)
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   await identity(page)
   await submit(page)
   await page.getByRole('button', { name: 'Set up Friends', exact: true }).click()

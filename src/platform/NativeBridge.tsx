@@ -70,7 +70,7 @@ export default function NativeBridge() {
         return
       }
       const { navigate, location: { pathname, search } } = router.current
-      if (roots.has(pathname)) {
+      if (roots.has(pathname) || (pathname === '/matchmaking' && !search)) {
         void App.minimizeApp().catch(() => {})
         return
       }

@@ -46,7 +46,7 @@ test('the finish card links straight to what is missing', async ({ page }) => {
 test('Discover cards show the person’s top interest and Garden item', async ({ page }) => {
   await wiringFixture(page)
   await page.route(`**/api/matchmaking/profile-customization/${peer}`, route => route.fulfill({ json: { interestOrder: ['Coffee'], gardenItem: 'bench' } }))
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   const card = page.locator('.discovery-card-slot:not([hidden])')
   await expect(card.getByRole('img', { name: /^From Taylor's Garden/ })).toBeVisible()
   await expect(card.locator('.dating-interest.is-top')).toContainText('Coffee')
@@ -78,7 +78,7 @@ test('a Discover card shows prompts and the current photo caption, and nothing w
   await wiringFixture(page)
   let withPrompts = false
   await page.route(`**/api/matchmaking/profile-customization/${peer}/prompts/*`, route => route.fulfill({ json: { prompts: withPrompts ? [{ id: 'study-spot', answer: 'Library roof' }] : [] } }))
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   const card = page.locator('.discovery-card-slot:not([hidden])')
   await expect(card.getByRole('heading', { name: 'Taylor, 23' })).toBeVisible()
   await expect(card.locator('.prompt-card')).toHaveCount(0)

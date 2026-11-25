@@ -6,7 +6,7 @@ for (const width of [320, 390]) {
   test(`Friends fields save in place and cancel preserves the account at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 740 })
     const fixture = await wiringFixture(page)
-    await page.goto('/matchmaking?preferences=true')
+    await page.goto('/matchmaking?mode=friends&preferences=true')
     const preferences = page.getByRole('dialog', { name: 'Friends preferences', exact: true })
     await preferences.getByRole('button', { name: 'Edit interests', exact: true }).click()
     const editor = page.getByRole('dialog', { name: 'Your interests', exact: true })
@@ -16,7 +16,7 @@ for (const width of [320, 390]) {
     await expect(editor).toHaveCount(0)
     await expect(preferences.locator('.friends-shared-interests')).toContainText('Outdoors')
     expect(fixture.getAccount().profile!.interests).toContain('Outdoors')
-    await expect(page).toHaveURL(/matchmaking\?preferences=true/)
+    await expect(page).toHaveURL(/matchmaking\?mode=friends&preferences=true/)
     await preferences.getByRole('button', { name: 'Edit availability', exact: true }).click()
     const schedule = page.getByRole('dialog', { name: 'Your availability', exact: true })
     await expect(schedule.getByRole('button', { name: 'Save changes' })).toBeEnabled()
@@ -32,7 +32,7 @@ for (const width of [320, 390]) {
 test('area label opens the map directly, confirmation saves and returns to Discover', async ({ page }) => {
   const fixture = await wiringFixture(page)
   await mockLocationPicker(page)
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   await page.getByRole('button', { name: 'Search area & preferences' }).click()
   const search = page.getByRole('combobox', { name: 'Search city or neighborhood' })
   await expect(search).toBeVisible()
@@ -47,7 +47,7 @@ test('area label opens the map directly, confirmation saves and returns to Disco
 test('canceling the direct map leaves the saved area untouched', async ({ page }) => {
   const fixture = await wiringFixture(page)
   await mockLocationPicker(page)
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   await page.getByRole('button', { name: 'Search area & preferences' }).click()
   await expect(page.getByRole('combobox', { name: 'Search city or neighborhood' })).toBeVisible()
   await page.keyboard.press('Escape')
@@ -93,7 +93,7 @@ test('an unconfirmed in-place interest save keeps the editor and blocks another 
     if (route.request().method() === 'PUT') { writes++; return route.abort() }
     return route.fallback()
   })
-  await page.goto('/matchmaking?preferences=true')
+  await page.goto('/matchmaking?mode=friends&preferences=true')
   await page.getByRole('button', { name: 'Edit interests', exact: true }).click()
   const editor = page.getByRole('dialog', { name: 'Your interests', exact: true })
   await editor.getByRole('button', { name: 'Outdoors', exact: true }).click()

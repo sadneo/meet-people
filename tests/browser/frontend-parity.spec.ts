@@ -17,7 +17,7 @@ test('Discover interest actions use the saved profile and retain its minimum-int
  const fixture=await wiringFixture(page)
  fixture.getAccount().profile!.interests=['Coffee']
  await page.route('**/api/matchmaking/friends/recommendations',route=>route.fulfill({json:{algorithmVersion:'friends-rules-v1',candidates:[{id:peer,name:'Taylor',age:23,city:null,bio:null,avatar:null,photoRevision:0,interests:['Coffee','Hiking'],areaDistanceMiles:2}]}}))
- await page.goto('/matchmaking')
+ await page.goto('/matchmaking?mode=friends')
  await page.getByRole('button',{name:'Coffee · shared interest',exact:true}).click()
  await page.getByRole('button',{name:'Remove from my interests'}).click()
  await expect(page.getByRole('dialog',{name:'Coffee'}).getByRole('alert')).toBeVisible()

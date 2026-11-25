@@ -106,7 +106,7 @@ test('Garden waits for required artwork and its first frame, without replacing n
   await wiringFixture(page)
   await page.route('**/garden/legacy-garden/village-empty.png', async route => { await art.promise; await route.continue() })
   try {
-    await page.goto('/')
+    await page.goto('/home')
     await expect(page.locator('[data-skeleton=garden]')).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Open Garden inventory' })).toBeDisabled()
@@ -121,7 +121,7 @@ test('Garden artwork failure replaces its skeleton with an explicit asset-only r
   await wiringFixture(page)
   let fail = true
   await page.route('**/garden/legacy-garden/village-empty.png', route => fail ? route.abort() : route.continue())
-  await page.goto('/')
+  await page.goto('/home')
   await expect(page.getByRole('alert')).toContainText('Garden artwork could not load')
   await expect(page.locator('[data-skeleton=garden]')).toHaveCount(0)
   fail = false
