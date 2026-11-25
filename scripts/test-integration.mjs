@@ -36,7 +36,8 @@ const run = (command, args, env) => new Promise(resolve => {
 
 async function dbTypes(env) {
   const { stdout } = await promisify(execFile)('sh', ['scripts/supabase.sh', 'gen', 'types', 'typescript', '--local'], { cwd: root, env, maxBuffer: 32 * 1024 * 1024, encoding: 'buffer' })
-  if (stdout.equals(readFileSync(join(root, 'src/types/database.ts')))) return 0
+  const canonicalText = bytes => bytes.toString('utf8').replaceAll('\r\n', '\n')
+  if (canonicalText(stdout) === canonicalText(readFileSync(join(root, 'src/types/database.ts')))) return 0
   const directory = mkdtempSync(join(tmpdir(), 'pebble-types-'))
   const generated = join(directory, 'database.ts')
   writeFileSync(generated, stdout)
@@ -62,7 +63,7 @@ async function builtApp(runId, env) {
   try {
     // The built API resolves its dependencies from the directory above it.
     mkdirSync(out, { recursive: true })
-    symlinkSync(join(root, 'node_modules'), join(out, 'node_modules'))
+    symlinkSync(join(root, 'node_modules'), join(out, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir')
     writeFileSync(join(out, 'package.json'), '{"type":"module"}\n')
     for (const args of [['typescript/bin/tsc', '--noEmit'], ['vite/bin/vite.js', 'build', '--outDir', webDir, '--emptyOutDir'], ['typescript/bin/tsc', '-p', 'tsconfig.api.json', '--outDir', apiDir]]) {
       const [script, ...rest] = args

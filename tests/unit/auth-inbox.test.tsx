@@ -23,6 +23,7 @@ it('shows a check-your-inbox state after sign-up with resend cooldown and a way 
   fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Synthetic-password-1!' } })
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
   expect(await screen.findByRole('heading', { name: 'Check your inbox' })).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'Privacy', exact: true }).getAttribute('target')).toBe('_blank')
   expect(screen.getByText('new@example.test')).toBeTruthy()
   expect((screen.getByRole('button', { name: /Resend in/ }) as HTMLButtonElement).disabled).toBe(true)
   expect(screen.getByRole('link', { name: 'reset your password' })).toBeTruthy()
@@ -40,6 +41,7 @@ it('uses the recovery resend after requesting a password reset', async () => {
   fireEvent.change(screen.getByRole('textbox', { name: /email/i }), { target: { value: 'a@example.test' } })
   fireEvent.click(screen.getByRole('button', { name: 'Send recovery link' }))
   expect(await screen.findByRole('heading', { name: 'Check your inbox' })).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'Privacy', exact: true }).getAttribute('target')).toBe('_blank')
   expect(screen.queryByText(/Already have an account/)).toBeNull()
 })
 

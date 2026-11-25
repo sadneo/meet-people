@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { PullToRefresh } from './PullToRefresh';
-import { Link, useLocation, useParams, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EventsResponseSchema, EventSchema } from "../../shared/events";
 import {
@@ -97,7 +97,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
       )}
       <div className="eventgrid event-directory stagger-in">
         {resource.value?.events.map((event) => (
-            <Link className="event-card" key={event.id} viewTransition to={`${publicView ? "/explore" : "/events"}/${event.id}?${searchParams}`} aria-label={`${event.title}: see event and people`}>
+            <Link className="event-card" key={event.id} viewTransition state={{ fromEventDirectory: true }} to={`${publicView ? "/explore" : "/events"}/${event.id}?${searchParams}`} aria-label={`${event.title}: see event and people`}>
                 <EventDateChip startsAt={event.starts_at}/>
                 <MediaImage
                   style={{ viewTransitionName: eventImageTransition(event.id) }}
@@ -172,12 +172,12 @@ function hasStarted(startsAt: string | null | undefined) {
   return Number.isFinite(time) && time <= Date.now();
 }
 // Permanent failures (cancelled, ended, unknown or malformed id) can't be fixed by retrying.
-function EventUnavailable({ directory }: { directory: string }) {
+function EventUnavailable({ directory, onClose }: { directory: string; onClose: (event: MouseEvent<HTMLAnchorElement>) => void }) {
   return (
     <div className="card blank">
       <h3>This event is no longer available</h3>
       <p>It may have ended or been cancelled.</p>
-      <Link className="btn" to={directory}>Browse events</Link>
+      <Link className="btn" to={directory} onClick={onClose} replace>Browse events</Link>
     </div>
   );
 }
@@ -194,6 +194,14 @@ function EventDateChip({ startsAt }: { startsAt: string | null | undefined }) {
 export function EventDetail({ publicView = false, renderGroup }: { publicView?: boolean; renderGroup?: (id: string, available: boolean) => ReactNode }) {
   const location = useLocation();
   const directory = `${publicView ? "/explore" : "/events"}${location.search}`;
+  const navigate = useNavigate();
+  function closeEvent(event: MouseEvent<HTMLAnchorElement>) {
+    // Back restores the directory entry and its filters when a card opened this detail.
+    if (location.state?.fromEventDirectory && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      void navigate(-1);
+    }
+  }
   const { id = "" } = useParams(),
     resource = useCachedLoad(
       useCallback(
@@ -221,8 +229,8 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
     startsAt > now;
   return (
     <div className="event-detail">
-      {!event && <Link className="account-back" to={directory}>‹ Events</Link>}
-      {permanentEventErrors.includes(resource.error) && <EventUnavailable directory={directory} />}
+      {!event && <Link className="account-back" to={directory} onClick={closeEvent} replace>‹ Events</Link>}
+      {permanentEventErrors.includes(resource.error) && <EventUnavailable directory={directory} onClose={closeEvent} />}
       <ResourceState
         loading={resource.loading}
         error={permanentEventErrors.includes(resource.error) ? '' : resource.error}
@@ -231,7 +239,7 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
       />
       {event && (
         <>
-          <header className="event-detail-header"><h1>{event.title}</h1><Link className="round" aria-label="Close event" to={directory}>×</Link></header>
+          <header className="event-detail-header"><h1>{event.title}</h1><Link className="round" aria-label="Close event" to={directory} onClick={closeEvent} replace>×</Link></header>
           <MediaImage
             style={{ viewTransitionName: eventImageTransition(event.id) }}
             className="event-cover"

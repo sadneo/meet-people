@@ -150,25 +150,49 @@ test('repeated quick two-tab purchases retain both purchases (50 exclusive-lock 
  await test.info().attach('quick-purchase-results',{body:JSON.stringify({attempts:50,failures},null,2),contentType:'application/json'})
  expect(failures).toEqual([])
 })
-test('simultaneous geodes and low-balance duplicate purchases use the locked balance',async({page,context})=>{
- const fixture=await wiringFixture(page);await page.goto('/home')
- const second=await context.newPage();await wiringFixture(second);await second.goto('/home')
- for(const tab of [page,second])await expect(tab.getByRole('button',{name:'Open Garden inventory',exact:true})).toBeEnabled()
- for(const [balance,kind] of [[600,'open-geode'],[300,'open-geode'],[15,'build']] as const){
-  for(let attempt=0;attempt<10;attempt++){
-   fixture.garden.seed({balance,owned:[],earnedChapters:[]})
-   await Promise.all([page,second].map(tab=>tab.evaluate(async owner=>{const path='/src/features/garden/state.ts';const {refreshGarden}=await import(path);await refreshGarden(owner)},user)))
-   await Promise.all([page,second].map(tab=>tab.evaluate(async({owner,kind})=>{
-    const path='/src/features/garden/state.ts';const {updateGarden}=await import(path)
-    await updateGarden(owner,kind==='build'?{type:'build',id:'bench'}:{type:'open-geode',random:0})
-   },{owner:user,kind})))
-   const saved=await page.evaluate(owner=>JSON.parse(localStorage.getItem(`pebble:account-garden:v1:${owner}`)!),user)
-   expect(saved.balance).toBe(0)
-   if(kind==='build')expect(saved.owned).toEqual(['bench'])
-   else{expect(saved.geodeUnlocks).toHaveLength(balance/300);expect(new Set(saved.geodeUnlocks).size).toBe(balance/300)}
+// Each scenario gets its own browser context and test deadline, including all ten races.
+for (const [scenario, balance, kind] of [
+ ['two geodes with 600 Pebbles', 600, 'open-geode'],
+ ['two geodes with only 300 Pebbles', 300, 'open-geode'],
+ ['duplicate bench purchases with only 15 Pebbles', 15, 'build'],
+] as const) {
+ test(`simultaneous Garden purchases use the locked balance: ${scenario}`, async ({ page, context }) => {
+  const fixture = await wiringFixture(page)
+  await page.goto('/home')
+  const second = await context.newPage()
+  await wiringFixture(second)
+  await second.goto('/home')
+  const tabs = [page, second]
+  for (const tab of tabs) {
+   await expect(tab.getByRole('button', { name: 'Open Garden inventory', exact: true })).toBeEnabled()
   }
- }
-})
+
+  for (let attempt = 0; attempt < 10; attempt++) {
+   fixture.garden.seed({ balance, owned: [], earnedChapters: [] })
+   await Promise.all(tabs.map(tab => tab.evaluate(async owner => {
+    const path = '/src/features/garden/state.ts'
+    const { refreshGarden } = await import(path)
+    await refreshGarden(owner)
+   }, user)))
+   await Promise.all(tabs.map(tab => tab.evaluate(async ({ owner, kind }) => {
+    const path = '/src/features/garden/state.ts'
+    const { updateGarden } = await import(path)
+    await updateGarden(owner, kind === 'build' ? { type: 'build', id: 'bench' } : { type: 'open-geode', random: 0 })
+   }, { owner: user, kind })))
+
+   const saved = await page.evaluate(owner => JSON.parse(localStorage.getItem(`pebble:account-garden:v1:${owner}`)!), user)
+   for (const garden of [fixture.garden.read(), saved]) {
+    expect(garden.balance).toBe(0)
+    if (kind === 'build') {
+     expect(garden.owned).toEqual(['bench'])
+    } else {
+     expect(garden.geodeUnlocks).toHaveLength(balance / 300)
+     expect(new Set(garden.geodeUnlocks).size).toBe(balance / 300)
+    }
+   }
+  }
+ })
+}
 test('an account switch while waiting for a real cross-tab lock cancels the queued write',async({page,context})=>{
  const fixture=await wiringFixture(page);await page.goto('/home')
  fixture.garden.seed({balance:1000,owned:[],earnedChapters:[]})

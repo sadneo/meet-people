@@ -1,6 +1,24 @@
 import { test,expect } from '@playwright/test'
 import { wiringFixture,user } from './wiring-fixture'
 
+test('a lost reset confirmation shows the recovery action and refreshes the saved Garden', async ({page}, info) => {
+ await page.setViewportSize({width:390,height:844})
+ const fixture = await wiringFixture(page)
+ fixture.garden.seed({balance:285,owned:['bench'],purchaseCosts:{bench:15},earnedChapters:[]})
+ await page.goto('/home')
+ await page.getByRole('button',{name:'Open Garden inventory'}).click()
+ const inventory = page.getByRole('dialog',{name:'Your garden',exact:true})
+ await inventory.getByRole('button',{name:'Reset Garden',exact:true}).click()
+ fixture.garden.loseNextResponse()
+ await page.getByRole('dialog',{name:'Start with a little space?'}).getByRole('button',{name:'Reset Garden',exact:true}).click()
+ await expect(page.locator('.garden-drawer [role=alert]')).toHaveText(/could not be confirmed/)
+ await page.screenshot({path:info.outputPath('garden-reset-recovery.png')})
+ await expect(inventory.getByRole('button',{name:'Refresh Garden'})).toBeVisible()
+ await inventory.getByRole('button',{name:'Refresh Garden'}).click()
+ await expect(inventory.getByText('300 Pebbles available')).toBeVisible()
+ expect(fixture.garden.calls.filter(call => call.body.action === 'reset')).toHaveLength(1)
+})
+
 for(const width of [390,1280])test(`account earning, purchases and reconciliation ${width}`,async({page},info)=>{
  await page.setViewportSize({width,height:860});const fixture=await wiringFixture(page)
  await page.goto('/home');await expect(page.getByRole('button',{name:'Build with 300 Pebbles'})).toBeVisible()

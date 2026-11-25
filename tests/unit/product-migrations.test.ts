@@ -4,8 +4,8 @@ import { expect, it } from 'vitest'
 import { buildProductSchema, buildProductPrerequisitesMigration, buildUuidRelationshipProjectionMigration } from '../../scripts/product-schema.mjs'
 
 it('keeps migration snapshots in sync with the reviewed prerequisite sources', () => {
-  expect(readFileSync('supabase/migrations/20261027000000_product_prerequisites.sql', 'utf8')).toBe(buildProductPrerequisitesMigration())
-  expect(readFileSync('supabase/migrations/20261029000150_uuid_relationship_projection.sql', 'utf8')).toBe(buildUuidRelationshipProjectionMigration())
+  expect(readFileSync('supabase/migrations/20261027000000_product_prerequisites.sql', 'utf8').replaceAll('\r\n', '\n')).toBe(buildProductPrerequisitesMigration())
+  expect(readFileSync('supabase/migrations/20261029000150_uuid_relationship_projection.sql', 'utf8').replaceAll('\r\n', '\n')).toBe(buildUuidRelationshipProjectionMigration())
 })
 
 it('preserves installed schema hashes after relocating the sources', () => {

@@ -115,6 +115,14 @@ export function Garden() {
     if(result.cancelled||result.before.community.owned.includes(id)||!result.after.community.owned.includes(id)){setAnnouncement(`${name} was not added. Your balance or inventory changed; check the updated garden.`);return}
     setAnnouncement(`${name} added.${result.saved?'':' Test preview only.'}`);close();if(!isLandscapeUpgrade(id)){setSelected(id as MovableId);canvas.current?.focus({preventScroll:true})}
   }
+  async function confirmReset() {
+    const result = await dispatch({ type: 'reset-purchases' })
+    reset.current?.close()
+    if (result.cancelled) return
+    setSelected(null)
+    setCamera({ x: 0, y: 0, zoom: 1 })
+    setAnnouncement('Garden reset. Collected Pebbles kept.')
+  }
   const openGeode=async()=>{
     const result=await dispatch({type:'open-geode',random:crypto.getRandomValues(new Uint32Array(1))[0]/4294967296})
     if(result.cancelled)return
@@ -202,7 +210,7 @@ export function Garden() {
         </div><small>{state.preview?'Test preview · Not saved':state.error?'Account save unconfirmed':state.pending?'Syncing…':state.remote?'Saved to your account':'Account Garden unavailable'}</small>
       </footer>
     </dialog>
-    <dialog ref={reset} className="garden-confirm" aria-labelledby="garden-reset-title"><h2 id="garden-reset-title">Start with a little space?</h2><p>Remove placed items and refund {purchaseRefund(community)} Pebbles. Collected Pebbles return to inventory for free. Their unlocks stay collected.</p><div><button autoFocus onClick={()=>reset.current?.close()}>Cancel</button><button disabled={!available} onClick={async()=>{if((await dispatch({type:'reset-purchases'})).cancelled)return;setSelected(null);setCamera({x:0,y:0,zoom:1});reset.current?.close();setAnnouncement('Garden reset. Collected Pebbles kept.')}}>Reset Garden</button></div></dialog>
+    <dialog ref={reset} className="garden-confirm" aria-labelledby="garden-reset-title"><h2 id="garden-reset-title">Start with a little space?</h2><p>Remove placed items and refund {purchaseRefund(community)} Pebbles. Collected Pebbles return to inventory for free. Their unlocks stay collected.</p><div><button autoFocus onClick={()=>reset.current?.close()}>Cancel</button><button disabled={!available} onClick={confirmReset}>Reset Garden</button></div></dialog>
     <dialog ref={revealDialog} className="garden-reveal" aria-labelledby="garden-reveal-title" onClose={()=>{setReveal(null);open()}}>{revealed&&<><p>A little discovery</p><ArtPreview id={revealed.id}/><h2 id="garden-reveal-title">{revealed.name}</h2><p>{revealed.description}</p><button className="btn" onClick={()=>revealDialog.current?.close()}>Keep in inventory</button></>}</dialog>
   </section>
 }
