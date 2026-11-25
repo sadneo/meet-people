@@ -53,3 +53,48 @@ test('registration and recovery stay available without an email-check screen', a
   await expect(page.getByLabel('Password', { exact: true })).toHaveValue('')
   await expect(page.getByLabel('Confirm password', { exact: true })).toHaveValue('')
 })
+
+for (const journey of [
+  { path: '/login', policy: '.auth-footer', label: 'Privacy', destination: '/privacy' },
+  { path: '/register', policy: '.auth-consent', label: 'Privacy Policy', destination: '/privacy' },
+  { path: '/auth/forgot-password', policy: '.auth-footer', label: 'Terms', destination: '/terms' },
+]) {
+  test(`policy round trip from ${journey.path} preserves the form and the original destination`, async ({ page }) => {
+    await wiringFixture(page, { guest: true })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`${journey.path}?returnTo=%2Fevents`)
+    await page.getByLabel('Email', { exact: true }).fill('development-fixture@example.test')
+    await page.locator(journey.policy).getByRole('link', { name: journey.label, exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(journey.destination + '$'))
+    if (journey.path === '/register') {
+      await page.getByRole('link', { name: 'Child safety standards' }).click()
+      await expect(page).toHaveURL(/\/child-safety$/)
+    }
+    await page.locator('.legal-header').getByRole('link', { name: /^Back to/ }).click()
+    if (journey.path === '/auth/forgot-password') {
+      await page.screenshot({ path: test.info().outputPath('recovery-after-reading-terms.png') })
+    }
+    expect(new URL(page.url()).pathname).toBe(journey.path)
+    expect(new URL(page.url()).searchParams.get('returnTo')).toBe('/events')
+    await expect(page.getByLabel('Email', { exact: true })).toHaveValue('development-fixture@example.test')
+    if (journey.path === '/login') {
+      await page.getByLabel('Password', { exact: true }).fill('Synthetic-fixture-password-1!')
+      await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+      await expect(page.getByRole('heading', { name: 'Events', exact: true })).toBeVisible()
+    }
+  })
+}
+
+test('reading Terms keeps a verified password reset form open', async ({ page }) => {
+  await wiringFixture(page, { guest: true })
+  await page.goto('/reset-password#access_token=browser-user-jwt&refresh_token=browser-refresh-fixture')
+  const password = page.getByLabel('Password', { exact: true })
+  await password.fill('New-reset-draft-1!')
+  const policyTab = page.waitForEvent('popup')
+  await page.locator('.auth-consent').getByRole('link', { name: 'Terms', exact: true }).click()
+  const policy = await policyTab
+  await expect(policy).toHaveURL(new URL('/terms', page.url()).href)
+  await policy.close()
+  await expect(page.getByRole('heading', { name: 'Set a new password' })).toBeVisible()
+  await expect(password).toHaveValue('New-reset-draft-1!')
+})

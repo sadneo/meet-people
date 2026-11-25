@@ -27,7 +27,8 @@ export const uuidProductSources = [
   'supabase/schema-sources/uuid-social-contact-migration.sql',
   ...productSources.slice(6),
 ]
-const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
+// Installed schema hashes use the repository's LF line endings on every platform.
+const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8').replaceAll('\r\n', '\n')
 function section(source, start, end) {
   const first = source.indexOf(start), last = source.indexOf(end, first + start.length)
   if (first < 0 || last < first) throw new Error('Product schema source boundaries changed; review deployment sources.')

@@ -120,6 +120,10 @@ export function Auth({
     reset = mode === "reset",
     forgot = mode === "forgot",
     register = mode === "register";
+  // Keep the single-use reset form and live resend timer open while reading policies.
+  const policyLink = reset || sent
+    ? { target: "_blank", rel: "noopener" }
+    : { state: { authFrom: forgot ? "/auth/forgot-password" : register ? "/register" : "/login", returnTo } };
   function changeEmail(value: string) {
     if (value === email) return;
     setEmail(value);
@@ -373,12 +377,12 @@ export function Auth({
         {(register || forgot) && <Link className="auth-home-link" to={`/login?${new URLSearchParams({ email, returnTo })}`}>Back to sign in</Link>}
         </>)}
         {mode !== "login" && <p className="account-note auth-consent">
-          By continuing, you agree to our <Link to="/terms">Terms</Link> and{" "}
-          <Link to="/privacy">Privacy Policy</Link>.
+          By continuing, you agree to our <Link to="/terms" {...policyLink}>Terms</Link> and{" "}
+          <Link to="/privacy" {...policyLink}>Privacy Policy</Link>.
         </p>}
         <footer className="auth-footer">
-          <Link to="/privacy" state={{ authFrom: mode === 'register' ? '/register' : '/login' }}>Privacy</Link>
-          <Link to="/terms" state={{ authFrom: mode === 'register' ? '/register' : '/login' }}>Terms</Link>
+          <Link to="/privacy" {...policyLink}>Privacy</Link>
+          <Link to="/terms" {...policyLink}>Terms</Link>
           <a href={`mailto:${legalPublication.contactEmail}`}>Safety</a>
         </footer>
       </div>

@@ -225,8 +225,18 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
       live.current = false;
     };
   }, []);
-  const reloadHistory=history.reload
-  useEffect(()=>{const refresh=()=>{setOlder([]);reloadHistory()};window.addEventListener('pebble:matching-changed',refresh);return()=>window.removeEventListener('pebble:matching-changed',refresh)},[reloadHistory])
+  const reloadHistory = history.reload;
+  const historyVersion = useRef(0);
+  const refreshHistory = useCallback(() => {
+    historyVersion.current += 1;
+    setOlder([]);
+    setCursor(null);
+    reloadHistory();
+  }, [reloadHistory]);
+  useEffect(() => {
+    window.addEventListener('pebble:matching-changed', refreshHistory);
+    return () => window.removeEventListener('pebble:matching-changed', refreshHistory);
+  }, [refreshHistory]);
   const messages = [
     ...new Map(
       [...older, ...(history.value?.messages ?? []), ...confirmed].map(
@@ -337,7 +347,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
         }); }}>Remove connection</ActionButton>
         <ActionButton secondary disabled={action.busy} onClick={() => setRemoveOpen(false)}>Cancel</ActionButton>
       </Modal>}
-      {isGroup&&group&&<GroupControls group={group} changed={()=>{setOlder([]);history.reload();changed()}}/>}
+      {isGroup&&group&&<GroupControls group={group} changed={()=>{refreshHistory();changed()}}/>}
       <div className="chat-history" aria-label="Message history" role="log" aria-live="polite" ref={historyElement}>
         <ResourceState
           loading={history.loading}
@@ -354,8 +364,9 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
               disabled={action.busy}
               onClick={() => {
                 void action.run(async () => {
+                  const version = historyVersion.current;
                   const value = await historyPage(olderCursor);
-                  if (!live.current) return;
+                  if (!live.current || version !== historyVersion.current) return;
                   setOlder((items) => [...value.messages, ...items]);
                   setCursor(value.nextCursor ?? -1);
                 });
