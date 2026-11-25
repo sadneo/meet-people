@@ -33,6 +33,6 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
     await page.getByRole('textbox', { name: /email/i }).fill('development-fixture@example.test')
     await page.getByLabel('Password', { exact: true }).fill('Synthetic-fixture-password-1!')
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-    await expect(page.locator('.garden-canvas')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Dating', exact: true })).toHaveAttribute('aria-pressed', 'true')
   })
 }

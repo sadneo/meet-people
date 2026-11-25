@@ -7,8 +7,8 @@ test('100 concurrent account build/refund cycles preserve acknowledged changes w
  test.setTimeout(120_000)
  const fixture=await wiringFixture(page)
  fixture.garden.seed({balance:1000,owned:[],earnedChapters:[]})
- await page.goto('/')
- const second=await context.newPage();await wiringFixture(second);await second.goto('/')
+ await page.goto('/home')
+ const second=await context.newPage();await wiringFixture(second);await second.goto('/home')
  for(const tab of [page,second])await expect(tab.getByRole('button',{name:'Open Garden inventory',exact:true})).toBeEnabled()
  for(let cycle=0;cycle<100;cycle++)for(const type of ['build','remove-garden-item'] as const){
   const results=await Promise.all([page,second].map((tab,index)=>tab.evaluate(async({owner,index,type})=>{
@@ -26,10 +26,10 @@ test('100 concurrent account build/refund cycles preserve acknowledged changes w
 })
 test('same-account tabs preserve purchases and update displayed balances',async({page,context})=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message))
- const fixture=await wiringFixture(page);await page.goto('/')
+ const fixture=await wiringFixture(page);await page.goto('/home')
  fixture.garden.seed({balance:1000,owned:[],earnedChapters:[]})
  await page.reload()
- const second=await context.newPage();await wiringFixture(second);await second.goto('/')
+ const second=await context.newPage();await wiringFixture(second);await second.goto('/home')
  await expect(second.getByRole('button',{name:'Build with 1000 Pebbles',exact:true})).toBeEnabled()
  for(const [tab,section,item] of [[page,'Decorations','Garden Bench'],[second,'Landscape','River']] as const){
   await tab.getByRole('button',{name:'Open Garden inventory',exact:true}).click()
@@ -47,7 +47,7 @@ test('same-account tabs preserve purchases and update displayed balances',async(
  expect(errors).toEqual([])
 })
 test('200 percent text keeps full catalog rows and sheet controls reachable at 320x568',async({page})=>{
- await wiringFixture(page);await page.goto('/')
+ await wiringFixture(page);await page.goto('/home')
  await page.getByRole('button',{name:'Open Garden inventory',exact:true}).click()
  await page.evaluate(()=>{
   const elements=[...document.querySelectorAll<HTMLElement>('body *')].filter(element=>!element.closest('svg'))
@@ -74,10 +74,10 @@ test('200 percent text keeps full catalog rows and sheet controls reachable at 3
  await expect(page.getByRole('dialog')).not.toBeVisible()
 })
 test('two tabs unlock unique geodes from the current low balance',async({page,context})=>{
- const fixture=await wiringFixture(page);await page.goto('/')
+ const fixture=await wiringFixture(page);await page.goto('/home')
  fixture.garden.seed({balance:600,owned:[],earnedChapters:[]})
  await page.reload()
- const second=await context.newPage();await wiringFixture(second);await second.goto('/')
+ const second=await context.newPage();await wiringFixture(second);await second.goto('/home')
  await expect(second.getByRole('button',{name:'Build with 600 Pebbles',exact:true})).toBeEnabled()
  for(const tab of [page,second]){
   await tab.getByRole('button',{name:'Open Garden inventory',exact:true}).click()
@@ -92,7 +92,7 @@ test('two tabs unlock unique geodes from the current low balance',async({page,co
  await second.screenshot({path:test.info().outputPath('geodes-after.png')})
 })
 for(const scenario of [{name:'insufficient balance',balance:0,owned:[]},{name:'duplicate ownership',balance:985,owned:['bench' as const]}])test(`a rejected stale purchase (${scenario.name}) does not announce success, select an item or add undo`,async({page})=>{
- const fixture=await wiringFixture(page);await page.goto('/')
+ const fixture=await wiringFixture(page);await page.goto('/home')
  fixture.garden.seed({balance:1000,owned:[],earnedChapters:[]})
  await page.reload()
  await page.getByRole('button',{name:'Open Garden inventory',exact:true}).click()
@@ -110,7 +110,7 @@ for(const scenario of [{name:'insufficient balance',balance:0,owned:[]},{name:'d
  expect(await page.evaluate(owner=>JSON.parse(localStorage.getItem(`pebble:account-garden:v1:${owner}`)!),user)).toMatchObject({balance:scenario.balance,owned:scenario.owned})
 })
 test('stale Undo cannot erase an external purchase before its storage event arrives',async({page})=>{
- const fixture=await wiringFixture(page);await page.goto('/')
+ const fixture=await wiringFixture(page);await page.goto('/home')
  fixture.garden.seed({balance:1000,owned:[],earnedChapters:[]})
  await page.reload()
  await page.getByRole('button',{name:'Open Garden inventory',exact:true}).click();await page.getByLabel('Decorations',{exact:true}).click()
@@ -127,8 +127,8 @@ test('stale Undo cannot erase an external purchase before its storage event arri
 })
 test('repeated quick two-tab purchases retain both purchases (50 exclusive-lock pairs)',async({page,context})=>{
  test.setTimeout(120_000)
- const fixture=await wiringFixture(page);await page.goto('/')
- const second=await context.newPage();await wiringFixture(second);await second.goto('/')
+ const fixture=await wiringFixture(page);await page.goto('/home')
+ const second=await context.newPage();await wiringFixture(second);await second.goto('/home')
  for(const tab of [page,second])await expect(tab.getByRole('button',{name:'Open Garden inventory',exact:true})).toBeEnabled()
  const failures:unknown[]=[]
  for(let attempt=0;attempt<50;attempt++){
@@ -151,8 +151,8 @@ test('repeated quick two-tab purchases retain both purchases (50 exclusive-lock 
  expect(failures).toEqual([])
 })
 test('simultaneous geodes and low-balance duplicate purchases use the locked balance',async({page,context})=>{
- const fixture=await wiringFixture(page);await page.goto('/')
- const second=await context.newPage();await wiringFixture(second);await second.goto('/')
+ const fixture=await wiringFixture(page);await page.goto('/home')
+ const second=await context.newPage();await wiringFixture(second);await second.goto('/home')
  for(const tab of [page,second])await expect(tab.getByRole('button',{name:'Open Garden inventory',exact:true})).toBeEnabled()
  for(const [balance,kind] of [[600,'open-geode'],[300,'open-geode'],[15,'build']] as const){
   for(let attempt=0;attempt<10;attempt++){
@@ -170,9 +170,9 @@ test('simultaneous geodes and low-balance duplicate purchases use the locked bal
  }
 })
 test('an account switch while waiting for a real cross-tab lock cancels the queued write',async({page,context})=>{
- const fixture=await wiringFixture(page);await page.goto('/')
+ const fixture=await wiringFixture(page);await page.goto('/home')
  fixture.garden.seed({balance:1000,owned:[],earnedChapters:[]})
- const second=await context.newPage();await wiringFixture(second);await second.goto('/')
+ const second=await context.newPage();await wiringFixture(second);await second.goto('/home')
  for(const tab of [page,second])await expect(tab.getByRole('button',{name:'Open Garden inventory',exact:true})).toBeEnabled()
  await page.evaluate(async owner=>{
   await new Promise<void>(granted=>{
@@ -196,9 +196,9 @@ test('an account switch while waiting for a real cross-tab lock cancels the queu
  expect(await page.evaluate(owner=>JSON.parse(localStorage.getItem(`pebble:account-garden:v1:${owner}`)!),user)).toMatchObject({balance:1000,owned:[]})
 })
 test('Undo queued behind another tab rechecks its expected snapshot inside the lock',async({page,context})=>{
- const fixture=await wiringFixture(page);await page.goto('/')
+ const fixture=await wiringFixture(page);await page.goto('/home')
  fixture.garden.seed({balance:1000,owned:[],earnedChapters:[]})
- const second=await context.newPage();await wiringFixture(second);await second.goto('/')
+ const second=await context.newPage();await wiringFixture(second);await second.goto('/home')
  await second.getByRole('button',{name:'Open Garden inventory',exact:true}).click();await second.getByLabel('Decorations',{exact:true}).click()
  await second.locator('.garden-shop-item').filter({has:second.getByText('Garden Bench',{exact:true})}).getByRole('button',{name:'Build',exact:true}).click()
  await second.getByRole('button',{name:'Open Garden inventory',exact:true}).click()
@@ -217,7 +217,7 @@ test('Undo queued behind another tab rechecks its expected snapshot inside the l
  expect(await second.evaluate(owner=>JSON.parse(localStorage.getItem(`pebble:account-garden:v1:${owner}`)!),user)).toMatchObject({balance:905,owned:['bench','river']})
 })
 test('rapid keyboard nudges reduce from the latest locked position',async({page})=>{
- await wiringFixture(page);await page.goto('/')
+ await wiringFixture(page);await page.goto('/home')
  await page.getByRole('button',{name:'Open Garden inventory',exact:true}).click()
  await page.getByText('Arrange with keyboard',{exact:true}).click()
  await page.getByRole('button',{name:'Move pebble',exact:true}).click()
@@ -227,9 +227,9 @@ test('rapid keyboard nudges reduce from the latest locked position',async({page}
  await expect.poll(()=>page.evaluate(owner=>JSON.parse(localStorage.getItem(`pebble:account-garden:v1:${owner}`)!).positions?.pebble,user)).toEqual({x:780,y:672})
 })
 test('a burst of drag placements serializes without erasing a concurrent purchase',async({page,context})=>{
- const fixture=await wiringFixture(page);await page.goto('/')
+ const fixture=await wiringFixture(page);await page.goto('/home')
  fixture.garden.seed({balance:1000,owned:[],earnedChapters:[]})
- const second=await context.newPage();await wiringFixture(second);await second.goto('/')
+ const second=await context.newPage();await wiringFixture(second);await second.goto('/home')
  for(const tab of [page,second])await expect(tab.getByRole('button',{name:'Open Garden inventory',exact:true})).toBeEnabled()
  await Promise.all([
   page.evaluate(async owner=>{
@@ -244,7 +244,7 @@ test('a burst of drag placements serializes without erasing a concurrent purchas
  for(const tab of [page,second])await expect.poll(()=>tab.evaluate(owner=>JSON.parse(localStorage.getItem(`pebble:account-garden:v1:${owner}`)!),user)).toMatchObject({balance:985,owned:['bench'],positions:{pebble:{x:828,y:624}}})
 })
 for(const failure of ['unsupported locking','rejected locking','denied storage'])test(`account saves remain safe with ${failure}`,async({page})=>{
- const fixture=await wiringFixture(page);await page.goto('/')
+ const fixture=await wiringFixture(page);await page.goto('/home')
  fixture.garden.seed({balance:1000,owned:[],earnedChapters:[]})
  await page.reload()
  await page.getByRole('button',{name:'Open Garden inventory',exact:true}).click();await page.getByLabel('Decorations',{exact:true}).click()

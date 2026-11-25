@@ -63,7 +63,7 @@ function Shell() {
     return () => clearTimeout(timer);
   }, [client, current.session.access_token]);
   const location = useLocation(),
-    garden = ["/", "/home", "/community"].includes(location.pathname),
+    garden = ["/home", "/community"].includes(location.pathname),
     inChat = location.pathname === '/messages/chat';
   const main = useRef<HTMLElement>(null);
   const previous = useRef<{ tab: string; depth: number } | null>(null);
@@ -100,7 +100,7 @@ function Shell() {
       window.removeEventListener("pebble:activity-changed", activity.reload);
   }, [activity.reload]);
   const links = [
-    ["Garden", "/"],
+    ["Garden", "/home"],
     ["Events", "/events"],
     ["Discover", "/matchmaking"],
     ["Messages", "/messages"],
@@ -145,7 +145,7 @@ function Shell() {
 }
 function routePlace(pathname: string, search: string) {
   const parts = pathname.split('/').filter(Boolean);
-  const tab = ['', 'home', 'community'].includes(parts[0] ?? '') ? 'garden' : parts[0] === 'matches' ? 'activity' : parts[0];
+  const tab = ['home', 'community'].includes(parts[0]) ? 'garden' : parts[0] === 'matches' ? 'activity' : parts[0] ?? 'matchmaking';
   const section = new URLSearchParams(search).get('section');
   if (tab === 'profile' && section) return { tab, depth: section === 'settings' ? 1 : 2 };
   if (tab === 'matchmaking') return { tab, depth: 0 };
@@ -214,7 +214,7 @@ export default function App() {
           <Route path="/messages/requests" element={<Requests />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route element={<Shell />}>
-            {session && <Route index element={<Garden />} />}
+            {session && <Route index element={<Navigate replace to="/matchmaking" />} />}
             <Route path="/home" element={<Garden />} />
             <Route path="/community" element={<Garden />} />
             <Route path="/matchmaking" element={<Discover />} />

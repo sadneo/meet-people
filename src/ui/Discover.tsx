@@ -302,7 +302,7 @@ export function Discover(){
   const [areaOnly, setAreaOnly] = useState(false)
   const [search,setSearch]=useSearchParams()
   const adult=canShowDating(current.account?.profile?.birthdate)
-  const mode=adult&&search.get('mode')==='dating'?'Dating':'Friends', preferences=search.get('preferences')==='true'
+  const mode=adult&&search.get('mode')!=='friends'?'Dating':'Friends', preferences=search.get('preferences')==='true'
   function setMode(value:'Friends'|'Dating'){setSearch(before=>{const next=new URLSearchParams(before);next.set('mode',value.toLowerCase());return next},{replace:true})}
   function setPreferences(open:boolean, onlyArea = false){setAreaOnly(open && onlyArea);if(!open)cache.removeQueries({queryKey:['discovery-deck']});setSearch(before=>{const next=new URLSearchParams(before);if(open)next.set('preferences','true');else next.delete('preferences');return next},{replace:true})}
   const token = current.session.access_token, home = current.account?.profile?.location_city;

@@ -3,7 +3,7 @@ import { conversationId, peer, wiringFixture } from './wiring-fixture'
 
 test('tab navigation reuses cached reads while the messaging subscription catches up once', async ({ page }) => {
   const fixture = await wiringFixture(page)
-  await page.goto('/')
+  await page.goto('/home')
   const nav = page.getByRole('navigation', { name: 'Main navigation' })
   await expect.poll(() => fixture.calls.some(call => call.path === '/api/events')).toBe(true)
   await expect.poll(() => fixture.calls.some(call => call.path === '/api/conversations')).toBe(true)

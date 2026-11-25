@@ -28,24 +28,26 @@ async function fixture(page: Page) {
   })
 }
 
-for (const width of [320, 390, 1280]) test(`Discover opens food menus with usable controls at ${width}px`, async ({ page }, testInfo) => {
+for (const width of [320, 390, 1280]) test(`Discover defaults to Dating and direct food menus have usable controls at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 900 })
   await fixture(page)
-  await page.goto('/matchmaking?mode=dating')
+  await page.goto('/')
   const views = page.getByRole('group', { name: 'Discover views' })
   const entry = views.getByRole('link', { name: 'Food', exact: true })
-  await expect(entry).toBeVisible()
+  await expect(entry).toHaveCount(0)
+  await expect(views.getByRole('button')).toHaveText(['Dating', 'Friends'])
+  await expect(views.getByRole('button', { name: 'Dating' })).toHaveAttribute('aria-pressed', 'true')
   const icons = views.locator('.ui-icon')
-  await expect(icons).toHaveCount(3)
+  await expect(icons).toHaveCount(2)
   for (const icon of await icons.all()) await expect(icon).toBeVisible()
   const viewCenters = await views.locator(':scope > *').evaluateAll(controls => controls.map(control => {
     const { y, height } = control.getBoundingClientRect()
     return y + height / 2
   }))
-  expect(viewCenters).toHaveLength(3)
+  expect(viewCenters).toHaveLength(2)
   expect(Math.max(...viewCenters) - Math.min(...viewCenters)).toBeLessThan(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  await entry.click()
+  await page.goto('/matchmaking/food')
   await expect(page.getByRole('heading', { name: 'Food menus', exact: true })).toBeVisible()
   await expect(page.getByLabel('Menu date')).toHaveValue(today)
   await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Discover', exact: true })).toHaveAttribute('aria-current', 'page')
