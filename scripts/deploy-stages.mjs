@@ -25,7 +25,7 @@ export function stageSteps(stage, env) {
   if (stage === 'services') return [
     ['Deploy API', 'sh', ['scripts/deploy-api.sh']],
     ['Deploy workers and schedules', 'node', ['scripts/deploy-workers.mjs']],
-    ['Configure Supabase dining cron at 6 a.m. New York time', 'node', ['scripts/deploy-dining-schedules.mjs']],
+    ['Keep Supabase dining cron paused', 'node', ['scripts/deploy-dining-schedules.mjs']],
   ]
   throw new Error('Choose the backend or services stage')
 }

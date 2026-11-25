@@ -108,6 +108,15 @@ storage conventions. Release CI deploys both functions.
 
 ## Schedule
 
+> **Paused in sandbox and production since 2026-11-25.** The `pebble-ingest-dining`
+> job still exists in both projects but is inactive (`active = false`), and every
+> release keeps it paused, so no food menus are imported on a schedule. To resume,
+> restore the `hosting_private.configure_dining_schedule()` call and its active-job
+> readback in `scripts/deploy-dining-schedules.mjs`, then release, or run
+> `select cron.alter_job(jobid, active := true) from cron.job where jobname='pebble-ingest-dining';`
+> (it lasts only until the next release while the script still pauses it).
+> The rest of this section describes the schedule when it is enabled.
+
 Supabase cron in each environment runs both imports daily against its own project
 at **6:00 a.m. America/New_York**, including daylight saving changes. The single
 job `pebble-ingest-dining` invokes the private `hosting_private.ingest_dining()`
@@ -127,7 +136,8 @@ produce partial imports; inspect those records and the `pg_net` response rather
 than relying on HTTP 200 alone. There are no automatic retries.
 
 `scripts/deploy-dining-schedules.mjs` reconciles the native job during every sandbox
-and production release, after functions, migrations and Vault are ready. The
+and production release, after functions, migrations and Vault are ready; while the
+import is paused it keeps the job inactive instead. The
 wrapper only accepts a `https://<ref>.supabase.co` URL from Vault. The legacy
 Google Cloud Scheduler dining job was retired from production on 2026-11-17. Event scraping also uses
 Supabase cron; Google event-group matching and push workers are separate jobs.
