@@ -1,4 +1,5 @@
 import { DiscoverPhotos } from './PhotoGallery'
+import { trackProfileOpen } from '../features/usage/tracker'
 import { canShowDating } from './age-visibility'
 import { PageSkeleton } from './loading/PageSkeleton'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -128,6 +129,8 @@ function Candidate({
   sharedAvailability?: DiscoveryPerson['sharedAvailability'];
 }) {
   const current = useCurrent();
+  // One profile opened (counted again if the same card remounts).
+  useEffect(() => { trackProfileOpen(); }, [id]);
   const [selectedInterest, setSelectedInterest] = useState<string | null>(null);
   const [interestError, setInterestError] = useState('');
   async function toggleInterest() {

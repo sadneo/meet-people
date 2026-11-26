@@ -4,6 +4,7 @@ import { SessionQueryProvider } from '../data/SessionQueryProvider'
 import { Events, EventDetail } from '../ui/Events'
 import { Legal } from '../ui/Public'
 import { Landing } from './Landing'
+const Dashboard = lazy(() => import('./Dashboard'))
 
 const DevelopmentNavigator = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS === 'true'
   ? lazy(() => import('../ui/DevelopmentNavigator'))
@@ -17,6 +18,7 @@ export default function Web() {
       <Route path="/welcome" element={<Navigate replace to="/" />} />
       <Route path="/explore" element={<Events publicView />} />
       <Route path="/explore/:id" element={<EventDetail publicView />} />
+      <Route path="/dashboard" element={<Suspense fallback={null}><Dashboard /></Suspense>} />
       <Route path="/terms" element={<Legal kind="terms" />} />
       <Route path="/privacy" element={<Legal kind="privacy" />} />
       <Route path="/cookies" element={<Legal kind="cookies" />} />

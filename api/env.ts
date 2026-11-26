@@ -21,6 +21,7 @@ export const ApiEnvSchema = z
     SEARCH_LOCATION_SIGNING_KEY: z.string().regex(/^[a-f0-9]{64}$/i).optional(),
     GOOGLE_MAPS_STORAGE_APPROVED: z.enum(['true', 'false']).default('false'),
     GOOGLE_MAPS_REQUESTS_PER_DAY: z.coerce.number().int().min(1).max(100000).default(2000),
+    DASHBOARD_ADMIN_USER_IDS: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(,[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})*$/i, 'Must be comma-separated account UUIDs.').optional(),
     QA_RUN_ID: z.string().regex(/^\d{8}-\d{6}-[a-f0-9]{8}$/).optional(),
     QA_AUTH_EMAIL_REQUESTS_PER_WINDOW: z.coerce.number().int().min(1).max(300).optional(),
   })
