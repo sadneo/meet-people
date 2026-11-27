@@ -36,3 +36,11 @@ qa/**/*.png
 qa/runs/**/*.json
 # Per-worktree Supabase stack identity.
 /.pebble/
+# Local event-picks QA tests.
+/tests/browser/event-picks.spec.ts
+/tests/integration/sql/event-picks.sql
+/tests/unit/event-message-link.test.ts
+/tests/unit/event-picks-api.test.ts
+/tests/unit/event-picks-scoring.test.ts
+/tests/unit/event-picks-state.test.ts
+/tests/unit/event-read-limits.test.ts

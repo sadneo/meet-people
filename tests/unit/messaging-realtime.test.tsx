@@ -170,6 +170,7 @@ it('keeps loaded earlier messages and does not scroll a reader away from older h
   const log = screen.getByRole('log')
   Object.defineProperties(log, { scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 500 } })
   log.scrollTop = 100
+  fireEvent.scroll(log)
   snapshot = { ...snapshot, messages: [message(1), message(2)] }
   await incoming()
   expect(screen.getByText('Message 0')).toBeTruthy()

@@ -11,6 +11,7 @@ import './ui/parity-public.css'
 import './ui/parity-social.css'
 import './ui/parity-shell.css'
 import './ui/motion.css'
+import './ui/event-picks.css'
 
 export function renderProduct(Product: ComponentType) {
   const router = createBrowserRouter([{ path: "*", Component: Product }])

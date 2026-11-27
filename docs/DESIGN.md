@@ -83,6 +83,11 @@ full-screen sheets; short tasks (filters, safety, confirmations, member lists,
 Find a group) use content-sized bottom sheets with a drag handle; desktop
 retains centered dialogs.
 
+Direct Friends and Dating chats show up to three event picks in a tray under the
+chat header. It tucks into a chip once both people are talking, disappears later
+and reopens from ••• → Event ideas. A pick opens the full event as a deeper
+screen; Send shares it as an event card. See `docs/event-picks.md`.
+
 Matches & Plans has Upcoming, Connections and Past tabs. Populate these only
 from supported services; unsupported plan history must not become sample history.
 Messages uses inbox/chat columns on desktop and a single selected pane on mobile.

@@ -1,0 +1,155 @@
+/* Event picks in direct chats: tray and chip under the header, the full event
+   screen, and events shared as messages. Event content uses the Events greens. */
+.event-picks {
+  flex: none;
+  margin: 10px 12px 0;
+  padding: 12px 0;
+  background: #f6f1ea;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px #4934210f;
+  animation: event-picks-in 260ms var(--ease-out, ease-out);
+}
+.event-picks-head { display: flex; align-items: center; gap: 10px; padding: 0 6px 0 12px; }
+.event-picks-icon {
+  display: grid; place-items: center; flex: none;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #eaf0df; color: #285640;
+}
+.event-picks-icon .ui-icon { width: 18px; height: 18px; }
+.event-picks-copy { flex: 1; min-width: 0; }
+.event-picks-copy h4 { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.3; }
+.event-picks-copy p { margin: 2px 0 0; font-size: 12px; color: #6f655b; }
+.event-picks-close.round { flex: none; width: 44px; height: 44px; border: 0; background: transparent; }
+.event-picks-close .ui-icon { width: 18px; height: 18px; }
+.event-picks-rail {
+  display: flex; gap: 8px; margin: 0; padding: 8px 12px 0;
+  list-style: none; overflow-x: auto; scrollbar-width: none;
+}
+/* Mouse users get a thin scrollbar as a visible cue that the row scrolls. */
+@media (hover: hover) and (pointer: fine) {
+  .event-picks-rail { padding-bottom: 6px; scrollbar-width: thin; scrollbar-color: #d9cfc3 transparent; }
+}
+.event-pick {
+  flex: none; display: flex; align-items: center; gap: 8px;
+  width: min(296px, calc(100% - 36px)); padding: 8px; box-sizing: border-box;
+  background: #fffdf9; border: 1px solid #ebe3d8; border-radius: 14px; scroll-snap-align: start;
+}
+.event-pick-main {
+  flex: 1; display: flex; gap: 10px; min-width: 0; padding: 0;
+  border: 0; border-radius: 10px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.event-pick-main img { flex: none; width: 64px; height: 64px; border-radius: 10px; object-fit: cover; }
+.event-pick-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.event-pick-when, .event-pick-category {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #55694a;
+}
+.event-pick-body b {
+  display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  font-size: 14px; line-height: 1.3; color: #285640;
+}
+.event-pick-why {
+  display: flex; align-items: flex-start; gap: 5px;
+  font-size: 12px; color: #6f655b; overflow-wrap: anywhere;
+}
+.event-pick-why .ui-icon { flex: none; width: 13px; height: 13px; color: #9d503d; }
+.event-picks-copy h4:focus { outline: 2px solid var(--green); outline-offset: 3px; }
+@media (pointer: coarse) { .event-picks-rail { scroll-snap-type: x proximity; } }
+.chat-history-content { display: flex; flex-direction: column; gap: 16px; flex: none; min-width: 0; }
+.event-message-status { font-size: 12px; }
+.event-pick-send {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-width: 44px; min-height: 44px; margin: 0; padding: 0 14px;
+  border: 0; border-radius: 40px; background: #eaf0df; color: #285640;
+  font-family: inherit; font-size: 13px; font-weight: 700; line-height: 1; cursor: pointer;
+}
+.event-pick-send:hover:not(:disabled) { background: #dfe8d1; }
+.event-pick-send.is-sent { cursor: default; font-weight: 600; }
+.event-pick-send .ui-icon { width: 15px; height: 15px; }
+.event-picks .account-error { margin: 8px 12px 0; }
+
+.event-picks-chip-row { flex: none; display: flex; padding: 8px 12px 0; }
+.event-picks-chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px 0 12px;
+  border: 0; border-radius: 40px; background: #eaf0df; color: #285640;
+  font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1; cursor: pointer; animation: event-picks-in 220ms var(--ease-out, ease-out);
+}
+.event-picks-chip:hover { background: #dfe8d1; }
+.event-picks-chip .ui-icon { width: 17px; height: 17px; }
+
+/* An event shared in the chat. */
+.messaging-page .live-message > .event-message-card,
+.live-message > .event-message-card {
+  /* A fixed width, so a long title or place can't widen the message and
+     leave the card short of the edge. */
+  display: flex; flex-direction: column; box-sizing: border-box; width: 256px; max-width: 100%; overflow: hidden;
+  background: #fffdf9; border: 5px solid #efeae3; border-radius: 17px 17px 17px 4px;
+}
+.messaging-page .live-message.mine > .event-message-card,
+.live-message.mine > .event-message-card { margin-left: auto; border-color: #e9d7c9; border-radius: 17px 17px 4px 17px; }
+.event-message-card img { display: block; width: 100%; height: 112px; object-fit: cover; border-radius: 12px 12px 0 0; }
+.event-message-body { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 0; }
+.event-message-body b { font-size: 15px; line-height: 1.3; color: #285640; }
+.event-message-body span:last-child { font-size: 12px; line-height: 1.45; color: #6f655b; }
+.event-message-open {
+  display: flex; align-items: center; justify-content: space-between; min-height: 44px; margin-top: 10px; padding: 0 12px;
+  border: 0; border-top: 1px solid #efe8de; background: transparent; color: #285640;
+  font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1; text-align: left; cursor: pointer;
+}
+.event-message-open .ui-icon { width: 16px; height: 16px; }
+.event-message-missing { display: block; margin-top: 6px; font-size: 12px; color: #6f655b; }
+
+/* The full event, opened from a pick or a shared event. */
+.account-modal > header.modal-back-header { justify-content: flex-start; gap: 8px; }
+.account-modal .modal-back.round { flex: none; width: 44px; height: 44px; margin-left: -8px; border: 0; background: transparent; }
+.account-modal.event-pick-detail > header h2 { font-size: 15px; }
+.event-pick-detail .modal-content { display: flex; flex-direction: column; }
+.event-pick-cover { display: block; width: 100%; height: 200px; margin-top: 6px; border-radius: 16px; object-fit: cover; }
+.event-pick-detail .event-pick-category { margin: 14px 0 6px; }
+.event-pick-title { margin: 0 0 10px; font-size: 24px; line-height: 1.25; letter-spacing: -0.6px; color: #285640; }
+.event-pick-meta { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 4px; font-size: 13px; line-height: 1.5; }
+.event-pick-meta.strong { font-weight: 600; }
+.event-pick-meta .ui-icon { width: 16px; height: 18px; color: #6f655b; }
+.event-pick-description { margin: 12px 0 0; font-size: 14px; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
+.event-pick-reasons {
+  display: flex; flex-direction: column; gap: 8px; margin: 16px 0 8px; padding: 12px 14px;
+  background: #f6f1ea; border-radius: 14px;
+}
+.event-pick-reasons h4 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #6f655b; }
+.event-pick-reasons p { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; }
+.event-pick-reasons .ui-icon { width: 16px; height: 16px; color: #9d503d; }
+dialog.account-modal.event-pick-detail { background: #fffdf9; }
+.event-pick-actions {
+  position: sticky; bottom: 0; z-index: 1;
+  display: flex; flex-direction: column; gap: 8px;
+  margin-top: 16px; padding: 12px 0 4px;
+  background: #fffdf9; border-top: 1px solid var(--line);
+}
+.event-pick-send-large { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; }
+.event-pick-send-large .ui-icon { width: 18px; height: 18px; }
+.event-pick-sent {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin: 0;
+  border-radius: 40px; background: #eaf0df; color: #285640; font-weight: 700; font-size: 15px;
+}
+.event-pick-sent .ui-icon { width: 18px; height: 18px; }
+
+/* Narrow phones keep the title readable beside the Send button. */
+@media (max-width: 360px) {
+  .event-pick { width: calc(100% - 20px); }
+  .event-pick-main { gap: 8px; }
+  .event-pick-main img { width: 48px; height: 48px; }
+  .event-pick-send { padding: 0 12px; font-size: 12px; }
+}
+
+@keyframes event-picks-in { from { opacity: 0; transform: translateY(-10px); } }
+@keyframes event-page-in { from { transform: translateX(100%); } }
+@keyframes event-page-out { to { transform: translateX(100%); } }
+/* Phones: the full event is a deeper screen, so it slides in from the right. */
+@media (max-width: 650px) {
+  dialog.account-modal.event-pick-detail[open] { animation: event-page-in 280ms var(--ease-out, ease-out); }
+  dialog.account-modal.event-pick-detail.is-closing { animation: event-page-out 200ms var(--ease-in, ease-in) forwards; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .event-picks, .event-picks-chip,
+  dialog.account-modal.event-pick-detail[open], dialog.account-modal.event-pick-detail.is-closing { animation: none; }
+}

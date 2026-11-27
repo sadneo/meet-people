@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { z } from 'zod'
-import { eventRequest, safeImage, eventImagePlaceholder, calendarLink } from '../../src/features/events/client'
+import { EventRequestError, eventRequest, safeImage, eventImagePlaceholder, calendarLink } from '../../src/features/events/client'
 
 vi.mock('../../src/supabase', () => ({ supabase: null }))
 afterEach(() => vi.unstubAllGlobals())
@@ -47,6 +47,13 @@ it.each(['invalid JSON', 'invalid event data'])('normalizes a successful respons
 it('preserves an actionable JSON error from the events server', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => Response.json({ error: 'This event is no longer available.' }, { status: 404 })))
   await expect(eventRequest('/example', schema)).rejects.toThrow('This event is no longer available.')
+  await expect(eventRequest('/example', schema)).rejects.toMatchObject({ status: 404 })
+})
+
+it.each([429, 503])('preserves HTTP %s so transient errors can be retried', async status => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ error: 'Try again later.' }, { status })))
+  await expect(eventRequest('/example', schema)).rejects.toBeInstanceOf(EventRequestError)
+  await expect(eventRequest('/example', schema)).rejects.toMatchObject({ status })
 })
 
 it('returns validated event data after a successful request', async () => {

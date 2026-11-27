@@ -2,6 +2,10 @@ import { supabase } from '../../supabase'
 import type { ZodType } from 'zod'
 import { apiUrl } from '../../platform/native'
 
+export class EventRequestError extends Error {
+  constructor(readonly status: number, message: string) { super(message) }
+}
+
 export async function eventRequest<T>(path: string, schema: ZodType<T>, options: { body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   const unavailable = 'Events are unavailable. Try again.'
   let response: Response, data: unknown
@@ -17,7 +21,7 @@ export async function eventRequest<T>(path: string, schema: ZodType<T>, options:
     if (options.signal?.aborted) throw failure
     throw new Error(unavailable, { cause: failure })
   }
-  if (!response.ok) throw new Error(data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : unavailable)
+  if (!response.ok) throw new EventRequestError(response.status, data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : unavailable)
   const parsed = schema.safeParse(data)
   if (!parsed.success) throw new Error(unavailable)
   return parsed.data
