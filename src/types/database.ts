@@ -1357,6 +1357,10 @@ export type Database = {
       get_active_friends_groups: { Args: never; Returns: Json }
       get_active_friends_status: { Args: never; Returns: Json }
       get_connection_request_allowance: { Args: never; Returns: Json }
+      get_conversation_event_pool: {
+        Args: { actor_in: string; conversation_in: string }
+        Returns: Json
+      }
       get_dating_match: {
         Args: never
         Returns: {
