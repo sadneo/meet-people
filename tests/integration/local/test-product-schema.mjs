@@ -2,7 +2,7 @@
 // The running local stack supplies Auth DDL only; no user rows are copied.
 import assert from 'node:assert/strict'
 import { URL } from 'node:url'
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 import process from 'node:process'
 import console from 'node:console'
@@ -75,6 +75,7 @@ await replay('uuid', (query, migrate) => {
   query(source('tests/integration/sql/photo-captions-prompts.sql'))
   query(source('tests/integration/sql/username-normalization.sql'))
   query(source('tests/integration/sql/cancel-sent-request.sql'))
+  if (existsSync(new URL('tests/integration/sql/event-picks.sql', root))) query(source('tests/integration/sql/event-picks.sql'))
   console.info('PASS: fresh migration replay, native UUID preservation, product receipt, seeds and SQL security checks.')
 })
 
@@ -100,5 +101,6 @@ await replay('legacy', (query, migrate) => {
   query(source('tests/integration/sql/photo-captions-prompts.sql'))
   query(source('tests/integration/sql/username-normalization.sql'))
   query(source('tests/integration/sql/cancel-sent-request.sql'))
+  if (existsSync(new URL('tests/integration/sql/event-picks.sql', root))) query(source('tests/integration/sql/event-picks.sql'))
   console.info('PASS: activated legacy upgrade, nonempty-store rollback, unchanged source receipt and duplicate-install refusal.')
 })

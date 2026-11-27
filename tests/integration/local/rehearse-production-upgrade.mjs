@@ -1,6 +1,6 @@
 // Synthetic production-like legacy upgrade. No hosted connection, no app DB writes.
 import assert from 'node:assert/strict'
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 import { URL } from 'node:url'
 import process from 'node:process'
@@ -33,6 +33,7 @@ assert.deepEqual(pending, [
   '20261117040000_sbengaged_producer_every_environment.sql',
   '20261119050000_username_normalization.sql',
   '20261124000000_cancel_sent_request.sql',
+  '20261125000000_conversation_event_picks.sql',
 ], 'Production baseline changed; review the rehearsal before executing.')
 const container = `pebble-production-rehearsal-${process.pid}`
 const docker = args => containerSync(args)
@@ -95,6 +96,8 @@ try {
   sql(source('tests/integration/sql/photo-captions-prompts.sql'))
   sql(source('tests/integration/sql/username-normalization.sql'))
   sql(source('tests/integration/sql/cancel-sent-request.sql'))
+  // This optional QA contract stays local; the migration itself is replayed above.
+  if (existsSync(new URL('tests/integration/sql/event-picks.sql', root))) sql(source('tests/integration/sql/event-picks.sql'))
   sql(source('tests/integration/sql/public-live-events.sql'))
   sql(source('tests/integration/sql/adult-release.sql'))
   assert.equal(sql(`select has_table_privilege('anon','public.push_devices','SELECT') or has_table_privilege('authenticated','public.push_devices','SELECT') or has_table_privilege('authenticated','garden_private.wallets','SELECT')`), 'f')

@@ -60,6 +60,7 @@ reference exists; Profile home does not stand in for an unconfirmed search area.
 | `/events`, `/events/:id` | API listings and event group queue/proposals |
 | Web `/explore`, `/explore/:id` | Public event reads; installation link for group participation |
 | `/messages`, `/messages/chat?conversation=…` | Saved inbox, history, read state and idempotent sends |
+| `/messages/chat` event picks | Direct chats read `GET /api/event-picks/:conversationId` (service-role pool, `event-picks-v1` ranking). Picks tuck away as the chat grows; Send posts an ordinary message drawn as an event card. See `docs/event-picks.md`. |
 | `/messages/requests` | Standalone private requests view; live acceptance, decline and safety; Close returns to Messages |
 | `/profile` | Prototype overview, saved-profile Preview, Settings gear, identity/interests/adult Dating editors and search-preference links. URL-selected editor tabs support Back/Forward. `?section=settings` contains the five existing settings categories and sign-out; category Back returns there. |
 | `/settings` | Legacy redirect to the Profile Settings hub; existing `?section=…` links still open the corresponding section. Active group matching remains in Messages. |

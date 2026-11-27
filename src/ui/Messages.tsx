@@ -4,6 +4,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -23,6 +24,11 @@ import { useMessagingRealtime } from '../features/messaging/useMessagingRealtime
 import { useConversationTyping } from '../features/messaging/useConversationTyping';
 import { useCachedLoad } from "../data/useCachedLoad";
 import { useMessageDraft } from '../data/message-drafts';
+import { eventLinkId, eventMessageText } from '../features/events/picks';
+import type { LiveEvent } from '../../shared/events';
+import type { EventPickReason } from '../../shared/event-picks';
+import { EventMessageCard, EventPickDetail, EventPicksBar } from './EventPicks';
+import { sharedEvents, useEventPickSend, useEventPicks } from './useEventPicks';
 import { useAction } from "./hooks";
 import { haptic } from "./feedback";
 import { SwipeReveal } from "./SwipeReveal";
@@ -81,7 +87,7 @@ export function Messages() {
     ...(inbox.value?.conversations ?? []).map(conversation => {
       const people = conversation.participants.filter(person => person.id !== current.session.user.id).map(named);
       return { id: conversation.id, group: false, title: people.map(person => person.display_name).join(', ') || 'Conversation', people,
-        preview: conversation.latest_message?.body ?? 'Say hello', date: conversation.latest_message?.created_at ?? conversation.created_at,
+        preview: conversation.latest_message ? eventMessageText(conversation.latest_message.body) : 'Say hello', date: conversation.latest_message?.created_at ?? conversation.created_at,
         unread: conversation.unread_count, label: conversation.kind === 'direct' ? conversation.mode === 'friends' ? 'Friends' : conversation.mode === 'dating' ? 'Dating' : '' : conversation.kind === 'event_group' ? 'Event group' : 'Friends',
       };
     }),
@@ -185,6 +191,21 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
   const [removeOpen, setRemoveOpen] = useState(false);
   const [peopleOpen, setPeopleOpen] = useState(false);
   const historyElement = useRef<HTMLDivElement>(null), lastVisibleMessage = useRef<string | null>(null);
+  const historyContent = useRef<HTMLDivElement>(null), followLatest = useRef(true);
+  const historySize = useRef<{ height: number; viewport: number } | null>(null);
+  // Event cards and images grow after the message arrives. Keep following that
+  // growth only while the reader is at the bottom of the conversation.
+  useEffect(() => {
+    const element = historyElement.current, content = historyContent.current;
+    if (!element || !content || typeof ResizeObserver === 'undefined') return;
+    historySize.current = { height: element.scrollHeight, viewport: element.clientHeight };
+    const observer = new ResizeObserver(() => {
+      historySize.current = { height: element.scrollHeight, viewport: element.clientHeight };
+      if (followLatest.current) element.scrollTop = element.scrollHeight;
+    });
+    observer.observe(element); observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
   const current = useCurrent()
   const token = current.session.access_token
   const action = useAction(),
@@ -232,7 +253,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
     setOlder([]);
     setCursor(null);
     reloadHistory();
-  }, [reloadHistory]);
+  }, [reloadHistory, setOlder, setCursor]);
   useEffect(() => {
     window.addEventListener('pebble:matching-changed', refreshHistory);
     return () => window.removeEventListener('pebble:matching-changed', refreshHistory);
@@ -251,10 +272,13 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
   const pendingRead = useRef<{ seq: number; controller: AbortController } | null>(null);
   useEffect(() => () => { pendingRead.current?.controller.abort(); }, []);
   const lastMessage = messages.at(-1);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = historyElement.current;
     if (!element || !lastMessage || lastVisibleMessage.current === lastMessage.id) return;
-    if (!lastVisibleMessage.current || element.scrollHeight - element.scrollTop - element.clientHeight < 120 || lastMessage.sender_id === current.session.user.id) element.scrollTop = element.scrollHeight;
+    if (!lastVisibleMessage.current || followLatest.current || lastMessage.sender_id === current.session.user.id) {
+      followLatest.current = true;
+      element.scrollTop = element.scrollHeight;
+    }
     lastVisibleMessage.current = lastMessage.id;
   }, [lastMessage, current.session.user.id]);
   useEffect(() => {
@@ -300,6 +324,27 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
   const olderCursor = cursor ?? history.value?.nextCursor;
   const typists = history.value?.canSend && !history.error ? others.filter(person => typing.some(event => event.conversationId === id && event.isGroup === isGroup && event.userId === person.id)) : []
   const typingLabel = typists.length === 1 ? `${typists[0].display_name} is typing` : `${typists.length} people are typing`
+  // Event picks: direct chats only, after the history confirms a peer.
+  const me = current.session.user.id
+  const direct = !isGroup && history.value?.kind === 'direct' && !!others[0]
+  const peerName = others[0]?.display_name ?? 'them'
+  const picks = useEventPicks(id, !isGroup)
+  const shared = sharedEvents(messages, me)
+  const [picksSignal, setPicksSignal] = useState(0)
+  const [eventDetail, setEventDetail] = useState<{ event: LiveEvent; reason: EventPickReason | null } | null>(null)
+  const optionsMenu = useRef<HTMLDetailsElement>(null)
+  const focusOptions = () => optionsMenu.current?.querySelector('summary')?.focus()
+  const focusAfterEvent = useRef(false)
+  useEffect(() => {
+    if (focusAfterEvent.current && !eventDetail && canSend) {
+      composer.current?.focus(); focusAfterEvent.current = false
+    }
+  }, [eventDetail, canSend])
+  const reloadAfterEvent = history.reload
+  const eventSender = useEventPickSend(id, canSend && direct, useCallback(() => {
+    haptic('light'); setEventDetail(null); focusAfterEvent.current = true; void reloadAfterEvent(); changed()
+  }, [reloadAfterEvent, changed]))
+  const openEvent = (event: LiveEvent) => setEventDetail({ event, reason: picks.find(pick => pick.event.id === event.id)?.reason ?? null })
   return (
     <section className="live-chat">
       <header className="chat-header">
@@ -311,7 +356,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
           {group?.name || others.map((person) => person.display_name).join(", ") ||
             "Conversation"}
         </h3>{connectionLabel && <span className={`connection-kind ${connectionLabel === 'Dating' ? 'dating' : ''}`}>{connectionLabel}</span>}</button>
-        <details className="chat-options" onKeyDown={event => {
+        <details className="chat-options" ref={optionsMenu} onKeyDown={event => {
           if (event.key === 'Escape') {
             event.currentTarget.open = false;
             event.currentTarget.querySelector('summary')?.focus();
@@ -319,6 +364,10 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
         }}>
           <summary className="round" aria-label="Conversation options and safety"><Icon name="More" /></summary>
           <div className="chat-options-menu">
+          {direct && picks.some(pick => !shared.has(pick.event.id)) && <ActionButton secondary onClick={() => {
+            if (optionsMenu.current) optionsMenu.current.open = false
+            setPicksSignal(value => value + 1)
+          }}>Event ideas</ActionButton>}
           <ActionButton secondary onClick={() => setPeopleOpen(true)}>View people</ActionButton>
           <ActionButton
           secondary
@@ -348,7 +397,20 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
         <ActionButton secondary disabled={action.busy} onClick={() => setRemoveOpen(false)}>Cancel</ActionButton>
       </Modal>}
       {isGroup&&group&&<GroupControls group={group} changed={()=>{refreshHistory();changed()}}/>}
-      <div className="chat-history" aria-label="Message history" role="log" aria-live="polite" ref={historyElement}>
+      {direct && <EventPicksBar conversationId={id} me={me} peerName={peerName} dating={connectionLabel === 'Dating'} picks={picks} messages={messages}
+        canSend={canSend} sender={eventSender} openSignal={picksSignal} openPick={pick => setEventDetail({ event: pick.event, reason: pick.reason })} focusOptions={focusOptions} />}
+      {eventDetail && <EventPickDetail event={eventDetail.event} reason={eventDetail.reason} peerName={peerName} shared={shared.get(eventDetail.event.id)}
+        canSend={canSend && direct} sender={eventSender} close={() => setEventDetail(null)} />}
+      <div className="chat-history" aria-label="Message history" role="log" aria-live="polite" ref={historyElement}
+        onScroll={event => {
+          const element = event.currentTarget, size = historySize.current;
+          // Layout changes also fire scroll events. Let the resize observer
+          // settle those before interpreting scrolling as the reader's choice.
+          if (!size || (size.height === element.scrollHeight && size.viewport === element.clientHeight)) {
+            followLatest.current = element.scrollHeight - element.scrollTop - element.clientHeight < 120;
+          }
+        }}>
+        <div className="chat-history-content" ref={historyContent}>
         <ResourceState
           loading={history.loading}
           error={history.error}
@@ -385,7 +447,9 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
             className={`live-message ${message.sender_id === current.session.user.id ? "mine" : ""} ${Date.parse(message.created_at) > openedAt ? "is-new" : ""}`}
           >
             {isGroup && message.sender_id !== current.session.user.id && <small className="sender-name">{history.value?.participants.find(person => person.id === message.sender_id)?.display_name ?? 'Group member'}</small>}
-            <p>{message.body}</p>
+            {eventLinkId(message.body)
+              ? <EventMessageCard eventId={eventLinkId(message.body)!} body={message.body} open={openEvent} />
+              : <p>{message.body}</p>}
             <time dateTime={message.created_at}>
               {new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
               {message.sender_id === current.session.user.id && ` · ${others.length > 0 && others.every(person => person.last_read_seq >= message.seq) ? 'Read' : 'Sent'}`}
@@ -393,6 +457,7 @@ function Chat({ id, changed, isGroup=false, connectionLabel='', draftKey, typing
           </div>
           </Fragment>
         ))}
+        </div>
       </div>
       {!!typists.length && <div className="chat-typing" role="status" aria-label={typingLabel}>
         <span className="typing-dots" aria-hidden="true"><span/><span/><span/></span>

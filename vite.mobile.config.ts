@@ -19,6 +19,9 @@ export const mobileEntry: Plugin = {
 }
 
 export default mergeConfig(config, {
+  // Web and mobile run together; their dependency optimizers must not replace
+  // each other's cached bundles.
+  cacheDir: 'node_modules/.vite-mobile',
   // APKs and the mobile site get only the VITE_* values their build script passes, never .env's.
   envDir: false,
   plugins: [mobileEntry],

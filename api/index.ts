@@ -18,6 +18,7 @@ import { createDatingScoringTransport } from './matching/dating-recommendations.
 import { createFriendsScoringTransport } from './matching/friends-recommendations.js'
 import { createActiveFriendsWorker } from './matching/active-worker.js'
 import { createGoogleSearchLocations } from './google-search-locations.js'
+import { createEventPicksRouter, createEventPoolTransport } from './event-picks.js'
 
 export const app = express()
 app.set('trust proxy', 1);
@@ -47,7 +48,16 @@ const eventsLimiter = rateLimit({
 const eventsClient = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null
-app.use('/api/events', eventsLimiter, createEventsRouter(eventsClient))
+// Chat cards read individual public events. Give these inexpensive lookups a
+// separate budget so they cannot exhaust the directory's allowance on a campus IP.
+const eventDetailsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 600, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many requests from this IP, please try again later.' },
+})
+app.use('/api/events', (request, response, next) => {
+  const detail = request.method === 'GET' && /^\/[0-9a-f-]{36}\/?$/i.test(request.path)
+  return (detail ? eventDetailsLimiter : eventsLimiter)(request, response, next)
+}, createEventsRouter(eventsClient))
 app.use('/api/auth', createAuthRouter(eventsClient, env.QA_AUTH_EMAIL_REQUESTS_PER_WINDOW))
 app.use('/api/account', createAccountRouter(eventsClient))
 app.use('/api/push', createPushRouter(eventsClient))
@@ -75,6 +85,9 @@ const mapLocations = env.GOOGLE_MAPS_STORAGE_APPROVED === 'true' && (env.GOOGLE_
 app.use('/api/matchmaking', boundedMatchingBodyError, createMatchmakingRouter(ownerTransport, datingScoring, friendsScoring, activeWorker, mapLocations, env.GOOGLE_MAPS_REQUESTS_PER_DAY))
 app.use('/api/connections', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'connections'))
 app.use('/api/conversations', boundedMatchingBodyError, createSocialRouter(ownerTransport, 'conversations'))
+// Read-only suggestions, refreshed periodically while a direct chat is open.
+const eventPicksLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests. Try again later.' } })
+app.use('/api/event-picks', eventPicksLimiter, createEventPicksRouter(ownerTransport, matchingConfig ? createEventPoolTransport(matchingConfig.url, matchingConfig.serviceKey) : null))
 app.use('/api/garden', createGardenRouter(ownerTransport))
 app.use('/api/dining', createDiningRouter(eventsClient, ownerTransport))
 

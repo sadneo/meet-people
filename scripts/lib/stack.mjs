@@ -142,6 +142,9 @@ export function stackKeys(stack) {
 export const childEnv = (stack, keys) => ({
   ...process.env,
   ...stackEnv(stack),
+  // Local browser previews proxy their own API; never inherit a hosted API
+  // address alongside the local Supabase session.
+  VITE_API_BASE_URL: '',
   SUPABASE_URL: keys.apiUrl,
   VITE_SUPABASE_URL: keys.apiUrl,
   SUPABASE_PUBLISHABLE_KEY: keys.publishableKey,

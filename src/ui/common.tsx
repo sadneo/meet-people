@@ -214,6 +214,7 @@ export function Modal({
   close,
   className = '',
   variant = 'full',
+  backLabel,
 }: {
   title: string;
   children: ReactNode;
@@ -221,6 +222,8 @@ export function Modal({
   className?: string;
   // Short tasks open as content-sized bottom sheets on phones.
   variant?: 'full' | 'sheet';
+  // A deeper screen shows a labelled Back arrow instead of the × close.
+  backLabel?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const latestClose = useRef(close);
@@ -314,11 +317,12 @@ export function Modal({
         }}
         onPointerCancel={() => { drag.current = null; if (dialog.current) dialog.current.style.transform = ''; }}
       ><span/></div>}
-      <header className="row between" hidden={!!layerBack}>
+      <header className={`row ${backLabel ? 'modal-back-header' : 'between'}`} hidden={!!layerBack}>
+        {backLabel && <button className="round modal-back" onClick={requestClose} aria-label={backLabel}><Icon name="Back" /></button>}
         <h2 id={titleId}>{title}</h2>
-        <button className="round" onClick={requestClose} aria-label="Close">
+        {!backLabel && <button className="round" onClick={requestClose} aria-label="Close">
           ×
-        </button>
+        </button>}
       </header>
       <ModalLayerContext.Provider value={{ host, activate }}>
         <div className="modal-content" hidden={!!layerBack}>{children}</div>
