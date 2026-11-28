@@ -44,6 +44,7 @@ import {
   Icon,
 } from "../ui/common";
 import PushBridge from "../platform/PushBridge";
+import { useUsageHeartbeat } from "../features/usage/tracker";
 import { prefersReducedMotion } from "../ui/feedback";
 import { Toaster } from "../ui/FeedbackUi";
 
@@ -53,6 +54,7 @@ const DevelopmentNavigator = import.meta.env.DEV || import.meta.env.VITE_DEV_TOO
 
 function Shell() {
   const client = useQueryClient(), current = useCurrent();
+  useUsageHeartbeat(current.session.access_token);
   useEffect(() => {
     const warm = () => { prefetchNavigation(client, '/events', current.session.access_token); prefetchNavigation(client, '/messages', current.session.access_token); };
     if ('requestIdleCallback' in window) {

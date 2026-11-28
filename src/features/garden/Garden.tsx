@@ -185,7 +185,6 @@ export function Garden() {
     <div className="garden-inventory-dock"><button ref={trigger} disabled={!sceneReady||!!error} className="garden-build" onClick={()=>open()} aria-label="Open Garden inventory" aria-expanded={inventoryOpen} aria-controls="garden-inventory-panel" onPointerDown={e=>{inventoryGesture.current=e.clientY;e.currentTarget.setPointerCapture(e.pointerId)}} onPointerMove={e=>{if(inventoryGesture.current!==null&&inventoryGesture.current-e.clientY>25){inventoryGesture.current=null;open()}}} onPointerUp={()=>{inventoryGesture.current=null}} onPointerCancel={()=>{inventoryGesture.current=null}}><span className="garden-inventory-handle"/><Icon name="build"/><span className="garden-build-label" aria-hidden="true">Build</span></button></div>
     <p className="garden-sr-only" role="status">{announcement}</p>
     <dialog ref={drawer} id="garden-inventory-panel" className="garden-drawer" aria-labelledby="garden-drawer-title" onCancel={e=>{e.preventDefault();close()}}>
-      <span className="garden-inventory-handle" aria-hidden="true"/>
       <header><h2 id="garden-drawer-title">Your garden</h2><button aria-label="Close Garden inventory" onClick={close}><Icon name="close"/></button></header>
       <div className="garden-build-meta"><span><CurrencyIcon/> {community.balance.toLocaleString()} Pebbles available</span><button onClick={()=>{close();canvas.current?.focus({preventScroll:true})}}>Arrange garden</button></div>
       <div className="garden-drawer-body">

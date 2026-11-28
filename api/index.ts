@@ -18,6 +18,7 @@ import { createDatingScoringTransport } from './matching/dating-recommendations.
 import { createFriendsScoringTransport } from './matching/friends-recommendations.js'
 import { createActiveFriendsWorker } from './matching/active-worker.js'
 import { createGoogleSearchLocations } from './google-search-locations.js'
+import { createUsageRouter } from './usage.js'
 
 export const app = express()
 app.set('trust proxy', 1);
@@ -51,6 +52,7 @@ app.use('/api/events', eventsLimiter, createEventsRouter(eventsClient))
 app.use('/api/auth', createAuthRouter(eventsClient, env.QA_AUTH_EMAIL_REQUESTS_PER_WINDOW))
 app.use('/api/account', createAccountRouter(eventsClient))
 app.use('/api/push', createPushRouter(eventsClient))
+app.use('/api/usage', createUsageRouter(eventsClient, (env.DASHBOARD_ADMIN_USER_IDS ?? '').split(',').map(id => id.trim().toLowerCase()).filter(Boolean)))
 
 const ownerTransport = env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY
   ? createUserContextTransport({ url: env.SUPABASE_URL, publicKey: env.SUPABASE_PUBLISHABLE_KEY, verificationKey: env.SUPABASE_SERVICE_ROLE_KEY })

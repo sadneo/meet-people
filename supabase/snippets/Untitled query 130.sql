@@ -1,5 +1,4 @@
-select set_config('request.jwt.claims',
-  '{"sub":"11111111-1111-1111-1111-111111111111"}', true);
-
-select username, display_name, shared_interests, mutual_count, score
-from get_suggested_connections(20);
+select p.last_beat, d.seconds, d.profile_opens
+from usage_private.presence p
+join usage_private.daily d on d.user_id = p.user_id and d.day = (now() at time zone 'utc')::date
+where p.user_id = (select id from auth.users where email = 'bob@test.dev');
