@@ -38,11 +38,11 @@ function ago(iso: string | null) {
   return `${Math.round(seconds / 86400)}d ago`
 }
 
-function Stat({ label, value, note }: { label: string; value: number; note?: string }) {
-  return <div className="dash-stat"><span>{label}</span><strong>{number.format(value)}</strong>{note && <small>{note}</small>}</div>
+function Stat({ label, value, note, text }: { label: string; value: number; note?: string; text?: string }) {
+  return <div className="dash-stat"><span>{label}</span><strong>{text ?? number.format(value)}</strong>{note && <small>{note}</small>}</div>
 }
 
-function Bars({ series, pick, label }: { series: Summary['series']; pick: (day: Summary['series'][number]) => number; label: string }) {
+function Bars<T extends { day: string }>({ series, pick, label }: { series: T[]; pick: (day: T) => number; label: string }) {
   const max = Math.max(1, ...series.map(pick))
   const width = 600, height = 120, gap = 4, bar = (width - gap * (series.length - 1)) / Math.max(1, series.length)
   return <figure className="dash-chart">
@@ -82,6 +82,49 @@ const columns: { key: SortKey; label: string; numeric?: boolean }[] = [
   { key: 'profileOpens', label: 'Profile opens', numeric: true },
 ]
 
+const MySchema = z.object({
+  minutesUsed: Count, daysActive: Count, profileOpens: Count, messagesSent: Count, messagesReceived: Count,
+  lastSeen: z.string().nullable(),
+  series: z.array(z.object({ day: z.string(), minutes: Count, profileOpens: Count })),
+})
+
+// Only ever the signed-in person's own numbers: the server reads the ID from their token.
+function MyStats({ token }: { token: string }) {
+  const [mine, setMine] = useState<z.infer<typeof MySchema> | null>(null)
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    let live = true
+    setMine(null); setFailed(false)
+    const load = () => authorizedRequest('/api/usage/me', MySchema)
+      .then(data => { if (live) { setMine(data); setFailed(false) } })
+      .catch(error => { console.error('Dashboard my stats failed', error); if (live) setFailed(true) })
+    void load()
+    const timer = setInterval(() => { if (document.visibilityState === 'visible') void load() }, 30_000)
+    return () => { live = false; clearInterval(timer) }
+  }, [token])
+  return <section className="dash-mine" aria-label="Your activity">
+    <div className="dash-mine-head">
+      <h2>Your activity</h2>
+      <button type="button" onClick={() => void supabase?.auth.signOut({ scope: 'local' })}>Sign out</button>
+    </div>
+    {failed && !mine && <div className="dash-note" role="alert"><p>Your activity could not be loaded right now.</p></div>}
+    {mine && <>
+      <div className="dash-stats">
+        <Stat label="Time in Pebble" value={mine.minutesUsed} text={duration(mine.minutesUsed)} />
+        <Stat label="Days active" value={mine.daysActive} />
+        <Stat label="Messages sent" value={mine.messagesSent} />
+        <Stat label="Messages received" value={mine.messagesReceived} />
+        <Stat label="Profiles opened" value={mine.profileOpens} />
+        <Stat label="Last active" value={0} text={ago(mine.lastSeen)} />
+      </div>
+      <div className="dash-charts">
+        <Bars series={mine.series} pick={day => day.minutes} label="Your minutes per day" />
+        <Bars series={mine.series} pick={day => day.profileOpens} label="Profiles you opened per day" />
+      </div>
+    </>}
+  </section>
+}
+
 function AdminSignIn() {
   const [email, setEmail] = useState(''), [password, setPassword] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false)
   async function submit(event: FormEvent) {
@@ -93,8 +136,8 @@ function AdminSignIn() {
     setBusy(false)
   }
   return <form className="dash-signin" onSubmit={submit}>
-    <h2>Admin sign-in</h2>
-    <p>Per-user details are only visible to approved Pebble admin accounts.</p>
+    <h2>Sign in</h2>
+    <p>Sign in to see your own activity. Approved Pebble admins also see everyone’s.</p>
     <label>Email<input type="email" autoComplete="username" value={email} onChange={event => setEmail(event.target.value)} required /></label>
     <label>Password<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required /></label>
     {error && <p className="dash-error" role="alert">{error}</p>}
@@ -135,8 +178,7 @@ function AdminUsers({ token }: { token: string }) {
     })
   }, [users, query, sort])
 
-  if (state === 'denied') return <div className="dash-note" role="alert"><p>This account is not approved for per-user details.</p>
-    <button type="button" onClick={() => void supabase?.auth.signOut({ scope: 'local' })}>Sign out</button></div>
+  if (state === 'denied') return <p className="dash-muted">Other people’s activity is only visible to Pebble admins. Your own numbers are above.</p>
   if (state === 'error') return <div className="dash-note" role="alert"><p>The user list could not be loaded.</p><button type="button" onClick={() => void load()}>Try again</button></div>
   if (!users) return <p className="dash-muted">Loading users…</p>
 
@@ -144,7 +186,6 @@ function AdminUsers({ token }: { token: string }) {
     <div className="dash-toolbar">
       <input type="search" placeholder="Search name or username" value={query} onChange={event => setQuery(event.target.value)} aria-label="Search users" />
       <span>{number.format(rows.length)} of {number.format(users.length)} users · {users.filter(user => user.online).length} online</span>
-      <button type="button" onClick={() => void supabase?.auth.signOut({ scope: 'local' })}>Sign out</button>
     </div>
     <div className="dash-table-wrap">
       <table className="dash-table">
@@ -208,10 +249,10 @@ export default function Dashboard() {
         <Bars series={summary.series} pick={day => day.profileOpens} label="Profile opens per day" />
       </section>
     </>}
-    <section className="dash-admin" aria-label="Admin">
-      <h2>People</h2>
-      {!ready ? <p className="dash-muted">Checking sign-in…</p> : session ? <AdminUsers token={session.access_token} /> : <AdminSignIn />}
-    </section>
-    <footer>Public figures are totals only. Names, photos and per-person activity are visible to approved admins.</footer>
+    {!ready && <p className="dash-muted">Checking sign-in…</p>}
+    {ready && !session && <section className="dash-admin" aria-label="Sign in"><AdminSignIn /></section>}
+    {session && <MyStats token={session.access_token} />}
+    {session && <section className="dash-admin" aria-label="People"><h2>People</h2><AdminUsers token={session.access_token} /></section>}
+    <footer>Public figures are totals only. You can see your own activity when signed in; names, photos and per-person activity are visible to approved admins.</footer>
   </main>
 }

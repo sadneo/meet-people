@@ -9,6 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 //   POST /api/usage/heartbeat      signed-in app, every ~30s while visible
 //   POST /api/usage/profile-open   signed-in app, when a profile card is opened
 //   GET  /api/usage/summary        PUBLIC: aggregate totals only, nothing per-user
+//   GET  /api/usage/me             SIGNED-IN: the caller's own numbers only
 //   GET  /api/usage/admin/users    ADMIN: per-user table (allowlisted account IDs)
 //   GET  /api/usage/admin/photo/:id ADMIN: 96px thumbnail of an uploaded photo
 //
@@ -46,6 +47,15 @@ export const AdminUserSchema = z.object({
   hasUploadedPhoto: z.boolean(),
 })
 const AdminUsersSchema = z.array(AdminUserSchema)
+export const MyStatsSchema = z.object({
+  minutesUsed: Count,
+  daysActive: Count,
+  profileOpens: Count,
+  messagesSent: Count,
+  messagesReceived: Count,
+  lastSeen: z.string().nullable(),
+  series: z.array(z.object({ day: z.string(), minutes: Count, profileOpens: Count })).max(31),
+})
 
 const bearer = (request: Request) => /^Bearer\s+(\S+)$/i.exec(request.header('authorization') ?? '')?.[1]
 
@@ -148,6 +158,15 @@ export function createUsageRouter(client: SupabaseClient | null, adminIds: strin
       if (!client) { unavailable(response); return }
       try { response.json(await loadSummary()) } catch { unavailable(response) }
     })
+
+  // Always the caller's own row: the ID comes from the verified token, never from the request.
+  router.get('/me', signedIn(true), perUser(60, 60_000), async (_request, response) => {
+    try {
+      const { data, error } = await client!.rpc('usage_my_stats', { actor_in: response.locals.userId })
+      if (error) throw error
+      response.json(MyStatsSchema.parse(data))
+    } catch { unavailable(response) }
+  })
 
   const loadUsers = cached(15_000, async () => {
     if (!client) throw new Error('unavailable')
