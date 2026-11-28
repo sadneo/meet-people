@@ -9,6 +9,11 @@
 --   public  -> usage_public_summary()   aggregate totals only, no per-user data
 --   admin   -> usage_admin_users()      per-user table, allowlisted accounts only
 begin;
+set local lock_timeout='5s';
+set local statement_timeout='30s';
+-- The functions below read messaging tables. Resolve them when called rather than
+-- when created, so this migration also applies on databases replayed without them.
+set local check_function_bodies = off;
 
 create schema if not exists usage_private;
 revoke all on schema usage_private from public, anon, authenticated;

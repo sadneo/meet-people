@@ -1880,6 +1880,12 @@ export type Database = {
       submit_safety_report: { Args: { report_in: Json }; Returns: Json }
       sweep_active_friends: { Args: never; Returns: Json }
       unblock_owner_target: { Args: { target_in: string }; Returns: Json }
+      usage_admin_photo: { Args: { owner_in: string }; Returns: string }
+      usage_admin_users: { Args: never; Returns: Json }
+      usage_heartbeat: { Args: { actor_in: string }; Returns: undefined }
+      usage_my_stats: { Args: { actor_in: string }; Returns: Json }
+      usage_profile_open: { Args: { actor_in: string }; Returns: undefined }
+      usage_public_summary: { Args: never; Returns: Json }
       user_interest_vector: { Args: { p_id: string }; Returns: number[] }
       username_policy_identity_write: {
         Args: { profile_in: Json }

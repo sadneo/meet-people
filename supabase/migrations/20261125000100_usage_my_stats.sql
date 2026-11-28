@@ -1,6 +1,11 @@
 -- Personal stats: lets a signed-in person see their own usage, and nobody else's.
 -- The API passes the caller's verified user ID; service_role only.
 begin;
+set local lock_timeout='5s';
+set local statement_timeout='30s';
+-- The functions below read messaging tables. Resolve them when called rather than
+-- when created, so this migration also applies on databases replayed without them.
+set local check_function_bodies = off;
 
 create function public.usage_my_stats(actor_in uuid) returns jsonb
 language sql stable security definer set search_path = '' as $$
