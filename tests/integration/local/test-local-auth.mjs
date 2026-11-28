@@ -1,21 +1,15 @@
-import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import assert from 'node:assert/strict'
-import { URL } from 'node:url'
 import console from 'node:console'
 import { createClient } from '@supabase/supabase-js'
+import { assertLocalStack, requireStack, supabaseStatus } from '../../../scripts/lib/stack.mjs'
 
-let status
-try { status = execFileSync('sh', ['scripts/supabase.sh', 'status', '--output', 'env'], { encoding: 'utf8', stdio: 'pipe' }) }
+const stack = requireStack()
+let values
+try { values = supabaseStatus(stack) }
 catch { throw new Error('Local Supabase status unavailable.') }
-const values = Object.fromEntries(status.trim().split('\n').map(line => {
-  const [key, value] = line.split(/=(.*)/s, 2)
-  return [key, value.replace(/^"|"$/g, '')]
-}))
-const url = values.API_URL ?? values.SUPA_API_URL
-let endpoint
-try { endpoint = new URL(url) } catch { throw new Error('Local Supabase URL is invalid.') }
-assert.ok(endpoint.protocol === 'http:' && endpoint.hostname === '127.0.0.1' && !endpoint.username && !endpoint.password && endpoint.pathname === '/' && !endpoint.search && !endpoint.hash, 'This check only runs against local Supabase.')
+const url = values.API_URL
+try { assertLocalStack(url, stack) } catch { throw new Error('This check only runs against local Supabase.') }
 const options = { auth: { persistSession: false, autoRefreshToken: false } }
 const client = () => createClient(url, values.PUBLISHABLE_KEY ?? values.ANON_KEY, options)
 const admin = createClient(url, values.SERVICE_ROLE_KEY, options)

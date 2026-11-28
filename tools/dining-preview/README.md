@@ -1,7 +1,7 @@
 # Temporary dining menu viewer
 
-Start with `pnpm dining:preview`, then open http://127.0.0.1:5175.
-Use `pnpm dining:preview --port 5176` if that port is occupied.
+Start with `pnpm demo dining-preview`, then open http://127.0.0.1:5175.
+Use `pnpm demo dining-preview --port 5176` if that port is occupied.
 
 Click **Fetch fresh menus** to run both scrapers in full, read-only mode. The
 viewer caches their real JSON output in this folder's ignored `.cache/` directory
@@ -15,4 +15,4 @@ for ingredients, serving size, and nutrition when the source supplies them.
 only and serves just this viewer and its public menu data.
 
 To remove the test website later: delete `tools/dining-preview/` and remove the
-`dining:preview` script from `package.json`. The scrapers remain independent.
+`dining-preview` action from `scripts/demo.mjs`. The scrapers remain independent.

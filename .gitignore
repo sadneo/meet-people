@@ -26,7 +26,6 @@ firebase-debug*.log
 *.log
 qa/**/log-*.txt
 gha-creds-*.json
-hosting/supabase/.temp/
 hosting/deployment/
 firebase.deploy.json
 # QA browser helper caches local sign-in tokens here.
@@ -35,3 +34,5 @@ qa/.sessions/
 qa/**/*.png
 # Generated QA run snapshots stay local.
 qa/runs/**/*.json
+# Per-worktree Supabase stack identity.
+/.pebble/

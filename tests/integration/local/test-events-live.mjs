@@ -4,10 +4,12 @@ import { randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import process from 'node:process'
 import { log } from 'node:console'
+import { requireStack, stackKeys } from '../../../scripts/lib/stack.mjs'
 
-const databaseUrl = process.env.SUPABASE_URL
-if (!databaseUrl || !/^http:\/\/(127\.0\.0\.1|localhost):/.test(databaseUrl)) throw new Error('This check requires local Supabase. Run with --env-file=.env.local.')
-const admin = createClient(databaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+const keys = process.env.SUPABASE_URL ? { apiUrl: process.env.SUPABASE_URL, serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY } : stackKeys(requireStack())
+const databaseUrl = keys.apiUrl
+if (!databaseUrl || !/^http:\/\/(127\.0\.0\.1|localhost):/.test(databaseUrl)) throw new Error('This check requires local Supabase. Run pnpm dev first.')
+const admin = createClient(databaseUrl, keys.serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
 const eventId = randomUUID()
 const users = []
 const failures = []

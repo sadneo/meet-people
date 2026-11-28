@@ -5,6 +5,8 @@ import { orderInterests, type DetailAudience, type ProfileCustomizationValue } f
 import { contactDetailsHint, profilePrompts, promptAnswerLimit, promptAudience, promptCount, promptLimit, promptShowsIn, promptText, promptsForMode, type ProfilePrompt, type PromptAudience } from '../../shared/profile-prompts'
 import type { ProfileDetails } from '../../shared/profile-details'
 import { useProfileCustomization } from '../features/account/profile-customization-client'
+import { useDatingPreferences } from '../features/matchmaking/useDatingPreferences'
+import { useCurrent } from './current'
 import { ArtPreview } from '../features/garden/ArtPreview'
 import { gardenItemName, showcaseChoices } from '../features/garden/showcase'
 import { useGarden } from '../features/garden/state'
@@ -106,34 +108,76 @@ export function ProfileFinishCard({ profile, hasPhoto, onAddPhoto }: { profile: 
   </section>
 }
 
-// How the saved profile looks to others, per mode, without leaving the page.
-export function OwnProfilePreview({ ownerId, account, details, photoRevision, adult }: {
+function ageOn(birthdate: string | null) {
+  if (!birthdate || !/^\d{4}-\d{2}-\d{2}$/.test(birthdate)) return undefined
+  const today = new Date().toISOString().slice(0, 10)
+  return Number(today.slice(0, 4)) - Number(birthdate.slice(0, 4)) - (today.slice(5) < birthdate.slice(5) ? 1 : 0)
+}
+
+type OwnPreviewProps = {
   ownerId: string; account: Account; details: ProfileDetails | null; photoRevision: number | undefined; adult: boolean
+  // Unsaved edits to show instead of the saved choices.
+  customization?: ProfileCustomizationValue
+}
+
+// How your profile looks to others, per mode, without leaving the page.
+// Adults also see their Dating intention and style, which Discover shows on the card.
+export function OwnProfilePreview(props: OwnPreviewProps) {
+  return props.adult ? <DatingOwnPreview {...props}/> : <OwnPreviewCard {...props} dating={null}/>
+}
+
+function DatingOwnPreview(props: OwnPreviewProps) {
+  const current = useCurrent()
+  const dating = useDatingPreferences(current.session.user.id, current.session.access_token, current.busy)
+  const profile = dating.snapshot?.profile
+  return <OwnPreviewCard {...props} dating={profile ? { intent: profile.intent, style: profile.style } : null}/>
+}
+
+function OwnPreviewCard({ ownerId, account, details, photoRevision, adult, customization, dating }: OwnPreviewProps & {
+  dating: { intent: string; style: string } | null
 }) {
-  const custom = useProfileCustomization()
+  const saved = useProfileCustomization()
   const [mode, setMode] = useState<'friends' | 'dating'>('friends')
   const profile = account.profile!
-  const value: ProfileCustomizationValue = custom.value
+  const value: ProfileCustomizationValue = customization ?? saved.value
   const interests = orderInterests(profile.interests, value.interestOrder)
   const facts = details?.facts
   const shown = (['education', 'occupation', 'languages'] as const).filter(key =>
     facts && facts.visibility[key] && facts[key].length > 0 && (value.audiences[key] === 'both' || value.audiences[key] === mode))
+  // Same details and placement as the Discover card.
+  const occupation = shown.includes('occupation') ? facts!.occupation : ''
+  const education = shown.includes('education') ? facts!.education : ''
+  const languages = shown.includes('languages') ? facts!.languages : []
+  const intent = mode === 'dating' ? dating?.intent : ''
+  const style = mode === 'dating' ? dating?.style : ''
+  const age = ageOn(profile.birthdate)
+  const city = profile.location_city
+  const bio = mode === 'dating' && value.datingBio ? value.datingBio : profile.bio
+  const prompts = (value.prompts ?? []).filter(item => item.answer.trim())
   return <section className="own-preview" aria-label="How others see your profile">
-    {adult && <DiscoverModes adult showFood={false} label="Preview as" mode={mode === 'friends' ? 'Friends' : 'Dating'}
+    {adult && <DiscoverModes adult label="Preview as" mode={mode === 'friends' ? 'Friends' : 'Dating'}
       onModeChange={option => { const next = option === 'Friends' ? 'friends' : 'dating'; if (mode !== next) haptic('light'); setMode(next) }}/>}
     <article className="own-preview-card">
       <div className="photo discovery-photo own-preview-photo">
         <DiscoverPhotos id={ownerId} name={profile.display_name} revision={photoRevision} fallback={null} active/>
-        <div className="phototext"><h2>{profile.display_name}</h2>{profile.location_city && <p>{profile.location_city}</p>}</div>
+        <div className="phototext">
+          <h2>{profile.display_name}{age !== undefined ? `, ${age}` : ''}</h2>
+          {(city || intent || occupation) && <p>{[occupation, city].filter(Boolean).join(' · ')}{(city || occupation) && intent && <br/>}{intent}</p>}
+        </div>
         {value.gardenItem && <span className="card-garden-item" title={gardenItemName(value.gardenItem)}><ArtPreview id={value.gardenItem} size={40}/></span>}
       </div>
       <div className="own-preview-body">
         {/* Dating shows the Dating bio when one is set. */}
-        {(mode === 'dating' && value.datingBio ? value.datingBio : profile.bio) && <section><h3>About {profile.display_name}</h3><p>{mode === 'dating' && value.datingBio ? value.datingBio : profile.bio}</p></section>}
-        <PromptCards prompts={promptsForMode(value.prompts ?? [], mode)}/>
+        {bio && <section><h3>About {profile.display_name}</h3><p>{bio}</p></section>}
+        <PromptCards prompts={promptsForMode(prompts, mode)}/>
         {!!interests.length && <section><h3>Interests</h3><div className="dating-interest-list">{interests.map((interest, index) =>
           <span key={interest} className={`dating-interest ${index === 0 && value.interestOrder[0] === interest ? 'is-top' : ''}`}>{index === 0 && value.interestOrder[0] === interest && <Icon name="Star"/>}{interest}</span>)}</div></section>}
-        {!!shown.length && <dl className="own-profile-facts">{shown.map(key => <div key={key}><dt>{key[0].toUpperCase() + key.slice(1)}</dt><dd>{Array.isArray(facts![key]) ? (facts![key] as string[]).join(', ') : facts![key]}</dd></div>)}</dl>}
+        {(intent || style || education || languages.length > 0) && <section className="dating-facts" aria-label={mode === 'dating' ? 'Dating details' : 'Profile details'}>
+          {intent && <div><span>Looking for</span><p>{intent}</p></div>}
+          {style && <div><span>Relationship style</span><p>{style}</p></div>}
+          {education && <div><span>Education</span><p>{education}</p></div>}
+          {languages.length > 0 && <div><span>Languages</span><p>{languages.join(', ')}</p></div>}
+        </section>}
       </div>
     </article>
   </section>
@@ -141,10 +185,9 @@ export function OwnProfilePreview({ ownerId, account, details, photoRevision, ad
 
 // Up to three prompts per mode. Each prompt shows in Friends, Dating or both;
 // Dating-only questions show only in Dating.
-export function PromptsEditor({ prompts, change, adult, disabled }: {
-  prompts: ProfilePrompt[]; change: (prompts: ProfilePrompt[]) => void; adult: boolean; disabled?: boolean
+export function PromptsEditor({ prompts, change, adult, disabled, invalid }: {
+  prompts: ProfilePrompt[]; change: (prompts: ProfilePrompt[]) => void; adult: boolean; disabled?: boolean; invalid?: string | null
 }) {
-  const [adding, setAdding] = useState('')
   const counts = { friends: promptCount(prompts, 'friends'), dating: promptCount(prompts, 'dating') }
   const room = (mode: 'friends' | 'dating') => counts[mode] < promptLimit
   // A new prompt goes everywhere it fits; Dating-only questions go to Dating.
@@ -193,7 +236,7 @@ export function PromptsEditor({ prompts, change, adult, disabled }: {
           </span>
         </div>
         <label className="sr-only" htmlFor={`prompt-${item.id}`}>Your answer to {promptText(item.id)}</label>
-        <textarea id={`prompt-${item.id}`} rows={2} maxLength={promptAnswerLimit} disabled={disabled} placeholder="Your answer"
+        <textarea id={`prompt-${item.id}`} rows={2} maxLength={promptAnswerLimit} disabled={disabled} placeholder="Your answer" aria-invalid={invalid === item.id || undefined}
           value={item.answer} onChange={event => update(index, { answer: event.target.value })}/>
         <div className="prompt-edit-meta"><span className="prompt-hint">{hint}</span><span>{item.answer.length}/{promptAnswerLimit}</span></div>
         {adult && <div className="prompt-edit-actions">
@@ -218,17 +261,17 @@ export function PromptsEditor({ prompts, change, adult, disabled }: {
       ? <p className="account-note">{adult ? `Friends and Dating each have ${promptLimit} prompts.` : `You have ${promptLimit} prompts.`} Remove one to add another.</p>
       : <div className="prompt-add">
         <label htmlFor="prompt-add-select" className="sr-only">Choose a prompt</label>
-        <select id="prompt-add-select" value={adding} disabled={disabled} onChange={event => setAdding(event.target.value)}>
+        <select id="prompt-add-select" value="" disabled={disabled} onChange={event => {
+          const id = event.target.value
+          const audience = placement(id)
+          if (!id || !audience) return
+          haptic('light')
+          change([...prompts, { id: id as ProfilePrompt['id'], answer: '', ...(audience === 'both' ? {} : { audience }) }])
+          requestAnimationFrame(() => document.getElementById(`prompt-${id}`)?.focus())
+        }}>
           <option value="">{prompts.length ? 'Add another prompt' : 'Choose a prompt'}</option>
           {available.map(prompt => <option key={prompt.id} value={prompt.id} disabled={!placement(prompt.id)}>{prompt.text}{prompt.audience === 'dating' ? ' (Dating)' : ''}</option>)}
         </select>
-        <button type="button" className="btn light" disabled={disabled || !adding || !placement(adding)} onClick={() => {
-          const audience = placement(adding)
-          if (!audience) return
-          haptic('light')
-          change([...prompts, { id: adding as ProfilePrompt['id'], answer: '', ...(audience === 'both' ? {} : { audience }) }])
-          setAdding('')
-        }}>Add prompt</button>
       </div>}
   </section>
 }

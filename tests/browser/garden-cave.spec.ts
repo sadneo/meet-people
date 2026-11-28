@@ -7,7 +7,7 @@ test('purchase a cave, arrange three Pebbles, and keep their drops visible while
   await page.emulateMedia({ reducedMotion: 'reduce' })
   const { garden } = await wiringFixture(page)
   garden.seed({ balance: 300, owned: ['garnet','sapphire'], earnedChapters: [] })
-  await page.goto('/')
+  await page.goto('/home')
   await page.getByRole('button', { name: 'Open Garden inventory' }).click()
   await page.getByLabel('Buildings', {exact:true}).click()
   const cave = page.locator('.garden-shop-item').filter({has:page.getByText('Pebble Cave',{exact:true})})

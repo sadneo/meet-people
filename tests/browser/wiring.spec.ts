@@ -8,12 +8,12 @@ test("public entry and private routes use the new frontend with real sign-in gat
   await wiringFixture(page, { guest: true });
   await page.goto("/");
   await expect(
-     page.getByRole("button", { name: "Continue with email", exact: true }),
+     page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/login\?returnTo=/);
   await expect(
-    page.getByRole("button", { name: "Continue with email", exact: true }),
+    page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /sample|simulate/i }),
@@ -51,7 +51,7 @@ test("profile saves use canonical account API and read back persisted data", asy
 
 test("Friends loads passive recommendations without joining an active queue", async ({page}) => {
  const fixture=await wiringFixture(page);
- await page.goto('/matchmaking');
+ await page.goto('/matchmaking?mode=friends');
  await expect(page.getByRole('heading',{name:'Taylor, 23'})).toBeVisible();
  await page.getByRole('button',{name:'Connect',exact:true}).click();
  await expect(page.getByText('Request sent to Taylor.')).toBeVisible();
@@ -61,7 +61,7 @@ test("Friends loads passive recommendations without joining an active queue", as
 
 test("passive discovery leaves a legacy downtime queue alone", async ({page}) => {
  const fixture=await wiringFixture(page,{queue:'downtime'});
- await page.goto('/matchmaking');
+ await page.goto('/matchmaking?mode=friends');
  await expect(page.getByRole('heading',{name:'Taylor, 23'})).toBeVisible();
  expect(fixture.calls.filter(call=>call.path.endsWith('/queue'))).toHaveLength(0);
 });
@@ -71,7 +71,7 @@ test("Friends preferences resolve a server-owned area and save revisioned filter
 }) => {
   const fixture = await wiringFixture(page);
   await mockLocationPicker(page);
-  await page.goto("/matchmaking");
+  await page.goto("/matchmaking?mode=friends");
   await page
     .getByRole("button", { name: "Friends preferences", exact: true })
     .click();
@@ -99,7 +99,7 @@ test("Dating starts with confirmed consent and uses the live Dating request endp
   page,
 }) => {
   const fixture = await wiringFixture(page);
-  await page.goto("/matchmaking");
+  await page.goto("/matchmaking?mode=friends");
   await page.getByRole("button", { name: "Dating", exact: true }).click();
   await page.getByRole("button", { name: "Start Dating discovery" }).click();
   await expect(page.getByRole("heading", { name: "Taylor, 23" })).toBeVisible();
@@ -161,7 +161,9 @@ test("event groups automatically show a suggested group without replaying the jo
   expect(methods.filter(method => method === "GET")).toHaveLength(readsAfterMatch);
   await expect(page.getByRole("button", { name: /proposal/i })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.getByRole("button", { name: "Leave group queue", exact: true }).click();
+  await page.getByRole("button", { name: "Leave group", exact: true }).click();
+  expect(methods.filter(method => method === "DELETE")).toHaveLength(0);
+  await page.getByRole("dialog", { name: "Leave this group?" }).getByRole("button", { name: "Leave group", exact: true }).click();
   await expect(page.getByRole("button", { name: "Join group queue", exact: true })).toBeVisible();
   expect(methods.filter(method => method === "DELETE")).toHaveLength(1);
   const readsAfterLeaving = methods.filter(method => method === "GET").length;
@@ -272,7 +274,7 @@ test("a backend outage shows a retry state without fixture matches", async ({
     "**/api/matchmaking/friends/recommendations",
     (route) => route.fulfill({ status: 503, json: { error: "Unavailable" } }),
   );
-  await page.goto("/matchmaking");
+  await page.goto("/matchmaking?mode=friends");
   await expect(page.getByRole('button',{name:'Try again',exact:true})).toBeEnabled();
   await expect(page.getByRole("alert")).toContainText(/unavailable/i);
   await expect(
@@ -310,7 +312,7 @@ test("garden renders the new canvas, supports local building and cleans up on na
   const failures: string[] = [];
   page.on("pageerror", (error) => failures.push(error.message));
   await wiringFixture(page);
-  await page.goto("/");
+  await page.goto("/home");
   await expect(page.locator(".garden-canvas")).toBeVisible();
   await page.getByRole("button", { name: /Build with/ }).click();
   await expect(
@@ -324,7 +326,7 @@ test("garden renders the new canvas, supports local building and cleans up on na
   expect(failures).toEqual([]);
 });
 
-test("email-first sign-in installs the real SDK session before entering the app", async ({
+test("single-submit sign-in installs the real SDK session before entering the app", async ({
   page,
 }) => {
   const fixture = await wiringFixture(page, { guest: true });
@@ -332,17 +334,16 @@ test("email-first sign-in installs the real SDK session before entering the app"
   await page
     .getByLabel("Email", { exact: true })
     .fill("development-fixture@example.test");
-  await page.getByRole("button", { name: "Continue with email", exact: true }).click();
   await page
     .getByLabel("Password", { exact: true })
     .fill("Synthetic-fixture-password-1!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.locator(".garden-canvas")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Dating", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect(
     fixture.calls.some(
       (call) => call.path === "/api/auth/email" && call.method === "POST",
     ),
-  ).toBe(true);
+  ).toBe(false);
 });
 
 test("optional facts save selected language chips and restore them when editing", async ({
@@ -429,7 +430,7 @@ test("garden purchases use the authenticated account economy and survive navigat
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   const fixture = await wiringFixture(page);
-  await page.goto("/");
+  await page.goto("/home");
   await page.getByRole("button", { name: /Build with/ }).click();
   await page.locator('summary[aria-label="Decorations"]').click();
   await page

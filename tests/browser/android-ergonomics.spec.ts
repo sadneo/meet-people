@@ -14,7 +14,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
 
     test('MOBILE-01 candidate identity clears fixed decisions without scrolling', async ({ page }, testInfo) => {
       await wiringFixture(page);
-      await page.goto('/matchmaking');
+      await page.goto('/matchmaking?mode=friends');
       await page.waitForLoadState('networkidle');
       const identity = page.getByRole('heading', { name: 'Taylor, 23', exact: true });
       await expect(identity).toBeVisible();
@@ -35,7 +35,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
 
     test('MOBILE-02 discovery and preference targets are at least 44px', async ({ page }, testInfo) => {
       await wiringFixture(page);
-      await page.goto('/matchmaking');
+      await page.goto('/matchmaking?mode=friends');
       await page.waitForLoadState('networkidle');
       await expect(page.getByRole('heading', { name: 'Taylor, 23', exact: true })).toBeVisible();
       for (const control of [
@@ -49,9 +49,9 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
       await page.screenshot({ path: testInfo.outputPath('discovery-targets.png') });
       await page.getByRole('button', { name: 'Friends preferences', exact: true }).click();
       const dialog = page.getByRole('dialog');
-      await expect(dialog.getByRole('link', { name: 'Edit profile', exact: true })).toBeVisible();
-      for (const name of ['Edit profile', 'Edit']) {
-        const link = dialog.getByRole('link', { name, exact: true });
+      await expect(dialog.getByRole('button', { name: 'Edit interests', exact: true })).toBeVisible();
+      for (const name of ['Edit interests', 'Edit availability']) {
+        const link = dialog.getByRole('button', { name, exact: true });
         await link.scrollIntoViewIfNeeded();
         await touchTarget(link);
       }

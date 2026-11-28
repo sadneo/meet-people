@@ -1,9 +1,9 @@
-import { execFileSync, spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { demoPlan, seedContainer, seedMarker } from './demo-seed/plan.js'
+import { demoPlan, seedMarker } from './demo-seed/plan.js'
+import { psql, verifiedStack } from './demo-seed/local.js'
 import { demoInitialsPhoto, demoStockPortrait } from './demo-seed/photos.js'
 
 const options = parseArgs({ options: { count: { type: 'string', default: '20' }, directory: { type: 'string', default: '/tmp/opencode/pebble-stock-portraits' }, 'dry-run': { type: 'boolean' }, 'restore-initials': { type: 'boolean' } } }).values
@@ -11,8 +11,7 @@ const count = z.coerce.number().int().min(2).max(20).parse(options.count)
 if (options['dry-run']) {
   console.log(`Preview only: ${options['restore-initials'] ? 'restore initial avatars on' : 'import stock portraits for'} ${count} marked local demo accounts; preserve edited photos. No files, database or network accessed.`)
 } else {
-  const metadata = JSON.parse(execFileSync('docker', ['inspect', '--format', '{"running":{{json .State.Running}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}}}', seedContainer], { encoding: 'utf8' }))
-  if (!metadata.running || metadata.project !== 'meet-people') throw new Error('Expected running local meet-people database; remote targets are unsupported')
+  verifiedStack('Expected running local Supabase database for this worktree; remote targets are unsupported')
   const sourceSchema = z.array(z.object({ id: z.number().int().positive(), index: z.number().int().min(1).max(20), pageUrl: z.string(), license: z.literal('https://www.pexels.com/license/') })).length(20)
   const directory = resolve(options.directory!)
   const sources = sourceSchema.parse(JSON.parse(readFileSync(resolve(directory, 'sources.json'), 'utf8')))
@@ -40,7 +39,7 @@ if (options['dry-run']) {
 end $$;\n`
   }
   sql += 'commit;'
-  const result = spawnSync('docker', ['exec', '-i', seedContainer, 'psql', '-X', '-q', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1'], { input: sql, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 })
+  const result = psql(['-X', '-q', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1'], sql, 4 * 1024 * 1024)
   if (result.status !== 0) throw new Error(`Local portrait transaction rejected; all photo changes rolled back. ${result.stderr}`)
   const total = (status: string) => (result.stderr.match(new RegExp(`DEMO_PHOTO_${status}`, 'g')) ?? []).length
   console.log(`Local demo portraits: ${total('UPDATED')} updated, ${total('UNCHANGED')} unchanged, ${total('PRESERVED')} owner-edited/removed photos preserved. No profile identities or preferences changed.`)

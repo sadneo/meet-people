@@ -6,11 +6,12 @@ import type { ProfileGalleryEdit, ProfilePhotoWrite } from '../shared/profile-ph
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { AccountSchema, SaveAccountSchema, completedAccountChapters, type Account, type SaveAccount } from '../shared/account.js'
+import { AccountSchema, SaveAccountSchema, accountOnboardingHeader, completedAccountChapters, legacyAccountChapters, type Account, type SaveAccount } from '../shared/account.js'
 import { isPublicSupabaseKey } from './env.js'
 import { JoinQueueSchema, MatchingProfileSchema, RawMatchSchema, RawQueueStatusSchema, type MatchingProfile } from '../shared/matchmaking.js'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, ListingIdSchema, ListingInterestRequestSchema, ListingMatchmakingStatusSchema, RawListingEventMatchesSchema } from '../shared/matchmaking.js'
 import { AccountProfileSchema, type AccountProfile } from '../shared/account-profile.js'
+import { checkUsernameWrite } from '../shared/username.js'
 import type { SaveProfileDetails } from '../shared/profile-details.js'
 import { createProfileDetailsRouter } from './profile-details.js'
 import { createProfileCustomizationRouter } from './profile-customization.js'
@@ -103,6 +104,7 @@ export interface UserContextTransport {
     mapSearchLocation?(mode: 'friends' | 'dating', reference: string): PromiseLike<RpcResponse>
     confirmMapSearchLocation?(ticket: MapTicket): PromiseLike<RpcResponse>
     socialConnection?(target: string, action: 'get' | 'request' | 'accept' | 'remove'): PromiseLike<RpcResponse>
+    cancelSentRequest?(target: string, requestedAt: string): PromiseLike<RpcResponse>
     socialConnectionList?(): PromiseLike<RpcResponse>
     connectionRequestAllowance?(): PromiseLike<RpcResponse>
     socialInbox?(page: number): PromiseLike<RpcResponse>
@@ -167,6 +169,7 @@ export function createUserContextTransport(config: { url: string; publicKey: str
         mapSearchLocation: (mode, reference) => client.rpc('get_search_location_map', { mode_in: mode, reference_in: reference }),
         confirmMapSearchLocation: ticket => client.rpc('confirm_map_search_location', { ticket_in: ticket }),
         socialConnection: (target, action) => client.rpc('social_connection', { target_in: target, action_in: action }),
+        cancelSentRequest: (target, requestedAt) => client.rpc('cancel_sent_request', { target_in: target, requested_at_in: requestedAt }),
         socialConnectionList: () => client.rpc('social_connection_list'),
         connectionRequestAllowance: () => client.rpc('get_connection_request_allowance'),
         socialInbox: page => client.rpc('social_inbox', { page_in: page }),
@@ -227,7 +230,7 @@ function unwrap(result: RpcResponse): unknown {
   if (result.error) {
     if (['PGRST301', 'PGRST302', 'PGRST303', '28000'].includes(result.error.code ?? '')) throw new MatchingFailure(401, 'auth', 'Your session has expired. Sign in again.')
     if (['PGRST202', '42883'].includes(result.error.code ?? '')) throw new MatchingFailure(503, 'unavailable', 'Matching RPC is not available yet.')
-    if (result.error.code === '23505') throw new MatchingFailure(400, 'invalid', 'That username is already taken. Choose another.')
+    if (result.error.code === '23505') throw new MatchingFailure(400, 'invalid', 'That username is taken. Choose another.')
     if (['22023', '23514'].includes(result.error.code ?? '')) throw new MatchingFailure(400, 'invalid', 'Check your profile fields and try again.')
     if (result.error.code === 'AQ409') throw new MatchingFailure(409, 'unavailable', 'Save Friends filters and choose a current search location before joining or checking.')
     if (result.error.code === 'AQ503') throw new MatchingFailure(503, 'unavailable', 'Downtime results are not available yet. Active Friends matching remains separate.')
@@ -279,6 +282,9 @@ export function createMatchmakingRouter(transport: UserContextTransport | null, 
   const writeAccount = async (response: Response, next: SaveAccount, previous: Account) => {
     const save = actor(response).saveAccount
     if (!save) throw new MatchingFailure(503, 'unavailable', 'Unified account RPC is not available yet.')
+    const checked = next.profile ? checkUsernameWrite(next.profile.username, previous.profile?.username) : null
+    if (checked && 'error' in checked) throw new MatchingFailure(400, 'invalid', checked.error)
+    if (next.profile && checked) next = { ...next, profile: { ...next.profile, username: checked.username } }
     const before = completedAccountChapters(previous).length
     if (completedAccountChapters(next).length < before || next.completed.length > before + 1) throw new MatchingFailure(400, 'invalid', 'Preserve required fields and complete chapters sequentially.')
     return validate(AccountSchema, unwrap(await save(SaveAccountSchema.parse(next))))
@@ -328,13 +334,16 @@ export function createMatchmakingRouter(transport: UserContextTransport | null, 
     const saved = await writeAccount(response, { ...previous, profile: { ...(previous.profile ?? { birthdate: null, location_city: null, interests: [], availability: [] }), ...parsed.data }, completed: previous.completed.length ? previous.completed : [0] }, previous)
     response.json({ profile: AccountProfileSchema.parse({ username: saved.profile!.username, display_name: saved.profile!.display_name, bio: saved.profile!.bio, avatar_url: saved.profile!.avatar_url }) })
   })
-  router.get('/account', async (_request, response) => {
-    response.json(await readAccount(response))
+  const accountForClient = (request: Request, account: Account) =>
+    request.headers[accountOnboardingHeader.toLowerCase()] === 'progressive'
+      ? account : { ...account, completed: legacyAccountChapters(account) }
+  router.get('/account', async (request, response) => {
+    response.json(accountForClient(request, await readAccount(response)))
   })
   router.put('/account', async (request, response) => {
     const parsed = SaveAccountSchema.safeParse(request.body)
     if (!parsed.success) throw new MatchingFailure(400, 'invalid', 'Invalid account data. No changes were saved.')
-    response.json(await writeAccount(response, parsed.data, await readAccount(response)))
+    response.json(accountForClient(request, await writeAccount(response, parsed.data, await readAccount(response))))
   })
   router.put('/profile', async (request, response) => {
     const parsed = MatchingProfileSchema.safeParse(request.body)

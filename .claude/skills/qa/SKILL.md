@@ -24,7 +24,7 @@ given: `AUTH MSG MATCH`. `all` means all six.
 1. Make sure the local stack is up: Supabase containers running and the dev server answering on
    http://127.0.0.1:3000 (start `pnpm dev` in the background if not).
 2. Reset the local database to the seed so every run starts from the same data:
-   `pnpm supabase:reset`, then `rm -rf qa/.sessions` (tokens from the old database are invalid).
+   `pnpm supabase db reset`, then `rm -rf qa/.sessions` (tokens from the old database are invalid).
    If `EVENTS` is in the run, insert the sample listings from areas.md.
 3. Create the run folder `qa/runs/<YYYY-MM-DD-HHMM>/` with `findings/`, `screenshots/`, `scratch/`.
 4. Smoke-test the helper once: `node .claude/skills/qa/scripts/qa-browser.mjs look alice /messages 390x844`.

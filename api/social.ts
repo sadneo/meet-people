@@ -59,6 +59,16 @@ export function createSocialRouter(transport: UserContextTransport | null, kind:
       body(request); noQuery(request); const target = id(request.params.targetId), call = actor(response).socialConnection
       response.json(await result(call && (() => call(target, action)), ConnectionStateSchema))
     }
+    router.post('/:targetId/cancel', async (request, response) => {
+      noQuery(request)
+      const target = id(request.params.targetId)
+      const input = z.object({ requestedAt: z.iso.datetime({ offset: true }) }).strict().safeParse(request.body)
+      if (!input.success) throw new SocialFailure(400, 'Invalid sent request.')
+      const cancel = actor(response).cancelSentRequest
+      const removed = await result(cancel && (() => cancel(target, input.data.requestedAt)), z.boolean())
+      if (!removed) throw new SocialFailure(409, 'This request is no longer pending. Refresh your requests.')
+      response.json(removed)
+    })
     router.get('/:targetId', connection('get')); router.post('/:targetId', connection('request'))
     router.post('/:targetId/accept', connection('accept')); router.delete('/:targetId', connection('remove'))
   } else {

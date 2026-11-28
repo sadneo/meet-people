@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { PullToRefresh } from './PullToRefresh';
-import { Link, useLocation, useParams, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EventsResponseSchema, EventSchema } from "../../shared/events";
 import {
@@ -61,6 +61,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
   }
   function selectCategory(value: string) {
     browse(value, 1);
+    setFiltersOpen(false);
   }
   const content = (
     <section className="events-page" aria-labelledby="events-title">
@@ -81,7 +82,6 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
         </select>
         <div className="event-filter-actions">
           <ActionButton secondary disabled={!category} onClick={() => selectCategory('')}>Reset filters</ActionButton>
-          <ActionButton onClick={() => setFiltersOpen(false)}>Done</ActionButton>
         </div>
       </Modal>}
       <ResourceState
@@ -97,7 +97,7 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
       )}
       <div className="eventgrid event-directory stagger-in">
         {resource.value?.events.map((event) => (
-            <Link className="event-card" key={event.id} viewTransition to={`${publicView ? "/explore" : "/events"}/${event.id}?${searchParams}`} aria-label={`${event.title}: see event and people`}>
+            <Link className="event-card" key={event.id} viewTransition state={{ fromEventDirectory: true }} to={`${publicView ? "/explore" : "/events"}/${event.id}?${searchParams}`} aria-label={`${event.title}: see event and people`}>
                 <EventDateChip startsAt={event.starts_at}/>
                 <MediaImage
                   style={{ viewTransitionName: eventImageTransition(event.id) }}
@@ -118,8 +118,10 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
                 {[event.location_name, event.city].filter(Boolean).join(' · ') || 'Location to be announced'}
               </span></span>
               <div className="event-card-footer">
-                <span className="event-company"><Icon name="Friends" /><span>Find people looking for company</span></span>
-                <span className="event-cta">See event &amp; people <Icon name="ArrowRight" /></span>
+                {hasStarted(event.starts_at)
+                  ? <span className="event-company"><Icon name="Clock" /><span>Happening now</span></span>
+                  : <span className="event-company"><Icon name="Friends" /><span>Find people looking for company</span></span>}
+                <span className="event-cta">{hasStarted(event.starts_at) ? 'See event' : <>See event &amp; people</>} <Icon name="ArrowRight" /></span>
               </div>
               </div>
             </Link>
@@ -164,6 +166,22 @@ export function Events({ publicView = false }: { publicView?: boolean }) {
 function eventImageTransition(id: string) {
   return `event-image-${id.replace(/[^a-zA-Z0-9-]/g, '')}`;
 }
+// Listed events are live, so one whose start has passed is in progress.
+function hasStarted(startsAt: string | null | undefined) {
+  const time = Date.parse(startsAt ?? '');
+  return Number.isFinite(time) && time <= Date.now();
+}
+// Permanent failures (cancelled, ended, unknown or malformed id) can't be fixed by retrying.
+function EventUnavailable({ directory, onClose }: { directory: string; onClose: (event: MouseEvent<HTMLAnchorElement>) => void }) {
+  return (
+    <div className="card blank">
+      <h3>This event is no longer available</h3>
+      <p>It may have ended or been cancelled.</p>
+      <Link className="btn" to={directory} onClick={onClose} replace>Browse events</Link>
+    </div>
+  );
+}
+const permanentEventErrors = ['This event is no longer available.', 'Invalid event ID.'];
 function EventDateChip({ startsAt }: { startsAt: string | null | undefined }) {
   const time = Date.parse(startsAt ?? '');
   if (!Number.isFinite(time)) return null;
@@ -176,6 +194,14 @@ function EventDateChip({ startsAt }: { startsAt: string | null | undefined }) {
 export function EventDetail({ publicView = false, renderGroup }: { publicView?: boolean; renderGroup?: (id: string, available: boolean) => ReactNode }) {
   const location = useLocation();
   const directory = `${publicView ? "/explore" : "/events"}${location.search}`;
+  const navigate = useNavigate();
+  function closeEvent(event: MouseEvent<HTMLAnchorElement>) {
+    // Back restores the directory entry and its filters when a card opened this detail.
+    if (location.state?.fromEventDirectory && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      void navigate(-1);
+    }
+  }
   const { id = "" } = useParams(),
     resource = useCachedLoad(
       useCallback(
@@ -203,16 +229,17 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
     startsAt > now;
   return (
     <div className="event-detail">
-      {!event && <Link className="account-back" to={directory}>‹ Events</Link>}
+      {!event && <Link className="account-back" to={directory} onClick={closeEvent} replace>‹ Events</Link>}
+      {permanentEventErrors.includes(resource.error) && <EventUnavailable directory={directory} onClose={closeEvent} />}
       <ResourceState
         loading={resource.loading}
-        error={resource.error}
+        error={permanentEventErrors.includes(resource.error) ? '' : resource.error}
         reload={resource.reload}
         skeleton={<PageSkeleton view="event" label="Loading event details"/>}
       />
       {event && (
         <>
-          <header className="event-detail-header"><h1>{event.title}</h1><Link className="round" aria-label="Close event" to={directory}>×</Link></header>
+          <header className="event-detail-header"><h1>{event.title}</h1><Link className="round" aria-label="Close event" to={directory} onClick={closeEvent} replace>×</Link></header>
           <MediaImage
             style={{ viewTransitionName: eventImageTransition(event.id) }}
             className="event-cover"
@@ -229,7 +256,7 @@ export function EventDetail({ publicView = false, renderGroup }: { publicView?: 
               .filter(Boolean)
               .join(" · ") || "Location to be announced"}
           </p>
-          <p className="event-company"><Icon name="Friends"/>Find people looking for company</p>
+          {groupAvailable && <p className="event-company"><Icon name="Friends"/>Find people looking for company</p>}
           <div className="event-detail-links">
           {groupAvailable && calendarLink(event) && (
             <a

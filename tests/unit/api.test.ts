@@ -20,6 +20,17 @@ describe('API', () => {
     await expect(response.json()).resolves.toEqual({ status: 'ok' })
   })
 
+  it('reports the run id when set', async () => {
+    process.env.PEBBLE_RUN_ID = 'run-1'
+    try {
+      const response = await fetch(`${url}/api/health`)
+
+      await expect(response.json()).resolves.toEqual({ status: 'ok', run: 'run-1' })
+    } finally {
+      delete process.env.PEBBLE_RUN_ID
+    }
+  })
+
   it('rejects invalid input', async () => {
     const response = await fetch(`${url}/api/hello?name=${'a'.repeat(101)}`)
 

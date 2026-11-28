@@ -37,7 +37,7 @@ for (const width of [320, 390]) {
         id, name: index ? 'Jordan' : 'Taylor', age: 23, city: null, bio: null, avatar: null, photoRevision: 0, interests: ['Coffee'], areaDistanceMiles: 2,
       })),
     } }))
-    await page.goto('/matchmaking')
+    await page.goto('/matchmaking?mode=friends')
     const navigator = page.getByRole('complementary', { name: 'Development navigation' })
     await expect(navigator).toHaveCSS('position', 'relative')
     await page.getByRole('button', { name: 'Pass', exact: true }).click()

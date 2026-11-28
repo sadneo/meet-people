@@ -7,7 +7,7 @@ if (endpoint.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includ
 export default defineConfig({
   testDir: './tests/integration/built',
   testMatch: '**/*.spec.ts',
-  outputDir: './test-results/built',
+  outputDir: process.env.PEBBLE_TEST_OUTPUT ?? './test-results/built',
   use: {
     baseURL,
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH

@@ -9,10 +9,10 @@ is never part of `pnpm build`, `tsc`, or the Vite module graph.
 ## Run
 
 ```bash
-pnpm dev:alt                 # http://localhost:5174
-pnpm dev:alt --port 4000     # custom port
-pnpm dev:alt --open          # also open the browser
-pnpm test:alt                # fixture interaction checks (Node only)
+node src/alt/serve.mjs                # http://localhost:5174
+node src/alt/serve.mjs --port 4000    # custom port
+node src/alt/serve.mjs --open         # also open the browser
+node src/alt/tests/account-ui.check.cjs   # fixture interaction checks (Node only)
 ```
 
 Landing page → **Sign in** → **Sign in as dev** to enter the fixture app.

@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router'
 import { hasBasicProfile, SaveAccountSchema } from '../../shared/account'
+import { checkUsernameWrite } from '../../shared/username'
 import { safeReturnTo } from '../auth/returnTo'
 import { ActionButton, Brand, ErrorMessage } from './common'
 import { useCurrent } from './current'
@@ -22,7 +23,7 @@ export function Onboarding() {
   const [year, setYear] = useState(saved?.birthdate?.slice(0, 4) ?? '')
   const [month, setMonth] = useState(saved?.birthdate?.slice(5, 7) ?? '')
   const [day, setDay] = useState(saved?.birthdate?.slice(8, 10) ?? '')
-  const destination = safeReturnTo(search.get('returnTo')) ?? '/'
+  const destination = safeReturnTo(search.get('returnTo')) ?? '/matchmaking'
   const busy = current.busy || current.loading || action.busy
   const form = useRef<HTMLFormElement>(null)
   const dayInput = useRef<HTMLInputElement>(null)
@@ -44,13 +45,15 @@ export function Onboarding() {
   async function submit(event: FormEvent) {
     event.preventDefault()
     await action.run(async () => {
+      const checked = checkUsernameWrite(username, saved?.username)
+      if ('error' in checked) throw new Error(checked.error)
       const birthdate = [year, month.padStart(2, '0'), day.padStart(2, '0')].join('-')
       const next = SaveAccountSchema.safeParse({
         ...account,
         initialTimeZone: deviceTimeZone(),
         profile: {
           bio: null, location_city: null, avatar_url: null, interests: [], availability: [],
-          ...saved, display_name: displayName, username, birthdate,
+          ...saved, display_name: displayName, username: checked.username, birthdate,
         },
         completed: account.completed.length ? account.completed : [0],
       })
@@ -75,8 +78,8 @@ export function Onboarding() {
           <label><span id="onboarding-display-label">Display name</span> <small id="onboarding-display-note">The name people see.</small>
             <input aria-labelledby="onboarding-display-label" aria-describedby="onboarding-display-note" autoComplete="nickname" required maxLength={120} value={displayName} onChange={event => setDisplayName(event.target.value)}/>
           </label>
-          <label><span id="onboarding-username-label">Username</span> <small id="onboarding-username-note">Your unique @handle.</small>
-            <input aria-labelledby="onboarding-username-label" aria-describedby="onboarding-username-note" autoComplete="username" autoCapitalize="none" spellCheck={false} required maxLength={80} value={username} onChange={event => setUsername(event.target.value)}/>
+          <label><span id="onboarding-username-label">Username</span> <small id="onboarding-username-note">Your unique @handle: letters, numbers, . or _.</small>
+            <input aria-labelledby="onboarding-username-label" aria-describedby="onboarding-username-note" autoComplete="username" autoCapitalize="none" spellCheck={false} required maxLength={30} value={username} onChange={event => setUsername(event.target.value)}/>
           </label>
           <fieldset className="onboarding-birthday" aria-describedby="birthday-note">
             <legend>Birthday</legend>

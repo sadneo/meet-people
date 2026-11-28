@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from 'react-router'
+import { deviceLocationAvailable, requestDeviceLocation } from '../platform/location'
 import type { FriendsPreferences } from '../../shared/friends-search-preferences'
 import type { MapCenter, MapPreview, MapPreviewRequest } from '../../shared/location-picker'
 import type { SearchLocationReceipt } from '../../shared/search-locations'
@@ -10,12 +10,12 @@ import { ErrorMessage, Icon } from './common'
 import { useModalLayer } from './modal-layer'
 import { useCurrent } from './current'
 
-type Props = { mode: 'friends' | 'dating'; value: FriendsPreferences['searchArea']; radiusMiles: number; disabled?: boolean; save: (area: FriendsPreferences['searchArea']) => Promise<boolean> }
+type Props = { mode: 'friends' | 'dating'; value: FriendsPreferences['searchArea']; radiusMiles: number; disabled?: boolean; openInitially?: boolean; onClose?: () => void; save: (area: FriendsPreferences['searchArea']) => Promise<boolean> }
 export function LocationPicker(props: Props) {
   const current = useCurrent(), layer = useModalLayer(), trigger = useRef<HTMLButtonElement>(null)
   // React keys can appear in diagnostics; never use the bearer token as a key.
   const binding = useMemo(() => ({ token: current.session.access_token, key: crypto.randomUUID() }), [current.session.access_token])
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(props.openInitially ?? false)
   const label = props.value.resolvedLocationRef
     ? props.value.source === 'temporary' ? props.value.areaLabel : current.account?.profile?.location_city
     : null
@@ -23,7 +23,7 @@ export function LocationPicker(props: Props) {
     <button ref={trigger} type="button" className="account-area search-area-button" disabled={props.disabled || !layer} onClick={() => setOpen(true)}>
       <span><span className="search-area-label">Search area</span><span>{label || 'Choose an area'}</span></span><Icon name="ChevronRight"/>
     </button>
-    {open && layer?.host && createPortal(<SearchAreaSheet key={`${props.mode}:${binding.key}`} {...props} close={() => setOpen(false)}/>, layer.host)}
+    {open && layer?.host && createPortal(<SearchAreaSheet key={`${props.mode}:${binding.key}`} {...props} close={() => { setOpen(false); props.onClose?.() }}/>, layer.host)}
   </div>
 }
 function SearchAreaSheet({ mode, value, radiusMiles, disabled, save, close }: Props & { close: () => void }) {
@@ -114,11 +114,17 @@ function SearchAreaSheet({ mode, value, radiusMiles, disabled, save, close }: Pr
     void resolve({ kind: 'place', mode, placeId, sessionToken: token }, true)
   }
   async function currentLocation() {
-    if (!current.account?.settings.location) { setError('Enable location access in Profile → Discovery before using your current location.'); return }
+    if (locating || savingRef.current || current.busy || !current.available) return
     const generation = ++version.current; operation.current?.abort(); if (moveTimer.current) clearTimeout(moveTimer.current)
     setPreview(null); setLocating(true); setError(''); setQuery('')
     try {
-      const position = await new Promise<GeolocationPosition>((ok, fail) => navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: false, maximumAge: 0, timeout: 15000 }))
+      const position = await requestDeviceLocation(async () => {
+        if (!alive.current || generation !== version.current) throw new Error('Location request cancelled.')
+        if (!current.account!.settings.location &&
+            !await current.save({ ...current.account!, settings: { ...current.account!.settings, location: true } })) {
+          throw new Error('Location permission was granted, but your search setting could not be saved. Try again.')
+        }
+      })
       if (!alive.current || generation !== version.current) return
       if (position.coords.accuracy > 1000 || Date.now() - position.timestamp > 5 * 60_000 || position.timestamp > Date.now() + 15000) throw new Error('Your location is too imprecise. Search for an area or move the map instead.')
       await resolve({ kind: 'pin', mode, center: { latitude: position.coords.latitude, longitude: position.coords.longitude }, deviceAssisted: true }, true)
@@ -153,7 +159,7 @@ function SearchAreaSheet({ mode, value, radiusMiles, disabled, save, close }: Pr
           if (event.key === 'Enter') { event.preventDefault(); if (suggestions[activeSuggestion]) select(suggestions[activeSuggestion].placeId) }
           if (event.key === 'Escape' && suggestions.length) { event.preventDefault(); event.stopPropagation(); setSuggestions([]) }
         }}/>
-      <button type="button" className="location-current" disabled={!ready || saving || locating || !navigator.geolocation} onClick={() => void currentLocation()}><Icon name="Location"/>Use my current location</button>
+      <button type="button" className="location-current" disabled={!ready || saving || locating || current.busy || !current.available || !deviceLocationAvailable()} onClick={() => void currentLocation()}><Icon name="Location"/>Use my current location</button>
       {searching && <span role="status">Searching…</span>}
       {!searching && query.trim().length >= 2 && !suggestions.length && !error && <span role="status">No areas found.</span>}
       {!!suggestions.length && <ul id="location-suggestions" className="location-suggestions" role="listbox" aria-label="Areas">{suggestions.map((item, index) => <li key={item.placeId} id={`location-suggestion-${index}`} role="option" aria-selected={activeSuggestion === index}><button type="button" onClick={() => select(item.placeId)}>{item.label}</button></li>)}</ul>}
@@ -166,7 +172,6 @@ function SearchAreaSheet({ mode, value, radiusMiles, disabled, save, close }: Pr
     <footer className="location-picker-footer">
       <p className="location-chosen" role="status">{locating ? 'Finding area…' : label || 'Choose an area'}</p>
       <ErrorMessage>{error}</ErrorMessage>
-      {!current.account?.settings.location && error.includes('Enable location') && <Link to="/profile?section=discovery">Location settings</Link>}
       {!ready && error && <button type="button" className="btn light" onClick={() => { setError(''); setInitial(null); setReady(false); setRetry(count => count + 1) }}>Retry map</button>}
       <button type="button" className="btn" disabled={!preview || !ready || locating || saving || disabled} onClick={() => void confirm()}>{saving ? 'Saving…' : 'Set search area'}</button>
     </footer>

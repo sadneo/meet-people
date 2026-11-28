@@ -87,6 +87,7 @@ The safety routes have no screen wired to them yet.
 |---|---|
 | `GET /api/connections` | Your connections |
 | `GET / POST / DELETE /api/connections/:targetId`, `POST /api/connections/:targetId/accept` | Read, request, remove or accept a connection |
+| `POST /api/connections/:targetId/cancel` | Cancel your pending outgoing request using its original requestedAt timestamp. A stale request returns HTTP 409. |
 | `GET /api/conversations?page=` | Inbox |
 | `GET /api/conversations/activity` | Unread activity |
 | `GET /api/conversations/:id/messages?before=\|after=` | Message history |
@@ -95,7 +96,7 @@ The safety routes have no screen wired to them yet.
 | `POST /api/conversations`, `POST /api/conversations/:id/leave` | Always return 503. Event-group chats can't be created or left yet. |
 
 ### Not an HTTP route
-- **The event group worker** (`pnpm start:worker`) is a separate background process that forms event groups. It's off by default.
+- **The event group worker** (`node dist/api/api/event-group-worker-main.js`) is a separate background process that forms event groups. It's off by default.
 - **The local development sign-in** (`dev/development-login.ts`) exists only in the local Vite dev server and is never built into production.
 
 ## 3. Rate limits

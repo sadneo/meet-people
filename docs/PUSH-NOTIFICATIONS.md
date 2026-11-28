@@ -7,19 +7,17 @@ Firebase Cloud Messaging -> the phone shows an alert; tapping it opens Messages.
 Alerts are generic ("New message" / "New connection request"). Names and message text are never sent,
 so nothing sensitive reaches the lock screen or Google's servers.
 
-## 1. Install dependencies and add the script
+## 1. Install dependencies
 ```
 pnpm add @capacitor/push-notifications google-auth-library
 ```
-Add this line to `"scripts"` in `package.json`:
-```
-"start:push": "node dist/api/api/push-dispatcher-main.js",
-```
+After `pnpm build:api`, run the dispatcher with `node dist/api/api/push-dispatcher-main.js`.
 Commit the updated `pnpm-lock.yaml` (the Dockerfile installs with `--frozen-lockfile`).
 
 ## 2. Firebase
 1. Open the Firebase project you already use for hosting -> Project settings -> **Add app** -> Android.
-   Package name: `com.cse416.meetpeople`.
+   Package names: `garden.pebble.android` (production) and `garden.pebble.android.dev`
+   (the sandbox "Pebble Dev" flavour); register both and download one file containing both.
 2. Download `google-services.json` into `android/app/google-services.json`. The Gradle files already apply
    the Google services plugin when that file exists.
 3. Project settings -> **Service accounts** -> *Generate new private key*. This JSON lets the server send
@@ -42,17 +40,19 @@ If your newest existing migration has a later timestamp, rename this file with a
 ## 4. Run the dispatcher
 It needs `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_JSON`
 and `PUSH_DISPATCH_ENABLED=true`.
-- **Locally:** put those in `.env.local`, add `PUSH_DISPATCH_INTERVAL_MS=5000`, then
-  `pnpm exec tsx --env-file=.env.local api/push-dispatcher-main.ts`.
+- **Locally:** put the Firebase values and `PUSH_DISPATCH_ENABLED=true` in `.env`, add `PUSH_DISPATCH_INTERVAL_MS=5000`.
+  `pnpm dev` does not start the dispatcher, and local Supabase values are not in any file: with `pnpm dev`
+  running, copy the API URL and service-role key from `pnpm supabase status`, then
+  `SUPABASE_URL=<API URL> SUPABASE_SERVICE_ROLE_KEY=<key> pnpm exec tsx --env-file=.env api/push-dispatcher-main.ts`.
 - **Hosted:** deploy it as a Cloud Run **Job** from the same image (command
-  `node dist/api/api/push-dispatcher-main.js`), the way `scripts/deploy-worker.sh` deploys the event-group
-  worker, and trigger it every minute with Cloud Scheduler. Alerts arrive within about a minute. For faster
+  `node dist/api/api/push-dispatcher-main.js`), as `scripts/deploy-workers.mjs` does in both
+  environments, and trigger it every minute with Cloud Scheduler. Alerts arrive within about a minute. For faster
   delivery, run it as an always-on process with `PUSH_DISPATCH_INTERVAL_MS=5000`.
 
 ## 5. Build and test
 ```
 pnpm install
-pnpm android
+pnpm android --target sandbox|production   # or, for the emulator with pnpm dev:mobile running: pnpm android --dev
 ```
 Use a real phone, or an emulator image that includes **Google Play** (plain AOSP images cannot receive pushes).
 1. Sign in on the phone -> Settings -> turn on **Notifications on this phone** and allow the prompt.

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { developmentLoginPlugin } from './dev/development-login.js'
+import { runIdPlugin } from './dev/run-id.js'
 
 const apiPort = process.env.API_PORT ?? 3001
 const proxy = { '/api': `http://127.0.0.1:${apiPort}` }
@@ -8,7 +9,7 @@ const proxy = { '/api': `http://127.0.0.1:${apiPort}` }
 export default defineConfig({
   // Mocked unit tests must not inherit a developer's hosted API or credentials.
   envDir: process.env.VITEST ? false : undefined,
-  plugins: [react(), developmentLoginPlugin()],
+  plugins: [react(), developmentLoginPlugin(), runIdPlugin()],
   build: {
     outDir: 'dist/web',
   },

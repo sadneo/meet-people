@@ -11,13 +11,14 @@ from `scripts/configure-deployment.mjs`. For local setup, use
 | URL | Firebase site | Product / artifact | Branch | Supabase | Developer toolbar |
 | --- | --- | --- | --- | --- | --- |
 | https://pebble.garden | `cse416-meet-people` | Web / `dist/web` | `main` | `pebble-production` | Off |
+| https://mobile.pebble.garden | `cse416-meet-people-mobile` | Mobile / `dist/mobile` | `main` | `pebble-production` | Off |
 | https://web.dev.pebble.garden | `cse416-meet-people-sandbox` | Web / `dist/web` | `dev` | `pebble-sandbox` | On |
 | https://mobile.dev.pebble.garden | `cse416-meet-people-dev` | Mobile / `dist/mobile` | `dev` | `pebble-sandbox` | On |
 
 Each site's `https://<site>.web.app` URL serves the same product as its custom domain.
 Web stays responsive on desktop and phone browsers. Mobile is the authenticated
 application and the source for Capacitor Android and future iOS builds.
-Both dev products share sandbox data; sessions/localStorage remain separate per origin.
+Both products in an environment share its data; sessions/localStorage remain separate per origin.
 
 | Environment | Supabase project | Reference | Region |
 | --- | --- | --- | --- |
@@ -38,22 +39,43 @@ API containers scale to zero, with a maximum of two instances per service.
 
 ## Releases
 
-Pushes to **main deploy production**. **Sandbox deploys only when run manually**
-(see below). The environments use separate GitHub settings and backends. Both
+Pushes to **main deploy production** and pushes to **dev deploy sandbox**, through
+the same workflow and stages. Both can also be run manually (see below). The
+environments use separate GitHub settings and backends. Both
 sandbox builds use one resolved commit, one API deployment and one database.
 
-1. Open a PR into `dev`; `Pull request checks` runs full CI and Android checks.
-   This is the only place tests run.
+1. Open a PR into `dev`. GitHub runs full CI and Android compilation. Merging it
+   deploys sandbox, so every change is exercised there before production.
 2. Open a PR from `dev` into `main`. `Main source` (required check `Require dev`)
    rejects PRs into `main` from any other branch or fork, so hotfixes go through
-   `dev` first. Use merge commits, not squash, so `dev` and `main` stay in step.
+   `dev` first. Full CI also verifies the proposed production merge and supplies
+   the required `Checks / CI` result on the PR. Use a merge commit to preserve ancestry.
 3. Merging into `main` runs `Deploy`, which resolves one commit SHA and prepares
    production frontend and API image builds without re-running tests.
 4. Deployment downloads frontend artifacts from the same workflow run and uses the
-   prepared API image by digest. It does not rebuild them. It deploys Edge Functions,
-   applies migrations without development seeds, configures services and deploys Hosting.
+   prepared API image by digest. It does not rebuild them. It then runs five stages:
+
+   | Stage | Where | What |
+   |---|---|---|
+   | Preflight | `release.yml` | settings validation, image check, production recovery policy, migration preview. Changes nothing. |
+   | Backend | `deploy-stages.mjs backend` | Edge Functions, reviewed migrations (no development seeds), product schema, hosted config, event sync |
+   | Services | `deploy-stages.mjs services` | API, push and event-group workers with their schedules; keeps the Supabase dining cron paused |
+   | Hosting | `release.yml` | web site, then mobile site |
+   | Verify | `release.yml` | hosted smoke checks and summary |
+
 5. Every deployed URL runs hosted smoke checks, even if another URL fails. Any
    failed smoke check fails the run; it does not automatically roll back changes.
+
+**Adding to a release:** add Edge Functions to `EDGE_FUNCTIONS` and new backend
+or service steps to `scripts/deploy-stages.mjs`, not to `release.yml`. A test
+fails if a directory in `supabase/functions/` is in neither `EDGE_FUNCTIONS` nor
+`UNDEPLOYED_FUNCTIONS` (currently `ingest-ticketmaster`, deliberately not deployed).
+
+**After a partial failure:** every step is safe to repeat (function and Cloud Run
+deploys overwrite, applied migrations are skipped, schedules are reconciled), so
+fix the cause and re-run Deploy. Each step's log is a collapsible group, and the
+failing step is reported as an error naming it. To roll production back, use a
+manual production redeploy of the previous main SHA. Migrations are never reverted.
 
 Version tags are release labels only. Production pipelines queue as complete runs
 (`queue: max`, up to 100 pending), preventing faster builds from overtaking an
@@ -97,7 +119,8 @@ first successful runs of the parallel pipeline before claiming a speedup.
 
 ### Manual sandbox deployment
 
-Actions → **Deploy** → **Run workflow**, using workflow branch **dev** or **main**:
+Merging into dev deploys sandbox automatically. To redeploy or roll sandbox back,
+use Actions → **Deploy** → **Run workflow**, with workflow branch **dev** or **main**:
 
 - Environment: `sandbox`
 - Source ref: `dev` (or blank), or a full commit SHA already on dev
@@ -134,7 +157,7 @@ environments:
 
 | Location | Values |
 | --- | --- |
-| GitHub environment variables | `GCP_PROJECT_ID`, `GCP_REGION`, `GAR_REPOSITORY`, `GCP_DEPLOY_SA_EMAIL`, `GCP_WIF_PROVIDER`, `API_SERVICE`, `API_RUNTIME_ACCOUNT`, `API_SECRET`, `WORKER_JOB`, `WORKER_RUNTIME_ACCOUNT`, `FIREBASE_WEB_SITE_ID`, sandbox `FIREBASE_MOBILE_SITE_ID`, `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
+| GitHub environment variables | `GCP_PROJECT_ID`, `GCP_REGION`, `GAR_REPOSITORY`, `GCP_DEPLOY_SA_EMAIL`, `GCP_WIF_PROVIDER`, `API_SERVICE`, `API_RUNTIME_ACCOUNT`, `API_SECRET`, `WORKER_JOB`, `WORKER_RUNTIME_ACCOUNT`, `FIREBASE_WEB_SITE_ID`, `FIREBASE_MOBILE_SITE_ID`, `SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
 | GitHub environment secret | `SUPABASE_ACCESS_TOKEN`, with access to that environment's Supabase project |
 | GCP Secret Manager | `pebble-supabase-service-role` / `pebble-supabase-service-role-sandbox`, accessible to the matching API runtime identity |
 | Supabase Vault | `pebble_project_url`, `pebble_ingest_token`, `pebble_embed_secret` |
@@ -158,65 +181,61 @@ artifacts include `build-info.json` with product, branch, commit and Supabase UR
 Hosted smoke checks compare it with the intended release and verify the actual
 JavaScript's Supabase URL and web/mobile entry point.
 
-### Sandbox Maps deployment
+### Environment parity
 
-Sandbox Maps activation was approved by the project owner during setup. No
-production Maps activation is included. Configure **GitHub environment `sandbox`
-→ Variables → `VITE_GOOGLE_MAPS_API_KEY`** with the public, website-restricted
-`Pebble Map Browser` key. `prepare.yml` explicitly passes it to the frontend build;
-preparation fails before building if it is missing. Private Maps/signing values
-stay in Secret Manager and must never become `VITE_*` variables or build secrets.
+Sandbox and production run the same scripts with the same settings. Only resource
+names, the database, domains and secret values differ (`-sandbox` suffix, or the
+environment name in secret names). Deliberate exceptions:
 
-`scripts/deploy-api.sh` declares the approved sandbox configuration:
+- Sandbox builds with the developer toolbar (and its Garden demo-funds shortcut).
+- Only production runs the backup-policy check before deploying.
 
-| Runtime setting | Sandbox value |
+The Supabase project refs live only in `supabaseRefs` in
+`scripts/configure-deployment.mjs`; other scripts import them. The exception is
+the SB Engaged Edge Function's unused mirror mode, which hard-codes the production
+export URL.
+
+### Maps deployment
+
+Configure **GitHub environment → Variables → `VITE_GOOGLE_MAPS_API_KEY`** with that
+environment's public, website-restricted browser key. `prepare.yml` passes it to
+the frontend build, which fails if it is missing. Private Maps/signing values stay
+in Secret Manager and must never become `VITE_*` variables or build secrets.
+
+`scripts/deploy-api.sh` declares, for each environment:
+
+| Runtime setting | Value |
 | --- | --- |
-| `GOOGLE_MAPS_SERVER_API_KEY` | Secret Manager `pebble-google-maps-server-key-sandbox`, version `1` |
-| `SEARCH_LOCATION_SIGNING_KEY` | Secret Manager `pebble-search-location-signing-key-sandbox`, version `1` |
+| `GOOGLE_MAPS_OAUTH_PROJECT` | The GCP project; Places/Geocoding use the runtime identity (ADC), not the server key |
+| `GOOGLE_MAPS_SERVER_API_KEY` | Secret Manager `pebble-google-maps-server-key-<environment>`, version `1` (unused while OAuth is set) |
+| `SEARCH_LOCATION_SIGNING_KEY` | Secret Manager `pebble-search-location-signing-key-<environment>`, version `1` |
 | `GOOGLE_MAPS_STORAGE_APPROVED` | `true` |
-| `GOOGLE_MAPS_REQUESTS_PER_DAY` | `2000` per API process, not an account-wide spending cap |
-| Direct VPC network / subnet | `pebble-sandbox-egress` / `pebble-sandbox-egress-us-east4` |
-| VPC egress | `all-traffic`, region `us-east4` |
+| `GOOGLE_MAPS_REQUESTS_PER_DAY` | `200` per API process, not an account-wide spending cap |
+| Direct VPC network / subnet | `pebble-<environment>-egress` / `pebble-<environment>-egress-us-east4`, `all-traffic` |
 
-The operator-created router `pebble-sandbox-egress-router` and NAT
-`pebble-sandbox-egress-nat` use the reserved address `pebble-sandbox-egress-ip`
-(`136.23.87.38`). Restrict the server key to that outbound IP and Places API (New)
-and Geocoding API. The browser key uses Maps JavaScript API and website restrictions,
-including `https://mobile.dev.pebble.garden/*`; retain localhost only as needed.
-Authorize additional hosted origins separately if testing there (for example the
-Firebase `web.app` alias); do not widen the key to arbitrary websites.
+The API runtime identity needs `roles/serviceusage.serviceUsageConsumer` (otherwise
+Google returns `USER_PROJECT_DENIED`) and Secret Accessor on both secrets;
+`scripts/bootstrap-gcp.sh` grants these. Each database's
+`location_private.map_signing_key` must hold the same bytes as its signing secret,
+and the owner-only purge must run at least every 15 minutes. See
+[Google search locations](google-search-locations.md).
 
-The sandbox runtime account must have Secret Accessor on both secrets. The default
-Cloud Run service agent needs its standard same-project Direct VPC permissions.
-This release does not create infrastructure, change IAM, read secret payloads or
-install/rotate database signing keys. Before rollout, the operator must install
-the **same signing bytes** in sandbox's `location_private.map_signing_key` and
-schedule the owner-only purge at least every 15 minutes. See
-[Google search locations](google-search-locations.md) for the privacy/retention gate.
-
-Sandbox uses `--update-env-vars` and `--update-secrets` to retain unrelated runtime
-settings while explicitly reconciling the listed Maps settings on every release.
-Production retains its existing deployment arguments and does not receive sandbox
-keys, approval or networking. Secret versions are pinned: rotation requires updating
-the references and, for the signing secret, coordinating the database value.
-
-A manual sandbox deployment prepares both sandbox products, deploys the API and
-publishes Firebase Hosting with `pinTag`. Merging or opening a PR does not deploy sandbox. The
-mobile hosted smoke verifies the built JavaScript includes the expected browser
-key; it does not issue billable Google requests or prove authenticated save flows.
-After deployment, test search, pin movement, confirm, reopen and permission-denied
-behavior on `mobile.dev.pebble.garden`. Monitor purge job execution and Google quotas.
+Both use `--update-env-vars`/`--update-secrets`, so unrelated runtime settings are
+kept. Secret versions are pinned: rotation requires updating the references and,
+for the signing secret, coordinating the database value.
 
 Emergency disable: set `GOOGLE_MAPS_STORAGE_APPROVED=false` on Cloud Run and route
-Hosting to that revision; **pause releases or change the declared approval in
-`deploy-api.sh` too**, otherwise the next sandbox release restores `true`. Keep the
-purge job running. NAT and its reserved IP continue incurring charges independently
-of the activation flag. Production is not part of this rollout.
+Hosting to that revision; **pause releases or change `deploy-api.sh` too**,
+otherwise the next release restores `true`.
 
-Site variables are `FIREBASE_WEB_SITE_ID=cse416-meet-people` in production;
+Site variables are `FIREBASE_WEB_SITE_ID=cse416-meet-people` and
+`FIREBASE_MOBILE_SITE_ID=cse416-meet-people-mobile` in production;
 `FIREBASE_WEB_SITE_ID=cse416-meet-people-sandbox` and
-`FIREBASE_MOBILE_SITE_ID=cse416-meet-people-dev` in sandbox. These variables were
-configured in GitHub on 2026-11-01. Legacy Hosting/Devtools variables remain for
+`FIREBASE_MOBILE_SITE_ID=cse416-meet-people-dev` in sandbox. The sandbox variables
+were configured in GitHub on 2026-11-01. Before the first production release with
+the mobile site, create the `cse416-meet-people-mobile` Hosting site, connect
+`mobile.pebble.garden`, set the production `FIREBASE_MOBILE_SITE_ID` variable, and
+allow the new origins in the production Maps browser key's website restrictions. Legacy Hosting/Devtools variables remain for
 older workflow revisions; the new workflow uses the explicit product names.
 
 The workflow uses `supabase link` and CLI-managed database credentials through the
@@ -226,9 +245,12 @@ discovered pooler. The old `SUPABASE_DB_URL` secret is not consumed.
 `hosting/deployment/supabase/config.toml`. The generated Auth configuration enables
 signup with email confirmation and secure password changes. It allows callback
 and reset routes on the environment's custom domains and `web.app` origins, plus
-the existing `com.cse416.meetpeople://app/` native callback/reset routes. Sandbox's
-default Auth URL is `https://mobile.dev.pebble.garden`; production's remains
-`https://pebble.garden`. Mobile clients request their explicit callback destination.
+the existing `com.cse416.meetpeople://app/` native callback/reset routes. Sandbox
+also allows the `com.cse416.meetpeople.dev://app/` routes used by the side-by-side
+Pebble Dev APK (the Android `sandbox` flavour). The default Auth URL is each
+environment's web origin: `https://web.dev.pebble.garden` in sandbox and
+`https://pebble.garden` in production. Mobile clients request their
+explicit callback destination.
 Do not push local development `supabase/config.toml` to hosted projects.
 
 ### Recreate infrastructure
@@ -246,12 +268,15 @@ missing infrastructure, IAM and environment-scoped GitHub variables. It does not
 create billing accounts, Hosting sites, Supabase projects or SMTP services.
 Populate each runtime secret from stdin before deploying its API.
 
-After migrations and Edge deployment, `pnpm hosting:configure` preserves generated
-shared tokens, synchronizes Vault/Edge secrets and pushes hosted Auth settings.
-Set `SUPABASE_PROJECT_REF` to the intended environment and `HOSTED_CONFIG_WORKDIR`
-to `hosting/deployment` for generated settings; its default `hosting` directory
-contains the production fallback. Optional provider secrets can be supplied through
-ignored `.env.hosting.local`. Unsupplied Edge secrets are preserved.
+After migrations and Edge deployment, the Release workflow runs `pnpm hosting:configure`,
+which preserves generated shared tokens, synchronizes Vault/Edge secrets and pushes
+hosted Auth settings. It runs only in CI and refuses to run locally. It uses
+`SUPABASE_PROJECT_REF` for the intended environment and `HOSTED_CONFIG_WORKDIR`
+set to `hosting/deployment`, which `node scripts/configure-deployment.mjs` generates
+for that environment. There is no fallback, so one environment's Auth settings can
+never be pushed to the other. Optional provider secrets come from the workflow
+environment; unsupplied Edge secrets are preserved. To change one hosted function
+secret by hand, run `pnpm exec supabase secrets set --project-ref <ref> NAME=value`.
 
 ### Database sources
 
@@ -353,14 +378,15 @@ releasing the already-active version directly, so a new clone is required.
   failed smoke checks do not automatically roll back a deployment.
 - Use Cloud Run and Supabase logs without logging tokens, request bodies, Vault
   values or provider keys.
-- `release.yml` hardcodes `EVENT_GROUP_WORKER_ENABLED=false`. It packages the worker
-  job but does not execute or schedule it. The runtime requires both worker/scoring
-  gates, a dedicated worker JWT, enabled registry/database gates and verified
-  provider configuration. Its job has zero retries; uncertain scoring must not be
-  automatically repeated. `scripts/deploy-worker.sh` defines the runtime settings.
+- `scripts/deploy-workers.mjs` deploys the push dispatcher (every minute) and the
+  event-group worker (every 2 minutes) as Cloud Run Jobs with Cloud Scheduler, in
+  both environments. Jobs have zero retries; uncertain scoring must not be
+  automatically repeated. The worker signs in with
+  `pebble-event-group-worker-credentials-<environment>`, an internal Auth identity
+  enabled in `event_group_private.workers`.
 
 ```sh
-pnpm test:deployment
+pnpm test
 pnpm test:hosted https://pebble.garden
 pnpm test:hosted https://web.dev.pebble.garden
 pnpm test:hosted https://mobile.dev.pebble.garden
@@ -368,5 +394,6 @@ pnpm test:hosted https://mobile.dev.pebble.garden
 
 The smoke check covers SPA routes/assets, API health, database-backed reads and
 anonymous private-account denial. Hosted account/product checks additionally
-create disposable users and require explicit administrative credentials; see
+create disposable users and require `--target sandbox|production` plus that
+target's `*_SUPABASE_SERVICE_ROLE_KEY` in `.env`; see
 [test prerequisites](../tests/README.md#integration-tests).

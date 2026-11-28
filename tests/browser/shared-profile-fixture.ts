@@ -22,7 +22,7 @@ export async function sharedProfileFixture(page: Page, options: { identity?: 'av
   const calls: { path: string; method: string; body: unknown }[] = [], external: string[] = []
   await page.route('**/*', route => {
     const request = route.request(), url = new URL(request.url())
-    if (url.origin !== 'http://127.0.0.1:3194') { external.push(url.origin); return route.abort() }
+    if (url.origin !== `http://127.0.0.1:${process.env.PEBBLE_BROWSER_PORT}`) { external.push(url.origin); return route.abort() }
     if (!url.pathname.startsWith('/api/')) return route.continue()
     calls.push({ path: url.pathname, method: request.method(), body: request.method() === 'PUT' ? request.postDataJSON() : null })
     if (url.pathname.endsWith('/friends-search-preferences')) {

@@ -14,7 +14,7 @@ test('two users upload, find Friends, discover Dating, accept and message throug
   for(const [index,page] of pages.entries()){
    await page.route('**/*',async route=>{
     const url=new URL(route.request().url())
-    if(url.origin!=='http://127.0.0.1:3194'){external.push(url.origin);return route.abort()}
+    if(url.origin!==`http://127.0.0.1:${process.env.PEBBLE_BROWSER_PORT}`){external.push(url.origin);return route.abort()}
     if(!url.pathname.startsWith('/api/'))return route.continue()
     calls.push(`${index} ${route.request().method()} ${url.pathname}`)
     const response=await route.fetch({url:'http://127.0.0.1:3195'+url.pathname+url.search})
@@ -32,7 +32,7 @@ test('two users upload, find Friends, discover Dating, accept and message throug
   await dialog.getByRole('button',{name:'Upload profile photo',exact:true}).click()
   await expect(dialog).not.toBeVisible()
   await morgan.reload();await expect(morgan.locator('.account-portrait')).toHaveAttribute('src',/^blob:/)
-  for(const page of pages){await page.goto('/matchmaking');await page.getByRole('button',{name:'Find Friends',exact:true}).click();await expect(page.getByRole('button',{name:'Check for a match',exact:true})).toBeVisible()}
+  for(const page of pages){await page.goto('/matchmaking?mode=friends');await page.getByRole('button',{name:'Find Friends',exact:true}).click();await expect(page.getByRole('button',{name:'Check for a match',exact:true})).toBeVisible()}
   expect(calls.filter(path=>path.endsWith('/result'))).toEqual([])
   await alex.getByRole('button',{name:'Check for a match',exact:true}).click()
   await expect(alex.getByRole('heading',{name:'Morgan',exact:true})).toBeVisible()

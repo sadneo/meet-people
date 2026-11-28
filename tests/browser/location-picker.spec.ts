@@ -36,7 +36,7 @@ for (const mode of ['friends', 'dating'] as const) for (const width of [320, 390
 test('cancel and Escape discard preview changes and restore focus; GPS is never requested on open', async ({ page }) => {
   const fixture = await wiringFixture(page), maps = await mockLocationPicker(page)
   await page.addInitScript(() => Object.defineProperty(navigator, 'geolocation', { value: { getCurrentPosition() { throw new Error('Unrequested GPS read') } } }))
-  await page.goto('/matchmaking?preferences=true')
+  await page.goto('/matchmaking?mode=friends&preferences=true')
   const trigger = page.getByRole('button', { name: 'Search area Choose an area' })
   await trigger.click()
   await page.getByRole('combobox', { name: 'Search city or neighborhood' }).fill('Brooklyn')
@@ -50,7 +50,7 @@ test('cancel and Escape discard preview changes and restore focus; GPS is never 
 
 test('map movement invalidates the old label and saves the exact chosen point only after confirmation', async ({ page }) => {
   const fixture = await wiringFixture(page), maps = await mockLocationPicker(page)
-  await page.goto('/matchmaking?preferences=true')
+  await page.goto('/matchmaking?mode=friends&preferences=true')
   await page.getByRole('button', { name: 'Search area Choose an area' }).click()
   await expect(page.getByRole('combobox', { name: 'Search city or neighborhood' })).toBeEnabled()
   const center = { latitude: 40.7123, longitude: -73.9234 }
@@ -68,7 +68,7 @@ test('current location is an explicit centering action and still needs confirmat
   fixture.getAccount().settings.location = true
   await page.context().grantPermissions(['geolocation'])
   await page.context().setGeolocation({ latitude: 40.7, longitude: -73.9, accuracy: 30 })
-  await page.goto('/matchmaking?preferences=true')
+  await page.goto('/matchmaking?mode=friends&preferences=true')
   await page.getByRole('button', { name: 'Search area Choose an area' }).click()
   await page.getByRole('button', { name: 'Use my current location' }).click()
   await expect(page.getByRole('button', { name: 'Set search area' })).toBeEnabled()
@@ -78,21 +78,24 @@ test('current location is an explicit centering action and still needs confirmat
 
 test('missing configuration is an honest unavailable state, not a fake map', async ({ page }) => {
   await wiringFixture(page); await mockLocationPicker(page, { available: false })
-  await page.goto('/matchmaking?preferences=true')
+  await page.goto('/matchmaking?mode=friends&preferences=true')
   await page.getByRole('button', { name: 'Search area Choose an area' }).click()
   await expect(page.getByRole('alert')).toHaveText('Map search is not configured yet.')
   await expect(page.getByRole('button', { name: 'Set search area' })).toBeDisabled()
   await expect(page.getByText('Synthetic map (browser test)')).toHaveCount(0)
 })
 
-test('device opt-out leaves manual search available', async ({ page }) => {
+test('allowing current location enables the saved search setting and centers the picker', async ({ page }) => {
   const fixture = await wiringFixture(page), maps = await mockLocationPicker(page)
   fixture.getAccount().settings.location = false
-  await page.goto('/matchmaking?preferences=true')
+  await page.context().grantPermissions(['geolocation'])
+  await page.context().setGeolocation({ latitude: 40.7, longitude: -73.9, accuracy: 30 })
+  await page.goto('/matchmaking?mode=friends&preferences=true')
   await page.getByRole('button', { name: 'Search area Choose an area' }).click()
   await page.getByRole('button', { name: 'Use my current location' }).click()
-  await expect(page.getByRole('alert')).toContainText('Enable location access')
-  expect(maps.calls.filter(call => call.path.endsWith('/map/preview'))).toHaveLength(0)
+  await expect(page.getByRole('button', { name: 'Set search area' })).toBeEnabled()
+  expect(fixture.getAccount().settings.location).toBe(true)
+  expect(maps.calls.filter(call => call.path.endsWith('/map/preview')).at(-1)?.body).toMatchObject({ kind: 'pin', deviceAssisted: true })
   await page.getByRole('combobox', { name: 'Search city or neighborhood' }).fill('Brooklyn')
   await page.getByRole('button', { name: 'Brooklyn, NY', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Set search area' })).toBeEnabled()
@@ -100,12 +103,13 @@ test('device opt-out leaves manual search available', async ({ page }) => {
 
 test('denied device permission does not block choosing an area manually', async ({ page }) => {
   const fixture = await wiringFixture(page); await mockLocationPicker(page)
-  fixture.getAccount().settings.location = true
+  fixture.getAccount().settings.location = false
   await page.addInitScript(() => Object.defineProperty(navigator, 'geolocation', { value: { getCurrentPosition(_success: unknown, fail: (error: unknown) => void) { fail({ code: 1, message: 'Permission denied' }) } } }))
-  await page.goto('/matchmaking?preferences=true')
+  await page.goto('/matchmaking?mode=friends&preferences=true')
   await page.getByRole('button', { name: 'Search area Choose an area' }).click()
   await page.getByRole('button', { name: 'Use my current location' }).click()
   await expect(page.getByRole('alert')).toContainText('device location is unavailable')
+  expect(fixture.getAccount().settings.location).toBe(false)
   await expect(page.getByRole('combobox', { name: 'Search city or neighborhood' })).toBeEnabled()
   await page.getByRole('combobox', { name: 'Search city or neighborhood' }).fill('Brooklyn')
   await page.getByRole('button', { name: 'Brooklyn, NY', exact: true }).click()
@@ -121,7 +125,7 @@ test('a stale area response cannot overwrite a newer map selection', async ({ pa
     if (body.kind === 'place') { await waiting; return route.fulfill({ json: { center: { latitude: 41, longitude: -74 }, areaLabel: 'Stale area, NY', expiresAt: '2099-01-01T00:00:00Z', ticket: { payload: '{}', signature: 'a'.repeat(64) } } }).catch(() => {}) }
     return route.fallback()
   })
-  await page.goto('/matchmaking?preferences=true')
+  await page.goto('/matchmaking?mode=friends&preferences=true')
   await page.getByRole('button', { name: 'Search area Choose an area' }).click()
   await page.getByRole('combobox', { name: 'Search city or neighborhood' }).fill('Upper Manhattan')
   const started = page.waitForRequest('**/map/preview')
@@ -141,7 +145,7 @@ test('a conflicting save stays in the picker and requires explicit preference re
     if (route.request().method() !== 'PUT') return route.fallback()
     writes++; return route.fulfill({ status: 409, json: { code: 'conflict', error: 'Changed elsewhere.' } })
   })
-  await page.goto('/matchmaking?preferences=true')
+  await page.goto('/matchmaking?mode=friends&preferences=true')
   await page.getByRole('button', { name: 'Search area Choose an area' }).click()
   await page.getByRole('combobox', { name: 'Search city or neighborhood' }).fill('Brooklyn')
   await page.getByRole('button', { name: 'Brooklyn, NY', exact: true }).click()

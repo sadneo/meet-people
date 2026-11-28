@@ -37,12 +37,12 @@ with a dedicated read-only export token. It serves the last completed metadata
 snapshot with the latest cached poster fields; no profile, queue, user, or source
 listing UUID is exported. Snapshots older than three hours are unavailable.
 
-Sandbox's importer runs in mirror mode and copies that snapshot into its own
-listings, preserving sandbox UUIDs. It validates completeness, age, event IDs,
-source URLs and image URLs before writing. It never falls back to upstream
-scraping or starts a second photo worker. Sandbox refreshes hourly, three minutes
-after production's metadata schedule; its images can lag production by up to an
-hour while the initial queue drains.
+Both environments run as producers: each scrapes SB Engaged and runs its own photo
+worker, so scraper changes are exercised in sandbox before production. Mirror
+mode remains available as a fallback (`configure_sbengaged_schedules('mirror')`
+in sandbox): it copies production's snapshot into sandbox listings, preserving
+sandbox UUIDs, after validating completeness, age, event IDs, source URLs and
+image URLs. It never falls back to upstream scraping or starts a photo worker.
 
 Both environments prune imported events ending more than two days ago, using
 the start only when an end is absent. Ongoing events are retained. The public
@@ -77,7 +77,7 @@ existing cached posters reduce the actual backlog. Counts vary with the calendar
 Regression checks:
 
 ```sh
-pnpm test:unit tests/unit/sbengaged-month-sync.test.ts
+pnpm exec vitest run tests/unit/sbengaged-month-sync.test.ts
 # Local SQL test fixtures roll back:
 docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_STOP=1 < tests/integration/sql/sbengaged-month-sync.sql
 deno check supabase/functions/ingest-sbengaged/index.ts supabase/functions/enrich-sbengaged/index.ts supabase/functions/export-sbengaged/index.ts
@@ -86,9 +86,9 @@ deno check supabase/functions/ingest-sbengaged/index.ts supabase/functions/enric
 ## Backfill existing local listings
 
 ```sh
-pnpm events:images --dry-run
-pnpm events:images
-pnpm events:images --limit 100
+pnpm demo images --dry-run
+pnpm demo images
+pnpm demo images --limit 100
 ```
 
 The tool accepts only the verified running local `meet-people` Supabase project.
@@ -100,3 +100,7 @@ queue enrollments, or call an embedding provider.
 
 An event without a public poster retains the neutral image placeholder. The three
 fictional demo events also have no real SBU poster to import.
+
+Event scraping uses Supabase cron in both environments. Release reconciliation
+removes the obsolete duplicate `ingest-sbengaged-hourly` job after verifying its
+project target. Google Cloud event-group and push schedules are separate workers.

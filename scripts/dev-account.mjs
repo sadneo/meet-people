@@ -1,6 +1,22 @@
 // Creates the dev account, or makes an existing one match the configured password.
 // Pure logic with injected Supabase calls so it can be tested without a running Supabase.
+import { randomBytes } from 'node:crypto'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+import { credentialsDir } from './lib/stack.mjs'
+
 const PAGE = 200
+
+// The Android dev APK's login, generated once per stack and kept beside the web development account.
+export function androidDevCredentials(projectId, home = homedir()) {
+  const directory = credentialsDir(projectId, home), file = join(directory, 'android-dev-account.json')
+  try { return JSON.parse(readFileSync(file, 'utf8')) } catch (error) { if (error.code !== 'ENOENT') throw error }
+  const credentials = { email: `android-dev-${randomBytes(3).toString('hex')}@example.com`, password: randomBytes(32).toString('base64url') }
+  mkdirSync(directory, { recursive: true, mode: 0o700 })
+  writeFileSync(file, JSON.stringify(credentials), { mode: 0o600, flag: 'wx' })
+  return credentials
+}
 
 export async function ensureDevAccount({ admin, signIn, email, password }) {
   const created = await admin.createUser({ email, password, email_confirm: true })

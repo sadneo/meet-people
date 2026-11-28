@@ -4,7 +4,7 @@ import { wiringFixture } from './wiring-fixture'
 for (const [reason, title, link, destination] of [
   ['age', 'Friends discovery is for ages 18–99.', 'Review birthdate', '/profile?section=basics'],
   ['profile', 'Set up Friends matchmaking.', 'Set up Friends', null],
-  ['discovery_off', 'Friends discovery is paused.', 'Discovery settings', '/profile?section=discovery'],
+  ['discovery_off', 'Set up Friends matchmaking.', 'Set up Friends', null],
   ['preferences', 'Set up Friends matchmaking.', 'Set up Friends', null],
   ['location', 'Confirm your Friends search area.', 'Review Friends setup', null],
 ] as const) {
@@ -12,7 +12,7 @@ for (const [reason, title, link, destination] of [
     await page.setViewportSize({ width: 320, height: 640 })
     const fixture = await wiringFixture(page)
     await page.route('**/api/matchmaking/friends/status', route => route.fulfill({ json: { available: true, eligible: false, reason } }))
-    await page.goto('/matchmaking')
+    await page.goto('/matchmaking?mode=friends')
     await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
     if (destination) await expect(page.getByRole('link', { name: link, exact: true })).toHaveAttribute('href', destination)
     else await expect(page.getByRole('button', { name: link, exact: true })).toBeVisible()
@@ -34,7 +34,7 @@ test('expiry between the setup check and scoring switches to search-area guidanc
     expired = true; batches++
     return route.fulfill({ status: 409, json: { code: 'friends_setup_required', error: 'Review your profile and Friends preferences.' } })
   })
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   await expect(page.getByRole('heading', { name: 'Confirm your Friends search area.', exact: true })).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
   expect(reads).toBeGreaterThan(1)

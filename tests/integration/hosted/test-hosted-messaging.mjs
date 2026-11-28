@@ -1,7 +1,7 @@
-// Opt-in production messaging acceptance using the root .env and generated fixtures.
+// Opt-in hosted messaging acceptance (production or sandbox) with generated fixtures; run through
+// pnpm test:hosted <url> --messaging --target <t>, which supplies the target's values and DEPLOY_ENVIRONMENT.
 // Requires the remote test app and logged-in Supabase CLI for scoped SQL cleanup.
-import { readFileSync, writeFileSync } from 'node:fs'
-import { parseEnv } from 'node:util'
+import { writeFileSync } from 'node:fs'
 import process from 'node:process'
 import console from 'node:console'
 import { URL } from 'node:url'
@@ -11,13 +11,16 @@ import { execFileSync } from 'node:child_process'
 import { chromium, expect } from '@playwright/test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createClient } from '@supabase/supabase-js'
+import { supabaseRefs } from '../../../scripts/configure-deployment.mjs'
 
 const { fetch, AbortSignal } = globalThis
 
-const env = parseEnv(readFileSync('.env', 'utf8'))
+const env = process.env
 const target = new URL(env.SUPABASE_URL)
 const origin = new URL(env.VITE_API_BASE_URL)
-if (target.origin !== 'https://wacgxhsdhrqigrmqaonc.supabase.co' || origin.origin !== 'https://pebble.garden') throw new Error('Unexpected configured target')
+const environment = process.env.DEPLOY_ENVIRONMENT ?? 'production'
+const expectedApi = { production: 'https://pebble.garden', sandbox: 'https://web.dev.pebble.garden' }[environment]
+if (!expectedApi || target.origin !== `https://${supabaseRefs[environment]}.supabase.co` || origin.origin !== expectedApi) throw new Error('Unexpected configured target')
 const run = randomUUID(), password = randomBytes(28).toString('base64url') + '-Aa1!'
 const report = { target: target.host, api: origin.origin, run, checks: [], cleanup: {} }
 const users = [], clients = [], conversations = []
@@ -98,7 +101,7 @@ try {
     execFileSync('pnpm',['exec','supabase','db','query','--linked','--project-ref',target.hostname.split('.')[0],'--file',cleanupProbe,'--output','json'],{stdio:'pipe',encoding:'utf8',timeout:30000})
   } catch { throw new Error('Run supabase login before testing; SQL cleanup access is required') }
   const readiness = await fetch('http://127.0.0.1:3302/api/health',{signal:AbortSignal.timeout(5000)})
-  requireValue(readiness.status===200,'Start pnpm run dev:remote before this test')
+  requireValue(readiness.status===200,'Start pnpm dev --remote before this test')
   const shape = await admin.from('conversations').select('id,source_key').limit(0)
   requireValue(!shape.error || ['42703', 'PGRST204'].includes(shape.error.code), `conversation_schema_${shape.error?.code}`)
   native = !shape.error
@@ -173,7 +176,6 @@ try {
       const page = await context.newPage(); pages.push(page)
       await page.goto(`${root}/login?returnTo=${encodeURIComponent(`/messages/chat?conversation=${conversation}`)}`)
       await page.getByLabel('Email',{exact:true}).fill(user.email)
-      await page.getByRole('button',{name:'Continue with email',exact:true}).click()
       await page.getByLabel('Password',{exact:true}).fill(password)
       await page.getByRole('button',{name:'Sign in',exact:true}).click()
       await check(page.getByRole('log',{name:'Message history'})).toBeVisible()

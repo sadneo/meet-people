@@ -3,7 +3,7 @@ import type { EventGroupQueue } from '../../shared/matchmaking'
 import { matchmakingClient } from '../features/matchmaking/client'
 import { useCurrent } from '../ui/current'
 import { useAction, useLoad } from '../ui/hooks'
-import { ActionButton, ErrorMessage, PersonPhoto, ResourceState } from '../ui/common'
+import { ActionButton, ErrorMessage, Modal, PersonPhoto, ResourceState } from '../ui/common'
 import { MatchingSetup } from '../ui/MatchingSetup'
 import { useMatchingSetupStatus } from '../ui/useMatchingSetupStatus'
 import { Link } from 'react-router'
@@ -26,6 +26,7 @@ export function EventGroup({ id, available }: { id: string; available: boolean }
   const canJoin = available && state.value?.state === 'idle'
   const readiness = useMatchingSetupStatus(canJoin)
   const [setupOpen, setSetupOpen] = useState(false)
+  const [leaveOpen, setLeaveOpen] = useState(false)
   const setupReady = readiness.value?.profileReady && readiness.value.friendsAreaReady
   const discoveryOff = current.account?.settings.discoverable === false
   function closeSetup() {
@@ -92,6 +93,7 @@ export function EventGroup({ id, available }: { id: string; available: boolean }
             secondary={state.value.state !== "idle"}
             disabled={action.busy || state.loading}
             onClick={() => {
+              if (state.value!.state === "proposal") return setLeaveOpen(true);
               void action.run(async () => {
                 try {
                   if (state.value!.state === "idle") await client.groupJoin(id);
@@ -103,10 +105,18 @@ export function EventGroup({ id, available }: { id: string; available: boolean }
               });
             }}
           >
-            {state.value.state === "idle" ? "Join group queue" : "Leave group queue"}
+            {state.value.state === "idle" ? "Join group queue" : state.value.state === "proposal" ? "Leave group" : "Leave group queue"}
           </ActionButton>
         )}
       </div>
+      {leaveOpen && <Modal variant="sheet" title="Leave this group?" close={() => setLeaveOpen(false)}>
+        <p>You won’t be grouped with these people for this event, and the suggestion is removed for them too.</p>
+        <ErrorMessage>{action.error}</ErrorMessage>
+        <ActionButton disabled={action.busy} onClick={() => { void action.run(async () => {
+          try { await client.groupLeave(id); setLeaveOpen(false); } finally { state.reload(); readiness.reload(); }
+        }); }}>Leave group</ActionButton>
+        <ActionButton secondary disabled={action.busy} onClick={() => setLeaveOpen(false)}>Cancel</ActionButton>
+      </Modal>}
       </div>
     </section>
   );

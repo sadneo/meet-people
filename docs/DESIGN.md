@@ -65,7 +65,7 @@ Raster artwork stays crisp and keeps its original aspect ratio.
 ## Navigation and layout
 
 Garden, Events, Discover, Messages and Profile are the primary destinations, in
-that order. Discover is the center tab on mobile, matching the complete demo.
+that order. A fresh signed-in launch opens Discover. Resuming keeps the current screen. Discover defaults to Dating for eligible users, with Friends second; everyone else opens Friends. Discover is the center tab on mobile, matching the complete demo.
 Activity is a supporting destination; account settings live within Profile. Desktop uses the alternate
 frontend’s left navigation; at 800px and below it becomes bottom navigation.
 Compact screens reach Activity from Messages and Settings through the Profile gear, without
@@ -106,6 +106,35 @@ bottom-tab labels so they still fit at doubled system text. Settings
 switches save as soon as they change. Reduced motion removes all decorative
 movement.
 
+## Direct actions
+
+Email sign-in shows email and password together and submits once. Registration,
+Google sign-in and recovery remain explicit choices. Changing an email clears
+password drafts without moving between screens.
+
+Choosing an event category or resetting it applies the choice and closes the
+filter sheet. Tapping Discover's search-area label opens the map directly; saving
+or canceling returns to Discover. Filters retain their separate entry point.
+Friends interests and weekly availability, Dating details, and group availability
+can be edited in focused dialogs within the current task. Their saves still use
+the canonical resources and retain revision checks and uncertain-write recovery.
+
+Selecting a gallery photo uploads it immediately, with a pending preview and
+explicit read-only reconciliation after an unconfirmed upload. Profile draft
+photos and matching-setup photos remain staged until their labeled Save action.
+Choosing a prompt opens its answer field immediately; the profile form saves it.
+The profile-completion photo action opens the file picker directly. Garden's
+illustrative friend islands link directly to Friends discovery. Accepting a
+connection request from Activity opens its confirmed conversation; opening an
+event notification also marks it read.
+
+Dating setup's final action is Save and start Dating, with the visibility change
+explained beside it. There is no separate ready screen. Group setup opens as soon
+as a missing prerequisite is detected after Find a group, and completed search
+areas are rechecked without an extra Finish tap. Event and group queues retain an
+explicit join action. Keep confirmations for account/photo deletion, blocking,
+removing connections, leaving groups and resetting the Garden.
+
 ## Profile customization
 
 Profile opens on your profile, with a Your profile / Preview switch; Preview
@@ -139,10 +168,16 @@ Each matching feature requires one saved profile photo, at least one interest
 and a confirmed search area. Friends and Dating have separate areas. Event and
 group matching use the Friends search area. Weekly availability is optional
 until group matching, which needs a continuous hour and a confirmed timezone.
+In matching setup, choosing a photo stages a preview. Save and continue uploads
+the selected photo and saves the interests before opening the next step.
 Profile and matching setup offer a photo manager with up to four ordered photos.
 Press and hold a photo to reorder it. The first is the profile photo. Friends and
 Dating cards support swiping when a person has more than one photo, with
 keyboard navigation on the photo viewer.
+
+Use my current location requests device permission directly. After permission is
+granted, enable the account's location-search setting and center the picker on
+the device location. The person confirms the search area before it is saved.
 
 ## Real data and service states
 

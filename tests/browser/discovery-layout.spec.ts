@@ -5,7 +5,7 @@ for (const width of [320, 390, 590]) {
   test(`Discover profile and actions match mobile reference at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 })
     await wiringFixture(page)
-    await page.goto('/matchmaking')
+    await page.goto('/matchmaking?mode=friends')
     const profile = page.locator('.discovery-profile:visible')
     await expect(profile.getByRole('heading', { name: 'Taylor, 23' })).toBeVisible()
     await expect(profile.locator('.phototext h2')).toHaveCSS('color', 'rgb(255, 255, 255)')
@@ -31,7 +31,7 @@ test('Undo restores only the most recent skipped profile and never sends a reque
   await page.route('**/api/matchmaking/friends/recommendations', route => route.fulfill({ json: {
     algorithmVersion: 'friends-rules-v1', candidates: [peer, 'a0000000-0000-4000-8000-000000000003'].map((id, index) => ({ id, name: index ? 'Jordan' : 'Taylor', age: 23, city: null, bio: null, avatar: null, photoRevision: 0, interests: ['Coffee'], areaDistanceMiles: 2 })),
   } }))
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   await expect(page.getByRole('heading', { name: 'Taylor, 23' })).toBeVisible()
   await page.getByRole('button', { name: 'Pass', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Jordan, 23' })).toBeVisible()
@@ -43,7 +43,7 @@ test('Undo restores only the most recent skipped profile and never sends a reque
 
 test('Dating uses a plum tab, filled heart and real relationship details', async ({ page }) => {
   await wiringFixture(page)
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   const dating = page.getByRole('button', { name: 'Dating', exact: true })
   await dating.click()
   await expect(dating).toHaveAttribute('aria-pressed', 'true')
@@ -63,7 +63,7 @@ test('Discover renders public facts and consented coarse availability, with no f
       sharedAvailability: { dayOfWeek: 3, period: 'afternoon', timeZone: 'America/New_York' },
     }],
   } }))
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   const profile = page.locator('.discovery-profile:visible')
   await profile.getByText('Time in common', { exact: true }).scrollIntoViewIfNeeded()
   await expect(profile.getByText('Wednesday afternoon · Shared availability', { exact: true })).toBeVisible()
@@ -87,7 +87,7 @@ for (const interest of ['coffee', 'sci-fi']) test(`shared-interest badges normal
   await page.getByRole('button', { name: 'Add', exact: true }).click()
   await page.getByRole('button', { name: 'Save changes', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible()
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   const profile = page.locator('.discovery-profile:visible')
   await expect(profile.getByText('1 in common', { exact: true })).toBeVisible()
   await expect(profile.locator('.dating-interest.in-common').first()).toContainText(candidateInterest)
@@ -96,7 +96,7 @@ for (const interest of ['coffee', 'sci-fi']) test(`shared-interest badges normal
 
 test('profile decision animation guards repeated taps and sends one request', async ({ page }) => {
   const fixture = await wiringFixture(page)
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   const connect = page.getByRole('button', { name: 'Connect', exact: true })
   await expect(connect).toBeVisible()
   await connect.evaluate((button: HTMLButtonElement) => { button.click(); button.click() })
@@ -107,12 +107,12 @@ test('profile decision animation guards repeated taps and sends one request', as
 test('profile transitions respect reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await wiringFixture(page)
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   const content = page.locator('.discovery-card-slot:not([hidden]) .discovery-profile-content')
   await expect(content).toBeVisible()
   await expect(content).toHaveCSS('animation-name', 'none')
   await page.getByRole('button', { name: 'Pass', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'You’re all caught up.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'You’re out of people nearby.' })).toBeVisible()
   await page.getByRole('button', { name: 'Undo skip', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Taylor, 23' })).toBeVisible()
   await expect(content).toHaveCSS('animation-name', 'none')
@@ -123,7 +123,7 @@ test('switching profiles never fades the visible card to a blank frame', async (
   await page.route('**/api/matchmaking/friends/recommendations', route => route.fulfill({ json: {
     algorithmVersion: 'friends-rules-v1', candidates: [peer, 'a0000000-0000-4000-8000-000000000003'].map((id, index) => ({ id, name: index ? 'Jordan' : 'Taylor', age: 23, city: null, bio: null, avatar: null, photoRevision: 0, interests: ['Coffee'], areaDistanceMiles: 2 })),
   } }))
-  await page.goto('/matchmaking')
+  await page.goto('/matchmaking?mode=friends')
   await expect(page.getByRole('heading', { name: 'Taylor, 23' })).toBeVisible()
   const minimumOpacity = await page.evaluate(async () => {
     const button = document.querySelector<HTMLButtonElement>('.discovery-card-slot:not([hidden]) button[aria-label="Pass"]')!

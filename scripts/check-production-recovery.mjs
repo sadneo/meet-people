@@ -1,10 +1,11 @@
 import { execFileSync } from 'node:child_process'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { supabaseRefs } from './configure-deployment.mjs'
 import process from 'node:process'
 import console from 'node:console'
 
-const projectRef = 'wacgxhsdhrqigrmqaonc'
+const projectRef = supabaseRefs.production
 const maxAgeMs = 24 * 60 * 60 * 1000
 // A recent managed recovery point is a prerequisite, not proof of recoverability.
 export function checkRecovery(inventory, now = Date.now()) {

@@ -23,10 +23,10 @@ it.each(['web', 'mobile'])('removes quick-login UI and anonymous Auth call sites
     expect(chunks.length).toBeGreaterThan(0)
     const javascript = chunks.map(chunk => chunk.code).join('\n')
     if (product === 'web') {
-      expect(javascript).not.toContain('Continue with email')
+      expect(javascript).not.toContain('auth-password')
       expect(javascript).not.toContain('Join group queue')
     } else {
-      expect(javascript).toContain('Continue with email')
+      expect(javascript).toContain('auth-password')
       expect(javascript).toContain('Join group queue')
     }
     expect(javascript).not.toContain('Quick sign in (local only)')

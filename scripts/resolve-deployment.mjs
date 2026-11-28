@@ -9,8 +9,8 @@ export function resolveDeployment(env, git = args => execFileSync('git', args, {
   const manual = env.GITHUB_EVENT_NAME === 'workflow_dispatch'
   assert.ok(manual || env.GITHUB_EVENT_NAME === 'push', 'Unsupported deployment event')
   assert.ok(['refs/heads/main', 'refs/heads/dev'].includes(env.GITHUB_REF), 'Deployments must use the workflow on main or dev')
-  // Only main pushes deploy automatically; sandbox deploys are manual.
-  const environment = manual ? env.DEPLOY_ENVIRONMENT : 'production'
+  // Pushes deploy their branch's environment: dev to sandbox, main to production.
+  const environment = manual ? env.DEPLOY_ENVIRONMENT : env.GITHUB_REF === 'refs/heads/dev' ? 'sandbox' : 'production'
   assert.ok(['production', 'sandbox'].includes(environment), 'Choose production or sandbox')
   if (environment === 'production') assert.equal(env.GITHUB_REF, 'refs/heads/main', 'Production must use the workflow on main')
   const branch = environment === 'production' ? 'main' : 'dev'

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import type { GardenResponse, GardenRewardAction } from '../../../shared/garden'
+import { Link } from 'react-router'
 import { Modal } from '../../ui/common'
 import { haptic } from '../../ui/feedback'
 
@@ -18,8 +19,8 @@ export function EarnPebbles({rewards,disabled,claim,close,error,refresh}:{reward
      return <li key={day} aria-label={`${day}: ${checked?'checked in':'not checked in'}`} aria-current={key===rewards.day?'date':undefined}><span className={checked?'checked':''} aria-hidden="true">{checked?'✓':''}</span><small aria-hidden="true">{day.slice(0,1)}</small></li>
     })}</ol>:null}</article>)},
   {id:'onboarding',collected:!!rewards?.profileClaimed,content:(<article key="onboarding"><div><h3>Complete onboarding <span>+100</span></h3></div><button className="btn light" disabled={disabled||!rewards?.profileEligible||rewards.profileClaimed} onClick={()=>void collect('profile-reward')}>{rewards?.profileClaimed?'Collected':'Collect'}</button></article>)},
-  {id:'connection',collected:social?.connectionsClaimed===2,content:(<article key="connection"><div><h3>Build a connection <span>+30</span></h3>{social&&<p>{social.connectionsClaimed} / 2 collected this week</p>}</div>{social?.connectionAvailable||social?.connectionsClaimed===2?<button className="btn light" aria-label="Collect connection reward" disabled={disabled||!social?.connectionAvailable} onClick={()=>void collect('connection-reward')}>{social?.connectionAvailable?'Collect':social?.connectionsClaimed===2?'Collected':'Not yet'}</button>:<span className="garden-quest-progress">Accept a connection</span>}</article>)},
-  {id:'keep-in-touch',collected:!!social?.keepInTouchClaimed,content:(<article key="keep-in-touch"><div><h3>Keep in touch <span>+20</span></h3></div>{social?.keepInTouchAvailable||social?.keepInTouchClaimed?<button className="btn light" aria-label="Collect keep-in-touch reward" disabled={disabled||!social?.keepInTouchAvailable} onClick={()=>void collect('keep-in-touch')}>{social?.keepInTouchClaimed?'Collected':social?.keepInTouchAvailable?'Collect':'Not yet'}</button>:<span className="garden-quest-progress">Message a connection</span>}</article>)}
+  {id:'connection',collected:social?.connectionsClaimed===2,content:(<article key="connection"><div><h3>Build a connection <span>+30</span></h3>{social&&<p>{social.connectionsClaimed} / 2 collected this week</p>}</div>{social?.connectionAvailable||social?.connectionsClaimed===2?<button className="btn light" aria-label="Collect connection reward" disabled={disabled||!social?.connectionAvailable} onClick={()=>void collect('connection-reward')}>{social?.connectionAvailable?'Collect':social?.connectionsClaimed===2?'Collected':'Not yet'}</button>:<Link className="btn light" to="/messages/requests" onClick={close}>Accept a connection</Link>}</article>)},
+  {id:'keep-in-touch',collected:!!social?.keepInTouchClaimed,content:(<article key="keep-in-touch"><div><h3>Keep in touch <span>+20</span></h3></div>{social?.keepInTouchAvailable||social?.keepInTouchClaimed?<button className="btn light" aria-label="Collect keep-in-touch reward" disabled={disabled||!social?.keepInTouchAvailable} onClick={()=>void collect('keep-in-touch')}>{social?.keepInTouchClaimed?'Collected':social?.keepInTouchAvailable?'Collect':'Not yet'}</button>:<Link className="btn light" to="/messages" onClick={close}>Message a connection</Link>}</article>)}
  ]
  const completed=quests.filter(quest=>quest.collected)
  return <Modal title="Earn Pebbles" className="garden-earn-modal" close={close}>

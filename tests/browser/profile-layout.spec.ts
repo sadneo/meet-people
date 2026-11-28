@@ -38,6 +38,7 @@ for (const width of [320, 390]) {
     await expect(page.getByLabel('Display name', { exact: true })).toHaveValue('Unsaved name');
     await expect(page.getByRole('complementary', { name: 'Development navigation' })).toBeVisible();
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Discard changes?' }).getByRole('button', { name: 'Discard', exact: true }).click();
     await expect(page.locator('.profile-summary h3')).not.toHaveText('Unsaved name');
     expect(fixture.calls.filter(call => call.method === 'PUT')).toHaveLength(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

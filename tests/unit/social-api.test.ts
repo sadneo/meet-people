@@ -108,3 +108,14 @@ it('sends typing through the fixed actor RPC without accepting a sender selector
   await transport.actor('synthetic').socialTyping!(b, true, true)
   expect(calls).toEqual([{ rpc: 'messaging_typing', body: { conversation_in: b, group_in: true, typing_in: true } }])
 })
+
+it('cancels only the selected outgoing request and surfaces a stale cancellation', async () => {
+  const requestedAt = '2026-11-19T00:00:00Z'
+  const cancel = vi.fn().mockResolvedValueOnce({ data: true }).mockResolvedValueOnce({ data: false })
+  const remove = vi.fn()
+  const transport = configured({ cancelSentRequest: cancel, socialConnection: remove })
+  expect((await request('connections', 'POST', `/${b}/cancel`, { requestedAt }, transport)).status).toBe(200)
+  expect(cancel).toHaveBeenCalledWith(b, requestedAt)
+  expect((await request('connections', 'POST', `/${b}/cancel`, { requestedAt }, transport)).status).toBe(409)
+  expect(remove).not.toHaveBeenCalled()
+})

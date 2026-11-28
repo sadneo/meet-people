@@ -18,6 +18,8 @@ it('sanitizes appended files, confirms revisions, and serves only the requested 
       return { data: state, error: null }
     }),
     profilePhotoGallery: vi.fn(() => ({ data: state, error: null })),
+    profilePhotoState: vi.fn(),
+    saveProfilePhoto: vi.fn(() => ({ data: null, error: { code: '23514', message: 'violates check constraint "profile_photo_gallery_size"' } })),
     readPhotoSlot: vi.fn((id: string, revision: number) => id === owner
       ? { data: { revision, jpegBase64: jpeg }, error: null }
       : { data: null, error: { code: 'PT404' } }),
@@ -43,6 +45,10 @@ it('sanitizes appended files, confirms revisions, and serves only the requested 
     })
     expect(appended.status).toBe(200)
     expect(await appended.json()).toEqual({ revision: 2, count: 2 })
+    const legacyRemove = await send(`?expectedRevision=2&requestId=${crypto.randomUUID()}`, { method: 'DELETE' })
+    expect(legacyRemove.status).toBe(409)
+    expect(await legacyRemove.json()).toEqual({ error: 'Update Pebble to remove a photo from a gallery with multiple photos.' })
+    expect(actor.profilePhotoState).not.toHaveBeenCalled()
     expect((await sharp(Buffer.from(jpeg,'base64')).metadata()).exif).toBeUndefined()
     const edit = { action:'move', position:2, toPosition:1, expectedRevision:2, requestId:crypto.randomUUID() }
     const moved = await send('/gallery',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(edit)})

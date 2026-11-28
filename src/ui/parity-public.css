@@ -61,3 +61,21 @@ main.onboarding { max-width:480px;min-height:100dvh;margin:0 auto;padding:40px 2
   margin: 16px auto 0;
   line-height: 1.55;
 }
+
+/* Check-your-inbox state after sign-up or a password reset request. */
+.auth-inbox { display: grid; gap: 4px; text-align: center; margin-top: -10px; }
+.auth-inbox > p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.auth-inbox > .auth-inbox-email { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; margin-bottom: 16px; }
+.auth-inbox > [role="status"], .auth-inbox > .account-error { margin-bottom: 12px; }
+.auth-inbox .auth-recovery-options { justify-content: center; column-gap: 24px; }
+.auth-inbox > .auth-inbox-hint { margin-top: 16px; font-size: 13px; }
+.auth-inbox .auth-submit:disabled { opacity: .6; cursor: default; }
+.auth-form-wrap [role="status"] { margin: 12px 0; }
+
+/* Expired or used email link. */
+.auth-callback-copy { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0 0 20px; }
+.auth-callback-actions { display: grid; gap: 16px; }
+.auth-callback-actions > .auth-submit { display: grid; place-items: center; text-decoration: none; }
+.auth-callback-resend { display: grid; gap: 8px; }
+.auth-callback-resend label { font-size: 13px; color: var(--muted); }
+.auth-callback-resend input { min-height: 48px; padding: 0 14px; border: 1px solid var(--line, #ddd3c8); border-radius: 12px; font-size: 16px; }

@@ -1,5 +1,5 @@
 import { type z } from 'zod'
-import { AccountSchema, SaveAccountSchema, type SaveAccount } from '../../../shared/account'
+import { AccountSchema, SaveAccountSchema, accountOnboardingHeader, type SaveAccount } from '../../../shared/account'
 import { JoinQueueSchema, QueueStatusSchema, MatchResultSchema, MatchingProfileSchema, ProfileResponseSchema, SavedProfileResponseSchema, MatchingErrorSchema, type MatchingMode, type MatchingProfile } from '../../../shared/matchmaking'
 import { EventGroupQueueSchema, MatchingNotificationsSchema, EventCompatibilityResponseSchema, ListingIdSchema, ListingMatchmakingStatusSchema } from '../../../shared/matchmaking'
 import { AccountProfileSchema, AccountProfileResponseSchema, SavedAccountProfileResponseSchema, type AccountProfile } from '../../../shared/account-profile'
@@ -17,7 +17,12 @@ export function matchmakingClient(token: string) {
     // Keep the deadline alive through JSON/body consumption, not just headers.
     const timer = setTimeout(() => controller.abort(), 15000)
     try {
-      const response = await fetch(apiUrl(`/api/matchmaking/${path}`), { method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store', signal: controller.signal })
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(path === 'account' && { [accountOnboardingHeader]: 'progressive' }),
+      }
+      const response = await fetch(apiUrl(`/api/matchmaking/${path}`), { method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store', signal: controller.signal })
       let data: unknown
       try { data = await response.json() } catch { throw new MatchmakingClientError('malformed', response.status, 'Matching service returned an invalid response.') }
       if (!response.ok) {
@@ -30,6 +35,8 @@ export function matchmakingClient(token: string) {
     } catch (failure) {
       // Aborting local transport does not prove a write was rolled back.
       if (controller.signal.aborted) throw new MatchmakingClientError('provider', 503, 'Matching request timed out. Its outcome may be uncertain; refresh to confirm.')
+      // fetch rejects with a bare TypeError when offline; the write may still have landed.
+      if (failure instanceof TypeError) throw new MatchmakingClientError('network', 503, 'Couldn’t reach the matching service. It may not have gone through; check your connection and try again.')
       throw failure
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort) }
   }

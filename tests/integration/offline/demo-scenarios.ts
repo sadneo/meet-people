@@ -1,17 +1,21 @@
 /** Empty schema-only disposable DB; synthetic users only, no Auth service/keys. */
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { demoPlan, developmentDemoPlan,onboardingChapters, seedContainer, seedMarker, campusId, campusLabel } from '../../../scripts/demo-seed/plan.js'
+import { demoPlan, developmentDemoPlan,onboardingChapters, seedMarker, campusId, campusLabel } from '../../../scripts/demo-seed/plan.js'
 import { seedSql } from '../../../scripts/demo-seed/sql.js'
 import { scenarioSql, scenarioMarker } from '../../../scripts/demo-seed/scenarios.js'
 import { eventQueueSql } from '../../../scripts/demo-seed/event.js'
+import { containerResult, containerSync } from '../../../scripts/lib/containers.mjs'
+import { requireStack } from '../../../scripts/lib/stack.mjs'
+
+const { dbContainer: seedContainer, projectId } = requireStack()
 
 const database = `pebble_seed_scenarios_check_${Date.now()}`
 const profiles = demoPlan(6)
 const schemas = ['public','extensions','auth','safety_private','social_private','location_private','dating_private','photo_private','active_private','event_group_private']
 function execute(args: string[], input?: string | Buffer) {
-  const result = spawnSync('docker', args, { input, maxBuffer: 16 * 1024 * 1024 })
+  const result = containerResult(args, { input, maxBuffer: 16 * 1024 * 1024, encoding: 'buffer' })
   assert.equal(result.status, 0, `Disposable operation failed; app database unchanged: ${result.stderr.toString().slice(-3000)}`)
   return result.stdout.toString().trim()
 }
@@ -27,11 +31,13 @@ const literal = (value: unknown) => `'${JSON.stringify(value).replaceAll("'", "'
 const actor = (index: number, body: string) => `set local role authenticated;select set_config('request.jwt.claim.sub','${profiles[index-1].id}',true) is not null;${body};reset role;`
 let created = false
 try {
-  const metadata = JSON.parse(execFileSync('docker',['inspect','--format','{"running":{{json .State.Running}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}}}',seedContainer],{encoding:'utf8',stdio:['ignore','pipe','pipe']}))
-  assert.deepEqual(metadata,{running:true,project:'meet-people'})
+  const metadata = JSON.parse(containerSync(['inspect','--format','{"running":{{json .State.Running}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}}}',seedContainer]))
+  assert.deepEqual(metadata,{running:true,project:projectId})
   execute(['exec',seedContainer,'createdb','-U','postgres','-T','template0',database])
   created = true
-  const snapshot = execFileSync('docker',['exec',seedContainer,'pg_dump','-U','postgres','-d','postgres','--schema-only','--format=custom',...schemas.map(schema=>`--schema=${schema}`)],{maxBuffer:16*1024*1024,stdio:['ignore','pipe','pipe']})
+  const dump = containerResult(['exec',seedContainer,'pg_dump','-U','postgres','-d','postgres','--schema-only','--format=custom',...schemas.map(schema=>`--schema=${schema}`)],{maxBuffer:16*1024*1024,encoding:'buffer'})
+  assert.equal(dump.status, 0, 'Schema snapshot failed')
+  const snapshot = dump.stdout
   sql('drop schema public;')
   execute(['exec','-i',seedContainer,'pg_restore','-U','supabase_admin','-d',database,'--exit-on-error'],snapshot)
   // A schema-filtered pg_dump omits extension installation metadata.
@@ -58,13 +64,13 @@ try {
   sql(`begin;${actor(2,`do $$ begin assert public.social_activity()->>'unreadConversations'='1','Rerun changed read state';end $$`)}commit;`)
   // An unowned ID collision stops the whole scenario before any writes.
   sql(`update auth.users set raw_app_meta_data='{}' where id='${profiles[0].id}';`)
-  const collision = spawnSync('docker',['exec','-i',seedContainer,'psql','-X','-qAt','-U','postgres','-d',database,'-v','ON_ERROR_STOP=1'],{input:bindTarget(scenarioSql(6)),encoding:'utf8'})
+  const collision = containerResult(['exec','-i',seedContainer,'psql','-X','-qAt','-U','postgres','-d',database,'-v','ON_ERROR_STOP=1'],{input:bindTarget(scenarioSql(6))})
   assert.notEqual(collision.status,0)
   assert.deepEqual(counts(),{connections:2,messages:3,events:3,eventQueues:10,friendsQueues:2})
   sql(`update auth.users set raw_app_meta_data=${literal({pebble_demo_seed:seedMarker})} where id='${profiles[0].id}';`)
   // Date renewal is explicit and restricted to this script's owned demo events.
   sql(`update public.listings set ends_at=statement_timestamp()-interval '1 hour',starts_at=statement_timestamp()-interval '3 hours' where source='${scenarioMarker}';`)
-  const stale = spawnSync('docker',['exec','-i',seedContainer,'psql','-X','-qAt','-U','postgres','-d',database,'-v','ON_ERROR_STOP=1'],{input:bindTarget(scenarioSql(6)),encoding:'utf8'})
+  const stale = containerResult(['exec','-i',seedContainer,'psql','-X','-qAt','-U','postgres','-d',database,'-v','ON_ERROR_STOP=1'],{input:bindTarget(scenarioSql(6))})
   assert.notEqual(stale.status,0)
   sql(bindTarget(scenarioSql(6,true)))
   assert.equal(sql(`select count(*) from public.listings where source='${scenarioMarker}' and starts_at>statement_timestamp();`),'3')
@@ -136,7 +142,7 @@ try {
   // carry across. Require the owner's join and retain imported listing fields.
   const regularEvent='d7500000-0000-4000-8000-000000000001'
   sql(`insert into public.listings(id,listing_type,title,starts_at,ends_at,source,external_id,status) values('${regularEvent}','event','Synthetic SBU event',statement_timestamp()+interval '1 day',statement_timestamp()+interval '2 days','synthetic-sbu','regular-event','active');`)
-  const missingJoin=spawnSync('docker',['exec','-i',seedContainer,'psql','-X','-qAt','-U','postgres','-d',database,'-v','ON_ERROR_STOP=1'],{input:bindTarget(eventQueueSql(regularEvent,primary)),encoding:'utf8'})
+  const missingJoin=containerResult(['exec','-i',seedContainer,'psql','-X','-qAt','-U','postgres','-d',database,'-v','ON_ERROR_STOP=1'],{input:bindTarget(eventQueueSql(regularEvent,primary))})
   assert.notEqual(missingJoin.status,0)
   assert.equal(sql(`select count(*) from event_group_private.queue where listing_id='${regularEvent}';`),'0')
   sql(bindTarget(eventQueueSql(regularEvent,primary,17,false)))

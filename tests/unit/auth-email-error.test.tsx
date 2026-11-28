@@ -3,21 +3,22 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, expect, it, vi } from 'vitest'
 import { Auth } from '../../src/ui/Auth'
 
-vi.mock('../../src/supabase', () => ({ supabase: { auth: {} } }))
-afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+const signIn = vi.hoisted(() => vi.fn())
+vi.mock('../../src/supabase', () => ({ supabase: { auth: { signInWithPassword: signIn } } }))
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks() })
 
-it.each([503, 429, 'network', 'invalid'] as const)('shows safe actionable email lookup errors for %s and allows retry', async failure => {
-  const fetcher = vi.fn().mockImplementationOnce(async () => {
-    if (failure === 'network') throw new Error('Failed fetch https://private.example/api/auth/email')
-    return new Response(failure === 'invalid' ? '<html>Proxy error</html>' : '{"error":"internal secret"}', { status: failure === 'invalid' ? 200 : failure })
-  }).mockResolvedValue(new Response('{"exists":true}'))
+it('signs in directly, hides provider diagnostics and allows an explicit retry', async () => {
+  signIn.mockResolvedValueOnce({ error: new Error('Private provider diagnostic') }).mockResolvedValue({ error: null })
+  const fetcher = vi.fn()
   vi.stubGlobal('fetch', fetcher)
   render(<MemoryRouter><Auth /></MemoryRouter>)
   fireEvent.change(screen.getByRole('textbox', { name: /email/i }), { target: { value: 'qa@example.test' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Continue with email' }))
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Synthetic-password-1!' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in', exact: true }))
   const alert = await screen.findByRole('alert')
-  expect(alert.textContent).toMatch(/try again/i)
-  expect(alert.textContent).not.toMatch(/https?:|internal secret|JSON|HTTP|Proxy|Failed fetch/)
-  fireEvent.click(screen.getByRole('button', { name: 'Continue with email' }))
-  await waitFor(() => expect(screen.getByLabelText('Password')).toBeTruthy())
+  expect(alert.textContent).toMatch(/Could not sign in/)
+  expect(alert.textContent).not.toMatch(/Private provider diagnostic/)
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in', exact: true }))
+  await waitFor(() => expect(signIn).toHaveBeenCalledTimes(2))
+  expect(fetcher).not.toHaveBeenCalled()
 })

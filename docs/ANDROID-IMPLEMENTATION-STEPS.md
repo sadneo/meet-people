@@ -18,19 +18,17 @@ The zip changes 12 existing files of yours and adds the rest. If you applied my 
 
 ## 2. Package scripts and dependencies
 ```
-node scripts/apply-android-changes.mjs              # adds the 4 npm scripts to package.json
 pnpm add @capacitor/push-notifications google-auth-library
 ```
 Commit `pnpm-lock.yaml` too: the Dockerfile installs with a frozen lockfile.
-Your `.gitignore` probably ignores `.env.*`, so keep the example file with `git add -f .env.android.example`.
 
 ## 3. Database (local)
 `config.toml` and `seed.sql` changed, so restart and rebuild:
 ```
-pnpm supabase:stop
-pnpm supabase:start
-pnpm supabase:reset        # rebuilds the local database: migrations + fixed seed. This wipes local data.
-pnpm env:local
+pnpm supabase stop
+pnpm supabase start
+pnpm supabase db reset        # rebuilds the local database: migrations + fixed seed. This wipes local data.
+pnpm dev
 ```
 To keep your local data instead of resetting, run the fix and the two push migrations by hand (all are safe to repeat):
 ```
@@ -41,34 +39,28 @@ docker exec -i supabase_db_meet-people psql -U postgres -d postgres -v ON_ERROR_
 (`supabase_db_meet-people` comes from `project_id` in `supabase/config.toml`.)
 
 ## 4. Dev-mode account and settings
-Create `.env.android-dev` in the project root (do not commit it):
+Nothing to create: `pnpm android --dev` (step 6) generates the dev login and points the build at this
+worktree's stack. For the emulator, run this in its own terminal (Supabase, worker, functions and the API on
+port 3100; no web servers):
 ```
-VITE_API_BASE_URL=http://10.0.2.2:3001
-VITE_SUPABASE_URL=http://10.0.2.2:54321
-VITE_SUPABASE_PUBLISHABLE_KEY=<the local publishable key already in your .env.android>
-VITE_DEV_LOGIN_EMAIL=android-dev@example.com
-VITE_DEV_LOGIN_PASSWORD=pick-something-local-only-123
-```
-Then start the API in its own terminal (`pnpm dev:api`) and in another:
-```
-pnpm android:dev-user
+pnpm dev:mobile
 ```
 
 ## 5. Checks
 ```
 pnpm typecheck
-pnpm test:unit        # the new tests should pass; other failures may already exist in your repo
-pnpm test:alt
+pnpm test        # the new tests should pass; other failures may already exist in your repo
+node src/alt/tests/account-ui.check.cjs
 ```
 If `pnpm lint` complains about `src/alt/`, add `src/alt/**` to the ignores in `eslint.config.js`.
 
 ## 6. Run it on the emulator
 ```
-pnpm android:dev
+pnpm android --dev
 ```
-In Android Studio press Run, then tap **Skip login (dev account)** on the login screen.
-Dev builds only appear with `pnpm android:dev`. **Before building anything to install elsewhere, run
-`pnpm build:android`** so the app is built from `.env.android` and has no dev button.
+With `pnpm dev:mobile` still running, press Run in Android Studio, then tap **Skip login (dev account)** on the login screen.
+Dev builds only appear with `pnpm android --dev`. **Before building anything to install elsewhere, run
+`pnpm android --target sandbox|production`** so the app is built from `shared/targets.json` and has no dev button.
 
 ## 7. Later
 - **Push notifications:** needs a Firebase project and `google-services.json`; see `PUSH-NOTIFICATIONS.md`.

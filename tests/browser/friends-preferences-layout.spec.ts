@@ -17,7 +17,7 @@ for (const width of [320, 626]) test(`Friends preferences match the reference an
     return route.fulfill({ json: { revision, preferences } });
   });
   await page.setViewportSize({ width, height: 800 });
-  await page.goto('/matchmaking?preferences=true');
+  await page.goto('/matchmaking?mode=friends&preferences=true');
   const dialog = page.getByRole('dialog', { name: 'Friends preferences' });
   await expect(dialog.getByRole('slider', { name: 'Minimum age', exact: true })).toHaveValue('18');
   await expect(dialog.getByRole('slider', { name: 'Maximum age', exact: true })).toHaveValue('26');
@@ -64,7 +64,7 @@ test('Friends preference auto-save failures require reconciliation and do not cl
     }
     return route.fulfill({ json: { revision: 1, preferences } });
   });
-  await page.goto('/matchmaking?preferences=true');
+  await page.goto('/matchmaking?mode=friends&preferences=true');
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('combobox', { name: 'Friendship goal', exact: true }).selectOption('Study buddies');
   await expect(dialog.getByText(/Friends filters changed/)).toBeVisible();
@@ -73,6 +73,7 @@ test('Friends preference auto-save failures require reconciliation and do not cl
   await dialog.getByRole('button', { name: 'Reload saved data', exact: true }).click();
   await expect(dialog.getByRole('combobox', { name: 'Friendship goal', exact: true })).toHaveValue('New friends');
   expect(writes).toBe(1);
-  await dialog.getByRole('link', { name: 'Edit profile', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'About You', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await dialog.getByRole('button', { name: 'Edit interests', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Your interests', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/matchmaking/);
 });

@@ -38,8 +38,8 @@ test('profile tabs highlight their state and keep the demo save bar above mobile
   const control = (await page.getByLabel('Display name', { exact: true }).boundingBox())!;
   expect(control.height).toBeGreaterThanOrEqual(49);
   const save = (await page.getByRole('button', { name: 'Save changes', exact: true }).boundingBox())!;
-  const nav = (await page.getByRole('navigation', { name: 'Main navigation' }).boundingBox())!;
-  expect(save.y + save.height).toBeLessThanOrEqual(nav.y);
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeHidden();
+  expect(save.y + save.height).toBeLessThanOrEqual(844);
   const interests = page.getByRole('button', { name: 'Interests & Availability', exact: true });
   await interests.click();
   await expect(interests).toHaveAttribute('aria-pressed', 'true');
@@ -135,7 +135,7 @@ test('a partial Profile save stays open and requires optional-detail reconciliat
 test('Discover portraits do not inherit generic mobile card padding', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await wiringFixture(page);
-  await page.goto('/matchmaking');
+  await page.goto('/matchmaking?mode=friends');
   const photo = page.locator('.discovery-card-slot:not([hidden]) .discovery-photo');
   await expect(photo).toBeVisible();
   const bounds = (await photo.boundingBox())!;

@@ -1,6 +1,5 @@
 import { parseArgs } from 'node:util'
-import { execFileSync, spawnSync } from 'node:child_process'
-import { seedContainer } from './demo-seed/plan.js'
+import { psql,verifiedStack } from './demo-seed/local.js'
 import { queueSelection } from './demo-seed/queue.js'
 import { activeDemoSql } from './demo-seed/active.js'
 try {
@@ -11,12 +10,11 @@ try {
  console.log(`${options['dry-run']?'Preview':'Local demo action'}: ${action} — ${selected.map(p=>p.email).join(', ')}`)
  if (options['dry-run']) console.log('No database/network access.')
  else {
-  const metadata=JSON.parse(execFileSync('docker',['inspect','--format','{"running":{{json .State.Running}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}}}',seedContainer],{encoding:'utf8',stdio:['ignore','pipe','pipe']}))
-  if (!metadata.running || metadata.project!=='meet-people') throw new Error('Expected running local meet-people Supabase container; remote targets unsupported')
-  const result=spawnSync('docker',['exec','-i',seedContainer,'psql','-X','-qAt','-U','postgres','-v','ON_ERROR_STOP=1','-d','postgres'],{input:sql,encoding:'utf8',maxBuffer:131072})
+  verifiedStack('Expected running local Supabase container for this worktree; remote targets unsupported')
+  const result=psql(['-X','-qAt','-U','postgres','-v','ON_ERROR_STOP=1','-d','postgres'],sql,131072)
   if(result.status!==0) throw new Error(`Transaction rolled back. Check matching migrations, seed ownership, active policy, availability timezone and trusted search areas. ${result.stderr.trim()}`)
   if(action==='status') console.log(result.stdout.trim())
   console.log('Done. All selected actions committed.')
-  if(action==='join') console.log('Run pnpm matchmaking:active:once, then open Messages → Find a group → Check. Proposals still require every member’s explicit acceptance; this tool never accepts for them.')
+  if(action==='join') console.log('Run pnpm demo matchmaking-once, then open Messages → Find a group → Check. Proposals still require every member’s explicit acceptance; this tool never accepts for them.')
  }
 } catch(error) { console.error(error instanceof Error?error.message:'Local demo action failed');process.exitCode=1 }

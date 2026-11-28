@@ -7899,3 +7899,5 @@ summary:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+.conversation-members .item>.portrait,.conversation-members .item>.initial-avatar { width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none; }
+.conversation-members .item>div:not(.safety-actions) { flex:1;min-width:0; }

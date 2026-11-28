@@ -1,34 +1,39 @@
 import { constants } from 'node:fs'
 import { open } from 'node:fs/promises'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import type { Plugin } from 'vite'
+import { assertLocalStack, credentialsDir, requireStack } from '../scripts/lib/stack.mjs'
 import { AccountSchema, completedAccountChapters } from '../shared/account.js'
 import { validatePrivateDevelopmentFile } from './private-development-file.js'
 import { provisionDevelopmentAccount } from './provision-development-account.js'
 
 const loopback = (value: string | undefined) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '')
-const localUrl = (value: string) => {
+const stackUrl = (value: string) => {
+  try { assertLocalStack(value, requireStack()); return true } catch { return false }
+}
+// A stored file may predate a port change; only provisioning may repair its url.
+const loopbackUrl = (value: string) => {
   try {
     const url = new URL(value)
-    return url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname) && !!url.port && url.pathname === '/' && !url.search && !url.hash && !url.username && !url.password
+    return url.protocol === 'http:' && url.hostname === '127.0.0.1' && !!url.port && url.pathname === '/' && !url.search && !url.hash && !url.username && !url.password
   } catch { return false }
 }
 const publicKey = (value: string) => {
   if (value.startsWith('sb_publishable_')) return value.length > 15
   try { return JSON.parse(Buffer.from(value.split('.')[1], 'base64url').toString()).role === 'anon' && value.split('.').length === 3 } catch { return false }
 }
-const Credentials = z.object({ accountId: z.uuid(), email: z.email().max(254), password: z.string().min(1).max(128), url: z.string().refine(localUrl), publicKey: z.string().max(4096).refine(publicKey) }).strict()
+const Credentials = z.object({ accountId: z.uuid(), email: z.email().max(254), password: z.string().min(1).max(128), url: z.string().refine(stackUrl), publicKey: z.string().max(4096).refine(publicKey) }).strict()
+const StoredCredentials = Credentials.extend({ url: z.string().refine(loopbackUrl) })
 export const parseDevelopmentCredentials = (value: unknown) => Credentials.parse(value)
 type Credentials = z.infer<typeof Credentials>
-const unavailable = 'Development account provisioning is unavailable. Check that local Supabase is running and .env.local contains its local connection settings.'
+const unavailable = 'Development account provisioning is unavailable. Start the app with pnpm dev, which runs this worktree\'s Supabase and passes its connection settings.'
 
-// Runtime-only fixed path. Never imported by the browser; no environment/browser path override.
+// Runtime-only path inside the current stack's credentials directory. Never imported by the browser; no environment/browser path override.
 export async function readDevelopmentCredentials() {
-  const path = join(homedir(), '.local/share/pebble/development-account.json')
+  const path = join(credentialsDir(requireStack().projectId), 'development-account.json')
   const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
   try {
     const stat = await file.stat()
@@ -37,7 +42,7 @@ export async function readDevelopmentCredentials() {
     const buffer = Buffer.alloc(8193)
     const { bytesRead } = await file.read(buffer, 0, buffer.length, 0)
     if (bytesRead > 8192) throw new Error('Invalid credential file')
-    return parseDevelopmentCredentials(JSON.parse(buffer.subarray(0, bytesRead).toString('utf8')))
+    return StoredCredentials.parse(JSON.parse(buffer.subarray(0, bytesRead).toString('utf8')))
   } finally { await file.close() }
 }
 
@@ -88,7 +93,7 @@ export async function signInDevelopmentAccount() {
     credentials = await provisionDevelopmentAccount()
     return authenticateDevelopmentAccount(credentials)
   }
-  if (credentials.accountId === 'd0000000-0000-4000-8000-000000000001' && credentials.email === 'pebble-development@example.test') await provisionDevelopmentAccount(credentials)
+  if (credentials.accountId === 'd0000000-0000-4000-8000-000000000001' && credentials.email === 'pebble-development@example.test') credentials = await provisionDevelopmentAccount(credentials)
   return authenticateDevelopmentAccount(credentials)
 }
 

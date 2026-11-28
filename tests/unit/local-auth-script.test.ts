@@ -3,8 +3,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import console from 'node:console'
 import { emptyAccount, SaveAccountSchema, type Account } from '../../shared/account'
 
+const stackUrl = 'http://127.0.0.1:55321'
+const statusJson = (url: string) => JSON.stringify({ API_URL: url, ANON_KEY: 'synthetic-public', SERVICE_ROLE_KEY: 'synthetic-admin' })
 const boundary = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn() }))
-vi.mock('node:child_process', () => ({ execFileSync: boundary.status }))
+vi.mock('node:child_process', async importOriginal => ({ ...await importOriginal<typeof import('node:child_process')>(), execFileSync: boundary.status }))
 vi.mock('@supabase/supabase-js', () => ({ createClient: boundary.create }))
 
 type User = { id: string; email: string; password: string; confirmed: boolean; account: Account }
@@ -84,7 +86,8 @@ function actor() {
 }
 beforeEach(() => {
   vi.resetModules(); generated = []; deleted = []; events = []; writes = []; fail = ''
-  boundary.status.mockReset().mockReturnValue('API_URL="http://127.0.0.1:54321"\nANON_KEY="synthetic-public"\nSERVICE_ROLE_KEY="synthetic-admin"\n')
+  vi.stubEnv('PEBBLE_SUPABASE_PROJECT_ID', 'meet-people-wt-unit'); vi.stubEnv('PEBBLE_SUPABASE_URL', stackUrl)
+  boundary.status.mockReset().mockReturnValue(statusJson(stackUrl))
   const admin = { auth: { admin: {
     async updateUserById(id: string, value: { email_confirm: boolean }) {
       const user = generated.find(user => user.id === id)
@@ -105,7 +108,7 @@ beforeEach(() => {
   boundary.create.mockReset().mockImplementation((_url, key) => key === 'synthetic-admin' ? admin : actor())
   vi.spyOn(console, 'log').mockImplementation(() => {})
 })
-afterEach(() => { vi.restoreAllMocks() })
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs() })
 const run = () => import('../integration/local/test-local-auth.mjs' as string)
 
 it('executes four valid sequential persisted chapters with authoritative SQL-ordered readback, isolation, logout and recovery', async () => {
@@ -139,8 +142,12 @@ it.each(['cleanup-first', 'cleanup-first-throws'])('attempts both deletions on %
   expect(deleted).toEqual(generated.map(user => user.id))
   expect(console.log).not.toHaveBeenCalled()
 })
-it.each(['https://remote.example.test', 'http://user:synthetic@127.0.0.1:54321', 'http://127.0.0.1:54321/?untrusted=1'])('rejects unsafe status URL %s before creating any client or user', async url => {
-  boundary.status.mockReturnValue(`API_URL="${url}"\nANON_KEY="synthetic-public"\nSERVICE_ROLE_KEY="synthetic-admin"\n`)
+it('reads status for this stack\'s project and ports', async () => {
+  await run()
+  expect(boundary.status.mock.calls[0][2].env).toMatchObject({ SUPABASE_PROJECT_ID: 'meet-people-wt-unit', SUPABASE_API_PORT: '55321' })
+})
+it.each(['https://remote.example.test', 'http://user:synthetic@127.0.0.1:55321', 'http://127.0.0.1:55321/?untrusted=1', 'http://127.0.0.1:55322'])('rejects unsafe status URL %s before creating any client or user', async url => {
+  boundary.status.mockReturnValue(statusJson(url))
   await expect(run()).rejects.toThrow()
   expect(boundary.create).not.toHaveBeenCalled(); expect(generated).toEqual([]); expect(deleted).toEqual([])
 })

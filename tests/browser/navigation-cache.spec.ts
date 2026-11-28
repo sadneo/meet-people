@@ -3,7 +3,7 @@ import { conversationId, peer, wiringFixture } from './wiring-fixture'
 
 test('tab navigation reuses cached reads while the messaging subscription catches up once', async ({ page }) => {
   const fixture = await wiringFixture(page)
-  await page.goto('/')
+  await page.goto('/home')
   const nav = page.getByRole('navigation', { name: 'Main navigation' })
   await expect.poll(() => fixture.calls.some(call => call.path === '/api/events')).toBe(true)
   await expect.poll(() => fixture.calls.some(call => call.path === '/api/conversations')).toBe(true)
@@ -128,7 +128,6 @@ test('sign-out clears private reads before signing into the account again', asyn
   await page.route('**/api/conversations?page=1', async route => { started = true; await held; return route.fallback() })
   try {
     await page.getByLabel('Email', { exact: true }).fill('development-fixture@example.test')
-    await page.getByRole('button', { name: 'Continue with email', exact: true }).click()
     await page.getByLabel('Password', { exact: true }).fill('Synthetic-fixture-password-1!')
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     const nav = page.getByRole('navigation', { name: 'Main navigation' })
