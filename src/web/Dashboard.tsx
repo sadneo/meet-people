@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { ApiRequestError, authorizedRequest } from '../auth/authorizedRequest'
 import { useSession } from '../auth/useSession'
@@ -53,7 +53,7 @@ function Bars<T extends { day: string }>({ series, pick, label }: { series: T[];
         return <rect key={day.day} x={index * (bar + gap)} y={height - h} width={bar} height={h} rx="2"><title>{`${day.day}: ${number.format(pick(day))}`}</title></rect>
       })}
     </svg>
-    <div className="dash-chart-axis"><span>{series[0]?.day.slice(5)}</span><span>peak {number.format(max)}</span><span>{series.at(-1)?.day.slice(5)}</span></div>
+    <div className="dash-chart-axis"><span>{series[0]?.day.slice(5)}</span><span>peak {number.format(max)}</span><span>{series[series.length - 1]?.day.slice(5)}</span></div>
   </figure>
 }
 
@@ -94,7 +94,6 @@ function MyStats({ token }: { token: string }) {
   const [failed, setFailed] = useState(false)
   useEffect(() => {
     let live = true
-    setMine(null); setFailed(false)
     const load = () => authorizedRequest('/api/usage/me', MySchema)
       .then(data => { if (live) { setMine(data); setFailed(false) } })
       .catch(error => { console.error('Dashboard my stats failed', error); if (live) setFailed(true) })
@@ -150,19 +149,19 @@ function AdminUsers({ token }: { token: string }) {
   const [state, setState] = useState<'loading' | 'ready' | 'denied' | 'error'>('loading')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'lastSeen', desc: true })
-  const load = useCallback(async () => {
-    try {
-      const data = await authorizedRequest('/api/usage/admin/users', UsersSchema)
-      setUsers(data.users); setState('ready')
-    } catch (error) {
-      setState(error instanceof ApiRequestError && (error.status === 401 || error.status === 403) ? 'denied' : 'error')
-    }
-  }, [])
+  const [attempt, setAttempt] = useState(0)
   useEffect(() => {
+    let live = true
+    const load = () => authorizedRequest('/api/usage/admin/users', UsersSchema)
+      .then(data => { if (live) { setUsers(data.users); setState('ready') } })
+      .catch(error => {
+        console.error('Dashboard users failed', error)
+        if (live) setState(error instanceof ApiRequestError && (error.status === 401 || error.status === 403) ? 'denied' : 'error')
+      })
     void load()
     const timer = setInterval(() => { if (document.visibilityState === 'visible') void load() }, 30_000)
-    return () => clearInterval(timer)
-  }, [load, token])
+    return () => { live = false; clearInterval(timer) }
+  }, [token, attempt])
 
   const rows = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -179,7 +178,7 @@ function AdminUsers({ token }: { token: string }) {
   }, [users, query, sort])
 
   if (state === 'denied') return <p className="dash-muted">Other people’s activity is only visible to Pebble admins. Your own numbers are above.</p>
-  if (state === 'error') return <div className="dash-note" role="alert"><p>The user list could not be loaded.</p><button type="button" onClick={() => void load()}>Try again</button></div>
+  if (state === 'error') return <div className="dash-note" role="alert"><p>The user list could not be loaded.</p><button type="button" onClick={() => setAttempt(count => count + 1)}>Try again</button></div>
   if (!users) return <p className="dash-muted">Loading users…</p>
 
   return <section aria-label="Users">
@@ -251,8 +250,8 @@ export default function Dashboard() {
     </>}
     {!ready && <p className="dash-muted">Checking sign-in…</p>}
     {ready && !session && <section className="dash-admin" aria-label="Sign in"><AdminSignIn /></section>}
-    {session && <MyStats token={session.access_token} />}
-    {session && <section className="dash-admin" aria-label="People"><h2>People</h2><AdminUsers token={session.access_token} /></section>}
+    {session && <MyStats key={session.user.id} token={session.access_token} />}
+    {session && <section className="dash-admin" aria-label="People"><h2>People</h2><AdminUsers key={session.user.id} token={session.access_token} /></section>}
     <footer>Public figures are totals only. You can see your own activity when signed in; names, photos and per-person activity are visible to approved admins.</footer>
   </main>
 }
